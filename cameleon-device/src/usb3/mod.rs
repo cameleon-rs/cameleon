@@ -1,5 +1,6 @@
 use thiserror::Error;
 
+pub mod control_handle;
 pub mod device;
 
 pub use device::Device;

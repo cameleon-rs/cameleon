@@ -2,6 +2,7 @@ use std::fmt;
 
 use semver::Version;
 
+use super::control_handle::{ControlHandle, ControlIfaceInfo};
 use super::Result;
 
 pub(super) type RusbDevHandle = rusb::DeviceHandle<rusb::GlobalContext>;
@@ -9,20 +10,33 @@ pub(super) type RusbDevice = rusb::Device<rusb::GlobalContext>;
 
 pub struct Device {
     device: RusbDevice,
+    ctrl_iface_info: ControlIfaceInfo,
+
     device_info: DeviceInfo,
 }
 
 impl Device {
+    pub fn control_handle(&self) -> Result<ControlHandle> {
+        let device_handle = self.device.open()?;
+
+        Ok(ControlHandle::new(
+            device_handle,
+            self.ctrl_iface_info.clone(),
+        ))
+    }
+
     pub fn device_info(&self) -> &DeviceInfo {
         &self.device_info
     }
 
     pub(super) fn new(
         device: RusbDevice,
+        ctrl_iface_info: ControlIfaceInfo,
         device_info: DeviceInfo,
     ) -> Self {
         let device = Self {
             device,
+            ctrl_iface_info,
             device_info,
         };
 
