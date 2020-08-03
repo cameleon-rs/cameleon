@@ -1,9 +1,11 @@
-use std::io::{Cursor, Seek, SeekFrom};
+use std::io::Cursor;
 use std::time;
 
 use byteorder::{ReadBytesExt, LE};
 
 use crate::usb3::{Error, Result};
+
+use super::parse_util;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AckPacket<'a> {
@@ -38,10 +40,6 @@ impl<'a> AckPacket<'a> {
         self.ccd.request_id
     }
 
-    pub fn scd_len(&self) -> u16 {
-        self.ccd.scd_len
-    }
-
     pub fn custom_command_id(&self) -> Option<u16> {
         match self.ccd.scd_kind {
             ScdKind::Custom(id) => Some(id),
@@ -54,7 +52,7 @@ impl<'a> AckPacket<'a> {
         if magic == Self::PREFIX_MAGIC {
             Ok(())
         } else {
-            Err(Error::InvalidPacket("invalid prefix magic {:#X}".into()))
+            Err(Error::InvalidPacket("invalid prefix magic".into()))
         }
     }
 }
@@ -242,7 +240,7 @@ impl<'a> AckScd<'a> {
     }
 
     fn parse_read_mem(cursor: &mut Cursor<&'a [u8]>, len: u16) -> Result<Self> {
-        let data = Self::read_bytes(cursor, len)?;
+        let data = parse_util::read_bytes(cursor, len)?;
         Ok(AckScd::ReadMem { data })
     }
 
@@ -259,7 +257,7 @@ impl<'a> AckScd<'a> {
     }
 
     fn parse_read_mem_stacked(cursor: &mut Cursor<&'a [u8]>, len: u16) -> Result<Self> {
-        let data = Self::read_bytes(cursor, len)?;
+        let data = parse_util::read_bytes(cursor, len)?;
         Ok(AckScd::ReadMemStacked { data })
     }
 
@@ -296,32 +294,8 @@ impl<'a> AckScd<'a> {
     }
 
     fn parse_custom(cursor: &mut Cursor<&'a [u8]>, len: u16) -> Result<Self> {
-        let data = Self::read_bytes(cursor, len)?;
+        let data = parse_util::read_bytes(cursor, len)?;
         Ok(AckScd::Custom { data })
-    }
-
-    fn read_bytes(cursor: &mut Cursor<&'a [u8]>, len: u16) -> Result<&'a [u8]> {
-        let current_pos = cursor.position() as usize;
-
-        let buf = cursor.get_ref();
-        let scd_end = len as usize + current_pos;
-
-        if buf.len() < scd_end {
-            use std::io;
-
-            let err = io::Error::new(
-                io::ErrorKind::UnexpectedEof,
-                "buffer is smaller than specified scd length",
-            );
-            return Err(Error::BufferIoError(err));
-        };
-
-        let data = &buf[current_pos..scd_end];
-
-        // Advance cursor by scd length.
-        cursor.seek(SeekFrom::Current(len.into()))?;
-
-        Ok(data)
     }
 }
 
@@ -387,7 +361,8 @@ mod tests {
         scd_len: u16,
         request_id: u16,
     ) -> Vec<u8> {
-        let mut ccd = vec![0x55, 0x33, 0x56, 0x43]; // Magic.
+        let mut ccd = vec![];
+        ccd.write_u32::<LE>(0x43563355).unwrap();
         ccd.write_u16::<LE>(status_code).unwrap();
         ccd.write_u16::<LE>(command_id).unwrap();
         ccd.write_u16::<LE>(scd_len).unwrap();
@@ -405,7 +380,6 @@ mod tests {
         assert!(ack.status().is_success());
         assert!(!ack.status().is_fatal());
         assert_eq!(ack.request_id(), 1);
-        assert_eq!(ack.scd_len(), scd.len() as u16);
         assert!(ack.custom_command_id().is_none());
 
         match ack.scd {
@@ -427,7 +401,6 @@ mod tests {
         assert!(ack.status().is_success());
         assert!(!ack.status().is_fatal());
         assert_eq!(ack.request_id(), 1);
-        assert_eq!(ack.scd_len(), scd.len() as u16);
         assert!(ack.custom_command_id().is_none());
 
         match ack.scd {
@@ -449,7 +422,6 @@ mod tests {
         assert!(ack.status().is_success());
         assert!(!ack.status().is_fatal());
         assert_eq!(ack.request_id(), 1);
-        assert_eq!(ack.scd_len(), scd.len() as u16);
         assert!(ack.custom_command_id().is_none());
 
         match ack.scd {
@@ -472,7 +444,6 @@ mod tests {
         assert!(ack.status().is_success());
         assert!(!ack.status().is_fatal());
         assert_eq!(ack.request_id(), 1);
-        assert_eq!(ack.scd_len(), scd.len() as u16);
         assert!(ack.custom_command_id().is_none());
 
         match ack.scd {
@@ -496,7 +467,6 @@ mod tests {
         assert!(ack.status().is_success());
         assert!(!ack.status().is_fatal());
         assert_eq!(ack.request_id(), 1);
-        assert_eq!(ack.scd_len(), scd.len() as u16);
         assert!(ack.custom_command_id().is_none());
 
         match ack.scd {

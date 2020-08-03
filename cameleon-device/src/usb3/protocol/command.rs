@@ -377,7 +377,8 @@ mod tests {
     const HEADER_LEN: u8 = 4 + 8; // Magic + CCD.
 
     fn serialize_header(command_id: &[u8; 2], scd_len: &[u8; 2], req_id: &[u8; 2]) -> Vec<u8> {
-        let mut ccd = vec![0x55, 0x33, 0x56, 0x43]; // Magic.
+        let mut ccd = vec![];
+        ccd.write_u32::<LE>(0x43563355).unwrap(); // Magic.
         ccd.extend(&[0x00, 0x40]); // Packet flag: Request Ack.
         ccd.extend(command_id);
         ccd.extend(scd_len);
