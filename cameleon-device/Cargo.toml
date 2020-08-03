@@ -22,3 +22,8 @@ usb3 = ["rusb"]
 name = "usb3_enumerate_device"
 path = "examples/usb3/enumerate_device.rs"
 required-features = ["usb3"]
+
+[[example]]
+name = "usb3_device_control"
+path = "examples/usb3/device_control.rs"
+required-features = ["usb3"]
