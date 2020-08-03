@@ -17,3 +17,8 @@ rusb = { version = "0.6.2", optional = true }
 default = ["usb3"]
 
 usb3 = ["rusb"]
+
+[[example]]
+name = "usb3_enumerate_device"
+path = "examples/usb3/enumerate_device.rs"
+required-features = ["usb3"]
