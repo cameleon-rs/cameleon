@@ -1,0 +1,5 @@
+[package]
+name = "cameleon-device"
+version = "0.1.0"
+authors = ["Cameleon Project Developers"]
+edition = "2018"
