@@ -2,7 +2,7 @@ use std::fmt;
 
 use semver::Version;
 
-use super::channel::{ControlChannel, ControlIfaceInfo};
+use super::channel::*;
 use super::Result;
 
 pub(super) type RusbDevHandle = rusb::DeviceHandle<rusb::GlobalContext>;
@@ -10,7 +10,10 @@ pub(super) type RusbDevice = rusb::Device<rusb::GlobalContext>;
 
 pub struct Device {
     device: RusbDevice,
+
     ctrl_iface_info: ControlIfaceInfo,
+    event_iface_info: Option<ReceiveIfaceInfo>,
+    stream_iface_info: Option<ReceiveIfaceInfo>,
 
     device_info: DeviceInfo,
 }
@@ -25,6 +28,24 @@ impl Device {
         ))
     }
 
+    pub fn event_channel(&self) -> Result<Option<ReceiveChannel>> {
+        let device_handle = self.device.open()?;
+
+        match &self.event_iface_info {
+            Some(iface_info) => Ok(Some(ReceiveChannel::new(device_handle, iface_info.clone()))),
+            None => Ok(None),
+        }
+    }
+
+    pub fn stream_channel(&self) -> Result<Option<ReceiveChannel>> {
+        let device_handle = self.device.open()?;
+
+        match &self.stream_iface_info {
+            Some(iface_info) => Ok(Some(ReceiveChannel::new(device_handle, iface_info.clone()))),
+            None => Ok(None),
+        }
+    }
+
     pub fn device_info(&self) -> &DeviceInfo {
         &self.device_info
     }
@@ -32,11 +53,15 @@ impl Device {
     pub(super) fn new(
         device: RusbDevice,
         ctrl_iface_info: ControlIfaceInfo,
+        event_iface_info: Option<ReceiveIfaceInfo>,
+        stream_iface_info: Option<ReceiveIfaceInfo>,
         device_info: DeviceInfo,
     ) -> Self {
         let device = Self {
             device,
             ctrl_iface_info,
+            event_iface_info,
+            stream_iface_info,
             device_info,
         };
 

@@ -1,7 +1,7 @@
 use byteorder::{ReadBytesExt, LE};
 use semver::Version;
 
-use super::channel::ControlIfaceInfo;
+use super::channel::{ControlIfaceInfo, ReceiveIfaceInfo};
 use super::device::{DeviceInfo, RusbDevHandle, RusbDevice, SupportedSpeed};
 use super::{Device, Error, Result};
 
@@ -62,19 +62,54 @@ impl DeviceBuilder {
             .interfaces()
             .skip_while(|iface| iface.number() != self.u3v_iad.first_interface);
 
+        // Retrieve control interface information.
         let ctrl_iface = interfaces.next().ok_or(Error::InvalidDevice)?;
+        let ctrl_iface_info = ControlIfaceInfo::new(&ctrl_iface)?;
 
-        let iface_desc = ctrl_iface
+        // Retrieve device information.
+        // This information is embedded next to control interface descriptor.
+        let ctrl_iface_desc = ctrl_iface
             .descriptors()
             .next()
             .ok_or(Error::InvalidDevice)?;
-        let ctrl_iface_info = ControlIfaceInfo::new(ctrl_iface.number(), &iface_desc)?;
-
-        let device_info_desc = iface_desc.extra().ok_or(Error::InvalidDevice)?;
+        let device_info_desc = ctrl_iface_desc.extra().ok_or(Error::InvalidDevice)?;
         let device_info_desc = DeviceInfoDescriptor::from_bytes(device_info_desc)?;
         let device_info = device_info_desc.interpret(&dev_channel)?;
 
-        Ok(Device::new(self.device, ctrl_iface_info, device_info))
+        // Retrieve event and stream interface information if exists.
+        let receive_ifaces = interfaces.filter_map(|iface| ReceiveIfaceInfo::new(&iface));
+        let mut receive_ifaces: Vec<(ReceiveIfaceInfo, ReceiveIfaceKind)> =
+            receive_ifaces.collect();
+
+        if receive_ifaces.len() > 2 {
+            return Err(Error::InvalidDevice);
+        }
+
+        let (event_iface, stream_iface) = match receive_ifaces.pop() {
+            Some((event_iface, ReceiveIfaceKind::Event)) => match receive_ifaces.pop() {
+                Some((stream_iface, ReceiveIfaceKind::Stream)) => {
+                    (Some(event_iface), Some(stream_iface))
+                }
+                None => (Some(event_iface), None),
+                _ => return Err(Error::InvalidDevice),
+            },
+            Some((stream_iface, ReceiveIfaceKind::Stream)) => match receive_ifaces.pop() {
+                Some((event_iface, ReceiveIfaceKind::Event)) => {
+                    (Some(event_iface), Some(stream_iface))
+                }
+                None => (None, Some(stream_iface)),
+                _ => return Err(Error::InvalidDevice),
+            },
+            None => (None, None),
+        };
+
+        Ok(Device::new(
+            self.device,
+            ctrl_iface_info,
+            event_iface,
+            stream_iface,
+            device_info,
+        ))
     }
 
     fn find_u3v_iad(
@@ -345,7 +380,10 @@ impl DeviceInfoDescriptor {
 impl ControlIfaceInfo {
     const CONTROL_IFACE_PROTOCOL: u8 = 0x00;
 
-    fn new(iface_number: u8, iface_desc: &rusb::InterfaceDescriptor) -> Result<Self> {
+    fn new(iface: &rusb::Interface) -> Result<Self> {
+        let iface_number = iface.number();
+        let iface_desc = iface.descriptors().next().ok_or(Error::InvalidDevice)?;
+
         if iface_desc.class_code() != MISCELLANEOUS_CLASS
             || iface_desc.sub_class_code() != USB3V_SUBCLASS
             || iface_desc.protocol_code() != Self::CONTROL_IFACE_PROTOCOL
@@ -357,32 +395,73 @@ impl ControlIfaceInfo {
         if eps.len() != 2 {
             return Err(Error::InvalidDevice);
         }
-
-        let ep0 = &eps[0];
-        let ep1 = &eps[1];
-        if ep0.transfer_type() != rusb::TransferType::Bulk
-            || ep1.transfer_type() != rusb::TransferType::Bulk
+        let ep_in = eps
+            .iter()
+            .find(|ep| ep.direction() == rusb::Direction::In)
+            .ok_or(Error::InvalidDevice)?;
+        let ep_out = eps
+            .iter()
+            .find(|ep| ep.direction() == rusb::Direction::Out)
+            .ok_or(Error::InvalidDevice)?;
+        if ep_in.transfer_type() != rusb::TransferType::Bulk
+            || ep_out.transfer_type() != rusb::TransferType::Bulk
         {
             return Err(Error::InvalidDevice);
         }
 
-        match ep0.direction() {
-            rusb::Direction::In => match ep1.direction() {
-                rusb::Direction::Out => Ok(Self {
-                    iface_number,
-                    bulk_in_ep: ep0.address(),
-                    bulk_out_ep: ep1.address(),
-                }),
-                _ => Err(Error::InvalidDevice),
-            },
-            rusb::Direction::Out => match ep1.direction() {
-                rusb::Direction::In => Ok(Self {
-                    iface_number,
-                    bulk_in_ep: ep1.address(),
-                    bulk_out_ep: ep0.address(),
-                }),
-                _ => Err(Error::InvalidDevice),
-            },
-        }
+        Ok(Self {
+            iface_number,
+            bulk_in_ep: ep_in.address(),
+            bulk_out_ep: ep_out.address(),
+        })
     }
+}
+
+impl ReceiveIfaceInfo {
+    const EVENT_IFACE_PROTOCOL: u8 = 0x01;
+    const STREAM_IFACE_PROTOCOL: u8 = 0x02;
+
+    fn new(iface: &rusb::Interface) -> Option<(Self, ReceiveIfaceKind)> {
+        let iface_number = iface.number();
+        for desc in iface.descriptors() {
+            if desc.setting_number() != 0 {
+                continue;
+            }
+
+            if desc.class_code() != MISCELLANEOUS_CLASS || desc.sub_class_code() != USB3V_SUBCLASS {
+                return None;
+            }
+
+            let iface_kind = match desc.protocol_code() {
+                Self::EVENT_IFACE_PROTOCOL => ReceiveIfaceKind::Event,
+                Self::STREAM_IFACE_PROTOCOL => ReceiveIfaceKind::Stream,
+                _ => return None,
+            };
+
+            if desc.num_endpoints() != 1 {
+                return None;
+            }
+            let ep = desc.endpoint_descriptors().next().unwrap();
+            if ep.transfer_type() != rusb::TransferType::Bulk
+                || ep.direction() != rusb::Direction::In
+            {
+                return None;
+            }
+
+            let iface_info = ReceiveIfaceInfo {
+                iface_number,
+                bulk_in_ep: ep.address(),
+            };
+
+            return Some((iface_info, iface_kind));
+        }
+
+        None
+    }
+}
+
+#[derive(PartialEq)]
+enum ReceiveIfaceKind {
+    Stream,
+    Event,
 }

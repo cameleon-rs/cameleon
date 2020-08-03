@@ -19,8 +19,8 @@ default = ["usb3"]
 usb3 = ["rusb"]
 
 [[example]]
-name = "usb3_enumerate_device"
-path = "examples/usb3/enumerate_device.rs"
+name = "usb3_device_enumeration"
+path = "examples/usb3/device_enumeration.rs"
 required-features = ["usb3"]
 
 [[example]]
