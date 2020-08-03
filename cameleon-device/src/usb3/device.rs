@@ -2,7 +2,7 @@ use std::fmt;
 
 use semver::Version;
 
-use super::control_handle::{ControlHandle, ControlIfaceInfo};
+use super::channel::{ControlChannel, ControlIfaceInfo};
 use super::Result;
 
 pub(super) type RusbDevHandle = rusb::DeviceHandle<rusb::GlobalContext>;
@@ -16,10 +16,10 @@ pub struct Device {
 }
 
 impl Device {
-    pub fn control_handle(&self) -> Result<ControlHandle> {
+    pub fn control_channel(&self) -> Result<ControlChannel> {
         let device_handle = self.device.open()?;
 
-        Ok(ControlHandle::new(
+        Ok(ControlChannel::new(
             device_handle,
             self.ctrl_iface_info.clone(),
         ))

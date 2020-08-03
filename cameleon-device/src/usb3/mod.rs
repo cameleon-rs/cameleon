@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use std::borrow::Cow;
 
-pub mod control_handle;
+pub mod channel;
 pub mod device;
 pub mod protocol;
 

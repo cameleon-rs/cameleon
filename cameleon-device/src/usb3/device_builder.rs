@@ -1,7 +1,7 @@
 use byteorder::{ReadBytesExt, LE};
 use semver::Version;
 
-use super::control_handle::ControlIfaceInfo;
+use super::channel::ControlIfaceInfo;
 use super::device::{DeviceInfo, RusbDevHandle, RusbDevice, SupportedSpeed};
 use super::{Device, Error, Result};
 
@@ -51,9 +51,9 @@ impl DeviceBuilder {
     }
 
     fn build(self) -> Result<Device> {
-        let mut dev_handle = self.device.open()?;
-        if dev_handle.active_configuration()? != self.config_desc.number() {
-            dev_handle.set_active_configuration(self.config_desc.number())?;
+        let mut dev_channel = self.device.open()?;
+        if dev_channel.active_configuration()? != self.config_desc.number() {
+            dev_channel.set_active_configuration(self.config_desc.number())?;
         }
 
         // Skip interfaces while control interface is appeared.
@@ -72,7 +72,7 @@ impl DeviceBuilder {
 
         let device_info_desc = iface_desc.extra().ok_or(Error::InvalidDevice)?;
         let device_info_desc = DeviceInfoDescriptor::from_bytes(device_info_desc)?;
-        let device_info = device_info_desc.interpret(&dev_handle)?;
+        let device_info = device_info_desc.interpret(&dev_channel)?;
 
         Ok(Device::new(self.device, ctrl_iface_info, device_info))
     }
@@ -282,7 +282,7 @@ impl DeviceInfoDescriptor {
         })
     }
 
-    fn interpret(&self, handle: &RusbDevHandle) -> Result<DeviceInfo> {
+    fn interpret(&self, channel: &RusbDevHandle) -> Result<DeviceInfo> {
         let gen_cp_version = Version::new(
             self.gen_cp_version_major.into(),
             self.gen_cp_version_minor.into(),
@@ -295,22 +295,22 @@ impl DeviceInfoDescriptor {
             0,
         );
 
-        let guid = handle.read_string_descriptor_ascii(self.guid_idx)?;
-        let vendor_name = handle.read_string_descriptor_ascii(self.vendor_name_idx)?;
-        let model_name = handle.read_string_descriptor_ascii(self.model_name_idx)?;
+        let guid = channel.read_string_descriptor_ascii(self.guid_idx)?;
+        let vendor_name = channel.read_string_descriptor_ascii(self.vendor_name_idx)?;
+        let model_name = channel.read_string_descriptor_ascii(self.model_name_idx)?;
         let family_name = if self.family_name_idx == 0 {
             None
         } else {
-            Some(handle.read_string_descriptor_ascii(self.family_name_idx)?)
+            Some(channel.read_string_descriptor_ascii(self.family_name_idx)?)
         };
 
-        let device_version = handle.read_string_descriptor_ascii(self.device_version_idx)?;
-        let manufacture_info = handle.read_string_descriptor_ascii(self.manufacture_info_idx)?;
-        let serial_number = handle.read_string_descriptor_ascii(self.serial_number_idx)?;
+        let device_version = channel.read_string_descriptor_ascii(self.device_version_idx)?;
+        let manufacture_info = channel.read_string_descriptor_ascii(self.manufacture_info_idx)?;
+        let serial_number = channel.read_string_descriptor_ascii(self.serial_number_idx)?;
         let user_defined_name = if self.user_defined_name_idx == 0 {
             None
         } else {
-            Some(handle.read_string_descriptor_ascii(self.user_defined_name_idx)?)
+            Some(channel.read_string_descriptor_ascii(self.user_defined_name_idx)?)
         };
         let supported_speed = if self.supported_speed_mask >> 4 & 0b1 == 1 {
             SupportedSpeed::SuperSpeedPlus

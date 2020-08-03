@@ -3,13 +3,13 @@ use std::time;
 use super::device::RusbDevHandle;
 use super::Result;
 
-pub struct ControlHandle {
+pub struct ControlChannel {
     device_handle: RusbDevHandle,
 
     iface_info: ControlIfaceInfo,
 }
 
-impl ControlHandle {
+impl ControlChannel {
     pub(super) fn new(device_handle: RusbDevHandle, iface_info: ControlIfaceInfo) -> Self {
         Self {
             device_handle,
@@ -31,16 +31,16 @@ impl ControlHandle {
         Ok(())
     }
 
-    pub fn read(&self, buf: &mut [u8], timeout: time::Duration) -> Result<usize> {
-        Ok(self
-            .device_handle
-            .read_bulk(self.iface_info.bulk_in_ep, buf, timeout)?)
-    }
-
-    pub fn write(&self, buf: &[u8], timeout: time::Duration) -> Result<usize> {
+    pub fn send(&self, buf: &[u8], timeout: time::Duration) -> Result<usize> {
         Ok(self
             .device_handle
             .write_bulk(self.iface_info.bulk_out_ep, buf, timeout)?)
+    }
+
+    pub fn recv(&self, buf: &mut [u8], timeout: time::Duration) -> Result<usize> {
+        Ok(self
+            .device_handle
+            .read_bulk(self.iface_info.bulk_in_ep, buf, timeout)?)
     }
 
     pub fn clear_halt(&mut self) -> Result<()> {
@@ -50,7 +50,7 @@ impl ControlHandle {
     }
 }
 
-impl Drop for ControlHandle {
+impl Drop for ControlChannel {
     fn drop(&mut self) {
         if let Err(_err) = self.close() {
             // TODO: logger

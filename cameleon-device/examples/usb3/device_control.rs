@@ -21,11 +21,11 @@ fn main() {
 
     let device = &devices[0];
 
-    // Get control handle of the device.
-    let mut control_handle = device.control_handle().unwrap();
+    // Get control channel of the device.
+    let mut control_channel = device.control_channel().unwrap();
 
-    // Open the handle to allow communication with the device.
-    control_handle.open().unwrap();
+    // Open the channel to allow communication with the device.
+    control_channel.open().unwrap();
 
     // TODO: Need helper for accessing BRM.
     // TODO: Get Maximum ack length from command.
@@ -36,14 +36,14 @@ fn main() {
     command.serialize(&mut serialized_command).unwrap();
 
     //  Send read request to the device.
-    control_handle
-        .write(&serialized_command, Duration::from_millis(100))
+    control_channel
+        .send(&serialized_command, Duration::from_millis(100))
         .unwrap();
 
     // Receive Acknowledge packet from device.
     let mut serialized_ack = vec![0; command.maximum_ack_len().unwrap()];
-    control_handle
-        .read(&mut serialized_ack, Duration::from_millis(100))
+    control_channel
+        .recv(&mut serialized_ack, Duration::from_millis(100))
         .unwrap();
     // Parse Acknowledge packet.
     let ack = usb3::protocol::AckPacket::parse(&serialized_ack).unwrap();
