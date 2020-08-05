@@ -147,7 +147,7 @@ impl Status {
     fn parse(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
         let code = cursor.read_u16::<LE>()?;
 
-        let namespace = code >> 13 & 0b11;
+        let namespace = (code >> 13) & 0x11;
         match namespace {
             0b00 => Self::parse_gencp_status(code),
             0b01 => Self::parse_usb_status(code),
@@ -164,7 +164,7 @@ impl Status {
     fn parse_gencp_status(code: u16) -> Result<Self> {
         use GenCpStatus::*;
 
-        debug_assert!(code >> 13 & 0b11 == 0b00);
+        debug_assert!((code >> 13).trailing_zeros() >= 2);
 
         let status = match code {
             0x0000 => Success,

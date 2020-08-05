@@ -29,19 +29,21 @@ impl Device {
     }
 
     pub fn event_channel(&self) -> Result<Option<ReceiveChannel>> {
-        let device_handle = self.device.open()?;
-
         match &self.event_iface_info {
-            Some(iface_info) => Ok(Some(ReceiveChannel::new(device_handle, iface_info.clone()))),
+            Some(iface_info) => {
+                let device_handle = self.device.open()?;
+                Ok(Some(ReceiveChannel::new(device_handle, iface_info.clone())))
+            }
             None => Ok(None),
         }
     }
 
     pub fn stream_channel(&self) -> Result<Option<ReceiveChannel>> {
-        let device_handle = self.device.open()?;
-
         match &self.stream_iface_info {
-            Some(iface_info) => Ok(Some(ReceiveChannel::new(device_handle, iface_info.clone()))),
+            Some(iface_info) => {
+                let device_handle = self.device.open()?;
+                Ok(Some(ReceiveChannel::new(device_handle, iface_info.clone())))
+            }
             None => Ok(None),
         }
     }

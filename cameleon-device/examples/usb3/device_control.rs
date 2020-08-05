@@ -8,11 +8,7 @@ use cameleon_device::usb3;
 
 fn main() {
     // Enumerate device connected to the host.
-    let devices: Vec<usb3::Device> = usb3::enumerate_device()
-        .unwrap()
-        .into_iter()
-        .filter_map(|device| device.ok())
-        .collect();
+    let devices: Vec<usb3::Device> = usb3::enumerate_device().unwrap().into_iter().collect();
 
     if devices.is_empty() {
         println!("no device found");

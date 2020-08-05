@@ -15,13 +15,15 @@ const IAD_FUNCTION_PROTOCOL: u8 = 0x00;
 
 const USB3V_SUBCLASS: u8 = 0x05;
 
-pub fn enumerate_device() -> Result<Vec<Result<Device>>> {
+pub fn enumerate_device() -> Result<Vec<Device>> {
     let rusb_device_list = rusb::DeviceList::new()?;
     let builders = rusb_device_list
         .iter()
         .filter_map(|dev| DeviceBuilder::new(dev).ok().flatten());
 
-    Ok(builders.map(|builder| builder.build()).collect())
+    Ok(builders
+        .filter_map(|builder| builder.build().ok())
+        .collect())
 }
 
 struct DeviceBuilder {
@@ -51,6 +53,7 @@ impl DeviceBuilder {
     }
 
     fn build(self) -> Result<Device> {
+        // TODO: Log it when device is broken or invalid.
         let mut dev_channel = self.device.open()?;
         if dev_channel.active_configuration()? != self.config_desc.number() {
             dev_channel.set_active_configuration(self.config_desc.number())?;

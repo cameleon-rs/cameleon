@@ -9,6 +9,6 @@ fn main() {
     }
 
     for device in devices {
-        println! {"{}", device.unwrap().device_info()};
+        println! {"{}", device.device_info()};
     }
 }

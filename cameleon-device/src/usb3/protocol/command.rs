@@ -27,7 +27,7 @@ impl<'a> CommandPacket<'a> {
         Ok(())
     }
 
-    pub fn len(&self) -> usize {
+    pub fn cmd_len(&self) -> usize {
         // Magic(4bytes) + ccd + scd
         4 + self.ccd.len() as usize + self.scd.len() as usize
     }
@@ -391,7 +391,7 @@ mod tests {
         let command = ReadMem::new(0x0004, 64).finalize(1);
         let scd_len = 12;
 
-        assert_eq!(command.len(), (HEADER_LEN + scd_len).into());
+        assert_eq!(command.cmd_len(), (HEADER_LEN + scd_len).into());
         assert_eq!(command.request_id(), 1);
 
         let mut buf = vec![];
@@ -409,7 +409,7 @@ mod tests {
         let command = WriteMem::new(0x0004, &[0x01, 0x02, 0x03]).finalize(1);
         let scd_len = 11;
 
-        assert_eq!(command.len(), (HEADER_LEN + scd_len).into());
+        assert_eq!(command.cmd_len(), (HEADER_LEN + scd_len).into());
         assert_eq!(command.request_id(), 1);
 
         let mut buf = vec![];
@@ -430,7 +430,7 @@ mod tests {
         let command = ReadMemStacked::new(&read_mems).finalize(1);
         let scd_len = 12 * 2;
 
-        assert_eq!(command.len(), (HEADER_LEN + scd_len).into());
+        assert_eq!(command.cmd_len(), (HEADER_LEN + scd_len).into());
         assert_eq!(command.request_id(), 1);
 
         let mut buf = vec![];
@@ -455,7 +455,7 @@ mod tests {
         let command = WriteMemStacked::new(&write_mems).finalize(1);
         let scd_len = (12 + 4) * 2;
 
-        assert_eq!(command.len(), (HEADER_LEN + scd_len).into());
+        assert_eq!(command.cmd_len(), (HEADER_LEN + scd_len).into());
         assert_eq!(command.request_id(), 1);
 
         let mut buf = vec![];
