@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - "**"
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  lint:
+    name: Rustfmt and clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          profile: minimal
+          components: rustfmt, clippy
+      - run: cargo fmt --all -- --check --color always
+      - run: cargo clippy --workspace --all-targets --all-features --color always -- -D warnings
+
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          #  - macos-latest
+          - windows-latest
+        rust:
+          - stable
+          - beta
+          - nightly
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install libusb
+        run: |
+          if [[ ${{ matrix.os }} == "ubuntu-latest" ]]; then
+            sudo apt install pkg-config libusb-1.0-0-dev
+          elif [[ ${{ matrix.os }} == "macos-latest" ]]; then
+            brew install pkg-config libusb
+          elif [[ ${{ matrix.os }} == "windows-latest" ]]; then
+            git clone https://github.com/microsoft/vcpkg.git --depth 1
+            vcpkg/bootstrap-vcpkg.bat
+            vcpkg/vcpkg integrate install
+            vcpkg/vcpkg install libusb
+          fi
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+      - run: cargo test --workspace --all-targets --all-features --color always
