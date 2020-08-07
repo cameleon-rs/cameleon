@@ -259,7 +259,7 @@ struct DeviceInfoDescriptor {
     model_name_idx: u8,
     family_name_idx: u8,
     device_version_idx: u8,
-    manufacture_info_idx: u8,
+    manufacturer_info_idx: u8,
     serial_number_idx: u8,
     user_defined_name_idx: u8,
     supported_speed_mask: u8,
@@ -295,7 +295,7 @@ impl DeviceInfoDescriptor {
         let model_name_idx = bytes.read_u8()?;
         let family_name_idx = bytes.read_u8()?;
         let device_version_idx = bytes.read_u8()?;
-        let manufacture_info_idx = bytes.read_u8()?;
+        let manufacturer_info_idx = bytes.read_u8()?;
         let serial_number_idx = bytes.read_u8()?;
         let user_defined_name_idx = bytes.read_u8()?;
         let supported_speed_mask = bytes.read_u8()?;
@@ -313,7 +313,7 @@ impl DeviceInfoDescriptor {
             model_name_idx,
             family_name_idx,
             device_version_idx,
-            manufacture_info_idx,
+            manufacturer_info_idx,
             serial_number_idx,
             user_defined_name_idx,
             supported_speed_mask,
@@ -343,7 +343,7 @@ impl DeviceInfoDescriptor {
         };
 
         let device_version = channel.read_string_descriptor_ascii(self.device_version_idx)?;
-        let manufacture_info = channel.read_string_descriptor_ascii(self.manufacture_info_idx)?;
+        let manufacturer_info = channel.read_string_descriptor_ascii(self.manufacturer_info_idx)?;
         let serial_number = channel.read_string_descriptor_ascii(self.serial_number_idx)?;
         let user_defined_name = if self.user_defined_name_idx == 0 {
             None
@@ -372,7 +372,7 @@ impl DeviceInfoDescriptor {
             model_name,
             family_name,
             device_version,
-            manufacture_info,
+            manufacturer_info,
             serial_number,
             user_defined_name,
             supported_speed,

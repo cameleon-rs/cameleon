@@ -106,16 +106,16 @@ pub struct DeviceInfo {
     /// Model name of the device.
     pub model_name: String,
 
-    /// A human readable name referring to multiple models of a single manufacture.
+    /// A human readable name referring to multiple models of a single manufacturer.
     pub family_name: Option<String>,
 
     /// Manufacture specific device version.
     /// An application can't make any assumptions of this version.
     pub device_version: String,
 
-    /// Manufacture specific information.
+    /// Manufacturer specific information.
     /// This field is optional.
-    pub manufacture_info: String,
+    pub manufacturer_info: String,
 
     /// Serial number of the device.
     pub serial_number: String,
@@ -159,7 +159,7 @@ impl fmt::Display for DeviceInfo {
         } else {
             writeln!(f, "Family Name: N/A")?;
         }
-        writeln!(f, "Manufacture Information: {}", self.manufacture_info)?;
+        writeln!(f, "Manufacture Information: {}", self.manufacturer_info)?;
         writeln!(f, "Serial Number: {}", self.serial_number)?;
         if let Some(user_defined_name) = &self.user_defined_name {
             writeln!(f, "User Defined Name: {}", user_defined_name)?;
