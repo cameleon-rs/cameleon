@@ -4,7 +4,7 @@ use std::io::Write;
 use byteorder::{WriteBytesExt, LE};
 use semver::Version;
 
-use super::{EmulatorError, Result};
+use super::{EmulatorError, EmulatorResult};
 
 pub struct Memory(Vec<u8>);
 
@@ -22,13 +22,13 @@ impl Memory {
         &self.0
     }
 
-    pub(super) fn read(&mut self, address: u64) -> Result<u8> {
+    pub(super) fn read(&mut self, address: u64) -> EmulatorResult<u8> {
         let address = address as usize;
         self.verify_address(address)?;
         Ok(self.0[address])
     }
 
-    pub(super) fn write(&mut self, address: u64, data: u8) -> Result<()> {
+    pub(super) fn write(&mut self, address: u64, data: u8) -> EmulatorResult<()> {
         let address = address as usize;
         self.verify_address(address)?;
 
@@ -36,7 +36,7 @@ impl Memory {
         Ok(())
     }
 
-    fn verify_address(&self, address: usize) -> Result<()> {
+    fn verify_address(&self, address: usize) -> EmulatorResult<()> {
         if self.0.len() < address {
             Err(EmulatorError::InvalidAddress)
         } else {
@@ -89,8 +89,25 @@ pub struct ABRM {
     device_software_interface_version: &'static str,
 }
 
+macro_rules! string_setter {
+    ($fn_name:ident, $prop:ident) => {
+        pub fn $fn_name(&mut self, name: &str) -> EmulatorResult<()> {
+            verify_str(name)?;
+            self.$prop = name.to_owned().into();
+            Ok(())
+        }
+    };
+}
+
 impl ABRM {
-    fn flush(&self, mut memory: impl Write) -> Result<()> {
+    string_setter!(set_model_name, model_name);
+    string_setter!(set_family_name, family_name);
+    string_setter!(set_device_version, device_version);
+    string_setter!(set_manufacturer_info, manufacturer_info);
+    string_setter!(set_serial_number, serial_number);
+    string_setter!(set_user_defined_name, user_defined_name);
+
+    fn flush(&self, mut memory: impl Write) -> EmulatorResult<()> {
         memory.write_u16::<LE>(self.gen_cp_version.minor as u16)?;
         memory.write_u16::<LE>(self.gen_cp_version.major as u16)?;
         write_str(&mut memory, &self.model_name)?;
@@ -147,7 +164,7 @@ impl Default for ABRM {
     }
 }
 
-fn verify_str(s: &str) -> Result<()> {
+fn verify_str(s: &str) -> EmulatorResult<()> {
     const STRING_LENGTH_LIMIT: usize = 64;
 
     if !s.is_ascii() {
@@ -162,8 +179,8 @@ fn verify_str(s: &str) -> Result<()> {
     Ok(())
 }
 
-fn write_str(w: &mut impl Write, s: &str) -> Result<()> {
+fn write_str(w: &mut impl Write, s: &str) -> EmulatorResult<()> {
     verify_str(s)?;
-    w.write(s.as_bytes())?;
+    w.write_all(s.as_bytes())?;
     Ok(w.write_u8(0)?) // 0 terminate.
 }

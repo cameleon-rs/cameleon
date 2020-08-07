@@ -1,9 +1,9 @@
 pub mod memory;
 
-use thiserror::Error;
+pub use thiserror::Error;
 
 #[derive(Debug, Error)]
-enum EmulatorError {
+pub enum EmulatorError {
     #[error("attempt to access not existed memory location")]
     InvalidAddress,
 
@@ -14,4 +14,4 @@ enum EmulatorError {
     InvalidString(&'static str),
 }
 
-type Result<T> = std::result::Result<T, EmulatorError>;
+pub type EmulatorResult<T> = std::result::Result<T, EmulatorError>;
