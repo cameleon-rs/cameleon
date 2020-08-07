@@ -1,4 +1,5 @@
-pub mod memory;
+mod memory;
+mod memory_protection;
 
 pub use thiserror::Error;
 

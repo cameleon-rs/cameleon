@@ -1,49 +1,11 @@
 use std::borrow::Cow;
 use std::io::Write;
+use std::ops::Index;
 
 use byteorder::{WriteBytesExt, LE};
 use semver::Version;
 
 use super::{EmulatorError, EmulatorResult};
-
-pub struct Memory(Vec<u8>);
-
-impl Memory {
-    pub(super) fn new(size: usize) -> Self {
-        let raw = vec![0; size];
-        Self(raw)
-    }
-
-    pub(super) fn from_raw(raw: Vec<u8>) -> Self {
-        Self(raw)
-    }
-
-    pub(super) fn dump(&self) -> &[u8] {
-        &self.0
-    }
-
-    pub(super) fn read(&mut self, address: u64) -> EmulatorResult<u8> {
-        let address = address as usize;
-        self.verify_address(address)?;
-        Ok(self.0[address])
-    }
-
-    pub(super) fn write(&mut self, address: u64, data: u8) -> EmulatorResult<()> {
-        let address = address as usize;
-        self.verify_address(address)?;
-
-        self.0[address] = data;
-        Ok(())
-    }
-
-    fn verify_address(&self, address: usize) -> EmulatorResult<()> {
-        if self.0.len() < address {
-            Err(EmulatorError::InvalidAddress)
-        } else {
-            Ok(())
-        }
-    }
-}
 
 const SBRM_ADDRESS: u64 = 0xffff;
 
@@ -107,7 +69,7 @@ impl ABRM {
     string_setter!(set_serial_number, serial_number);
     string_setter!(set_user_defined_name, user_defined_name);
 
-    fn flush(&self, mut memory: impl Write) -> EmulatorResult<()> {
+    pub(super) fn flush(&self, mut memory: impl Write) -> EmulatorResult<()> {
         memory.write_u16::<LE>(self.gen_cp_version.minor as u16)?;
         memory.write_u16::<LE>(self.gen_cp_version.major as u16)?;
         write_str(&mut memory, &self.model_name)?;
