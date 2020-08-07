@@ -5,6 +5,7 @@ use std::borrow::Cow;
 pub mod channel;
 pub mod device;
 pub mod protocol;
+pub mod register_map;
 
 mod device_builder;
 
