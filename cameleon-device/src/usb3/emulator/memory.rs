@@ -1,45 +1,44 @@
 use std::borrow::Cow;
 use std::io::Write;
 
-use super::{EmulatorError, Result};
+use byteorder::{WriteBytesExt, LE};
 use semver::Version;
 
-pub struct Memory {
-    raw: Vec<u8>,
-}
+use super::{EmulatorError, Result};
+
+pub struct Memory(Vec<u8>);
 
 impl Memory {
     pub(super) fn new(size: usize) -> Self {
         let raw = vec![0; size];
-        let mut memory = Self { raw };
-        memory
+        Self(raw)
     }
 
     pub(super) fn from_raw(raw: Vec<u8>) -> Self {
-        Self { raw }
+        Self(raw)
     }
 
     pub(super) fn dump(&self) -> &[u8] {
-        &self.raw
+        &self.0
     }
 
     pub(super) fn read(&mut self, address: u64) -> Result<u8> {
         let address = address as usize;
-        self.check_access(address)?;
-        Ok(self.raw[address])
+        self.verify_address(address)?;
+        Ok(self.0[address])
     }
 
     pub(super) fn write(&mut self, address: u64, data: u8) -> Result<()> {
         let address = address as usize;
-        self.check_access(address)?;
+        self.verify_address(address)?;
 
-        self.raw[address] = data;
+        self.0[address] = data;
         Ok(())
     }
 
-    fn check_access(&self, address: usize) -> Result<()> {
-        if self.raw.len() < address {
-            Err(EmulatorError::MemoryAccessViolation)
+    fn verify_address(&self, address: usize) -> Result<()> {
+        if self.0.len() < address {
+            Err(EmulatorError::InvalidAddress)
         } else {
             Ok(())
         }
@@ -50,7 +49,7 @@ const SBRM_ADDRESS: u64 = 0xffff;
 
 /// offset | value | Description.
 ///      0 |     1 | User Defined Name is supported.
-///      1 |     0 | Access Priviledge and Heartbeat are NOT supported.
+///      1 |     0 | Access Privilege and Heartbeat are NOT supported.
 ///      2 |     0 | Message Channel is NOT supported.
 ///      3 |     1 | Timestampl is supported.
 ///      4 |  0000 | String Encoding (Ascii).
@@ -91,15 +90,38 @@ pub struct ABRM {
 }
 
 impl ABRM {
-    fn flush(&self, memory: impl Write) -> Result<()> {
-        todo!();
+    fn flush(&self, mut memory: impl Write) -> Result<()> {
+        memory.write_u16::<LE>(self.gen_cp_version.minor as u16)?;
+        memory.write_u16::<LE>(self.gen_cp_version.major as u16)?;
+        write_str(&mut memory, &self.model_name)?;
+        write_str(&mut memory, &self.family_name)?;
+        write_str(&mut memory, &self.device_version)?;
+        write_str(&mut memory, &self.manufacturer_info)?;
+        write_str(&mut memory, &self.serial_number)?;
+        write_str(&mut memory, &self.user_defined_name)?;
+        memory.write_u64::<LE>(self.device_capability)?;
+        memory.write_u32::<LE>(self.maximum_device_response_time)?;
+        memory.write_u64::<LE>(self.manifest_table_address)?;
+        memory.write_u64::<LE>(self.sbrm_address)?;
+        memory.write_u64::<LE>(self.device_configuration)?;
+        memory.write_u32::<LE>(self.heartbeat_timeout)?;
+        memory.write_u32::<LE>(self.message_channel_id)?;
+        memory.write_u64::<LE>(self.timestamp)?;
+        memory.write_u32::<LE>(self.timestamp_latch)?;
+        memory.write_u64::<LE>(self.timestamp_increment)?;
+        memory.write_u32::<LE>(self.access_privilege)?;
+        memory.write_u32::<LE>(self.protocol_endianess)?;
+        memory.write_u32::<LE>(self.implementation_endianess)?;
+        write_str(&mut memory, self.device_software_interface_version)?;
+
+        Ok(())
     }
 }
 
 impl Default for ABRM {
     fn default() -> Self {
         Self {
-            gen_cp_version: Version::new(1, 2, 0),
+            gen_cp_version: Version::new(1, 3, 0),
             manufacturer_name: "cameleon".into(),
             model_name: "cameleon model".into(),
             family_name: "cameleon family".into(),
@@ -109,7 +131,7 @@ impl Default for ABRM {
             user_defined_name: "none".into(),
             device_capability: DEVICE_CAPABILITY,
             maximum_device_response_time: 100,
-            manifest_table_address: 0, // TODO: Define manifest address,
+            manifest_table_address: 0, // TODO: Define manifest table address.
             sbrm_address: SBRM_ADDRESS,
             device_configuration: 0b00,
             heartbeat_timeout: 0,
@@ -118,9 +140,30 @@ impl Default for ABRM {
             timestamp_latch: 0,
             timestamp_increment: 1000, // Dummy value indicating device clock runs at 1MHz.
             access_privilege: 0,
-            protocol_endianess: 0xffff,       // Big endian.
-            implementation_endianess: 0xffff, // Big endian.
+            protocol_endianess: 0xffff,       // Little endian.
+            implementation_endianess: 0xffff, // Little endian.
             device_software_interface_version: "1.0.0",
         }
     }
+}
+
+fn verify_str(s: &str) -> Result<()> {
+    const STRING_LENGTH_LIMIT: usize = 64;
+
+    if !s.is_ascii() {
+        return Err(EmulatorError::InvalidString("string format is not ascii"));
+    }
+
+    // String in register must be 0 terminated.
+    if s.as_bytes().len() > STRING_LENGTH_LIMIT - 1 {
+        return Err(EmulatorError::InvalidString("string is too long."));
+    }
+
+    Ok(())
+}
+
+fn write_str(w: &mut impl Write, s: &str) -> Result<()> {
+    verify_str(s)?;
+    w.write(s.as_bytes())?;
+    Ok(w.write_u8(0)?) // 0 terminate.
 }
