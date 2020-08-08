@@ -8,6 +8,10 @@ use super::Result;
 pub(super) type RusbDevHandle = rusb::DeviceHandle<rusb::GlobalContext>;
 pub(super) type RusbDevice = rusb::Device<rusb::GlobalContext>;
 
+/// Entry point to the connected device.
+/// This device itself doesn't communicate with the connected device but provide basic device
+/// information and channels to communicate with the connected device. So it's valid to use
+/// provided channels even after dropping this instance.
 pub struct Device {
     device: RusbDevice,
 

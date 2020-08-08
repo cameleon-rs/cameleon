@@ -6,6 +6,7 @@ use super::Result;
 pub struct ControlChannel {
     device_handle: RusbDevHandle,
     iface_info: ControlIfaceInfo,
+    is_open: bool,
 }
 
 impl ControlChannel {
@@ -13,21 +14,32 @@ impl ControlChannel {
         Self {
             device_handle,
             iface_info,
+            is_open: false,
         }
     }
 
     pub fn open(&mut self) -> Result<()> {
-        self.device_handle
-            .claim_interface(self.iface_info.iface_number)?;
+        if !self.is_open() {
+            self.device_handle
+                .claim_interface(self.iface_info.iface_number)?;
+            self.is_open = true;
+        }
 
         Ok(())
     }
 
     pub fn close(&mut self) -> Result<()> {
-        self.device_handle
-            .release_interface(self.iface_info.iface_number)?;
+        if self.is_open() {
+            self.device_handle
+                .release_interface(self.iface_info.iface_number)?;
+        }
 
+        self.is_open = false;
         Ok(())
+    }
+
+    pub fn is_open(&self) -> bool {
+        self.is_open
     }
 
     pub fn send(&self, buf: &[u8], timeout: time::Duration) -> Result<usize> {
@@ -49,18 +61,10 @@ impl ControlChannel {
     }
 }
 
-impl Drop for ControlChannel {
-    fn drop(&mut self) {
-        if let Err(_err) = self.close() {
-            // TODO: logger
-            // self.logger.warn(err);
-        }
-    }
-}
-
 pub struct ReceiveChannel {
     device_handle: RusbDevHandle,
     iface_info: ReceiveIfaceInfo,
+    is_open: bool,
 }
 
 impl ReceiveChannel {
@@ -68,21 +72,32 @@ impl ReceiveChannel {
         Self {
             device_handle,
             iface_info,
+            is_open: false,
         }
     }
 
     pub fn open(&mut self) -> Result<()> {
-        self.device_handle
-            .claim_interface(self.iface_info.iface_number)?;
+        if !self.is_open() {
+            self.device_handle
+                .claim_interface(self.iface_info.iface_number)?;
+            self.is_open = true;
+        }
 
         Ok(())
     }
 
     pub fn close(&mut self) -> Result<()> {
-        self.device_handle
-            .release_interface(self.iface_info.iface_number)?;
+        if self.is_open() {
+            self.device_handle
+                .release_interface(self.iface_info.iface_number)?;
+        }
 
+        self.is_open = false;
         Ok(())
+    }
+
+    pub fn is_open(&self) -> bool {
+        self.is_open
     }
 
     pub fn recv(&self, buf: &mut [u8], timeout: time::Duration) -> Result<usize> {
