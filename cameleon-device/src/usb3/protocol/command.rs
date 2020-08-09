@@ -312,7 +312,12 @@ impl<'a> CommandScd for ReadMemStacked<'a> {
     }
 
     fn maximum_ack_scd_len(&self) -> Option<usize> {
-        todo!();
+        // Corresponding each ack scd length is (address(8bytes) + reserved(2bytes) + read_length).
+        Some(
+            self.entries
+                .iter()
+                .fold(0, |acc, ent| acc + 10 + ent.read_length as usize),
+        )
     }
 }
 
@@ -343,7 +348,8 @@ impl<'a> CommandScd for WriteMemStacked<'a> {
     }
 
     fn maximum_ack_scd_len(&self) -> Option<usize> {
-        todo!();
+        // Corresponding each ack length is (reserved(2bytes) + writte_length(2bytes)).
+        Some(self.entries.len() * 4)
     }
 }
 
