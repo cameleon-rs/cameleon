@@ -88,20 +88,20 @@ impl AckCcd {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Status {
-    code: u16,
-    kind: StatusKind,
+    pub(crate) code: u16,
+    pub(crate) kind: StatusKind,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StatusKind {
     GenCp(GenCpStatus),
     UsbSpecific(UsbSpecificStatus),
     DeviceSpecific,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum GenCpStatus {
     /// Success.
     Success,
@@ -140,7 +140,7 @@ pub enum GenCpStatus {
     GenericError,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum UsbSpecificStatus {
     /// Resend command is not supported by USB device.
     ResendNotSupported,
@@ -267,11 +267,15 @@ impl ScdKind {
             0x0805 => Ok(ScdKind::Pending),
             0x0807 => Ok(ScdKind::ReadMemStacked),
             0x0809 => Ok(ScdKind::WriteMemStacked),
-            _ if (id >> 15 == 1 && id & 1 == 1) => Ok(ScdKind::Custom(id)),
+            _ if Self::is_custom(id) => Ok(ScdKind::Custom(id)),
             _ => Err(Error::InvalidPacket(
                 format!("unknown ack command id {:#X}", id).into(),
             )),
         }
+    }
+
+    pub(crate) fn is_custom(id: u16) -> bool {
+        id >> 15 == 1 && id & 1 == 1
     }
 }
 
@@ -299,7 +303,7 @@ pub struct WriteMemStacked {
     pub lengths: Vec<u16>,
 }
 
-pub struct Custom<'a> {
+pub struct CustomAck<'a> {
     pub data: &'a [u8],
 }
 
@@ -372,7 +376,7 @@ impl<'a> ParseScd<'a> for WriteMemStacked {
     }
 }
 
-impl<'a> ParseScd<'a> for Custom<'a> {
+impl<'a> ParseScd<'a> for CustomAck<'a> {
     fn parse(buf: &'a [u8], ccd: &AckCcd) -> Result<Self> {
         let data = parse_util::read_bytes(&mut Cursor::new(buf), ccd.scd_len)?;
 
