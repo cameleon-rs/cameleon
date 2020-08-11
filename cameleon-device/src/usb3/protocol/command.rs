@@ -180,14 +180,8 @@ pub struct CustomCommand<'a> {
 
 impl<'a> CustomCommand<'a> {
     pub fn new(command_id: u16, data: &'a [u8]) -> Result<Self> {
-        if command_id >> 15 != 1 {
-            return Err(Error::InvalidPacket(
-                "custom command id must set MSB to 1".into(),
-            ));
-        }
-
-        if command_id.trailing_zeros() < 1 {
-            return Err(Error::InvalidPacket("command id must set LSB to 0".into()));
+        if !ScdKind::is_custom(command_id) {
+            return Err(Error::InvalidPacket("invalid custom command id".into()));
         }
 
         let data_len: u16 = into_scd_len(data.len())?;
@@ -244,7 +238,7 @@ pub enum CommandFlag {
 }
 
 impl CommandFlag {
-    pub fn serialize(&self, mut buf: impl Write) -> Result<()> {
+    fn serialize(&self, mut buf: impl Write) -> Result<()> {
         let flag_id = match self {
             Self::RequestAck => 1 << 14,
         };
@@ -252,7 +246,7 @@ impl CommandFlag {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ScdKind {
     ReadMem,
     WriteMem,
@@ -262,15 +256,20 @@ pub enum ScdKind {
 }
 
 impl ScdKind {
-    pub fn serialize(&self, mut buf: impl Write) -> Result<()> {
+    fn serialize(self, mut buf: impl Write) -> Result<()> {
         let kind_id = match self {
             Self::ReadMem => 0x0800,
             Self::WriteMem => 0x0802,
             Self::ReadMemStacked => 0x0806,
             Self::WriteMemStacked => 0x0808,
-            Self::Custom(id) => *id,
+            Self::Custom(id) if Self::is_custom(id) => id,
+            _ => return Err(Error::InvalidPacket("invalid scd kind id".into())),
         };
         Ok(buf.write_u16::<LE>(kind_id)?)
+    }
+
+    pub(crate) fn is_custom(id: u16) -> bool {
+        id >> 15 == 1 && id.trailing_zeros() > 0
     }
 }
 
