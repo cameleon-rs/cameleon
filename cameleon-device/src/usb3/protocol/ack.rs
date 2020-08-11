@@ -9,8 +9,8 @@ use super::parse_util;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AckPacket<'a> {
-    ccd: AckCcd,
-    pub scd: Option<AckScd<'a>>,
+    pub ccd: AckCcd,
+    pub raw_scd: &'a [u8],
 }
 
 impl<'a> AckPacket<'a> {
@@ -23,13 +23,20 @@ impl<'a> AckPacket<'a> {
 
         let ccd = AckCcd::parse(&mut cursor)?;
 
-        let scd = if ccd.status.is_success() {
-            Some(AckScd::parse(&mut cursor, &ccd)?)
-        } else {
-            None
-        };
+        let raw_scd = &cursor.get_ref()[cursor.position() as usize..];
+        Ok(Self { ccd, raw_scd })
+    }
 
-        Ok(Self { ccd, scd })
+    pub fn scd_kind(&self) -> ScdKind {
+        self.ccd.scd_kind
+    }
+
+    pub fn ccd(&self) -> &AckCcd {
+        &self.ccd
+    }
+
+    pub fn scd_as<T: ParseScd<'a>>(&self) -> Result<T> {
+        T::parse(self.raw_scd, &self.ccd)
     }
 
     pub fn status(&self) -> &Status {
@@ -54,6 +61,30 @@ impl<'a> AckPacket<'a> {
         } else {
             Err(Error::InvalidPacket("invalid prefix magic".into()))
         }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AckCcd {
+    pub status: Status,
+    pub scd_kind: ScdKind,
+    pub request_id: u16,
+    pub scd_len: u16,
+}
+
+impl AckCcd {
+    fn parse(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
+        let status = Status::parse(cursor)?;
+        let scd_kind = ScdKind::parse(cursor)?;
+        let scd_len = cursor.read_u16::<LE>()?;
+        let request_id = cursor.read_u16::<LE>()?;
+
+        Ok(Self {
+            status,
+            scd_kind,
+            scd_len,
+            request_id,
+        })
     }
 }
 
@@ -217,114 +248,8 @@ impl Status {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum AckScd<'a> {
-    ReadMem { data: &'a [u8] },
-    WriteMem { length: u16 },
-    ReadMemStacked { data: &'a [u8] },
-    WriteMemStacked { lengths: Vec<u16> },
-    Pending { timeout: time::Duration },
-    Custom { data: &'a [u8] },
-}
-
-impl<'a> AckScd<'a> {
-    fn parse(cursor: &mut Cursor<&'a [u8]>, ccd: &AckCcd) -> Result<Self> {
-        match ccd.scd_kind {
-            ScdKind::ReadMem => Self::parse_read_mem(cursor, ccd.scd_len),
-            ScdKind::WriteMem => Self::parse_write_mem(cursor),
-            ScdKind::ReadMemStacked => Self::parse_read_mem_stacked(cursor, ccd.scd_len),
-            ScdKind::WriteMemStacked => Self::parse_write_mem_stacked(cursor, ccd.scd_len),
-            ScdKind::Pending => Self::parse_pending(cursor),
-            ScdKind::Custom(..) => Self::parse_custom(cursor, ccd.scd_len),
-        }
-    }
-
-    fn parse_read_mem(cursor: &mut Cursor<&'a [u8]>, len: u16) -> Result<Self> {
-        let data = parse_util::read_bytes(cursor, len)?;
-        Ok(AckScd::ReadMem { data })
-    }
-
-    fn parse_write_mem(cursor: &mut Cursor<&'a [u8]>) -> Result<Self> {
-        let reserved = cursor.read_u16::<LE>()?;
-        if reserved != 0 {
-            return Err(Error::InvalidPacket(
-                "the first two bytes of WriteMemAck scd must be set to zero".into(),
-            ));
-        }
-
-        let length = cursor.read_u16::<LE>()?;
-        Ok(Self::WriteMem { length })
-    }
-
-    fn parse_read_mem_stacked(cursor: &mut Cursor<&'a [u8]>, len: u16) -> Result<Self> {
-        let data = parse_util::read_bytes(cursor, len)?;
-        Ok(AckScd::ReadMemStacked { data })
-    }
-
-    fn parse_write_mem_stacked(cursor: &mut Cursor<&'a [u8]>, mut len: u16) -> Result<Self> {
-        let mut lengths = Vec::with_capacity(len as usize % 4);
-
-        while len > 0 {
-            let reserved = cursor.read_u16::<LE>()?;
-            if reserved != 0 {
-                return Err(Error::InvalidPacket(
-                    "the first two bytes of each WriteMemStackedAck scd entry must be set to zero"
-                        .into(),
-                ));
-            }
-            let length = cursor.read_u16::<LE>()?;
-            lengths.push(length);
-            len = len.saturating_sub(4);
-        }
-
-        Ok(Self::WriteMemStacked { lengths })
-    }
-
-    fn parse_pending(cursor: &mut Cursor<&'a [u8]>) -> Result<Self> {
-        let reserved = cursor.read_u16::<LE>()?;
-        if reserved != 0 {
-            return Err(Error::InvalidPacket(
-                "the first two bytes of PendingAck scd must be set to zero".into(),
-            ));
-        }
-
-        let timeout_ms = cursor.read_u16::<LE>()?;
-        let timeout = time::Duration::from_millis(timeout_ms.into());
-        Ok(Self::Pending { timeout })
-    }
-
-    fn parse_custom(cursor: &mut Cursor<&'a [u8]>, len: u16) -> Result<Self> {
-        let data = parse_util::read_bytes(cursor, len)?;
-        Ok(AckScd::Custom { data })
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-struct AckCcd {
-    status: Status,
-    scd_kind: ScdKind,
-    request_id: u16,
-    scd_len: u16,
-}
-
-impl AckCcd {
-    fn parse(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
-        let status = Status::parse(cursor)?;
-        let scd_kind = ScdKind::parse(cursor)?;
-        let scd_len = cursor.read_u16::<LE>()?;
-        let request_id = cursor.read_u16::<LE>()?;
-
-        Ok(Self {
-            status,
-            scd_kind,
-            scd_len,
-            request_id,
-        })
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-enum ScdKind {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ScdKind {
     ReadMem,
     WriteMem,
     ReadMemStacked,
@@ -347,6 +272,111 @@ impl ScdKind {
                 format!("unknown ack command id {:#X}", id).into(),
             )),
         }
+    }
+}
+
+pub trait ParseScd<'a>: Sized {
+    fn parse(buf: &'a [u8], ccd: &AckCcd) -> Result<Self>;
+}
+
+pub struct ReadMem<'a> {
+    pub data: &'a [u8],
+}
+
+pub struct WriteMem {
+    pub length: u16,
+}
+
+pub struct Pending {
+    pub timeout: time::Duration,
+}
+
+pub struct ReadMemStacked<'a> {
+    pub data: &'a [u8],
+}
+
+pub struct WriteMemStacked {
+    pub lengths: Vec<u16>,
+}
+
+pub struct Custom<'a> {
+    pub data: &'a [u8],
+}
+
+impl<'a> ParseScd<'a> for ReadMem<'a> {
+    fn parse(buf: &'a [u8], ccd: &AckCcd) -> Result<Self> {
+        let data = parse_util::read_bytes(&mut Cursor::new(buf), ccd.scd_len)?;
+        Ok(Self { data })
+    }
+}
+
+impl<'a> ParseScd<'a> for WriteMem {
+    fn parse(buf: &'a [u8], _ccd: &AckCcd) -> Result<Self> {
+        let mut cursor = Cursor::new(buf);
+        let reserved = cursor.read_u16::<LE>()?;
+        if reserved != 0 {
+            return Err(Error::InvalidPacket(
+                "the first two bytes of WriteMemAck scd must be set to zero".into(),
+            ));
+        }
+
+        let length = cursor.read_u16::<LE>()?;
+        Ok(Self { length })
+    }
+}
+
+impl<'a> ParseScd<'a> for Pending {
+    fn parse(buf: &'a [u8], _ccd: &AckCcd) -> Result<Self> {
+        let mut cursor = Cursor::new(buf);
+        let reserved = cursor.read_u16::<LE>()?;
+        if reserved != 0 {
+            return Err(Error::InvalidPacket(
+                "the first two bytes of PendingAck scd must be set to zero".into(),
+            ));
+        }
+
+        let timeout_ms = cursor.read_u16::<LE>()?;
+        let timeout = time::Duration::from_millis(timeout_ms.into());
+        Ok(Self { timeout })
+    }
+}
+
+impl<'a> ParseScd<'a> for ReadMemStacked<'a> {
+    fn parse(buf: &'a [u8], ccd: &AckCcd) -> Result<Self> {
+        let data = parse_util::read_bytes(&mut Cursor::new(buf), ccd.scd_len)?;
+
+        Ok(Self { data })
+    }
+}
+
+impl<'a> ParseScd<'a> for WriteMemStacked {
+    fn parse(buf: &'a [u8], ccd: &AckCcd) -> Result<Self> {
+        let mut cursor = Cursor::new(buf);
+        let mut to_read = ccd.scd_len as usize;
+        let mut lengths = Vec::with_capacity(to_read as usize / 4);
+
+        while to_read > 0 {
+            let reserved = cursor.read_u16::<LE>()?;
+            if reserved != 0 {
+                return Err(Error::InvalidPacket(
+                    "the first two bytes of each WriteMemStackedAck scd entry must be set to zero"
+                        .into(),
+                ));
+            }
+            let length = cursor.read_u16::<LE>()?;
+            lengths.push(length);
+            to_read = to_read - 4;
+        }
+
+        Ok(Self { lengths })
+    }
+}
+
+impl<'a> ParseScd<'a> for Custom<'a> {
+    fn parse(buf: &'a [u8], ccd: &AckCcd) -> Result<Self> {
+        let data = parse_util::read_bytes(&mut Cursor::new(buf), ccd.scd_len)?;
+
+        Ok(Self { data })
     }
 }
 
@@ -382,12 +412,8 @@ mod tests {
         assert_eq!(ack.request_id(), 1);
         assert!(ack.custom_command_id().is_none());
 
-        match ack.scd {
-            Some(AckScd::ReadMem { data }) => {
-                assert_eq!(data, scd);
-            }
-            other => panic!("unexpected scd, {:?}", other),
-        }
+        let parsed_scd = ack.scd_as::<ReadMem>().unwrap();
+        assert_eq!(parsed_scd.data, scd);
     }
 
     #[test]
@@ -403,12 +429,8 @@ mod tests {
         assert_eq!(ack.request_id(), 1);
         assert!(ack.custom_command_id().is_none());
 
-        match ack.scd {
-            Some(AckScd::WriteMem { length }) => {
-                assert_eq!(length, 0x0a);
-            }
-            other => panic!("unexpected scd, {:?}", other),
-        }
+        let parsed_scd = ack.scd_as::<WriteMem>().unwrap();
+        assert_eq!(parsed_scd.length, 0x0a);
     }
 
     #[test]
@@ -424,12 +446,8 @@ mod tests {
         assert_eq!(ack.request_id(), 1);
         assert!(ack.custom_command_id().is_none());
 
-        match ack.scd {
-            Some(AckScd::ReadMemStacked { data }) => {
-                assert_eq!(data, scd);
-            }
-            other => panic!("unexpected scd, {:?}", other),
-        }
+        let parsed_scd = ack.scd_as::<ReadMemStacked>().unwrap();
+        assert_eq!(parsed_scd.data, scd);
     }
 
     #[test]
@@ -446,12 +464,8 @@ mod tests {
         assert_eq!(ack.request_id(), 1);
         assert!(ack.custom_command_id().is_none());
 
-        match ack.scd {
-            Some(AckScd::WriteMemStacked { lengths }) => {
-                assert_eq!(lengths, &[3, 10]);
-            }
-            other => panic!("unexpected scd, {:?}", other),
-        }
+        let parsed_scd = ack.scd_as::<WriteMemStacked>().unwrap();
+        assert_eq!(&parsed_scd.lengths, &[3, 10]);
     }
 
     #[test]
@@ -469,12 +483,8 @@ mod tests {
         assert_eq!(ack.request_id(), 1);
         assert!(ack.custom_command_id().is_none());
 
-        match ack.scd {
-            Some(AckScd::Pending { timeout }) => {
-                assert_eq!(timeout, Duration::from_millis(700));
-            }
-            other => panic!("unexpected scd, {:?}", other),
-        }
+        let parsed_scd = ack.scd_as::<Pending>().unwrap();
+        assert_eq!(parsed_scd.timeout, Duration::from_millis(700));
     }
 
     #[test]

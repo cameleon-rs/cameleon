@@ -4,7 +4,10 @@ use std::time::Duration;
 extern crate byteorder;
 extern crate cameleon_device;
 
-use cameleon_device::usb3;
+use cameleon_device::usb3::{
+    self,
+    protocol::{ack, command},
+};
 
 fn main() {
     // Enumerate device connected to the host.
@@ -26,7 +29,7 @@ fn main() {
     // TODO: Need helper for accessing BRM.
     // TODO: Get Maximum ack length from command.
     // TODO: Add description about request_id.
-    let command = usb3::protocol::ReadMem::new(0x00144, 64).finalize(0);
+    let command = command::ReadMem::new(0x00144, 64).finalize(0);
 
     let mut serialized_command = vec![];
     command.serialize(&mut serialized_command).unwrap();
@@ -42,7 +45,7 @@ fn main() {
         .recv(&mut serialized_ack, Duration::from_millis(100))
         .unwrap();
     // Parse Acknowledge packet.
-    let ack = usb3::protocol::AckPacket::parse(&serialized_ack).unwrap();
+    let ack = ack::AckPacket::parse(&serialized_ack).unwrap();
 
     // Check status and request_id.
     if !ack.status().is_success() || ack.request_id() != 0 {
@@ -50,16 +53,9 @@ fn main() {
         return;
     }
 
-    let serial_number = match ack.scd.unwrap() {
-        usb3::protocol::AckScd::ReadMem { data } => {
-            let string_len = data.iter().position(|c| *c == 0).unwrap();
-            CStr::from_bytes_with_nul(&data[..string_len + 1]).unwrap() // Zero terminated.
-        }
-        _ => {
-            println!("Invalid command data!");
-            return;
-        }
-    };
+    let scd = ack.scd_as::<ack::ReadMem>().unwrap();
+    let string_len = scd.data.iter().position(|c| *c == 0).unwrap();
+    let serial_number = CStr::from_bytes_with_nul(&scd.data[..string_len + 1]).unwrap(); // Zero terminated.
 
     println!(
         "received serial number of the device: {}",
