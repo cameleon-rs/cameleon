@@ -235,12 +235,14 @@ impl CommandCcd {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CommandFlag {
     RequestAck,
+    CommandResend,
 }
 
 impl CommandFlag {
     fn serialize(&self, mut buf: impl Write) -> Result<()> {
         let flag_id = match self {
             Self::RequestAck => 1 << 14,
+            Self::CommandResend => 1 << 15,
         };
         Ok(buf.write_u16::<LE>(flag_id)?)
     }

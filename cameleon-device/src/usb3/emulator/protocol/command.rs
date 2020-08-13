@@ -58,6 +58,8 @@ impl CommandFlag {
         let raw = cursor.read_u16::<LE>()?;
         if raw == 1 << 14 {
             Ok(Self::RequestAck)
+        } else if raw == 1 << 15 {
+            Ok(Self::CommandResend)
         } else {
             Err(EmulatorError::InvalidPacket("invalid command flag".into()))
         }
