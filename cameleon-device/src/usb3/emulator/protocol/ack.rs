@@ -1,4 +1,3 @@
-// TODO: Implement status kind builder.
 use std::io::Write;
 use std::time;
 
@@ -74,12 +73,9 @@ pub(super) trait AckSerialize: Sized {
     fn serialize(&self, buf: impl Write) -> EmulatorResult<()>;
     fn scd_len(&self) -> u16;
     fn scd_kind(&self) -> ScdKind;
+
     fn status(&self) -> Status {
-        // TODO: Implement status kind builder.
-        Status {
-            code: 0x0000,
-            kind: StatusKind::GenCp(GenCpStatus::Success),
-        }
+        GenCpStatus::Success.into()
     }
 
     fn finalize(self, request_id: u16) -> AckPacket<Self> {
@@ -238,9 +234,13 @@ pub(super) struct ErrorAck {
     status: Status,
     scd_kind: ScdKind,
 }
+
 impl ErrorAck {
-    pub(super) fn new(status: Status, scd_kind: ScdKind) -> Self {
-        Self { status, scd_kind }
+    pub(super) fn new(status: impl Into<Status>, scd_kind: ScdKind) -> Self {
+        Self {
+            status: status.into(),
+            scd_kind,
+        }
     }
 }
 
@@ -259,6 +259,55 @@ impl AckSerialize for ErrorAck {
 
     fn status(&self) -> Status {
         self.status
+    }
+}
+
+impl GenCpStatus {
+    fn as_code(self) -> u16 {
+        use GenCpStatus::*;
+        match self {
+            Success => 0x0000,
+            NotImplemented => 0x8001,
+            InvalidParameter => 0x8002,
+            InvalidAddress => 0x8003,
+            WriteProtect => 0x8004,
+            BadAlignment => 0x8005,
+            AccessDenied => 0x8006,
+            Busy => 0x8007,
+            Timeout => 0x800B,
+            InvalidHeader => 0x800E,
+            WrongConfig => 0x800F,
+            GenericError => 0x8FFF,
+        }
+    }
+}
+
+impl UsbSpecificStatus {
+    fn as_code(self) -> u16 {
+        use UsbSpecificStatus::*;
+        match self {
+            ResendNotSupported => 0xA001,
+            StreamEndpointHalted => 0xA002,
+            PayloadSizeNotAligned => 0xA003,
+            InvalidSiState => 0xA004,
+            EventEndpointHalted => 0xA005,
+        }
+    }
+}
+
+impl From<GenCpStatus> for Status {
+    fn from(cp_status: GenCpStatus) -> Status {
+        let code = cp_status.as_code();
+        let kind = StatusKind::GenCp(cp_status);
+        Self { code, kind }
+    }
+}
+
+impl From<UsbSpecificStatus> for Status {
+    fn from(usb_status: UsbSpecificStatus) -> Status {
+        let code = usb_status.as_code();
+        let kind = StatusKind::UsbSpecific(usb_status);
+        Self { code, kind }
     }
 }
 
@@ -363,5 +412,29 @@ mod tests {
         assert_eq!(parsed_scd.data, data);
     }
 
-    // TODO: Add tests for ErrorAck.
+    #[test]
+    fn test_gen_cp_error() {
+        let err_status = GenCpStatus::AccessDenied;
+        let command = ErrorAck::new(err_status, ScdKind::ReadMem).finalize(1);
+        let mut buf = vec![];
+        command.serialize(&mut buf).unwrap();
+
+        let parsed = host_side_ack::AckPacket::parse(&buf).unwrap();
+        let status = parsed.status();
+        assert!(!status.is_success());
+        assert_eq!(status.kind, StatusKind::GenCp(err_status));
+    }
+
+    #[test]
+    fn test_usb3_error() {
+        let err_status = UsbSpecificStatus::StreamEndpointHalted;
+        let command = ErrorAck::new(err_status, ScdKind::ReadMem).finalize(1);
+        let mut buf = vec![];
+        command.serialize(&mut buf).unwrap();
+
+        let parsed = host_side_ack::AckPacket::parse(&buf).unwrap();
+        let status = parsed.status();
+        assert!(!status.is_success());
+        assert_eq!(status.kind, StatusKind::UsbSpecific(err_status));
+    }
 }
