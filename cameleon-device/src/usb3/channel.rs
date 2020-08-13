@@ -54,6 +54,13 @@ impl ControlChannel {
             .read_bulk(self.iface_info.bulk_in_ep, buf, timeout)?)
     }
 
+    pub fn set_halt(&self, timeout: time::Duration) -> Result<()> {
+        set_halt(&self.device_handle, self.iface_info.bulk_in_ep, timeout)?;
+        set_halt(&self.device_handle, self.iface_info.bulk_out_ep, timeout)?;
+
+        Ok(())
+    }
+
     pub fn clear_halt(&mut self) -> Result<()> {
         self.device_handle.clear_halt(self.iface_info.bulk_in_ep)?;
         self.device_handle.clear_halt(self.iface_info.bulk_out_ep)?;
@@ -106,6 +113,12 @@ impl ReceiveChannel {
             .read_bulk(self.iface_info.bulk_in_ep, buf, timeout)?)
     }
 
+    pub fn set_halt(&self, timeout: time::Duration) -> Result<()> {
+        set_halt(&self.device_handle, self.iface_info.bulk_in_ep, timeout)?;
+
+        Ok(())
+    }
+
     pub fn clear_halt(&mut self) -> Result<()> {
         self.device_handle.clear_halt(self.iface_info.bulk_in_ep)?;
         Ok(())
@@ -123,4 +136,26 @@ pub(super) struct ControlIfaceInfo {
 pub(super) struct ReceiveIfaceInfo {
     pub(super) iface_number: u8,
     pub(super) bulk_in_ep: u8,
+}
+
+fn set_halt(handle: &RusbDevHandle, endpoint_number: u8, timeout: time::Duration) -> Result<()> {
+    let request_type = rusb::request_type(
+        rusb::Direction::Out,
+        rusb::RequestType::Standard,
+        rusb::Recipient::Endpoint,
+    );
+    let request = 0x03; // SET_FEATURE.
+    let value = 0x00; // ENDPOINT_HALT.
+    let buf = vec![]; // NO DATA.
+
+    handle.write_control(
+        request_type,
+        request,
+        value,
+        endpoint_number as u16,
+        &buf,
+        timeout,
+    )?;
+
+    Ok(())
 }
