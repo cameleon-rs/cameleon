@@ -3,11 +3,11 @@ use std::time;
 
 use byteorder::{WriteBytesExt, LE};
 
-use crate::usb3::protocol::ack::*;
+use crate::usb3::protocol::{ack::*, command};
 
 use super::super::EmulatorResult;
 
-pub(super) struct AckPacket<T> {
+pub(crate) struct AckPacket<T> {
     ccd: AckCcd,
     scd: T,
 }
@@ -18,7 +18,7 @@ where
 {
     const PREFIX_MAGIC: u32 = 0x43563355;
 
-    pub(super) fn serialize(&self, mut buf: impl Write) -> EmulatorResult<()> {
+    pub(crate) fn serialize(&self, mut buf: impl Write) -> EmulatorResult<()> {
         buf.write_u32::<LE>(Self::PREFIX_MAGIC)?;
         self.ccd.serialize(&mut buf)?;
         self.scd.serialize(&mut buf)?;
@@ -69,7 +69,7 @@ impl ScdKind {
     }
 }
 
-pub(super) trait AckSerialize: Sized {
+pub(crate) trait AckSerialize: Sized {
     fn serialize(&self, buf: impl Write) -> EmulatorResult<()>;
     fn scd_len(&self) -> u16;
     fn scd_kind(&self) -> ScdKind;
@@ -84,7 +84,7 @@ pub(super) trait AckSerialize: Sized {
 }
 
 impl<'a> ReadMem<'a> {
-    pub(super) fn new(data: &'a [u8]) -> Self {
+    pub(crate) fn new(data: &'a [u8]) -> Self {
         debug_assert!(data.len() <= u16::MAX as usize);
         Self { data }
     }
@@ -106,7 +106,7 @@ impl<'a> AckSerialize for ReadMem<'a> {
 }
 
 impl WriteMem {
-    pub(super) fn new(length: u16) -> Self {
+    pub(crate) fn new(length: u16) -> Self {
         Self { length }
     }
 }
@@ -128,7 +128,7 @@ impl<'a> AckSerialize for WriteMem {
 }
 
 impl Pending {
-    pub(super) fn new(timeout: time::Duration) -> Self {
+    pub(crate) fn new(timeout: time::Duration) -> Self {
         debug_assert!(timeout.as_millis() <= std::u16::MAX as u128);
         Self { timeout }
     }
@@ -151,7 +151,7 @@ impl AckSerialize for Pending {
 }
 
 impl<'a> ReadMemStacked<'a> {
-    pub(super) fn new(data: &'a [u8]) -> Self {
+    pub(crate) fn new(data: &'a [u8]) -> Self {
         debug_assert!(data.len() <= u16::MAX as usize);
         Self { data }
     }
@@ -173,7 +173,7 @@ impl<'a> AckSerialize for ReadMemStacked<'a> {
 }
 
 impl WriteMemStacked {
-    pub(super) fn new(lengths: Vec<u16>) -> Self {
+    pub(crate) fn new(lengths: Vec<u16>) -> Self {
         debug_assert!(Self::scd_len(&lengths) <= u16::MAX as usize);
         Self { lengths }
     }
@@ -202,13 +202,13 @@ impl AckSerialize for WriteMemStacked {
     }
 }
 
-pub(super) struct CustomAck<'a> {
+pub(crate) struct CustomAck<'a> {
     command_id: u16,
     data: &'a [u8],
 }
 
 impl<'a> CustomAck<'a> {
-    pub(super) fn new(command_id: u16, data: &'a [u8]) -> Self {
+    pub(crate) fn new(command_id: u16, data: &'a [u8]) -> Self {
         debug_assert!(data.len() <= u16::MAX as usize);
         debug_assert!(ScdKind::is_custom(command_id));
         Self { command_id, data }
@@ -230,16 +230,16 @@ impl<'a> AckSerialize for CustomAck<'a> {
     }
 }
 
-pub(super) struct ErrorAck {
+pub(crate) struct ErrorAck {
     status: Status,
     scd_kind: ScdKind,
 }
 
 impl ErrorAck {
-    pub(super) fn new(status: impl Into<Status>, scd_kind: ScdKind) -> Self {
+    pub(crate) fn new(status: impl Into<Status>, scd_kind: impl Into<ScdKind>) -> Self {
         Self {
             status: status.into(),
-            scd_kind,
+            scd_kind: scd_kind.into(),
         }
     }
 }
@@ -308,6 +308,18 @@ impl From<UsbSpecificStatus> for Status {
         let code = usb_status.as_code();
         let kind = StatusKind::UsbSpecific(usb_status);
         Self { code, kind }
+    }
+}
+
+impl From<command::ScdKind> for ScdKind {
+    fn from(kind: command::ScdKind) -> Self {
+        match kind {
+            command::ScdKind::ReadMem => ScdKind::ReadMem,
+            command::ScdKind::WriteMem => ScdKind::WriteMem,
+            command::ScdKind::ReadMemStacked => ScdKind::ReadMemStacked,
+            command::ScdKind::WriteMemStacked => ScdKind::WriteMemStacked,
+            command::ScdKind::Custom(code) => ScdKind::Custom(code | 1),
+        }
     }
 }
 

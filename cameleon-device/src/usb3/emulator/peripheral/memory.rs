@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 use std::io::Write;
-use std::ops::Index;
 
 use byteorder::{WriteBytesExt, LE};
 use semver::Version;
@@ -14,7 +13,7 @@ const SBRM_ADDRESS: u64 = 0xffff;
 ///      1 |     0 | Access Privilege and Heartbeat are NOT supported.
 ///      2 |     0 | Message Channel is NOT supported.
 ///      3 |     1 | Timestampl is supported.
-///      4 |  0000 | String Encoding (Ascii).
+///    7-4 |  0000 | String Encoding (Ascii).
 ///      8 |     1 | Family Name is supported.
 ///      9 |     1 | SBRM is supported.
 ///     10 |     1 | Endianess Register is supported.
@@ -22,7 +21,7 @@ const SBRM_ADDRESS: u64 = 0xffff;
 ///     12 |     1 | Multi Event is supported.
 ///     13 |     1 | Stacked Commands is supported.
 ///     14 |     1 | Device Software Interface Version is supported.
-///     15 |     0 | Reserved. All remained bits are set to 0.
+///  63-15 |     0 | Reserved. All remained bits are set to 0.
 const DEVICE_CAPABILITY: u64 = 0b111111100001001;
 
 #[derive(Clone)]

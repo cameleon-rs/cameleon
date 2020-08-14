@@ -27,6 +27,10 @@ impl<'a> CommandPacket<'a> {
         T::parse(self.raw_scd, &self.ccd)
     }
 
+    pub(super) fn ccd(&self) -> &CommandCcd {
+        &self.ccd
+    }
+
     fn parse_prefix(cursor: &mut Cursor<&[u8]>) -> EmulatorResult<()> {
         let magic = cursor.read_u32::<LE>()?;
         if magic == Self::PREFIX_MAGIC {

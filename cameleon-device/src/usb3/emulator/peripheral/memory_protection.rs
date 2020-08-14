@@ -37,6 +37,15 @@ impl MemoryProtection {
         AccessRight::from_num(block >> offset & 0b11)
     }
 
+    pub(super) fn access_right_with_range(
+        &self,
+        range: impl IntoIterator<Item = usize>,
+    ) -> AccessRight {
+        range
+            .into_iter()
+            .fold(AccessRight::RW, |acc, i| acc.meet(self.access_right(i)))
+    }
+
     pub(super) fn verify_address(&self, address: usize) -> EmulatorResult<()> {
         if self.memory_size <= address {
             Err(EmulatorError::InvalidAddress)

@@ -32,9 +32,9 @@ impl ControlChannel {
         if self.is_open() {
             self.device_handle
                 .release_interface(self.iface_info.iface_number)?;
+            self.is_open = false;
         }
 
-        self.is_open = false;
         Ok(())
     }
 
