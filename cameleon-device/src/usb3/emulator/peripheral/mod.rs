@@ -3,6 +3,7 @@ use std::borrow::Cow;
 use thiserror::Error;
 
 mod fake_protocol;
+mod interface;
 mod memory;
 mod memory_protection;
 mod protocol;
