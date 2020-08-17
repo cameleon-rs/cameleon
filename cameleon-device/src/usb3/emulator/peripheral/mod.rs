@@ -1,12 +1,9 @@
-use std::borrow::Cow;
-
 use thiserror::Error;
 
 mod control_module;
 mod fake_protocol;
 mod interface;
 mod memory;
-mod protocol;
 mod signal;
 
 #[derive(Debug, Error)]
@@ -16,9 +13,6 @@ pub enum EmulatorError {
 
     #[error("invalid string: {}", 0)]
     InvalidString(&'static str),
-
-    #[error("packet is broken: {}", 0)]
-    InvalidPacket(Cow<'static, str>),
 
     #[error("buffer io error in emulator: {}", 0)]
     BufferIoError(#[from] std::io::Error),
