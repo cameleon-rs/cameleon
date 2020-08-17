@@ -24,6 +24,12 @@ pub enum EmulatorError {
 
     #[error("device internal buffer is ful.")]
     FullBuffer,
+
+    #[error("attempt to read unreadable address")]
+    AddressNotReadable,
+
+    #[error("attempt to write to unwritable address")]
+    AddressNotWritable,
 }
 
 pub type EmulatorResult<T> = std::result::Result<T, EmulatorError>;

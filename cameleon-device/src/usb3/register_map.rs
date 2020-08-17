@@ -91,7 +91,7 @@ impl AccessRight {
         self.as_num() & 0b1 == 1
     }
 
-    pub fn is_writeable(self) -> bool {
+    pub fn is_writable(self) -> bool {
         self.as_num() >> 1 == 1
     }
 
@@ -113,7 +113,7 @@ impl AccessRight {
                 }
             }
             WO => {
-                if rhs.is_writeable() {
+                if rhs.is_writable() {
                     self
                 } else {
                     NA
