@@ -1,15 +1,25 @@
-use std::sync::{atomic::AtomicBool, Arc};
 use std::borrow::Cow;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
-use thiserror::Error;
 use async_std::{
     prelude::*,
-    sync::{channel, Mutex, Receiver, RwLock, Sender},
+    sync::{channel, Mutex, Receiver, Sender},
     task,
 };
 use futures::{channel::oneshot, select, FutureExt};
+use thiserror::Error;
 
-use super::{fake_protocol::IfaceKind, interface::IfaceState, memory::Memory, signal::*};
+use super::{
+    fake_protocol::IfaceKind,
+    interface::IfaceState,
+    memory::{Memory, MemoryError},
+    signal::*,
+};
+
+use ack::AckSerialize;
 
 pub(super) struct ControlModule {
     req_rx: Receiver<Vec<u8>>,
@@ -22,10 +32,11 @@ pub(super) struct ControlModule {
 }
 
 impl ControlModule {
-    pub(super) async fn run(mut self) {
+    pub(super) async fn run(self) {
         let mut req_rx = self.req_rx.fuse();
         let mut inner_event_rx = self.ctrl_manage_rx.fuse();
         let mut worker_manager = WorkerManager::new(
+            self.ack_tx.clone(),
             self.memory.clone(),
             self.iface_state,
             self.event_manage_tx.clone(),
@@ -99,6 +110,7 @@ impl ControlModule {
 }
 
 struct Worker {
+    ack_tx: Sender<Vec<u8>>,
     memory: Arc<Mutex<Memory>>,
     completed: Sender<()>,
     on_processing: Arc<AtomicBool>,
@@ -108,14 +120,218 @@ struct Worker {
 }
 
 impl Worker {
+    // TODO: Emulate pending situation.
     async fn run(self, command: Vec<u8>) {
-        todo!();
+        let cmd_packet = match self.try_parse_command(&command) {
+            Some(packet) => packet,
+            None => return,
+        };
+        let ccd = cmd_packet.ccd();
+
+        // If another interface is halted, control module must notify it to the host.
+        if self.iface_state.is_halt(IfaceKind::Event).await {
+            let ack = ack::ErrorAck::new(ack::UsbSpecificStatus::EventEndpointHalted, ccd.scd_kind)
+                .finalize(ccd.request_id);
+            self.try_send_ack(ack);
+            return;
+        } else if self.iface_state.is_halt(IfaceKind::Stream).await {
+            let ack =
+                ack::ErrorAck::new(ack::UsbSpecificStatus::StreamEndpointHalted, ccd.scd_kind)
+                    .finalize(ccd.request_id);
+            self.try_send_ack(ack);
+            return;
+        }
+
+        // If another thread is processing command simultaneously, return busy error ack.
+        if self
+            .on_processing
+            .compare_and_swap(false, true, Ordering::Relaxed)
+        {
+            let ack =
+                ack::ErrorAck::new(ack::GenCpStatus::Busy, ccd.scd_kind).finalize(ccd.request_id);
+            self.try_send_ack(ack);
+        }
+
+        match ccd.scd_kind {
+            cmd::ScdKind::ReadMem => self.process_read_mem(cmd_packet),
+            cmd::ScdKind::WriteMem => self.process_write_mem(cmd_packet),
+            cmd::ScdKind::ReadMemStacked => self.process_read_mem_stacked(cmd_packet),
+            cmd::ScdKind::WriteMemStacked => self.process_write_mem_stacked(cmd_packet),
+            cmd::ScdKind::Custom(_) => self.process_custom(cmd_packet),
+        }
+
+        self.on_processing.store(false, Ordering::Relaxed);
+    }
+
+    fn try_parse_command<'a>(&self, command: &'a [u8]) -> Option<cmd::CommandPacket<'a>> {
+        match cmd::CommandPacket::parse(command) {
+            Ok(packet) => Some(packet),
+            Err(e) => {
+                log::warn!("{}", e);
+
+                // Can't parse even CCD, so return error ack packet with dummy scd kind and dummy request id.
+                let ack =
+                    ack::ErrorAck::new(ack::GenCpStatus::InvalidParameter, ack::ScdKind::ReadMem)
+                        .finalize(0);
+                let mut buf = vec![];
+
+                if let Err(e) = ack.serialize(&mut buf) {
+                    log::error!("{}", e);
+                    return None;
+                }
+
+                match self.ack_tx.try_send(buf) {
+                    Ok(()) => {}
+                    Err(e) => {
+                        log::warn!("can't push internal acknowledge packet queue. cause: {}", e)
+                    }
+                }
+
+                None
+            }
+        }
+    }
+
+    fn process_read_mem(&self, command: cmd::CommandPacket) {
+        let scd: cmd::ReadMem = match self.try_extract_scd(&command) {
+            Some(scd) => scd,
+            None => return,
+        };
+        let ccd = command.ccd();
+        let req_id = ccd.request_id;
+        let scd_kind = ccd.scd_kind;
+
+        let memory = task::block_on(self.memory.lock());
+        let address = scd.address as usize;
+        let read_length = scd.read_length as usize;
+        match memory.read_mem(address..address + read_length) {
+            Ok(data) => {
+                let ack = ack::ReadMem::new(data).finalize(req_id);
+                self.try_send_ack(ack);
+            }
+            Err(MemoryError::InvalidAddress) => {
+                let ack = ack::ErrorAck::new(ack::GenCpStatus::InvalidAddress, scd_kind)
+                    .finalize(req_id);
+                self.try_send_ack(ack);
+            }
+            Err(MemoryError::AddressNotReadable) => {
+                let ack = ack::ErrorAck::new(ack::GenCpStatus::AccessDenied, scd_kind)
+                    .finalize(req_id);
+                self.try_send_ack(ack);
+            }
+            Err(MemoryError::AddressNotWritable) => unreachable!(),
+        };
+    }
+
+    fn process_write_mem(&self, command: cmd::CommandPacket) {
+        let scd: cmd::WriteMem = match self.try_extract_scd(&command) {
+            Some(scd) => scd,
+            None => return,
+        };
+        let ccd = command.ccd();
+        let req_id = ccd.request_id;
+        let scd_kind = ccd.scd_kind;
+
+        let mut memory = task::block_on(self.memory.lock());
+        match memory.write_mem(scd.address as usize, scd.data) {
+            Ok(()) => {
+                let ack = ack::WriteMem::new(scd.data.len() as u16).finalize(req_id);
+                self.try_send_ack(ack);
+            }
+            Err(MemoryError::InvalidAddress) => {
+                let ack = ack::ErrorAck::new(ack::GenCpStatus::InvalidAddress, scd_kind)
+                    .finalize(req_id);
+                self.try_send_ack(ack);
+            }
+            Err(MemoryError::AddressNotWritable) => {
+                let ack = ack::ErrorAck::new(ack::GenCpStatus::WriteProtect, scd_kind)
+                    .finalize(req_id);
+                self.try_send_ack(ack);
+            }
+            Err(MemoryError::AddressNotReadable) => unreachable!(),
+        }
+    }
+
+    fn process_read_mem_stacked(&self, command: cmd::CommandPacket) {
+        let scd: cmd::WriteMemStacked = match self.try_extract_scd(&command) {
+            Some(scd) => scd,
+            None => return,
+        };
+        let ccd = command.ccd();
+        let req_id = ccd.request_id;
+        let scd_kind = ccd.scd_kind;
+
+        // TODO: Should we implemnent this command?
+        let ack = ack::ErrorAck::new(ack::GenCpStatus::NotImplemented, scd_kind).finalize(req_id);
+        self.try_send_ack(ack);
+    }
+
+    fn process_write_mem_stacked(&self, command: cmd::CommandPacket) {
+        let scd: cmd::WriteMemStacked = match self.try_extract_scd(&command) {
+            Some(scd) => scd,
+            None => return,
+        };
+        let ccd = command.ccd();
+        let req_id = ccd.request_id;
+        let scd_kind = ccd.scd_kind;
+
+        // TODO: Should we implemnent this command?
+        let ack = ack::ErrorAck::new(ack::GenCpStatus::NotImplemented, scd_kind).finalize(req_id);
+        self.try_send_ack(ack);
+    }
+
+    fn process_custom(&self, command: cmd::CommandPacket) {
+        let scd: cmd::WriteMemStacked = match self.try_extract_scd(&command) {
+            Some(scd) => scd,
+            None => return,
+        };
+        let ccd = command.ccd();
+        let req_id = ccd.request_id;
+        let scd_kind = ccd.scd_kind;
+
+        // TODO: Should we implemnent this command?
+        let ack = ack::ErrorAck::new(ack::GenCpStatus::NotImplemented, scd_kind).finalize(req_id);
+        self.try_send_ack(ack);
+    }
+
+    fn try_extract_scd<'a, T>(&self, command: &cmd::CommandPacket<'a>) -> Option<T>
+    where
+        T: cmd::ParseScd<'a>,
+    {
+        match command.scd_as::<T>() {
+            Ok(scd) => Some(scd),
+            Err(e) => {
+                let ccd = command.ccd();
+                let ack = ack::ErrorAck::new(ack::GenCpStatus::InvalidParameter, ccd.scd_kind)
+                    .finalize(ccd.request_id);
+                self.try_send_ack(ack);
+                None
+            }
+        }
+    }
+
+    fn try_send_ack<T>(&self, ack: ack::AckPacket<T>)
+    where
+        T: AckSerialize,
+    {
+        let mut buf = vec![];
+
+        if let Err(e) = ack.serialize(&mut buf) {
+            log::error!("{}", e);
+        }
+
+        match self.ack_tx.try_send(buf) {
+            Ok(()) => {}
+            Err(e) => log::warn!("can't push internal acknowledge packet queue. cause: {}", e),
+        }
     }
 }
 
 struct WorkerManager {
     tx: Sender<()>,
     rx: Receiver<()>,
+
+    ack_tx: Sender<Vec<u8>>,
     memory: Arc<Mutex<Memory>>,
     iface_state: IfaceState,
     on_processing: Arc<AtomicBool>,
@@ -125,6 +341,7 @@ struct WorkerManager {
 
 impl WorkerManager {
     fn new(
+        ack_tx: Sender<Vec<u8>>,
         memory: Arc<Mutex<Memory>>,
         iface_state: IfaceState,
         event_manage_tx: Sender<EventManagementSignal>,
@@ -136,6 +353,7 @@ impl WorkerManager {
         Self {
             tx,
             rx,
+            ack_tx,
             memory,
             iface_state,
             on_processing,
@@ -146,6 +364,7 @@ impl WorkerManager {
 
     fn worker(&self) -> Worker {
         Worker {
+            ack_tx: self.ack_tx.clone(),
             memory: self.memory.clone(),
             completed: self.tx.clone(),
             on_processing: self.on_processing.clone(),
@@ -168,9 +387,8 @@ enum ProtocolError {
     #[error("packet is broken: {}", 0)]
     InvalidPacket(Cow<'static, str>),
 
-
     #[error("internal buffer for a packet is something wrong")]
-    BufferError(#[from] std::io::Error)
+    BufferError(#[from] std::io::Error),
 }
 
 type ProtocolResult<T> = std::result::Result<T, ProtocolError>;
@@ -184,6 +402,9 @@ mod cmd {
     use crate::usb3::protocol::{command::*, parse_util};
 
     use super::{ProtocolError, ProtocolResult};
+    pub(super) use crate::usb3::protocol::command::{
+        CustomCommand, ReadMem, ReadMemStacked, ScdKind, WriteMem, WriteMemStacked,
+    };
 
     pub(super) struct CommandPacket<'a> {
         ccd: CommandCcd,
@@ -465,9 +686,16 @@ mod ack {
 
     use byteorder::{WriteBytesExt, LE};
 
-    use crate::usb3::protocol::{ack::*, command};
+    use crate::usb3::protocol::{
+        ack::{AckCcd, Status, StatusKind},
+        command,
+    };
 
     use super::ProtocolResult;
+    pub(super) use crate::usb3::protocol::ack::{
+        GenCpStatus, ReadMem, ReadMemStacked, ScdKind, UsbSpecificStatus, WriteMem, Pending,
+        WriteMemStacked,
+    };
 
     pub(super) struct AckPacket<T> {
         ccd: AckCcd,

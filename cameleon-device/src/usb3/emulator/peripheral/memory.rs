@@ -1,3 +1,5 @@
+use thiserror::Error;
+
 use std::borrow::Cow;
 use std::io::Write;
 use std::ops::Range;
@@ -8,6 +10,20 @@ use semver::Version;
 use crate::usb3::register_map::AccessRight;
 
 use super::{EmulatorError, EmulatorResult};
+
+#[derive(Debug, Error)]
+pub(super) enum MemoryError {
+    #[error("attempt to read unreadable address")]
+    AddressNotReadable,
+
+    #[error("attempt to write to unwritable address")]
+    AddressNotWritable,
+
+    #[error("attempt to access not existed memory location")]
+    InvalidAddress,
+}
+
+pub(super) type MemoryResult<T> = std::result::Result<T, MemoryError>;
 
 pub(super) struct Memory {
     inner: Vec<u8>,
@@ -22,7 +38,7 @@ impl Memory {
         }
     }
 
-    pub(super) fn read_mem(&self, range: Range<usize>) -> EmulatorResult<&[u8]> {
+    pub(super) fn read_mem(&self, range: Range<usize>) -> MemoryResult<&[u8]> {
         self.protection.verify_address_with_range(range.clone())?;
 
         if !self
@@ -30,13 +46,13 @@ impl Memory {
             .access_right_with_range(range.clone())
             .is_readable()
         {
-            return Err(EmulatorError::AddressNotReadable);
+            return Err(MemoryError::AddressNotReadable);
         }
 
         Ok(&self.inner[range])
     }
 
-    pub(super) fn write_mem(&mut self, address: usize, data: &[u8]) -> EmulatorResult<()> {
+    pub(super) fn write_mem(&mut self, address: usize, data: &[u8]) -> MemoryResult<()> {
         let range = address..address + data.len();
         self.protection.verify_address_with_range(range.clone())?;
         if !self
@@ -44,7 +60,7 @@ impl Memory {
             .access_right_with_range(range.clone())
             .is_writable()
         {
-            return Err(EmulatorError::AddressNotWritable);
+            return Err(MemoryError::AddressNotWritable);
         }
 
         self.inner[range].copy_from_slice(data);
@@ -254,9 +270,9 @@ impl MemoryProtection {
             .for_each(|i| self.set_access_right(i, access_right));
     }
 
-    fn verify_address(&self, address: usize) -> EmulatorResult<()> {
+    fn verify_address(&self, address: usize) -> MemoryResult<()> {
         if self.memory_size <= address {
-            Err(EmulatorError::InvalidAddress)
+            Err(MemoryError::InvalidAddress)
         } else {
             Ok(())
         }
@@ -265,7 +281,7 @@ impl MemoryProtection {
     fn verify_address_with_range(
         &self,
         range: impl IntoIterator<Item = usize>,
-    ) -> EmulatorResult<()> {
+    ) -> MemoryResult<()> {
         for i in range {
             self.verify_address(i)?;
         }
