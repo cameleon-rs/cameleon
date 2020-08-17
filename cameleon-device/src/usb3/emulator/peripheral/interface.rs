@@ -1,18 +1,20 @@
+use std::sync::Arc;
+
 use async_std::{
     prelude::*,
-    sync::{Receiver, Sender},
-    task,
+    sync::{Receiver, RwLock, Sender, TryRecvError},
 };
 use futures::{channel::oneshot, select, FutureExt};
 
-use super::{fake_protocol::*, EmulatorError, EmulatorResult};
+use super::{fake_protocol::*, signal::CtrlManagementSignal, EmulatorError, EmulatorResult};
 
 pub(super) struct Interface {
     host_side_interface: (Sender<FakeAckPacket>, Receiver<FakeReqPacket>),
 
-    ctrl_sender: CtrlEventSender,
+    ctrl_tx: CtrlEventSender,
 
     ack_rx: AckDataReceiver,
+    /// Control
     iface_state: IfaceState,
 }
 
@@ -20,12 +22,12 @@ impl Interface {
     pub(super) fn new(
         host_side_interface: (Sender<FakeAckPacket>, Receiver<FakeReqPacket>),
         ctrl_req_tx: Sender<Vec<u8>>,
-        inner_ctrl_tx: Sender<InnerCtrlEvent>,
+        inner_ctrl_tx: Sender<CtrlManagementSignal>,
         ack_rx: AckDataReceiver,
     ) -> Self {
         Self {
             host_side_interface,
-            ctrl_sender: CtrlEventSender {
+            ctrl_tx: CtrlEventSender {
                 req_tx: ctrl_req_tx,
                 inner_ctrl_tx,
             },
@@ -34,7 +36,11 @@ impl Interface {
         }
     }
 
-    pub(super) async fn run(mut self, shutdown: oneshot::Receiver<()>) {
+    pub(super) async fn run(
+        mut self,
+        shutdown: oneshot::Receiver<()>,
+        _completed: oneshot::Sender<()>,
+    ) {
         let mut receiver = self.host_side_interface.1.fuse();
         let mut shutdown = shutdown.fuse();
         let sender = self.host_side_interface.0;
@@ -63,14 +69,20 @@ impl Interface {
 
             // Handle request related to halt.
             if req_kind.is_clear_halt() {
-                self.iface_state.set_state(iface, IfaceStateKind::Ready);
+                self.iface_state
+                    .set_state(iface, IfaceStateKind::Ready)
+                    .await;
                 send_or_log(&sender, iface, FakeAckKind::ClearHaltAck);
                 continue;
             } else if req_kind.is_set_halt() {
-                if !self.iface_state.is_halt(iface) {
-                    self.iface_state.set_state(iface, IfaceStateKind::Halt);
+                if !self.iface_state.is_halt(iface).await {
+                    self.iface_state
+                        .set_state(iface, IfaceStateKind::Halt)
+                        .await;
+
                     // Block until modules finish its processing correctly.
-                    task::block_on(self.ctrl_sender.send_set_halt(iface));
+                    self.ctrl_tx.send_set_halt(iface).await;
+
                     // Discard all queued ack data.
                     while let Some(_) = self.ack_rx.try_recv(iface) {}
                 }
@@ -79,7 +91,7 @@ impl Interface {
             }
 
             // If corresponding interface is halted, ignore the request and send `FakeAckKind::IfaceHalted` back.
-            if self.iface_state.is_halt(iface) {
+            if self.iface_state.is_halt(iface).await {
                 send_or_log(&sender, iface, FakeAckKind::IfaceHalted);
                 continue;
             };
@@ -95,7 +107,7 @@ impl Interface {
                 }
 
                 (IfaceKind::Control, FakeReqKind::Send(data)) => {
-                    let ack_kind = match self.ctrl_sender.send_req(data) {
+                    let ack_kind = match self.ctrl_tx.send_req(data) {
                         Ok(()) => FakeAckKind::SendAck,
                         Err(err) => {
                             log::warn!("{}", err);
@@ -116,7 +128,18 @@ impl Interface {
             };
         }
 
-        task::block_on(self.ctrl_sender.send_shutdown());
+        self.ctrl_tx.send_shutdown().await;
+        // Wait control module shutdown.
+        // We delegate control of other modules to control module, so it's enough to just wait
+        // control module shutdown.
+        self.ack_rx.ctrl_buffer.recv().await;
+        debug_assert!(match (
+            self.ack_rx.event_buffer.try_recv(),
+            self.ack_rx.stream_buffer.try_recv()
+        ) {
+            (Err(TryRecvError::Disconnected), Err(TryRecvError)) => true,
+            _ => false,
+        })
     }
 }
 
@@ -136,15 +159,45 @@ impl AckDataReceiver {
     }
 }
 
-pub(super) enum InnerCtrlEvent {
-    SetHalt {
-        iface: IfaceKind,
-        completed: oneshot::Sender<()>,
-    },
+#[derive(Debug, Clone)]
+pub(super) struct IfaceState {
+    ctrl_state: Arc<RwLock<IfaceStateKind>>,
+    event_state: Arc<RwLock<IfaceStateKind>>,
+    stream_state: Arc<RwLock<IfaceStateKind>>,
+}
 
-    ShutDown {
-        completed: oneshot::Sender<()>,
-    },
+impl IfaceState {
+    fn new() -> Self {
+        use IfaceStateKind::*;
+        Self {
+            ctrl_state: Arc::new(RwLock::new(Ready)),
+            event_state: Arc::new(RwLock::new(Ready)),
+            stream_state: Arc::new(RwLock::new(Ready)),
+        }
+    }
+
+    async fn set_state(&mut self, iface: IfaceKind, state: IfaceStateKind) {
+        match iface {
+            IfaceKind::Control => *self.ctrl_state.write().await = state,
+            IfaceKind::Event => *self.event_state.write().await = state,
+            IfaceKind::Stream => *self.stream_state.write().await = state,
+        }
+    }
+
+    pub(super) async fn is_halt(&self, iface: IfaceKind) -> bool {
+        let state = match iface {
+            IfaceKind::Control => self.ctrl_state.read().await,
+            IfaceKind::Event => self.event_state.read().await,
+            IfaceKind::Stream => self.stream_state.read().await,
+        };
+        *state == IfaceStateKind::Halt
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum IfaceStateKind {
+    Halt,
+    Ready,
 }
 
 struct CtrlEventSender {
@@ -155,14 +208,14 @@ struct CtrlEventSender {
     /// This sender handles requests that affect control mudule behavior itself.
     /// These requests must be processed if "normal" request channel is full. That's why we need
     /// this sender in addition to normal `req_tx` sender.
-    inner_ctrl_tx: Sender<InnerCtrlEvent>,
+    inner_ctrl_tx: Sender<CtrlManagementSignal>,
 }
 
 impl CtrlEventSender {
     async fn send_set_halt(&self, iface: IfaceKind) {
         let (completed_tx, completed_rx) = oneshot::channel();
 
-        let event = InnerCtrlEvent::SetHalt {
+        let event = CtrlManagementSignal::SetHalt {
             iface,
             completed: completed_tx,
         };
@@ -171,12 +224,8 @@ impl CtrlEventSender {
     }
 
     async fn send_shutdown(&self) {
-        let (completed_tx, completed_rx) = oneshot::channel();
-        let event = InnerCtrlEvent::ShutDown {
-            completed: completed_tx,
-        };
+        let event = CtrlManagementSignal::Shutdown;
         self.inner_ctrl_tx.send(event).await;
-        completed_rx.await.ok();
     }
 
     fn send_req(&self, data: Vec<u8>) -> EmulatorResult<()> {
@@ -191,51 +240,5 @@ fn send_or_log(sender: &Sender<FakeAckPacket>, iface: IfaceKind, ack_kind: FakeA
     match sender.try_send(ack) {
         Ok(()) => {}
         Err(_) => log::error!("can't send fake ack packet to the host"),
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum IfaceStateKind {
-    Halt,
-    Ready,
-}
-
-struct IfaceState {
-    ctrl_state: IfaceStateKind,
-    event_state: IfaceStateKind,
-    stream_state: IfaceStateKind,
-}
-
-impl IfaceState {
-    fn new() -> Self {
-        use IfaceStateKind::*;
-        Self {
-            ctrl_state: Ready,
-            event_state: Ready,
-            stream_state: Ready,
-        }
-    }
-
-    fn state(&self, iface: IfaceKind) -> IfaceStateKind {
-        match iface {
-            IfaceKind::Control => self.ctrl_state,
-            IfaceKind::Event => self.event_state,
-            IfaceKind::Stream => self.stream_state,
-        }
-    }
-
-    fn set_state(&mut self, iface: IfaceKind, state: IfaceStateKind) {
-        match iface {
-            IfaceKind::Control => self.ctrl_state = state,
-            IfaceKind::Event => self.event_state = state,
-            IfaceKind::Stream => self.stream_state = state,
-        }
-    }
-
-    fn is_halt(&self, iface: IfaceKind) -> bool {
-        match self.state(iface) {
-            IfaceStateKind::Halt => true,
-            _ => false,
-        }
     }
 }

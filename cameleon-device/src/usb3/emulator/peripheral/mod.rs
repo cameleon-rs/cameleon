@@ -5,8 +5,8 @@ use thiserror::Error;
 mod fake_protocol;
 mod interface;
 mod memory;
-mod memory_protection;
 mod protocol;
+mod signal;
 
 #[derive(Debug, Error)]
 pub enum EmulatorError {
