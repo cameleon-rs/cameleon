@@ -13,13 +13,13 @@ pub(super) enum CtrlManagementSignal {
 
 pub(super) enum EventManagementSignal {
     Start,
-    Pause,
-    Shutdown,
+    Pause(oneshot::Sender<()>),
+    Shutdown(oneshot::Sender<()>),
 }
 
 pub(super) enum StreamManagementSignal {
     Start,
-    Pause,
-    Shutdown,
+    Pause(oneshot::Sender<()>),
+    Shutdown(oneshot::Sender<()>),
     // TODO: Stream module property(i.e. pixel format or stream protocol) will also be managed through this signal.
 }

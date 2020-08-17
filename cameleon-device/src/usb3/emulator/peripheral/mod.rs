@@ -2,6 +2,7 @@ use std::borrow::Cow;
 
 use thiserror::Error;
 
+mod control_module;
 mod fake_protocol;
 mod interface;
 mod memory;
