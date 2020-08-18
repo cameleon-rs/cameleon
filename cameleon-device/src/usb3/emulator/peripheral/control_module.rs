@@ -22,86 +22,79 @@ use super::{
 use ack::AckSerialize;
 
 pub(super) struct ControlModule {
-    req_rx: Receiver<Vec<u8>>,
-    ctrl_manage_rx: Receiver<CtrlManagementSignal>,
+    ctrl_rx: Receiver<CtrlSignal>,
     ack_tx: Sender<Vec<u8>>,
     memory: Arc<Mutex<Memory>>,
     iface_state: IfaceState,
-    event_manage_tx: Sender<EventManagementSignal>,
-    stream_manage_tx: Sender<StreamManagementSignal>,
+    event_tx: Sender<EventSignal>,
+    stream_tx: Sender<StreamSignal>,
 }
 
 impl ControlModule {
-    pub(super) async fn run(self) {
-        let mut req_rx = self.req_rx.fuse();
-        let mut inner_event_rx = self.ctrl_manage_rx.fuse();
+    pub(super) async fn run(mut self) {
         let mut worker_manager = WorkerManager::new(
             self.ack_tx.clone(),
             self.memory.clone(),
             self.iface_state,
-            self.event_manage_tx.clone(),
-            self.stream_manage_tx.clone(),
+            self.event_tx.clone(),
+            self.stream_tx.clone(),
         );
 
         loop {
-            select! {
-                req_data = req_rx.next().fuse() => {
-                    if req_data.is_none() {
-                        log::error!("main interface is unexpectedly stopped!");
-                        break;
-                    }
-                    let req_data = req_data.unwrap();
+            let signal = match self.ctrl_rx.next().await {
+                Some(event) => event,
+                None => {
+                    log::error!("main interface is unexpectedly stopped!");
+                    break;
+                }
+            };
+
+            match signal {
+                CtrlSignal::SendDataReq(data) => {
                     let worker = worker_manager.worker();
-                    task::spawn(worker.run(req_data));
-                },
+                    task::spawn(worker.run(data));
+                }
 
-                event = inner_event_rx.next().fuse() => {
-                    if event.is_none() {
-                        log::error!("main interface is unexpectedly stopped!");
-                        break;
-                    }
+                CtrlSignal::Shutdown => {
+                    break;
+                }
 
-                    let event = event.unwrap();
-                    match event {
-                        CtrlManagementSignal::Shutdown => {
-                            break;
-                        },
+                CtrlSignal::SetHalt {
+                    iface,
+                    completed: _completed,
+                } => {
+                    // We need to wait all workers completion even if the event is targeted at event/stream
+                    // module to avoid race condition related to EI/SI register.
+                    worker_manager.wait_completion();
+                    match iface {
+                        IfaceKind::Control => {}
 
-                        CtrlManagementSignal::SetHalt{iface, completed: _completed} => {
-                            // We need to wait all workers completion even if the event is targeted at event/stream
-                            // module to avoid race condition related to EI/SI register.
-                            worker_manager.wait_completion().await;
-                            match iface {
-                                IfaceKind::Control => {}
+                        IfaceKind::Event => {
+                            // TODO: Set zero to EI control register.
+                            let (completed_tx, completed_rx) = oneshot::channel();
+                            self.event_tx.send(EventSignal::Pause(completed_tx)).await;
+                            completed_rx.await.ok();
+                        }
 
-                                IfaceKind::Event => {
-                                    // TODO: Set zero to EI control register.
-                                    let (completed_tx, completed_rx) = oneshot::channel();
-                                    self.event_manage_tx.send(EventManagementSignal::Pause(completed_tx)).await;
-                                    completed_rx.await.ok();
-                                }
-
-                                IfaceKind::Stream => {
-                                    // TODO: Set zero to SI control register.
-                                    let (completed_tx, completed_rx) = oneshot::channel();
-                                    self.stream_manage_tx.send(StreamManagementSignal::Pause(completed_tx)).await;
-                                    completed_rx.await.ok();
-                                }
-                            }
+                        IfaceKind::Stream => {
+                            // TODO: Set zero to SI control register.
+                            let (completed_tx, completed_rx) = oneshot::channel();
+                            self.stream_tx.send(StreamSignal::Pause(completed_tx)).await;
+                            completed_rx.await.ok();
                         }
                     }
                 }
-            };
+            }
         }
 
         // Shutdown event module and stream module.
         let (event_shutdown_tx, event_shutdown_rx) = oneshot::channel();
         let (stream_shutdown_tx, stream_shutdown_rx) = oneshot::channel();
-        self.event_manage_tx
-            .send(EventManagementSignal::Shutdown(event_shutdown_tx))
+        self.event_tx
+            .send(EventSignal::Shutdown(event_shutdown_tx))
             .await;
-        self.stream_manage_tx
-            .send(StreamManagementSignal::Shutdown(stream_shutdown_tx))
+        self.stream_tx
+            .send(StreamSignal::Shutdown(stream_shutdown_tx))
             .await;
 
         event_shutdown_rx.await.ok();
@@ -115,8 +108,8 @@ struct Worker {
     completed: Sender<()>,
     on_processing: Arc<AtomicBool>,
     iface_state: IfaceState,
-    event_manage_tx: Sender<EventManagementSignal>,
-    stream_manage_tx: Sender<StreamManagementSignal>,
+    event_tx: Sender<EventSignal>,
+    stream_tx: Sender<StreamSignal>,
 }
 
 impl Worker {
@@ -128,20 +121,6 @@ impl Worker {
         };
         let ccd = cmd_packet.ccd();
 
-        // If another interface is halted, control module must notify it to the host.
-        if self.iface_state.is_halt(IfaceKind::Event).await {
-            let ack = ack::ErrorAck::new(ack::UsbSpecificStatus::EventEndpointHalted, ccd.scd_kind)
-                .finalize(ccd.request_id);
-            self.try_send_ack(ack);
-            return;
-        } else if self.iface_state.is_halt(IfaceKind::Stream).await {
-            let ack =
-                ack::ErrorAck::new(ack::UsbSpecificStatus::StreamEndpointHalted, ccd.scd_kind)
-                    .finalize(ccd.request_id);
-            self.try_send_ack(ack);
-            return;
-        }
-
         // If another thread is processing command simultaneously, return busy error ack.
         if self
             .on_processing
@@ -150,6 +129,7 @@ impl Worker {
             let ack =
                 ack::ErrorAck::new(ack::GenCpStatus::Busy, ccd.scd_kind).finalize(ccd.request_id);
             self.try_send_ack(ack);
+            return;
         }
 
         match ccd.scd_kind {
@@ -210,13 +190,13 @@ impl Worker {
                 self.try_send_ack(ack);
             }
             Err(MemoryError::InvalidAddress) => {
-                let ack = ack::ErrorAck::new(ack::GenCpStatus::InvalidAddress, scd_kind)
-                    .finalize(req_id);
+                let ack =
+                    ack::ErrorAck::new(ack::GenCpStatus::InvalidAddress, scd_kind).finalize(req_id);
                 self.try_send_ack(ack);
             }
             Err(MemoryError::AddressNotReadable) => {
-                let ack = ack::ErrorAck::new(ack::GenCpStatus::AccessDenied, scd_kind)
-                    .finalize(req_id);
+                let ack =
+                    ack::ErrorAck::new(ack::GenCpStatus::AccessDenied, scd_kind).finalize(req_id);
                 self.try_send_ack(ack);
             }
             Err(MemoryError::AddressNotWritable) => unreachable!(),
@@ -239,13 +219,13 @@ impl Worker {
                 self.try_send_ack(ack);
             }
             Err(MemoryError::InvalidAddress) => {
-                let ack = ack::ErrorAck::new(ack::GenCpStatus::InvalidAddress, scd_kind)
-                    .finalize(req_id);
+                let ack =
+                    ack::ErrorAck::new(ack::GenCpStatus::InvalidAddress, scd_kind).finalize(req_id);
                 self.try_send_ack(ack);
             }
             Err(MemoryError::AddressNotWritable) => {
-                let ack = ack::ErrorAck::new(ack::GenCpStatus::WriteProtect, scd_kind)
-                    .finalize(req_id);
+                let ack =
+                    ack::ErrorAck::new(ack::GenCpStatus::WriteProtect, scd_kind).finalize(req_id);
                 self.try_send_ack(ack);
             }
             Err(MemoryError::AddressNotReadable) => unreachable!(),
@@ -322,7 +302,10 @@ impl Worker {
 
         match self.ack_tx.try_send(buf) {
             Ok(()) => {}
-            Err(e) => log::warn!("can't push internal acknowledge packet queue. cause: {}", e),
+            Err(e) => log::warn!(
+                "can't push data into internal acknowledge packet queue. cause: {}",
+                e
+            ),
         }
     }
 }
@@ -335,8 +318,8 @@ struct WorkerManager {
     memory: Arc<Mutex<Memory>>,
     iface_state: IfaceState,
     on_processing: Arc<AtomicBool>,
-    event_manage_tx: Sender<EventManagementSignal>,
-    stream_manage_tx: Sender<StreamManagementSignal>,
+    event_tx: Sender<EventSignal>,
+    stream_tx: Sender<StreamSignal>,
 }
 
 impl WorkerManager {
@@ -344,8 +327,8 @@ impl WorkerManager {
         ack_tx: Sender<Vec<u8>>,
         memory: Arc<Mutex<Memory>>,
         iface_state: IfaceState,
-        event_manage_tx: Sender<EventManagementSignal>,
-        stream_manage_tx: Sender<StreamManagementSignal>,
+        event_tx: Sender<EventSignal>,
+        stream_tx: Sender<StreamSignal>,
     ) -> Self {
         let (tx, rx) = channel(1);
         let on_processing = Arc::new(AtomicBool::new(false));
@@ -357,8 +340,8 @@ impl WorkerManager {
             memory,
             iface_state,
             on_processing,
-            event_manage_tx,
-            stream_manage_tx,
+            event_tx,
+            stream_tx,
         }
     }
 
@@ -369,8 +352,8 @@ impl WorkerManager {
             completed: self.tx.clone(),
             on_processing: self.on_processing.clone(),
             iface_state: self.iface_state.clone(),
-            event_manage_tx: self.event_manage_tx.clone(),
-            stream_manage_tx: self.stream_manage_tx.clone(),
+            event_tx: self.event_tx.clone(),
+            stream_tx: self.stream_tx.clone(),
         }
     }
 
@@ -693,7 +676,7 @@ mod ack {
 
     use super::ProtocolResult;
     pub(super) use crate::usb3::protocol::ack::{
-        GenCpStatus, ReadMem, ReadMemStacked, ScdKind, UsbSpecificStatus, WriteMem, Pending,
+        GenCpStatus, Pending, ReadMem, ReadMemStacked, ScdKind, UsbSpecificStatus, WriteMem,
         WriteMemStacked,
     };
 

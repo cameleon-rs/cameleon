@@ -2,7 +2,9 @@ use futures::channel::oneshot;
 
 use super::fake_protocol::IfaceKind;
 
-pub(super) enum CtrlManagementSignal {
+pub(super) enum CtrlSignal {
+    SendDataReq(Vec<u8>),
+
     SetHalt {
         iface: IfaceKind,
         completed: oneshot::Sender<()>,
@@ -11,13 +13,15 @@ pub(super) enum CtrlManagementSignal {
     Shutdown,
 }
 
-pub(super) enum EventManagementSignal {
+pub(super) enum EventSignal {
+    EventData(Vec<u8>),
+    UpdateTimestamp(u32),
     Start,
     Pause(oneshot::Sender<()>),
     Shutdown(oneshot::Sender<()>),
 }
 
-pub(super) enum StreamManagementSignal {
+pub(super) enum StreamSignal {
     Start,
     Pause(oneshot::Sender<()>),
     Shutdown(oneshot::Sender<()>),

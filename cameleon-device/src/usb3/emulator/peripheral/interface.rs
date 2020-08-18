@@ -6,15 +6,14 @@ use async_std::{
 };
 use futures::{channel::oneshot, select, FutureExt};
 
-use super::{fake_protocol::*, signal::CtrlManagementSignal, EmulatorError, EmulatorResult};
+use super::{fake_protocol::*, signal::CtrlSignal, EmulatorError, EmulatorResult};
 
 pub(super) struct Interface {
     host_side_interface: (Sender<FakeAckPacket>, Receiver<FakeReqPacket>),
 
-    ctrl_tx: CtrlEventSender,
+    ctrl_tx: Sender<CtrlSignal>,
 
     ack_rx: AckDataReceiver,
-    /// Control
     iface_state: IfaceState,
 }
 
@@ -22,15 +21,12 @@ impl Interface {
     pub(super) fn new(
         host_side_interface: (Sender<FakeAckPacket>, Receiver<FakeReqPacket>),
         ctrl_req_tx: Sender<Vec<u8>>,
-        inner_ctrl_tx: Sender<CtrlManagementSignal>,
+        ctrl_tx: Sender<CtrlSignal>,
         ack_rx: AckDataReceiver,
     ) -> Self {
         Self {
             host_side_interface,
-            ctrl_tx: CtrlEventSender {
-                req_tx: ctrl_req_tx,
-                inner_ctrl_tx,
-            },
+            ctrl_tx,
             ack_rx,
             iface_state: IfaceState::new(),
         }
@@ -81,7 +77,12 @@ impl Interface {
                         .await;
 
                     // Block until modules finish its processing correctly.
-                    self.ctrl_tx.send_set_halt(iface).await;
+                    let (completed_tx, completed_rx) = oneshot::channel();
+                    self.ctrl_tx.send(CtrlSignal::SetHalt {
+                        iface,
+                        completed: completed_tx,
+                    });
+                    completed_rx.await.ok();
 
                     // Discard all queued ack data.
                     while let Some(_) = self.ack_rx.try_recv(iface) {}
@@ -107,7 +108,7 @@ impl Interface {
                 }
 
                 (IfaceKind::Control, FakeReqKind::Send(data)) => {
-                    let ack_kind = match self.ctrl_tx.send_req(data) {
+                    let ack_kind = match self.ctrl_tx.try_send(CtrlSignal::SendDataReq(data)) {
                         Ok(()) => FakeAckKind::SendAck,
                         Err(err) => {
                             log::warn!("{}", err);
@@ -128,7 +129,7 @@ impl Interface {
             };
         }
 
-        self.ctrl_tx.send_shutdown().await;
+        self.ctrl_tx.send(CtrlSignal::Shutdown).await;
         // Wait control module shutdown.
         // We delegate control of other modules to control module, so it's enough to just wait
         // control module shutdown.
@@ -198,41 +199,6 @@ impl IfaceState {
 enum IfaceStateKind {
     Halt,
     Ready,
-}
-
-struct CtrlEventSender {
-    /// This sender just propagate contents of `FakeReqPacket{iface: Control, req_kind:
-    /// Send(data)}` to the control module.
-    req_tx: Sender<Vec<u8>>,
-
-    /// This sender handles requests that affect control mudule behavior itself.
-    /// These requests must be processed if "normal" request channel is full. That's why we need
-    /// this sender in addition to normal `req_tx` sender.
-    inner_ctrl_tx: Sender<CtrlManagementSignal>,
-}
-
-impl CtrlEventSender {
-    async fn send_set_halt(&self, iface: IfaceKind) {
-        let (completed_tx, completed_rx) = oneshot::channel();
-
-        let event = CtrlManagementSignal::SetHalt {
-            iface,
-            completed: completed_tx,
-        };
-        self.inner_ctrl_tx.send(event).await;
-        completed_rx.await.ok();
-    }
-
-    async fn send_shutdown(&self) {
-        let event = CtrlManagementSignal::Shutdown;
-        self.inner_ctrl_tx.send(event).await;
-    }
-
-    fn send_req(&self, data: Vec<u8>) -> EmulatorResult<()> {
-        self.req_tx
-            .try_send(data)
-            .map_err(|_| EmulatorError::FullBuffer)
-    }
 }
 
 fn send_or_log(sender: &Sender<FakeAckPacket>, iface: IfaceKind, ack_kind: FakeAckKind) {
