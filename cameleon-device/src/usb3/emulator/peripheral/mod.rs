@@ -6,6 +6,7 @@ mod fake_protocol;
 mod interface;
 mod memory;
 mod signal;
+mod stream_module;
 
 #[derive(Debug, Error)]
 pub enum EmulatorError {

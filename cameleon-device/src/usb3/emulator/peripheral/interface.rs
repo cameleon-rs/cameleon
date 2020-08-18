@@ -6,7 +6,7 @@ use async_std::{
 };
 use futures::{channel::oneshot, select, FutureExt};
 
-use super::{fake_protocol::*, signal::CtrlSignal, EmulatorError, EmulatorResult};
+use super::{fake_protocol::*, signal::CtrlSignal};
 
 pub(super) struct Interface {
     host_side_interface: (Sender<FakeAckPacket>, Receiver<FakeReqPacket>),
@@ -20,7 +20,6 @@ pub(super) struct Interface {
 impl Interface {
     pub(super) fn new(
         host_side_interface: (Sender<FakeAckPacket>, Receiver<FakeReqPacket>),
-        ctrl_req_tx: Sender<Vec<u8>>,
         ctrl_tx: Sender<CtrlSignal>,
         ack_rx: AckDataReceiver,
     ) -> Self {
@@ -138,7 +137,7 @@ impl Interface {
             self.ack_rx.event_buffer.try_recv(),
             self.ack_rx.stream_buffer.try_recv()
         ) {
-            (Err(TryRecvError::Disconnected), Err(TryRecvError)) => true,
+            (Err(TryRecvError::Disconnected), Err(TryRecvError::Disconnected)) => true,
             _ => false,
         })
     }

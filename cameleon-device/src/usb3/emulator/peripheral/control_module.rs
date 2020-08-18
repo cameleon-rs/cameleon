@@ -82,15 +82,10 @@ impl ControlModule {
         }
 
         // Shutdown event module and stream module.
-        self.event_tx
-            .send(EventSignal::Shutdown)
-            .await;
-        self.stream_tx
-            .send(StreamSignal::Shutdown)
-            .await;
+        self.event_tx.send(EventSignal::Shutdown).await;
+        self.stream_tx.send(StreamSignal::Shutdown).await;
 
         // TOOD: Wait completion.
-
     }
 }
 

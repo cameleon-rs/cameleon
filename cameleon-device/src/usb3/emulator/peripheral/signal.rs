@@ -27,8 +27,8 @@ pub(super) enum EventSignal {
 }
 
 pub(super) enum StreamSignal {
+    // TODO: Its' better to send strem protocol with enable signal.
     Enable,
     Disable(oneshot::Sender<()>),
     Shutdown,
-    // TODO: Stream module property(e.g. pixel format or stream protocol) will also be managed through this signal.
 }
