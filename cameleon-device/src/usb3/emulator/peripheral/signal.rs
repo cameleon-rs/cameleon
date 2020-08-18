@@ -14,8 +14,12 @@ pub(super) enum CtrlSignal {
 }
 
 pub(super) enum EventSignal {
-    EventData(u16),
-    UpdateTimestamp(u32),
+    EventData {
+        event_id: u16,
+        data: Vec<u8>,
+        request_id: u16,
+    },
+    UpdateTimestamp(u64),
     Enable,
     Disable(oneshot::Sender<()>),
     Shutdown,

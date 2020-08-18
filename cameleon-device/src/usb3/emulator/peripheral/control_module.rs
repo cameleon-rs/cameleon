@@ -305,7 +305,7 @@ impl Worker {
 
 struct WorkerManager {
     /// Work as join handle coupled with `completed_rx`.
-    /// All workers spawnd by the manager shared this sender.
+    /// All workers spawnd by the manager share this sender.
     completed_tx: Sender<()>,
     /// Work as join handle coupled with `completed_tx`.
     /// Manager can wait all spawned worker completion via this receiver.
@@ -691,7 +691,7 @@ mod ack {
     {
         const PREFIX_MAGIC: u32 = 0x43563355;
 
-        pub(crate) fn serialize(&self, mut buf: impl Write) -> ProtocolResult<()> {
+        pub(super) fn serialize(&self, mut buf: impl Write) -> ProtocolResult<()> {
             buf.write_u32::<LE>(Self::PREFIX_MAGIC)?;
             self.ccd.serialize(&mut buf)?;
             self.scd.serialize(&mut buf)?;
@@ -757,7 +757,7 @@ mod ack {
     }
 
     impl<'a> ReadMem<'a> {
-        pub(crate) fn new(data: &'a [u8]) -> Self {
+        pub(super) fn new(data: &'a [u8]) -> Self {
             debug_assert!(data.len() <= u16::MAX as usize);
             Self { data }
         }
@@ -779,7 +779,7 @@ mod ack {
     }
 
     impl WriteMem {
-        pub(crate) fn new(length: u16) -> Self {
+        pub(super) fn new(length: u16) -> Self {
             Self { length }
         }
     }
@@ -801,7 +801,7 @@ mod ack {
     }
 
     impl Pending {
-        pub(crate) fn new(timeout: time::Duration) -> Self {
+        pub(super) fn new(timeout: time::Duration) -> Self {
             debug_assert!(timeout.as_millis() <= std::u16::MAX as u128);
             Self { timeout }
         }
@@ -824,7 +824,7 @@ mod ack {
     }
 
     impl<'a> ReadMemStacked<'a> {
-        pub(crate) fn new(data: &'a [u8]) -> Self {
+        pub(super) fn new(data: &'a [u8]) -> Self {
             debug_assert!(data.len() <= u16::MAX as usize);
             Self { data }
         }
@@ -846,7 +846,7 @@ mod ack {
     }
 
     impl WriteMemStacked {
-        pub(crate) fn new(lengths: Vec<u16>) -> Self {
+        pub(super) fn new(lengths: Vec<u16>) -> Self {
             debug_assert!(Self::scd_len(&lengths) <= u16::MAX as usize);
             Self { lengths }
         }
@@ -875,13 +875,13 @@ mod ack {
         }
     }
 
-    pub(crate) struct CustomAck<'a> {
+    pub(super) struct CustomAck<'a> {
         command_id: u16,
         data: &'a [u8],
     }
 
     impl<'a> CustomAck<'a> {
-        pub(crate) fn new(command_id: u16, data: &'a [u8]) -> Self {
+        pub(super) fn new(command_id: u16, data: &'a [u8]) -> Self {
             debug_assert!(data.len() <= u16::MAX as usize);
             debug_assert!(ScdKind::is_custom(command_id));
             Self { command_id, data }
@@ -903,13 +903,13 @@ mod ack {
         }
     }
 
-    pub(crate) struct ErrorAck {
+    pub(super) struct ErrorAck {
         status: Status,
         scd_kind: ScdKind,
     }
 
     impl ErrorAck {
-        pub(crate) fn new(status: impl Into<Status>, scd_kind: impl Into<ScdKind>) -> Self {
+        pub(super) fn new(status: impl Into<Status>, scd_kind: impl Into<ScdKind>) -> Self {
             Self {
                 status: status.into(),
                 scd_kind: scd_kind.into(),
