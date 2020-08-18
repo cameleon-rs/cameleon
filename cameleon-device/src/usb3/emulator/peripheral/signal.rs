@@ -14,16 +14,17 @@ pub(super) enum CtrlSignal {
 }
 
 pub(super) enum EventSignal {
-    EventData(Vec<u8>),
+    EventData(u16),
     UpdateTimestamp(u32),
-    Start,
-    Pause(oneshot::Sender<()>),
-    Shutdown(oneshot::Sender<()>),
+    Enable,
+    Disable(oneshot::Sender<()>),
+    Shutdown,
+    // TODO: Multievent support.
 }
 
 pub(super) enum StreamSignal {
-    Start,
-    Pause(oneshot::Sender<()>),
-    Shutdown(oneshot::Sender<()>),
-    // TODO: Stream module property(i.e. pixel format or stream protocol) will also be managed through this signal.
+    Enable,
+    Disable(oneshot::Sender<()>),
+    Shutdown,
+    // TODO: Stream module property(e.g. pixel format or stream protocol) will also be managed through this signal.
 }

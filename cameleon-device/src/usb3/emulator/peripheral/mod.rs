@@ -1,6 +1,7 @@
 use thiserror::Error;
 
 mod control_module;
+mod event_module;
 mod fake_protocol;
 mod interface;
 mod memory;

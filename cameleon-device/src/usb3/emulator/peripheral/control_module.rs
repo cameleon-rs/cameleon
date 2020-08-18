@@ -9,7 +9,7 @@ use async_std::{
     sync::{channel, Mutex, Receiver, Sender},
     task,
 };
-use futures::{channel::oneshot, select, FutureExt};
+use futures::channel::oneshot;
 use thiserror::Error;
 
 use super::{
@@ -40,15 +40,7 @@ impl ControlModule {
             self.stream_tx.clone(),
         );
 
-        loop {
-            let signal = match self.ctrl_rx.next().await {
-                Some(event) => event,
-                None => {
-                    log::error!("main interface is unexpectedly stopped!");
-                    break;
-                }
-            };
-
+        while let Some(signal) = self.ctrl_rx.next().await {
             match signal {
                 CtrlSignal::SendDataReq(data) => {
                     let worker = worker_manager.worker();
@@ -65,21 +57,23 @@ impl ControlModule {
                 } => {
                     // We need to wait all workers completion even if the event is targeted at event/stream
                     // module to avoid race condition related to EI/SI register.
-                    worker_manager.wait_completion();
+                    worker_manager.wait_completion().await;
                     match iface {
                         IfaceKind::Control => {}
 
                         IfaceKind::Event => {
                             // TODO: Set zero to EI control register.
                             let (completed_tx, completed_rx) = oneshot::channel();
-                            self.event_tx.send(EventSignal::Pause(completed_tx)).await;
+                            self.event_tx.send(EventSignal::Disable(completed_tx)).await;
                             completed_rx.await.ok();
                         }
 
                         IfaceKind::Stream => {
                             // TODO: Set zero to SI control register.
                             let (completed_tx, completed_rx) = oneshot::channel();
-                            self.stream_tx.send(StreamSignal::Pause(completed_tx)).await;
+                            self.stream_tx
+                                .send(StreamSignal::Disable(completed_tx))
+                                .await;
                             completed_rx.await.ok();
                         }
                     }
@@ -88,17 +82,15 @@ impl ControlModule {
         }
 
         // Shutdown event module and stream module.
-        let (event_shutdown_tx, event_shutdown_rx) = oneshot::channel();
-        let (stream_shutdown_tx, stream_shutdown_rx) = oneshot::channel();
         self.event_tx
-            .send(EventSignal::Shutdown(event_shutdown_tx))
+            .send(EventSignal::Shutdown)
             .await;
         self.stream_tx
-            .send(StreamSignal::Shutdown(stream_shutdown_tx))
+            .send(StreamSignal::Shutdown)
             .await;
 
-        event_shutdown_rx.await.ok();
-        stream_shutdown_rx.await.ok();
+        // TOOD: Wait completion.
+
     }
 }
 
@@ -204,6 +196,7 @@ impl Worker {
     }
 
     fn process_write_mem(&self, command: cmd::CommandPacket) {
+        // TODO: Handle special events which occured by write mem command,
         let scd: cmd::WriteMem = match self.try_extract_scd(&command) {
             Some(scd) => scd,
             None => return,
@@ -311,8 +304,12 @@ impl Worker {
 }
 
 struct WorkerManager {
-    tx: Sender<()>,
-    rx: Receiver<()>,
+    /// Work as join handle coupled with `completed_rx`.
+    /// All workers spawnd by the manager shared this sender.
+    completed_tx: Sender<()>,
+    /// Work as join handle coupled with `completed_tx`.
+    /// Manager can wait all spawned worker completion via this receiver.
+    completed_rx: Receiver<()>,
 
     ack_tx: Sender<Vec<u8>>,
     memory: Arc<Mutex<Memory>>,
@@ -330,12 +327,12 @@ impl WorkerManager {
         event_tx: Sender<EventSignal>,
         stream_tx: Sender<StreamSignal>,
     ) -> Self {
-        let (tx, rx) = channel(1);
+        let (completed_tx, completed_rx) = channel(1);
         let on_processing = Arc::new(AtomicBool::new(false));
 
         Self {
-            tx,
-            rx,
+            completed_tx,
+            completed_rx,
             ack_tx,
             memory,
             iface_state,
@@ -349,7 +346,7 @@ impl WorkerManager {
         Worker {
             ack_tx: self.ack_tx.clone(),
             memory: self.memory.clone(),
-            completed: self.tx.clone(),
+            completed: self.completed_tx.clone(),
             on_processing: self.on_processing.clone(),
             iface_state: self.iface_state.clone(),
             event_tx: self.event_tx.clone(),
@@ -359,9 +356,12 @@ impl WorkerManager {
 
     async fn wait_completion(&mut self) {
         let (new_tx, new_rx) = channel(1);
-        self.tx = new_tx;
-        self.rx.recv().await.ok();
-        self.rx = new_rx;
+        // Drop old sender for wait workers completion.
+        self.completed_tx = new_tx;
+
+        // Wait all workers completion.
+        self.completed_rx.recv().await.ok();
+        self.completed_rx = new_rx;
     }
 }
 

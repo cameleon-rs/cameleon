@@ -90,11 +90,11 @@ const SBRM_ADDRESS: u64 = 0xffff;
 ///      9 |     1 | SBRM is supported.
 ///     10 |     1 | Endianess Register is supported.
 ///     11 |     1 | Written Length Field is supported.
-///     12 |     1 | Multi Event is supported.
+///     12 |     0 | Multi Event is NOT supported.
 ///     13 |     1 | Stacked Commands is supported.
 ///     14 |     1 | Device Software Interface Version is supported.
 ///  63-15 |     0 | Reserved. All remained bits are set to 0.
-const DEVICE_CAPABILITY: u64 = 0b111111100001001;
+const DEVICE_CAPABILITY: u64 = 0b111011100001001;
 
 #[derive(Clone)]
 pub struct ABRM {
