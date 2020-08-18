@@ -15,6 +15,16 @@ pub(super) struct EventModule {
 }
 
 impl EventModule {
+    pub(super) fn new(ctrl_rx: Receiver<EventSignal>, ack_tx: Sender<Vec<u8>>, timestamp: u64) -> Self {
+        Self {
+            ctrl_rx,
+            ack_tx,
+            timestamp,
+            enabled: false
+        }
+    }
+
+
     pub(super) async fn run(mut self, _completed: oneshot::Sender<()>) {
         while let Some(signal) = self.ctrl_rx.next().await {
             match signal {
@@ -188,4 +198,72 @@ mod event_packet {
             assert_eq!(parsed.scd[0].data, data);
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use async_std::{sync::{channel, TryRecvError}, task, future::timeout};
+    use futures::channel::oneshot;
+
+    use crate::usb3::protocol::event;
+
+    use super::*;
+
+    const TO: Duration = Duration::from_millis(100);
+
+    fn new_module() -> (EventModule, Sender<EventSignal>, Receiver<Vec<u8>>) {
+        let (ctrl_tx, ctrl_rx) = channel(10);
+        let (ack_tx, ack_rx) = channel(10);
+        (EventModule::new(ctrl_rx, ack_tx, 0), ctrl_tx, ack_rx)
+    }
+
+    #[test]
+    fn test_run_and_stop() {
+        let (event_module, ctrl_tx, ack_rx) = new_module();
+        let (completed_tx, completed_rx) = oneshot::channel();
+        task::spawn(event_module.run(completed_tx));
+
+        assert!(ctrl_tx.try_send(EventSignal::Shutdown).is_ok());
+        let completed = task::block_on(timeout(TO, completed_rx)).unwrap();
+        assert_eq!(completed, Err(oneshot::Canceled));
+
+        assert_eq!(ack_rx.try_recv(), Err(TryRecvError::Disconnected));
+    }
+
+    #[test]
+    fn test_signal() {
+        let (event_module, ctrl_tx, ack_rx) = new_module();
+        let (completed_tx, completed_rx) = oneshot::channel();
+        task::spawn(event_module.run(completed_tx));
+        assert!(ctrl_tx.try_send(EventSignal::Enable).is_ok());
+
+        // Test EventData signal.
+        let event_id = 10;
+        let request_id = 20;
+        let data = vec![1, 2, 3];
+        ctrl_tx.try_send(EventSignal::EventData{event_id, data: data.clone(), request_id}).unwrap();
+        let received = task::block_on(timeout(TO, ack_rx.recv())).unwrap().unwrap();
+        let event_packet = event::EventPacket::parse(&received).unwrap();
+        assert_eq!(event_packet.request_id(), request_id);
+        assert_eq!(event_packet.scd.len(), 1);
+        assert_eq!(&event_packet.scd[0].data, &data.as_slice());
+
+        // Test UpdateTimestamp signal.
+        let timestamp = 123456789;
+        ctrl_tx.try_send(EventSignal::UpdateTimestamp(timestamp)).unwrap();
+        ctrl_tx.try_send(EventSignal::EventData{event_id, data: data.clone(), request_id}).unwrap();
+        let received = task::block_on(timeout(TO, ack_rx.recv())).unwrap().unwrap();
+        let event_packet = event::EventPacket::parse(&received).unwrap();
+        assert_eq!(event_packet.scd[0].timestamp, timestamp);
+
+        // Clean up.
+        assert!(ctrl_tx.try_send(EventSignal::Shutdown).is_ok());
+        let completed = task::block_on(timeout(TO, completed_rx)).unwrap();
+        assert_eq!(completed, Err(oneshot::Canceled));
+        assert_eq!(ack_rx.try_recv(), Err(TryRecvError::Disconnected));
+
+    }
+
 }

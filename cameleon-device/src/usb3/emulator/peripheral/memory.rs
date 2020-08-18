@@ -204,7 +204,7 @@ fn verify_str(s: &str) -> EmulatorResult<()> {
         return Err(EmulatorError::InvalidString("string format is not ascii"));
     }
 
-    // String in register must be 0 terminated.
+    // String in register must be 0 terminated, so need to subtract 1 from STRING_LENGTH_LIMIT.
     if s.as_bytes().len() > STRING_LENGTH_LIMIT - 1 {
         return Err(EmulatorError::InvalidString("string is too long."));
     }
@@ -213,7 +213,7 @@ fn verify_str(s: &str) -> EmulatorResult<()> {
 }
 
 fn write_str(w: &mut impl Write, s: &str) -> EmulatorResult<()> {
-    verify_str(s)?;
+    debug_assert!(verify_str(s).is_ok());
     w.write_all(s.as_bytes())?;
     Ok(w.write_u8(0)?) // 0 terminate.
 }
