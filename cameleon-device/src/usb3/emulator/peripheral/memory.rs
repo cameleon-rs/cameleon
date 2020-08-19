@@ -77,7 +77,11 @@ impl Memory {
         Ok(&self.inner[range])
     }
 
-    pub(super) fn write_mem(&mut self, address: usize, data: &[u8]) -> MemoryResult<()> {
+    pub(super) fn write_mem(
+        &mut self,
+        address: usize,
+        data: &[u8],
+    ) -> MemoryResult<Option<EventChain>> {
         let range = address..address + data.len();
         self.protection.verify_address_with_range(range.clone())?;
         if !self
@@ -90,7 +94,10 @@ impl Memory {
 
         self.inner[range].copy_from_slice(data);
 
-        Ok(())
+        Ok(self
+            .chain_builder
+            .build_chain(address as u64, data.len() as u16)
+            .cloned())
     }
 
     pub(super) fn write_mem_u8_unchecked(&mut self, address: usize, data: u8) {
@@ -148,6 +155,7 @@ impl EventChainBuilder {
     }
 }
 
+#[derive(Debug, Clone)]
 pub(super) struct EventChain {
     chain: Vec<EventData>,
 }
@@ -164,12 +172,9 @@ impl EventChain {
     }
 }
 
+#[derive(Debug, Clone)]
 pub(super) enum EventData {
-    WriteTimestamp { addr: u64 },
-}
-
-pub(super) enum WriteEventType {
-    U64,
+    WriteTimestamp { addr: usize },
 }
 
 #[derive(Debug, Clone)]
@@ -217,7 +222,7 @@ impl ABRM {
         let timestamp_latch = abrm::TIMESTAMP_LATCH;
         let (addr, len) = (timestamp_latch.0, timestamp_latch.1);
         let chain = EventChain::single_event(EventData::WriteTimestamp {
-            addr: abrm::TIMESTAMP.0,
+            addr: abrm::TIMESTAMP.0 as usize,
         });
         chain_builder.register(addr, len, chain);
     }

@@ -19,7 +19,7 @@ use super::{
     event_module::EventModule,
     fake_protocol::IfaceKind,
     interface::{AckDataSender, IfaceState},
-    memory::{Memory, MemoryError},
+    memory::{EventChain, EventData, Memory, MemoryError},
     signal::*,
     stream_module::StreamModule,
 };
@@ -56,6 +56,7 @@ impl ControlModule {
             iface_state,
             event_tx.clone(),
             stream_tx.clone(),
+            self.timestamp.clone(),
         );
 
         // Spawn event and stream module.
@@ -130,6 +131,7 @@ struct Worker {
     iface_state: IfaceState,
     event_tx: Sender<EventSignal>,
     stream_tx: Sender<StreamSignal>,
+    timestamp: Timestamp,
 }
 
 impl Worker {
@@ -234,23 +236,45 @@ impl Worker {
         let scd_kind = ccd.scd_kind;
 
         let mut memory = self.memory.lock().await;
-        match memory.write_mem(scd.address as usize, scd.data) {
-            Ok(()) => {
+        let (event_chain, ack) = match memory.write_mem(scd.address as usize, scd.data) {
+            Ok(Some(event_chain)) => {
+                let ack = ack::WriteMem::new(scd.data.len() as u16).finalize(req_id);
+                (event_chain, ack)
+            }
+            Ok(None) => {
                 let ack = ack::WriteMem::new(scd.data.len() as u16).finalize(req_id);
                 self.try_send_ack(ack);
+                return;
             }
             Err(MemoryError::InvalidAddress) => {
                 let ack =
                     ack::ErrorAck::new(ack::GenCpStatus::InvalidAddress, scd_kind).finalize(req_id);
                 self.try_send_ack(ack);
+                return;
             }
             Err(MemoryError::AddressNotWritable) => {
                 let ack =
                     ack::ErrorAck::new(ack::GenCpStatus::WriteProtect, scd_kind).finalize(req_id);
                 self.try_send_ack(ack);
+                return;
             }
             Err(MemoryError::AddressNotReadable) => unreachable!(),
+        };
+
+        // TODO: Implement event chain processor as another method.
+        for event in event_chain.chain() {
+            match event {
+                EventData::WriteTimestamp { addr } => {
+                    let timestamp_ns = self.timestamp.as_nanos().await;
+                    // TODO: Handle error.
+                    self.event_tx
+                        .try_send(EventSignal::UpdateTimestamp(timestamp_ns))
+                        .ok();
+                    memory.write_mem_u64_unchecked(*addr, timestamp_ns);
+                }
+            }
         }
+        self.try_send_ack(ack);
     }
 
     async fn process_read_mem_stacked<'a>(&self, command: cmd::CommandPacket<'a>) {
@@ -293,6 +317,10 @@ impl Worker {
         // TODO: Should we implemnent this command?
         let ack = ack::ErrorAck::new(ack::GenCpStatus::NotImplemented, scd_kind).finalize(req_id);
         self.try_send_ack(ack);
+    }
+
+    async fn process_event_chain<T>(&self, chain: &EventChain, ack: ack::AckPacket<T>) {
+        todo!()
     }
 
     fn try_extract_scd<'a, T>(&self, command: &cmd::CommandPacket<'a>) -> Option<T>
@@ -345,6 +373,7 @@ struct WorkerManager {
     on_processing: Arc<AtomicBool>,
     event_tx: Sender<EventSignal>,
     stream_tx: Sender<StreamSignal>,
+    timestamp: Timestamp,
 }
 
 impl WorkerManager {
@@ -354,6 +383,7 @@ impl WorkerManager {
         iface_state: IfaceState,
         event_tx: Sender<EventSignal>,
         stream_tx: Sender<StreamSignal>,
+        timestamp: Timestamp,
     ) -> Self {
         let (completed_tx, completed_rx) = channel(1);
         let on_processing = Arc::new(AtomicBool::new(false));
@@ -367,6 +397,7 @@ impl WorkerManager {
             on_processing,
             event_tx,
             stream_tx,
+            timestamp,
         }
     }
 
@@ -379,6 +410,7 @@ impl WorkerManager {
             iface_state: self.iface_state.clone(),
             event_tx: self.event_tx.clone(),
             stream_tx: self.stream_tx.clone(),
+            timestamp: self.timestamp.clone(),
         }
     }
 

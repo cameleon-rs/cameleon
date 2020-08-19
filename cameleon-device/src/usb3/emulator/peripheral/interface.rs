@@ -84,7 +84,7 @@ impl Interface {
             };
 
             let iface = packet.iface;
-            let req_kind = packet.req_kind;
+            let req_kind = packet.kind;
 
             // Handle request related to halt.
             if req_kind.is_clear_halt() {
