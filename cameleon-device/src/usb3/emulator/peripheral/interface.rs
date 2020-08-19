@@ -120,6 +120,7 @@ impl Interface {
                 continue;
             };
 
+            // Handle request.
             match (iface, req_kind) {
                 (iface, FakeReqKind::Recv) => {
                     let data = ack_rx_for_mod.try_recv(iface);
@@ -160,15 +161,6 @@ impl Interface {
             .send(CtrlSignal::Shutdown(completed_tx))
             .await;
         completed_rx.await.ok();
-
-        debug_assert!(match (
-            ack_rx_for_mod.try_recv(IfaceKind::Control),
-            ack_rx_for_mod.try_recv(IfaceKind::Event),
-            ack_rx_for_mod.try_recv(IfaceKind::Stream)
-        ) {
-            (None, None, None) => true,
-            _ => false,
-        })
     }
 }
 

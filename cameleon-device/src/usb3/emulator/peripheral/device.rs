@@ -6,7 +6,7 @@ use async_std::{
 };
 use futures::channel::oneshot;
 
-use super::{fake_protocol::*, memory::Memory};
+use super::{fake_protocol::*, interface::Interface, memory::Memory};
 
 const REQ_PACKET_CHANNEL_CAPACITY: usize = 1;
 const ACK_PACKET_CHANNEL_CAPACITY: usize = 1;
@@ -16,6 +16,8 @@ pub(super) struct Device {
     memory: Arc<Mutex<Memory>>,
     tx_for_host: Option<Sender<FakeReqPacket>>,
     rx_for_host: Option<Receiver<FakeAckPacket>>,
+    shutdown_tx: Option<oneshot::Sender<()>>,
+    completion_rx: Option<oneshot::Receiver<()>>,
 }
 
 impl Device {
@@ -25,6 +27,16 @@ impl Device {
             memory: Arc::new(Mutex::new(memory)),
             tx_for_host: None,
             rx_for_host: None,
+            shutdown_tx: None,
+            completion_rx: None,
+        }
+    }
+
+    pub(super) fn connect(&mut self) -> Option<(Sender<FakeReqPacket>, Receiver<FakeAckPacket>)> {
+        if let (Some(tx), Some(rx)) = (self.tx_for_host.take(), self.rx_for_host.take()) {
+            Some((tx, rx))
+        } else {
+            None
         }
     }
 
@@ -35,7 +47,39 @@ impl Device {
         self.tx_for_host = Some(req_tx_for_host);
         self.rx_for_host = Some(ack_rx_for_host);
 
-        todo!();
+        // Create channel for communication between device and its internal interface.
+        let (shutdown_tx, shutdown_rx) = oneshot::channel();
+        let (completion_tx, completion_rx) = oneshot::channel();
+        self.shutdown_tx = Some(shutdown_tx);
+        self.completion_rx = Some(completion_rx);
+
+        task::spawn(Interface::new().run(
+            ack_tx_for_device,
+            req_rx_for_device,
+            self.timestamp.clone(),
+            self.memory.clone(),
+            shutdown_rx,
+            completion_tx,
+        ));
+    }
+
+    pub(super) fn shutdown(&mut self) {
+        if let Some(shutdown_tx) = self.shutdown_tx.take() {
+            // Signal shutdown to interface.
+            self.shutdown_tx = None;
+            // Wait interface shutdown completion.
+            let completion_rx = self.completion_rx.take().unwrap();
+            task::block_on(completion_rx);
+        }
+
+        self.tx_for_host = None;
+        self.rx_for_host = None;
+    }
+}
+
+impl Drop for Device {
+    fn drop(&mut self) {
+        self.shutdown();
     }
 }
 

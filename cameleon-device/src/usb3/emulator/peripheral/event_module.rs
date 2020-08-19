@@ -259,8 +259,6 @@ mod tests {
             .is_ok());
         let completed = task::block_on(timeout(TO, completed_rx)).unwrap();
         assert_eq!(completed, Err(oneshot::Canceled));
-
-        assert_eq!(ack_rx.try_recv(), Err(TryRecvError::Disconnected));
     }
 
     #[test]
@@ -308,6 +306,5 @@ mod tests {
             .is_ok());
         let completed = task::block_on(timeout(TO, completed_rx)).unwrap();
         assert_eq!(completed, Err(oneshot::Canceled));
-        assert_eq!(ack_rx.try_recv(), Err(TryRecvError::Disconnected));
     }
 }
