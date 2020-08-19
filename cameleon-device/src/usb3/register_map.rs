@@ -71,7 +71,7 @@ pub mod sirm {
     pub const MAXIMUM_TRAILER_SIZE: (u64, u16, AccessRight) = (0x002C, 4, RW);
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum AccessRight {
     /// Not Available.
     NA,

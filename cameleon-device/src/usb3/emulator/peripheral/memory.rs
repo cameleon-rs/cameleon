@@ -1,15 +1,31 @@
-use thiserror::Error;
-
-use std::borrow::Cow;
-use std::io::Write;
-use std::ops::Range;
+use std::{borrow::Cow, collections::HashMap, io::Write, ops::Range};
 
 use byteorder::{WriteBytesExt, LE};
 use semver::Version;
+use thiserror::Error;
 
-use crate::usb3::register_map::AccessRight;
+use crate::usb3::register_map::*;
 
 use super::{EmulatorError, EmulatorResult};
+
+const SBRM_ADDRESS: u64 = 0xffff;
+
+// TODO: Multievent support.
+/// offset | value | Description.
+///      0 |     1 | User Defined Name is supported.
+///      1 |     0 | Access Privilege and Heartbeat are NOT supported.
+///      2 |     0 | Message Channel is NOT supported.
+///      3 |     1 | Timestampl is supported.
+///    7-4 |  0000 | String Encoding (Ascii).
+///      8 |     1 | Family Name is supported.
+///      9 |     1 | SBRM is supported.
+///     10 |     1 | Endianess Register is supported.
+///     11 |     1 | Written Length Field is supported.
+///     12 |     0 | Multi Event is currentrly NOT supported.
+///     13 |     1 | Stacked Commands is supported.
+///     14 |     1 | Device Software Interface Version is supported.
+///  63-15 |     0 | Reserved. All remained bits are set to 0.
+const DEVICE_CAPABILITY: u64 = 0b111011100001001;
 
 #[derive(Debug, Error)]
 pub(super) enum MemoryError {
@@ -31,11 +47,15 @@ pub(super) struct Memory {
 }
 
 impl Memory {
-    pub(super) fn new(inner: Vec<u8>) -> Self {
-        Self {
-            protection: MemoryProtection::new(inner.len()),
-            inner,
-        }
+    // TODO: Add SBRM, EIRM, SIRM, GenXML.
+    pub(super) fn new(abrm: ABRM) -> Self {
+        let memory_len = *[abrm.last_address()].iter().max().unwrap();
+        let inner = vec![0; memory_len];
+        let protection = MemoryProtection::new(memory_len);
+        let mut memory = Memory { protection, inner };
+
+        abrm.flush(&mut memory);
+        memory
     }
 
     pub(super) fn read_mem(&self, range: Range<usize>) -> MemoryResult<&[u8]> {
@@ -78,121 +98,83 @@ impl Memory {
     }
 }
 
-const SBRM_ADDRESS: u64 = 0xffff;
-
-/// offset | value | Description.
-///      0 |     1 | User Defined Name is supported.
-///      1 |     0 | Access Privilege and Heartbeat are NOT supported.
-///      2 |     0 | Message Channel is NOT supported.
-///      3 |     1 | Timestampl is supported.
-///    7-4 |  0000 | String Encoding (Ascii).
-///      8 |     1 | Family Name is supported.
-///      9 |     1 | SBRM is supported.
-///     10 |     1 | Endianess Register is supported.
-///     11 |     1 | Written Length Field is supported.
-///     12 |     0 | Multi Event is NOT supported.
-///     13 |     1 | Stacked Commands is supported.
-///     14 |     1 | Device Software Interface Version is supported.
-///  63-15 |     0 | Reserved. All remained bits are set to 0.
-const DEVICE_CAPABILITY: u64 = 0b111011100001001;
-
-#[derive(Clone)]
-pub struct ABRM {
-    gen_cp_version: Version,
-    manufacturer_name: Cow<'static, str>,
-    model_name: Cow<'static, str>,
-    family_name: Cow<'static, str>,
-    device_version: Cow<'static, str>,
-    manufacturer_info: Cow<'static, str>,
-    serial_number: Cow<'static, str>,
-    user_defined_name: Cow<'static, str>,
-    device_capability: u64,
-    maximum_device_response_time: u32,
-    manifest_table_address: u64,
-    sbrm_address: u64,
-    device_configuration: u64,
-    heartbeat_timeout: u32,
-    message_channel_id: u32,
-    timestamp: u64,
-    timestamp_latch: u32,
-    timestamp_increment: u64,
-    access_privilege: u32,
-    protocol_endianess: u32,
-    implementation_endianess: u32,
-    device_software_interface_version: &'static str,
+#[derive(Debug, Clone)]
+pub(super) struct ABRM {
+    inner: HashMap<(u64, u16, AccessRight), RegisterEntryData>,
+    last_address: usize,
 }
 
 macro_rules! string_setter {
-    ($fn_name:ident, $prop:ident) => {
-        pub fn $fn_name(&mut self, name: &str) -> EmulatorResult<()> {
+    ($fn_name:ident, $entry:ident) => {
+        pub(super) fn $fn_name(&mut self, name: &str) -> EmulatorResult<()> {
+            use abrm::*;
             verify_str(name)?;
-            self.$prop = name.to_owned().into();
+            *self.inner.get_mut(&$entry).unwrap() = RegisterEntryData::Str(name.to_owned().into());
             Ok(())
         }
     };
 }
 
 impl ABRM {
-    string_setter!(set_model_name, model_name);
-    string_setter!(set_family_name, family_name);
-    string_setter!(set_device_version, device_version);
-    string_setter!(set_manufacturer_info, manufacturer_info);
-    string_setter!(set_serial_number, serial_number);
-    string_setter!(set_user_defined_name, user_defined_name);
+    string_setter!(set_model_name, MODEL_NAME);
+    string_setter!(set_family_name, FAMILY_NAME);
+    string_setter!(set_device_version, DEVICE_VERSION);
+    string_setter!(set_manufacturer_info, MANUFACTURER_INFO);
+    string_setter!(set_serial_number, SERIAL_NUMBER);
+    string_setter!(set_user_defined_name, USER_DEFINED_NAME);
 
-    pub(super) fn flush(&self, mut memory: impl Write) -> EmulatorResult<()> {
-        memory.write_u16::<LE>(self.gen_cp_version.minor as u16)?;
-        memory.write_u16::<LE>(self.gen_cp_version.major as u16)?;
-        write_str(&mut memory, &self.model_name)?;
-        write_str(&mut memory, &self.family_name)?;
-        write_str(&mut memory, &self.device_version)?;
-        write_str(&mut memory, &self.manufacturer_info)?;
-        write_str(&mut memory, &self.serial_number)?;
-        write_str(&mut memory, &self.user_defined_name)?;
-        memory.write_u64::<LE>(self.device_capability)?;
-        memory.write_u32::<LE>(self.maximum_device_response_time)?;
-        memory.write_u64::<LE>(self.manifest_table_address)?;
-        memory.write_u64::<LE>(self.sbrm_address)?;
-        memory.write_u64::<LE>(self.device_configuration)?;
-        memory.write_u32::<LE>(self.heartbeat_timeout)?;
-        memory.write_u32::<LE>(self.message_channel_id)?;
-        memory.write_u64::<LE>(self.timestamp)?;
-        memory.write_u32::<LE>(self.timestamp_latch)?;
-        memory.write_u64::<LE>(self.timestamp_increment)?;
-        memory.write_u32::<LE>(self.access_privilege)?;
-        memory.write_u32::<LE>(self.protocol_endianess)?;
-        memory.write_u32::<LE>(self.implementation_endianess)?;
-        write_str(&mut memory, self.device_software_interface_version)?;
+    fn flush(&self, memory: &mut Memory) {
+        let mem_inner = &mut memory.inner;
+        let protection = &mut memory.protection;
+        for ((addr, len, right), data) in self.inner.iter() {
+            let range = *addr as usize..*addr as usize + *len as usize;
 
-        Ok(())
+            // Flush entry data to memory.
+            data.write(&mut mem_inner[range.clone()]);
+
+            // Set access right to memory protection.
+            protection.set_access_right_with_range(range, *right);
+        }
+    }
+
+    fn last_address(&self) -> usize {
+        self.last_address
     }
 }
 
 impl Default for ABRM {
     fn default() -> Self {
+        use RegisterEntryData::*;
+        let raw_abrm = [
+            (abrm::GENCP_VERSION, Ver(Version::new(1, 3, 0))),
+            (abrm::MANUFACTURER_NAME, Str("cameleon".into())),
+            (abrm::MODEL_NAME, Str("cameleon model".into())),
+            (abrm::FAMILY_NAME, Str("cameleon family".into())),
+            (abrm::DEVICE_VERSION, Str("none".into())),
+            (abrm::MANUFACTURER_INFO, Str("".into())),
+            (abrm::SERIAL_NUMBER, Str("0000".into())),
+            (abrm::USER_DEFINED_NAME, Str("none".into())),
+            (abrm::DEVICE_CAPABILITY, U64(DEVICE_CAPABILITY)),
+            (abrm::MAXIMUM_DEVICE_RESPONSE_TIME, U32(100)),
+            (abrm::MANIFEST_TABLE_ADDRESS, U64(0xFFFFFFFFFFFFFFFF)), // TODO: Define manifest table address.
+            (abrm::SBRM_ADDRESS, U64(SBRM_ADDRESS)),
+            (abrm::DEVICE_CONFIGURATION, U64(0)),
+            (abrm::HEARTBEAT_TIMEOUT, U32(0)),
+            (abrm::MESSAGE_CHANNEL_ID, U32(0)),
+            (abrm::TIMESTAMP, U64(0)),
+            (abrm::TIMESTAMP_LATCH, U32(0)),
+            (abrm::TIMESTAMP_INCREMENT, U64(1000)), // Dummy value indicating device clock runs at 1MHz.
+            (abrm::ACCESS_PRIVILEGE, U32(0)),
+            (abrm::PROTOCOL_ENDIANESS, U32(0xFFFFFFFF)), // Little endian.
+            (abrm::IMPLEMENTATION_ENDIANESS, U32(0xFFFFFFFF)), // Little endian.
+            (abrm::DEVICE_SOFTWARE_INTERFACE_VERSION, Str("1.0.0".into())),
+        ];
+
+        let (last_addr, last_len, _) = raw_abrm.last().unwrap().0;
+        let last_address = last_addr as usize + last_len as usize;
         Self {
-            gen_cp_version: Version::new(1, 3, 0),
-            manufacturer_name: "cameleon".into(),
-            model_name: "cameleon model".into(),
-            family_name: "cameleon family".into(),
-            device_version: "none".into(),
-            manufacturer_info: "".into(),
-            serial_number: "0000".into(),
-            user_defined_name: "none".into(),
-            device_capability: DEVICE_CAPABILITY,
-            maximum_device_response_time: 100,
-            manifest_table_address: 0, // TODO: Define manifest table address.
-            sbrm_address: SBRM_ADDRESS,
-            device_configuration: 0b00,
-            heartbeat_timeout: 0,
-            message_channel_id: 0,
-            timestamp: 0,
-            timestamp_latch: 0,
-            timestamp_increment: 1000, // Dummy value indicating device clock runs at 1MHz.
-            access_privilege: 0,
-            protocol_endianess: 0xffff,       // Little endian.
-            implementation_endianess: 0xffff, // Little endian.
-            device_software_interface_version: "1.0.0",
+            inner: raw_abrm.iter().cloned().collect(),
+            last_address,
         }
     }
 }
@@ -212,19 +194,40 @@ fn verify_str(s: &str) -> EmulatorResult<()> {
     Ok(())
 }
 
-fn write_str(w: &mut impl Write, s: &str) -> EmulatorResult<()> {
-    debug_assert!(verify_str(s).is_ok());
-    w.write_all(s.as_bytes())?;
-    Ok(w.write_u8(0)?) // 0 terminate.
+#[derive(Debug, Clone)]
+enum RegisterEntryData {
+    U16(u16),
+    U32(u32),
+    U64(u64),
+    Ver(Version),
+    Str(Cow<'static, str>),
+}
+
+impl RegisterEntryData {
+    fn write(&self, mut wtr: impl Write) {
+        match self {
+            Self::U16(data) => wtr.write_u16::<LE>(*data).unwrap(),
+            Self::U32(data) => wtr.write_u32::<LE>(*data).unwrap(),
+            Self::U64(data) => wtr.write_u64::<LE>(*data).unwrap(),
+            Self::Ver(data) => {
+                wtr.write_u16::<LE>(data.minor as u16).unwrap();
+                wtr.write_u16::<LE>(data.major as u16).unwrap();
+            }
+            Self::Str(data) => {
+                debug_assert!(verify_str(data).is_ok());
+                wtr.write_all(data.as_bytes()).unwrap();
+                wtr.write_u8(0).unwrap() // 0 terminate.
+            }
+        }
+    }
 }
 
 /// Map each address to its access right.
 /// Access right is represented by 2 bits and mapping is done in 2 steps described below.
-/// 1. First step is calculating block corresponding to the address. 4 access rights is packed into a single block, thus the block
+/// 1. First step is calculating block corresponding to the address. Four access rights is packed into a single block, thus the block
 ///    position is calculated by `address / 4`.
 /// 2. Second step is extracting the access right from the block. The offset of the access right is calculated by
 ///    `address % 4 * 2`.
-// TODO: Consider better representation.
 struct MemoryProtection {
     inner: Vec<u8>,
     memory_size: usize,
@@ -324,16 +327,5 @@ mod tests {
         assert!(protection.verify_address(5).is_err());
         assert!(protection.verify_address_with_range(2..5).is_ok());
         assert!(protection.verify_address_with_range(2..6).is_err());
-    }
-
-    #[test]
-    fn test_read_write_memory() {
-        let inner = vec![0, 0, 0, 0];
-        let mut mem = Memory::new(inner);
-        mem.set_access_right(0..4, RW);
-
-        let data = &[1, 2, 3, 4];
-        assert!(mem.write_mem(0, data).is_ok());
-        assert_eq!(mem.read_mem(0..4).unwrap(), data);
     }
 }
