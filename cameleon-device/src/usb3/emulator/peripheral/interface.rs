@@ -128,33 +128,40 @@ impl Interface {
             };
         }
 
-        self.ctrl_tx.send(CtrlSignal::Shutdown).await;
-        // Wait control module shutdown.
+        // Send shutdown signal to control module.
         // We delegate control of other modules to control module, so it's enough to just wait
         // control module shutdown.
-        self.ack_rx.ctrl_buffer.recv().await;
+        let (completed_tx, completed_rx) = oneshot::channel();
+        self.ctrl_tx.send(CtrlSignal::Shutdown(completed_tx)).await;
+        completed_rx.await.ok();
+
         debug_assert!(match (
-            self.ack_rx.event_buffer.try_recv(),
-            self.ack_rx.stream_buffer.try_recv()
+            self.ack_rx.ctrl_rx.try_recv(),
+            self.ack_rx.event_rx.try_recv(),
+            self.ack_rx.stream_rx.try_recv()
         ) {
-            (Err(TryRecvError::Disconnected), Err(TryRecvError::Disconnected)) => true,
+            (
+                Err(TryRecvError::Disconnected),
+                Err(TryRecvError::Disconnected),
+                Err(TryRecvError::Disconnected),
+            ) => true,
             _ => false,
         })
     }
 }
 
 pub(super) struct AckDataReceiver {
-    ctrl_buffer: Receiver<Vec<u8>>,
-    event_buffer: Receiver<Vec<u8>>,
-    stream_buffer: Receiver<Vec<u8>>,
+    ctrl_rx: Receiver<Vec<u8>>,
+    event_rx: Receiver<Vec<u8>>,
+    stream_rx: Receiver<Vec<u8>>,
 }
 
 impl AckDataReceiver {
     fn try_recv(&self, iface: IfaceKind) -> Option<Vec<u8>> {
         match iface {
-            IfaceKind::Control => self.ctrl_buffer.try_recv().ok(),
-            IfaceKind::Event => self.event_buffer.try_recv().ok(),
-            IfaceKind::Stream => self.stream_buffer.try_recv().ok(),
+            IfaceKind::Control => self.ctrl_rx.try_recv().ok(),
+            IfaceKind::Event => self.event_rx.try_recv().ok(),
+            IfaceKind::Stream => self.stream_rx.try_recv().ok(),
         }
     }
 }

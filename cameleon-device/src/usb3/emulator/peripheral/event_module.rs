@@ -28,7 +28,9 @@ impl EventModule {
         }
     }
 
-    pub(super) async fn run(mut self, _completed: oneshot::Sender<()>) {
+    pub(super) async fn run(mut self) {
+        let mut completed = None;
+
         while let Some(signal) = self.ctrl_rx.next().await {
             match signal {
                 EventSignal::EventData {
@@ -61,8 +63,15 @@ impl EventModule {
                         log::warn! {"receive event disable signal, but event module is already disabled"}
                     }
                 }
-                EventSignal::Shutdown => break,
+                EventSignal::Shutdown(completed_tx) => {
+                    completed = Some(completed_tx);
+                    break;
+                }
             }
+        }
+
+        if completed.is_none() {
+            log::error!("event module ends abnormally. cause: event signal sender is dropped");
         }
     }
 

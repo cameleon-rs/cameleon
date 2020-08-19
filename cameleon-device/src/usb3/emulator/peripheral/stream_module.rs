@@ -22,7 +22,9 @@ impl StreamModule {
         }
     }
 
-    pub(super) async fn run(mut self, _completed: oneshot::Sender<()>) {
+    pub(super) async fn run(mut self) {
+        let mut completed = None;
+
         while let Some(signal) = self.ctrl_rx.next().await {
             match signal {
                 StreamSignal::Enable => {
@@ -41,8 +43,15 @@ impl StreamModule {
                         log::warn! {"receive event disable signal, but event module is already disabled"}
                     }
                 }
-                StreamSignal::Shutdown => break,
+                StreamSignal::Shutdown(completed_tx) => {
+                    completed = Some(completed_tx);
+                    break;
+                }
             }
+        }
+
+        if completed.is_none() {
+            log::error!("stream module ends abnormally. cause: stream signal sender is dropped");
         }
     }
 }

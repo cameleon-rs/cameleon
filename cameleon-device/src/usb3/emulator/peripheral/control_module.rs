@@ -40,6 +40,8 @@ impl ControlModule {
             self.stream_tx.clone(),
         );
 
+        let mut completed = None;
+
         while let Some(signal) = self.ctrl_rx.next().await {
             match signal {
                 CtrlSignal::SendDataReq(data) => {
@@ -47,7 +49,8 @@ impl ControlModule {
                     task::spawn(worker.run(data));
                 }
 
-                CtrlSignal::Shutdown => {
+                CtrlSignal::Shutdown(completed_tx) => {
+                    completed = Some(completed_tx);
                     break;
                 }
 
@@ -81,11 +84,22 @@ impl ControlModule {
             }
         }
 
-        // Shutdown event module and stream module.
-        self.event_tx.send(EventSignal::Shutdown).await;
-        self.stream_tx.send(StreamSignal::Shutdown).await;
+        if completed.is_none() {
+            log::error!("control module ends abnormally. cause: control signal sender is dropped");
+        }
 
-        // TOOD: Wait completion.
+        // Shutdown event module and stream module.
+        let (event_completed_tx, event_completed_rx) = oneshot::channel();
+        let (stream_completed_tx, stream_completed_rx) = oneshot::channel();
+        self.event_tx
+            .send(EventSignal::Shutdown(event_completed_tx))
+            .await;
+        self.stream_tx
+            .send(StreamSignal::Shutdown(stream_completed_tx))
+            .await;
+
+        event_completed_rx.await;
+        stream_completed_rx.await;
     }
 }
 

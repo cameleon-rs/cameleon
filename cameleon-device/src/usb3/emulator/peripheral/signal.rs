@@ -10,7 +10,7 @@ pub(super) enum CtrlSignal {
         completed: oneshot::Sender<()>,
     },
 
-    Shutdown,
+    Shutdown(oneshot::Sender<()>),
 }
 
 pub(super) enum EventSignal {
@@ -22,7 +22,7 @@ pub(super) enum EventSignal {
     UpdateTimestamp(u64),
     Enable,
     Disable(oneshot::Sender<()>),
-    Shutdown,
+    Shutdown(oneshot::Sender<()>),
     // TODO: Multievent support.
 }
 
@@ -30,5 +30,5 @@ pub(super) enum StreamSignal {
     // TODO: Its' better to send strem protocol with enable signal.
     Enable,
     Disable(oneshot::Sender<()>),
-    Shutdown,
+    Shutdown(oneshot::Sender<()>),
 }
