@@ -66,12 +66,13 @@ impl Device {
     pub(super) fn shutdown(&mut self) {
         if let Some(shutdown_tx) = self.shutdown_tx.take() {
             // Signal shutdown to interface.
-            self.shutdown_tx = None;
+            drop(shutdown_tx);
             // Wait interface shutdown completion.
             let completion_rx = self.completion_rx.take().unwrap();
-            task::block_on(completion_rx);
+            task::block_on(completion_rx).ok();
         }
 
+        self.shutdown_tx = None;
         self.tx_for_host = None;
         self.rx_for_host = None;
     }
