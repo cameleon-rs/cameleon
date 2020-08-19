@@ -1,5 +1,6 @@
 use thiserror::Error;
 
+mod context;
 mod control_module;
 mod device;
 mod event_module;
