@@ -1,7 +1,11 @@
-use std::borrow::Cow;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
+use std::{
+    borrow::Cow,
+    convert::TryInto,
+    time,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
 };
 
 use async_std::{
@@ -13,34 +17,46 @@ use futures::channel::oneshot;
 use thiserror::Error;
 
 use super::{
+    event_module::EventModule,
     fake_protocol::IfaceKind,
-    interface::IfaceState,
+    interface::{AckDataSender, IfaceState},
     memory::{Memory, MemoryError},
     signal::*,
+    stream_module::StreamModule,
 };
 
 use ack::AckSerialize;
+
+const EVENT_CTRL_CHANNEL_CAPACITY: usize = 32;
+const STREAM_CTRL_CHANNEL_CAPACITY: usize = 32;
 
 pub(super) struct ControlModule {
     ctrl_rx: Receiver<CtrlSignal>,
     ack_tx: Sender<Vec<u8>>,
     memory: Arc<Mutex<Memory>>,
     iface_state: IfaceState,
-    event_tx: Sender<EventSignal>,
-    stream_tx: Sender<StreamSignal>,
+    timestamp: Timestamp,
 }
 
 impl ControlModule {
-    pub(super) async fn run(mut self) {
+    pub(super) async fn run(mut self, ack_sender: AckDataSender) {
+        let mut completed = None;
+
+        let (event_tx, event_rx) = channel(EVENT_CTRL_CHANNEL_CAPACITY);
+        let (stream_tx, stream_rx) = channel(STREAM_CTRL_CHANNEL_CAPACITY);
+
         let mut worker_manager = WorkerManager::new(
-            self.ack_tx.clone(),
+            ack_sender.ctrl,
             self.memory.clone(),
             self.iface_state,
-            self.event_tx.clone(),
-            self.stream_tx.clone(),
+            event_tx.clone(),
+            stream_tx.clone(),
         );
 
-        let mut completed = None;
+        // Spawn event and stream module.
+        let timestamp_ns = self.timestamp.as_nanos().await;
+        task::spawn(EventModule::new(event_rx, ack_sender.event, timestamp_ns).run());
+        task::spawn(StreamModule::new(stream_rx, ack_sender.stream, self.timestamp.clone()).run());
 
         while let Some(signal) = self.ctrl_rx.next().await {
             match signal {
@@ -67,16 +83,14 @@ impl ControlModule {
                         IfaceKind::Event => {
                             // TODO: Set zero to EI control register.
                             let (completed_tx, completed_rx) = oneshot::channel();
-                            self.event_tx.send(EventSignal::Disable(completed_tx)).await;
+                            event_tx.send(EventSignal::Disable(completed_tx)).await;
                             completed_rx.await.ok();
                         }
 
                         IfaceKind::Stream => {
                             // TODO: Set zero to SI control register.
                             let (completed_tx, completed_rx) = oneshot::channel();
-                            self.stream_tx
-                                .send(StreamSignal::Disable(completed_tx))
-                                .await;
+                            stream_tx.send(StreamSignal::Disable(completed_tx)).await;
                             completed_rx.await.ok();
                         }
                     }
@@ -91,15 +105,36 @@ impl ControlModule {
         // Shutdown event module and stream module.
         let (event_completed_tx, event_completed_rx) = oneshot::channel();
         let (stream_completed_tx, stream_completed_rx) = oneshot::channel();
-        self.event_tx
+        event_tx
             .send(EventSignal::Shutdown(event_completed_tx))
             .await;
-        self.stream_tx
+        stream_tx
             .send(StreamSignal::Shutdown(stream_completed_tx))
             .await;
 
-        event_completed_rx.await;
-        stream_completed_rx.await;
+        event_completed_rx.await.ok();
+        stream_completed_rx.await.ok();
+    }
+}
+
+#[derive(Clone)]
+pub(super) struct Timestamp(Arc<Mutex<time::Instant>>);
+
+impl Timestamp {
+    pub(super) fn new() -> Self {
+        Self(Arc::new(Mutex::new(time::Instant::now())))
+    }
+
+    async fn as_nanos(&self) -> u64 {
+        let mut inner = self.0.lock().await;
+        let ns: u64 = match inner.elapsed().as_nanos().try_into() {
+            Ok(time) => time,
+            Err(_) => {
+                *inner = time::Instant::now();
+                inner.elapsed().as_nanos() as u64
+            }
+        };
+        ns
     }
 }
 

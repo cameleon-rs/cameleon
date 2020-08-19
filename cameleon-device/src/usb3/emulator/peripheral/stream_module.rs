@@ -1,24 +1,31 @@
+use std::{sync::Arc, time::Instant};
+
 use async_std::{
     prelude::*,
-    sync::{Receiver, Sender},
+    sync::{Receiver, Sender, Mutex},
 };
 use futures::channel::oneshot;
 
-use super::signal::StreamSignal;
+use super::{
+    signal::StreamSignal,
+    control_module::Timestamp,
+};
 
 // TODO: Implement stream module.
 pub(super) struct StreamModule {
     ctrl_rx: Receiver<StreamSignal>,
     ack_tx: Sender<Vec<u8>>,
     enabled: bool,
+    timestamp: Timestamp,
 }
 
 impl StreamModule {
-    pub(super) fn new(ctrl_rx: Receiver<StreamSignal>, ack_tx: Sender<Vec<u8>>) -> Self {
+    pub(super) fn new(ctrl_rx: Receiver<StreamSignal>, ack_tx: Sender<Vec<u8>>, timestamp: Timestamp)-> Self {
         Self {
             ctrl_rx,
             ack_tx,
             enabled: false,
+            timestamp,
         }
     }
 

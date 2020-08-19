@@ -136,9 +136,9 @@ impl Interface {
         completed_rx.await.ok();
 
         debug_assert!(match (
-            self.ack_rx.ctrl_rx.try_recv(),
-            self.ack_rx.event_rx.try_recv(),
-            self.ack_rx.stream_rx.try_recv()
+            self.ack_rx.ctrl.try_recv(),
+            self.ack_rx.event.try_recv(),
+            self.ack_rx.stream.try_recv()
         ) {
             (
                 Err(TryRecvError::Disconnected),
@@ -150,18 +150,24 @@ impl Interface {
     }
 }
 
+pub(super) struct AckDataSender {
+    pub(super) ctrl: Sender<Vec<u8>>,
+    pub(super) event: Sender<Vec<u8>>,
+    pub(super) stream: Sender<Vec<u8>>,
+}
+
 pub(super) struct AckDataReceiver {
-    ctrl_rx: Receiver<Vec<u8>>,
-    event_rx: Receiver<Vec<u8>>,
-    stream_rx: Receiver<Vec<u8>>,
+    ctrl: Receiver<Vec<u8>>,
+    event: Receiver<Vec<u8>>,
+    stream: Receiver<Vec<u8>>,
 }
 
 impl AckDataReceiver {
     fn try_recv(&self, iface: IfaceKind) -> Option<Vec<u8>> {
         match iface {
-            IfaceKind::Control => self.ctrl_rx.try_recv().ok(),
-            IfaceKind::Event => self.event_rx.try_recv().ok(),
-            IfaceKind::Stream => self.stream_rx.try_recv().ok(),
+            IfaceKind::Control => self.ctrl.try_recv().ok(),
+            IfaceKind::Event => self.event.try_recv().ok(),
+            IfaceKind::Stream => self.stream.try_recv().ok(),
         }
     }
 }
