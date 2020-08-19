@@ -104,7 +104,7 @@ impl Interface {
                     ctrl_tx_for_mod.send(CtrlSignal::SetHalt {
                         iface,
                         completed: completed_tx,
-                    });
+                    }).await;
                     completed_rx.await.ok();
 
                     // Discard all queued ack data.

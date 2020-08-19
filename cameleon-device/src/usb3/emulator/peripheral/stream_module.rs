@@ -1,10 +1,7 @@
-use std::{sync::Arc, time::Instant};
-
 use async_std::{
     prelude::*,
-    sync::{Mutex, Receiver, Sender},
+    sync::{Receiver, Sender},
 };
-use futures::channel::oneshot;
 
 use super::{device::Timestamp, signal::StreamSignal};
 

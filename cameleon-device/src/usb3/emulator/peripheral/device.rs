@@ -104,3 +104,210 @@ impl Timestamp {
         ns
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::time::{Duration, Instant};
+
+    use crate::usb3::{
+        protocol::{ack, command},
+        register_map::abrm::*,
+    };
+    use async_std::future::timeout;
+    use byteorder::{ReadBytesExt, WriteBytesExt, LE};
+
+    const FAKE_LAYER_TO: Duration = Duration::from_millis(50);
+    const GENCP_LAYER_TO: Duration = Duration::from_millis(500);
+
+    use super::*;
+
+    fn create_device() -> Device {
+        let memory = Memory::new(Default::default());
+        Device::new(memory)
+    }
+
+    #[test]
+    fn test_device_run() {
+        let mut device = create_device();
+        device.run();
+        device.shutdown();
+    }
+
+    #[test]
+    fn test_handle_ctrl_packet() {
+        let mut device = create_device();
+        device.run();
+
+        let (tx, rx) = device.connect().unwrap();
+
+        // Write to TimestampLatch.
+        let (tsl_addr, tsl_len, _) = TIMESTAMP_LATCH;
+        let req_id = 0;
+        let mut data = vec![];
+        data.write_u32::<LE>(1).unwrap();
+        let gencp_packet = command::WriteMem::new(tsl_addr, &data)
+            .unwrap()
+            .finalize(req_id);
+        let mut buf = vec![];
+        gencp_packet.serialize(&mut buf).unwrap();
+
+        // Send ReadMem gencp packet over SendReq fake packet.
+        let fake_req = FakeReqPacket::control(FakeReqKind::Send(buf));
+        assert!(tx.try_send(fake_req).is_ok());
+        let fake_ack = (task::block_on(timeout(FAKE_LAYER_TO, rx.recv())))
+            .unwrap()
+            .unwrap();
+        assert_eq!(fake_ack.iface, IfaceKind::Control);
+        assert_eq!(fake_ack.kind, FakeAckKind::SendAck);
+
+        // Send RecvReq to obtain WriteMem gencp ack packet.
+        // Device may be still processing write mem packet. So we need to continue sending recv request
+        // until RecvAck is returned or GENCP_LAYER_TO is expired.
+        let timer = Instant::now();
+        let mut fake_ack;
+        loop {
+            let fake_req = FakeReqPacket::control(FakeReqKind::Recv);
+            assert!(tx.try_send(fake_req).is_ok());
+            fake_ack = (task::block_on(timeout(FAKE_LAYER_TO, rx.recv())))
+                .unwrap()
+                .unwrap();
+            match fake_ack.kind {
+                FakeAckKind::RecvAck(..) => break,
+                _ => {}
+            }
+            if timer.elapsed() > GENCP_LAYER_TO {
+                panic!();
+            }
+        }
+
+        // Extract gencp readmem packet from fake ack packet.
+        let gencp_writemem_ack = match fake_ack.kind {
+            FakeAckKind::RecvAck(data) => data,
+            _ => panic!(),
+        };
+        let ack_packet = ack::AckPacket::parse(&gencp_writemem_ack).unwrap();
+        assert_eq!(ack_packet.request_id(), req_id);
+        let ack_scd: ack::WriteMem = ack_packet.scd_as().unwrap();
+        assert_eq!(ack_scd.length, 4);
+
+        // Get timestamp.
+        let (ts_addr, ts_len, _) = TIMESTAMP;
+        let req_id = 1;
+        let gencp_packet = command::ReadMem::new(ts_addr, ts_len).finalize(req_id);
+        let mut buf = vec![];
+        gencp_packet.serialize(&mut buf).unwrap();
+
+        // Send ReadMem gencp packet over SendReq fake packet.
+        let fake_req = FakeReqPacket::control(FakeReqKind::Send(buf));
+        assert!(tx.try_send(fake_req).is_ok());
+        let fake_ack = (task::block_on(timeout(FAKE_LAYER_TO, rx.recv())))
+            .unwrap()
+            .unwrap();
+        assert_eq!(fake_ack.kind, FakeAckKind::SendAck);
+        assert_eq!(fake_ack.iface, IfaceKind::Control);
+
+        // Send RecvReq.
+        // Device may be still processing read mem packet. So we need to continue sending recv request
+        // while RecvAck is returned or GENCP_LAYER_TO is expired.
+        let timer = Instant::now();
+        let mut fake_ack;
+        loop {
+            let fake_req = FakeReqPacket::control(FakeReqKind::Recv);
+            assert!(tx.try_send(fake_req).is_ok());
+            fake_ack = (task::block_on(timeout(FAKE_LAYER_TO, rx.recv())))
+                .unwrap()
+                .unwrap();
+            match fake_ack.kind {
+                FakeAckKind::RecvAck(..) => break,
+                _ => {}
+            }
+            if timer.elapsed() > GENCP_LAYER_TO {
+                panic!();
+            }
+        }
+
+        // Extract gencp readmem packet from fake ack packet.
+        let gencp_readmem_ack = match fake_ack.kind {
+            FakeAckKind::RecvAck(data) => data,
+            _ => panic!(),
+        };
+
+        let ack_packet = ack::AckPacket::parse(&gencp_readmem_ack).unwrap();
+        assert_eq!(ack_packet.request_id(), req_id);
+        let mut ack_scd: ack::ReadMem = ack_packet.scd_as().unwrap();
+
+        // We write to Timestamp latch. So returned timestamp should be greater than zero.
+        let timestamp = ack_scd.data.read_u64::<LE>().unwrap();
+        assert!(timestamp > 0);
+    }
+
+    #[test]
+    fn test_handle_halt() {
+        let mut device = create_device();
+        device.run();
+
+        let (tx, rx) = device.connect().unwrap();
+
+        // Send set halt request.
+        tx.try_send(FakeReqPacket::control(FakeReqKind::SetHalt)).unwrap();
+        let ack =task::block_on(timeout(FAKE_LAYER_TO, rx.recv())).unwrap().unwrap();
+        assert_eq!(ack.kind, FakeAckKind::SetHaltAck);
+        assert_eq!(ack.iface, IfaceKind::Control);
+
+        // Verify interface state is halted.
+        tx.try_send(FakeReqPacket::control(FakeReqKind::Recv)).unwrap();
+        let ack =task::block_on(timeout(FAKE_LAYER_TO, rx.recv())).unwrap().unwrap();
+        assert_eq!(ack.kind, FakeAckKind::IfaceHalted);
+        assert_eq!(ack.iface, IfaceKind::Control);
+
+        // Send clear halt request.
+        tx.try_send(FakeReqPacket::control(FakeReqKind::ClearHalt)).unwrap();
+        let ack =task::block_on(timeout(FAKE_LAYER_TO, rx.recv())).unwrap().unwrap();
+        assert_eq!(ack.kind, FakeAckKind::ClearHaltAck);
+        assert_eq!(ack.iface, IfaceKind::Control);
+
+        // Verify halted interface is cleared with meaningless gencp packet.
+        tx.try_send(FakeReqPacket::control(FakeReqKind::Send(vec![1, 2, 3]))).unwrap();
+        let ack =task::block_on(timeout(FAKE_LAYER_TO, rx.recv())).unwrap().unwrap();
+        assert_eq!(ack.kind, FakeAckKind::SendAck);
+        assert_eq!(ack.iface, IfaceKind::Control);
+    }
+
+    #[test]
+    fn test_handle_halt_while_processing() {
+        let mut device = create_device();
+        device.run();
+
+        let (tx, rx) = device.connect().unwrap();
+
+        // Send meaningless gencp packet.
+        tx.try_send(FakeReqPacket::control(FakeReqKind::Send(vec![1, 2, 3]))).unwrap();
+        let ack =task::block_on(timeout(FAKE_LAYER_TO, rx.recv())).unwrap().unwrap();
+        assert_eq!(ack.kind, FakeAckKind::SendAck);
+        assert_eq!(ack.iface, IfaceKind::Control);
+
+        // Send set halt request.
+        tx.try_send(FakeReqPacket::control(FakeReqKind::SetHalt)).unwrap();
+        let ack =task::block_on(timeout(FAKE_LAYER_TO, rx.recv())).unwrap().unwrap();
+        assert_eq!(ack.kind, FakeAckKind::SetHaltAck);
+        assert_eq!(ack.iface, IfaceKind::Control);
+
+        // Verify interface state is halted.
+        tx.try_send(FakeReqPacket::control(FakeReqKind::Recv)).unwrap();
+        let ack =task::block_on(timeout(FAKE_LAYER_TO, rx.recv())).unwrap().unwrap();
+        assert_eq!(ack.kind, FakeAckKind::IfaceHalted);
+        assert_eq!(ack.iface, IfaceKind::Control);
+
+        // Send clear halt request.
+        tx.try_send(FakeReqPacket::control(FakeReqKind::ClearHalt)).unwrap();
+        let ack =task::block_on(timeout(FAKE_LAYER_TO, rx.recv())).unwrap().unwrap();
+        assert_eq!(ack.kind, FakeAckKind::ClearHaltAck);
+        assert_eq!(ack.iface, IfaceKind::Control);
+
+        // Verify halt state removes ack packets corresponding packets sent before halt.
+        tx.try_send(FakeReqPacket::control(FakeReqKind::Recv)).unwrap();
+        let ack =task::block_on(timeout(FAKE_LAYER_TO, rx.recv())).unwrap().unwrap();
+        assert_eq!(ack.kind, FakeAckKind::RecvNak);
+        assert_eq!(ack.iface, IfaceKind::Control);
+    }
+}

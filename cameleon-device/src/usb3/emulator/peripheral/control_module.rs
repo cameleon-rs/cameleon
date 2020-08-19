@@ -416,7 +416,7 @@ impl WorkerManager {
 
     async fn wait_completion(&mut self) {
         let (new_tx, new_rx) = channel(1);
-        // Drop old sender for wait workers completion.
+        // Drop old sender to wait workers completion only.
         self.completed_tx = new_tx;
 
         // Wait all workers completion.

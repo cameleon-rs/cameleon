@@ -32,7 +32,8 @@ impl DeviceContext {
         self.devices.len()
     }
 
-    pub(super) fn attach_device(&mut self, device: Device) {
+    pub(super) fn attach_device(&mut self, mut device: Device) {
+        device.run();
         self.devices.push(device);
     }
 
