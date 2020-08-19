@@ -228,11 +228,7 @@ mod event_packet {
 mod tests {
     use std::time::Duration;
 
-    use async_std::{
-        future::timeout,
-        sync::{channel, TryRecvError},
-        task,
-    };
+    use async_std::{future::timeout, sync::channel, task};
     use futures::channel::oneshot;
 
     use crate::usb3::protocol::event;

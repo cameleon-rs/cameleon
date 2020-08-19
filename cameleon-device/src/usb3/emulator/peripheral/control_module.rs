@@ -153,11 +153,11 @@ impl Worker {
         }
 
         match ccd.scd_kind {
-            cmd::ScdKind::ReadMem => self.process_read_mem(cmd_packet),
-            cmd::ScdKind::WriteMem => self.process_write_mem(cmd_packet),
-            cmd::ScdKind::ReadMemStacked => self.process_read_mem_stacked(cmd_packet),
-            cmd::ScdKind::WriteMemStacked => self.process_write_mem_stacked(cmd_packet),
-            cmd::ScdKind::Custom(_) => self.process_custom(cmd_packet),
+            cmd::ScdKind::ReadMem => self.process_read_mem(cmd_packet).await,
+            cmd::ScdKind::WriteMem => self.process_write_mem(cmd_packet).await,
+            cmd::ScdKind::ReadMemStacked => self.process_read_mem_stacked(cmd_packet).await,
+            cmd::ScdKind::WriteMemStacked => self.process_write_mem_stacked(cmd_packet).await,
+            cmd::ScdKind::Custom(_) => self.process_custom(cmd_packet).await,
         }
 
         self.on_processing.store(false, Ordering::Relaxed);
@@ -192,7 +192,7 @@ impl Worker {
         }
     }
 
-    fn process_read_mem(&self, command: cmd::CommandPacket) {
+    async fn process_read_mem<'a>(&self, command: cmd::CommandPacket<'a>) {
         let scd: cmd::ReadMem = match self.try_extract_scd(&command) {
             Some(scd) => scd,
             None => return,
@@ -201,7 +201,7 @@ impl Worker {
         let req_id = ccd.request_id;
         let scd_kind = ccd.scd_kind;
 
-        let memory = task::block_on(self.memory.lock());
+        let memory = self.memory.lock().await;
         let address = scd.address as usize;
         let read_length = scd.read_length as usize;
         match memory.read_mem(address..address + read_length) {
@@ -223,7 +223,7 @@ impl Worker {
         };
     }
 
-    fn process_write_mem(&self, command: cmd::CommandPacket) {
+    async fn process_write_mem<'a>(&self, command: cmd::CommandPacket<'a>) {
         // TODO: Handle special events which occured by write mem command,
         let scd: cmd::WriteMem = match self.try_extract_scd(&command) {
             Some(scd) => scd,
@@ -233,7 +233,7 @@ impl Worker {
         let req_id = ccd.request_id;
         let scd_kind = ccd.scd_kind;
 
-        let mut memory = task::block_on(self.memory.lock());
+        let mut memory = self.memory.lock().await;
         match memory.write_mem(scd.address as usize, scd.data) {
             Ok(()) => {
                 let ack = ack::WriteMem::new(scd.data.len() as u16).finalize(req_id);
@@ -253,7 +253,7 @@ impl Worker {
         }
     }
 
-    fn process_read_mem_stacked(&self, command: cmd::CommandPacket) {
+    async fn process_read_mem_stacked<'a>(&self, command: cmd::CommandPacket<'a>) {
         let scd: cmd::WriteMemStacked = match self.try_extract_scd(&command) {
             Some(scd) => scd,
             None => return,
@@ -267,7 +267,7 @@ impl Worker {
         self.try_send_ack(ack);
     }
 
-    fn process_write_mem_stacked(&self, command: cmd::CommandPacket) {
+    async fn process_write_mem_stacked<'a>(&self, command: cmd::CommandPacket<'a>) {
         let scd: cmd::WriteMemStacked = match self.try_extract_scd(&command) {
             Some(scd) => scd,
             None => return,
@@ -281,7 +281,7 @@ impl Worker {
         self.try_send_ack(ack);
     }
 
-    fn process_custom(&self, command: cmd::CommandPacket) {
+    async fn process_custom<'a>(&self, command: cmd::CommandPacket<'a>) {
         let scd: cmd::WriteMemStacked = match self.try_extract_scd(&command) {
             Some(scd) => scd,
             None => return,
@@ -579,7 +579,7 @@ mod cmd {
         fn parse(buf: &'a [u8], ccd: &CommandCcd) -> ProtocolResult<Self> {
             let command_id = match ccd.scd_kind {
                 ScdKind::Custom(id) => id,
-                _ => panic!("not custome ccd"),
+                _ => return Err(ProtocolError::InvalidPacket("invalid scd type".into())),
             };
 
             let mut cursor = Cursor::new(buf);
