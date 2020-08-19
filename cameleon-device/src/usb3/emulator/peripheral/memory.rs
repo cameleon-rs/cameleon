@@ -44,6 +44,7 @@ pub(super) type MemoryResult<T> = std::result::Result<T, MemoryError>;
 pub(super) struct Memory {
     inner: Vec<u8>,
     protection: MemoryProtection,
+    chain_builder: EventChainBuilder,
 }
 
 impl Memory {
@@ -52,7 +53,11 @@ impl Memory {
         let memory_len = *[abrm.last_address()].iter().max().unwrap();
         let inner = vec![0; memory_len];
         let protection = MemoryProtection::new(memory_len);
-        let mut memory = Memory { protection, inner };
+        let mut memory = Memory {
+            protection,
+            inner,
+            chain_builder: EventChainBuilder::new(),
+        };
 
         abrm.flush(&mut memory);
         memory
@@ -88,6 +93,25 @@ impl Memory {
         Ok(())
     }
 
+    pub(super) fn write_mem_u8_unchecked(&mut self, address: usize, data: u8) {
+        self.inner[address] = data;
+    }
+
+    pub(super) fn write_mem_u16_unchecked(&mut self, address: usize, data: u16) {
+        let range = address..address + 2;
+        (&mut self.inner[range]).write_u16::<LE>(data).unwrap();
+    }
+
+    pub(super) fn write_mem_u32_unchecked(&mut self, address: usize, data: u32) {
+        let range = address..address + 4;
+        (&mut self.inner[range]).write_u32::<LE>(data).unwrap();
+    }
+
+    pub(super) fn write_mem_u64_unchecked(&mut self, address: usize, data: u64) {
+        let range = address..address + 8;
+        (&mut self.inner[range]).write_u64::<LE>(data).unwrap();
+    }
+
     pub(super) fn set_access_right(
         &mut self,
         range: impl IntoIterator<Item = usize>,
@@ -96,6 +120,56 @@ impl Memory {
         self.protection
             .set_access_right_with_range(range, access_right)
     }
+}
+
+/// Write requests from user may cause "event chain".
+/// e.g. write request to TimestampLatch entry causes another write request to Timestamp entry.
+/// Or write request to Si control entry causes stream enable event.
+///
+/// `EventChainBuilder` manage these write requests by observing write requests.
+pub(super) struct EventChainBuilder {
+    chain_map: HashMap<(u64, u16), EventChain>,
+}
+
+impl EventChainBuilder {
+    fn new() -> Self {
+        Self {
+            chain_map: HashMap::new(),
+        }
+    }
+
+    fn register(&mut self, address: u64, len: u16, chain: EventChain) {
+        let must_none = self.chain_map.insert((address, len), chain);
+        debug_assert!(must_none.is_none());
+    }
+
+    fn build_chain(&self, address: u64, len: u16) -> Option<&EventChain> {
+        self.chain_map.get(&(address, len))
+    }
+}
+
+pub(super) struct EventChain {
+    chain: Vec<EventData>,
+}
+
+impl EventChain {
+    pub(super) fn chain(&self) -> &[EventData] {
+        &self.chain
+    }
+
+    fn single_event(event_data: EventData) -> Self {
+        Self {
+            chain: vec![event_data],
+        }
+    }
+}
+
+pub(super) enum EventData {
+    WriteTimestamp { addr: u64 },
+}
+
+pub(super) enum WriteEventType {
+    U64,
 }
 
 #[derive(Debug, Clone)]
@@ -135,6 +209,17 @@ impl ABRM {
             // Set access right to memory protection.
             protection.set_access_right_with_range(range, *right);
         }
+
+        // Register event chains.
+        let chain_builder = &mut memory.chain_builder;
+
+        // Register event associated with TimestampLatch ently.
+        let timestamp_latch = abrm::TIMESTAMP_LATCH;
+        let (addr, len) = (timestamp_latch.0, timestamp_latch.1);
+        let chain = EventChain::single_event(EventData::WriteTimestamp {
+            addr: abrm::TIMESTAMP.0,
+        });
+        chain_builder.register(addr, len, chain);
     }
 
     fn last_address(&self) -> usize {
