@@ -8,30 +8,22 @@ use futures::channel::oneshot;
 use super::signal::EventSignal;
 
 pub(super) struct EventModule {
-    ctrl_rx: Receiver<EventSignal>,
-    ack_tx: Sender<Vec<u8>>,
     timestamp: u64,
     enabled: bool,
 }
 
 impl EventModule {
-    pub(super) fn new(
-        ctrl_rx: Receiver<EventSignal>,
-        ack_tx: Sender<Vec<u8>>,
-        timestamp: u64,
-    ) -> Self {
+    pub(super) fn new(timestamp: u64) -> Self {
         Self {
-            ctrl_rx,
-            ack_tx,
             timestamp,
             enabled: false,
         }
     }
 
-    pub(super) async fn run(mut self) {
+    pub(super) async fn run(mut self, mut ctrl_rx: Receiver<EventSignal>, ack_tx: Sender<Vec<u8>>) {
         let mut completed = None;
 
-        while let Some(signal) = self.ctrl_rx.next().await {
+        while let Some(signal) = ctrl_rx.next().await {
             match signal {
                 EventSignal::EventData {
                     event_id,
@@ -39,7 +31,7 @@ impl EventModule {
                     request_id,
                 } => {
                     if self.enabled {
-                        self.send_event_data(event_id, &data, request_id)
+                        self.try_send_event(&ack_tx, event_id, &data, request_id)
                     } else {
                         log::warn! {"receive event data signal, but event module is currently disabled"}
                     }
@@ -75,7 +67,13 @@ impl EventModule {
         }
     }
 
-    fn send_event_data(&self, event_id: u16, data: &[u8], request_id: u16) {
+    fn try_send_event(
+        &self,
+        ack_tx: &Sender<Vec<u8>>,
+        event_id: u16,
+        data: &[u8],
+        request_id: u16,
+    ) {
         let scd = match event_packet::EventScd::single_event(event_id, data, self.timestamp) {
             Ok(scd) => scd,
             Err(e) => {
@@ -90,7 +88,7 @@ impl EventModule {
             return;
         }
 
-        if let Err(e) = self.ack_tx.try_send(buf) {
+        if let Err(e) = ack_tx.try_send(buf) {
             log::error!(
                 "can't send event packet to interface of the device: cause {}",
                 e
@@ -243,19 +241,22 @@ mod tests {
 
     const TO: Duration = Duration::from_millis(100);
 
-    fn new_module() -> (EventModule, Sender<EventSignal>, Receiver<Vec<u8>>) {
+    fn spawn_module() -> (Sender<EventSignal>, Receiver<Vec<u8>>) {
         let (ctrl_tx, ctrl_rx) = channel(10);
         let (ack_tx, ack_rx) = channel(10);
-        (EventModule::new(ctrl_rx, ack_tx, 0), ctrl_tx, ack_rx)
+        let event_module = EventModule::new(0);
+        task::spawn(event_module.run(ctrl_rx, ack_tx));
+        (ctrl_tx, ack_rx)
     }
 
     #[test]
     fn test_run_and_stop() {
-        let (event_module, ctrl_tx, ack_rx) = new_module();
-        let (completed_tx, completed_rx) = oneshot::channel();
-        task::spawn(event_module.run(completed_tx));
+        let (ctrl_tx, ack_rx) = spawn_module();
 
-        assert!(ctrl_tx.try_send(EventSignal::Shutdown).is_ok());
+        let (completed_tx, completed_rx) = oneshot::channel();
+        assert!(ctrl_tx
+            .try_send(EventSignal::Shutdown(completed_tx))
+            .is_ok());
         let completed = task::block_on(timeout(TO, completed_rx)).unwrap();
         assert_eq!(completed, Err(oneshot::Canceled));
 
@@ -264,10 +265,8 @@ mod tests {
 
     #[test]
     fn test_signal() {
-        let (event_module, ctrl_tx, ack_rx) = new_module();
-        let (completed_tx, completed_rx) = oneshot::channel();
-        task::spawn(event_module.run(completed_tx));
-        assert!(ctrl_tx.try_send(EventSignal::Enable).is_ok());
+        let (ctrl_tx, ack_rx) = spawn_module();
+        ctrl_tx.try_send(EventSignal::Enable).unwrap();
 
         // Test EventData signal.
         let event_id = 10;
@@ -303,7 +302,10 @@ mod tests {
         assert_eq!(event_packet.scd[0].timestamp, timestamp);
 
         // Clean up.
-        assert!(ctrl_tx.try_send(EventSignal::Shutdown).is_ok());
+        let (completed_tx, completed_rx) = oneshot::channel();
+        assert!(ctrl_tx
+            .try_send(EventSignal::Shutdown(completed_tx))
+            .is_ok());
         let completed = task::block_on(timeout(TO, completed_rx)).unwrap();
         assert_eq!(completed, Err(oneshot::Canceled));
         assert_eq!(ack_rx.try_recv(), Err(TryRecvError::Disconnected));

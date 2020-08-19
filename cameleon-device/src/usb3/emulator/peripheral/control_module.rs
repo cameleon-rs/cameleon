@@ -1,7 +1,5 @@
 use std::{
     borrow::Cow,
-    convert::TryInto,
-    time,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -17,6 +15,7 @@ use futures::channel::oneshot;
 use thiserror::Error;
 
 use super::{
+    device::Timestamp,
     event_module::EventModule,
     fake_protocol::IfaceKind,
     interface::{AckDataSender, IfaceState},
@@ -31,15 +30,21 @@ const EVENT_CTRL_CHANNEL_CAPACITY: usize = 32;
 const STREAM_CTRL_CHANNEL_CAPACITY: usize = 32;
 
 pub(super) struct ControlModule {
-    ctrl_rx: Receiver<CtrlSignal>,
-    ack_tx: Sender<Vec<u8>>,
     memory: Arc<Mutex<Memory>>,
-    iface_state: IfaceState,
     timestamp: Timestamp,
 }
 
 impl ControlModule {
-    pub(super) async fn run(mut self, ack_sender: AckDataSender) {
+    pub(super) fn new(memory: Arc<Mutex<Memory>>, timestamp: Timestamp) -> Self {
+        Self { memory, timestamp }
+    }
+
+    pub(super) async fn run(
+        self,
+        iface_state: IfaceState,
+        mut ctrl_rx: Receiver<CtrlSignal>,
+        ack_sender: AckDataSender,
+    ) {
         let mut completed = None;
 
         let (event_tx, event_rx) = channel(EVENT_CTRL_CHANNEL_CAPACITY);
@@ -48,17 +53,17 @@ impl ControlModule {
         let mut worker_manager = WorkerManager::new(
             ack_sender.ctrl,
             self.memory.clone(),
-            self.iface_state,
+            iface_state,
             event_tx.clone(),
             stream_tx.clone(),
         );
 
         // Spawn event and stream module.
         let timestamp_ns = self.timestamp.as_nanos().await;
-        task::spawn(EventModule::new(event_rx, ack_sender.event, timestamp_ns).run());
-        task::spawn(StreamModule::new(stream_rx, ack_sender.stream, self.timestamp.clone()).run());
+        task::spawn(EventModule::new(timestamp_ns).run(event_rx, ack_sender.event));
+        task::spawn(StreamModule::new(self.timestamp.clone()).run(stream_rx, ack_sender.stream));
 
-        while let Some(signal) = self.ctrl_rx.next().await {
+        while let Some(signal) = ctrl_rx.next().await {
             match signal {
                 CtrlSignal::SendDataReq(data) => {
                     let worker = worker_manager.worker();
@@ -114,27 +119,6 @@ impl ControlModule {
 
         event_completed_rx.await.ok();
         stream_completed_rx.await.ok();
-    }
-}
-
-#[derive(Clone)]
-pub(super) struct Timestamp(Arc<Mutex<time::Instant>>);
-
-impl Timestamp {
-    pub(super) fn new() -> Self {
-        Self(Arc::new(Mutex::new(time::Instant::now())))
-    }
-
-    async fn as_nanos(&self) -> u64 {
-        let mut inner = self.0.lock().await;
-        let ns: u64 = match inner.elapsed().as_nanos().try_into() {
-            Ok(time) => time,
-            Err(_) => {
-                *inner = time::Instant::now();
-                inner.elapsed().as_nanos() as u64
-            }
-        };
-        ns
     }
 }
 

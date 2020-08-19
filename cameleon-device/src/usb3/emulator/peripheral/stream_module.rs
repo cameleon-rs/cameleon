@@ -2,37 +2,34 @@ use std::{sync::Arc, time::Instant};
 
 use async_std::{
     prelude::*,
-    sync::{Receiver, Sender, Mutex},
+    sync::{Mutex, Receiver, Sender},
 };
 use futures::channel::oneshot;
 
-use super::{
-    signal::StreamSignal,
-    control_module::Timestamp,
-};
+use super::{device::Timestamp, signal::StreamSignal};
 
 // TODO: Implement stream module.
 pub(super) struct StreamModule {
-    ctrl_rx: Receiver<StreamSignal>,
-    ack_tx: Sender<Vec<u8>>,
     enabled: bool,
     timestamp: Timestamp,
 }
 
 impl StreamModule {
-    pub(super) fn new(ctrl_rx: Receiver<StreamSignal>, ack_tx: Sender<Vec<u8>>, timestamp: Timestamp)-> Self {
+    pub(super) fn new(timestamp: Timestamp) -> Self {
         Self {
-            ctrl_rx,
-            ack_tx,
             enabled: false,
             timestamp,
         }
     }
 
-    pub(super) async fn run(mut self) {
+    pub(super) async fn run(
+        mut self,
+        mut ctrl_rx: Receiver<StreamSignal>,
+        ack_tx: Sender<Vec<u8>>,
+    ) {
         let mut completed = None;
 
-        while let Some(signal) = self.ctrl_rx.next().await {
+        while let Some(signal) = ctrl_rx.next().await {
             match signal {
                 StreamSignal::Enable => {
                     if self.enabled {

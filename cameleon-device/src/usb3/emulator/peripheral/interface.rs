@@ -2,47 +2,71 @@ use std::sync::Arc;
 
 use async_std::{
     prelude::*,
-    sync::{Receiver, RwLock, Sender, TryRecvError},
+    sync::{channel, Mutex, Receiver, RwLock, Sender, TrySendError},
+    task,
 };
 use futures::{channel::oneshot, select, FutureExt};
 
-use super::{fake_protocol::*, signal::CtrlSignal};
+use super::{
+    control_module::ControlModule, device::Timestamp, fake_protocol::*, memory::Memory,
+    signal::CtrlSignal,
+};
 
 pub(super) struct Interface {
-    host_side_interface: (Sender<FakeAckPacket>, Receiver<FakeReqPacket>),
-
-    ctrl_tx: Sender<CtrlSignal>,
-
-    ack_rx: AckDataReceiver,
     iface_state: IfaceState,
 }
 
+const CTRL_CHANNEL_CAPACITY: usize = 32;
+const CTRL_ACK_DATA_CHANNELE_CAPACITY: usize = 32;
+const EVENT_ACK_DATA_CHANNELE_CAPACITY: usize = 32;
+const STREAM_ACK_DATA_CHANNEL_CAPACITY: usize = 32;
+
 impl Interface {
-    pub(super) fn new(
-        host_side_interface: (Sender<FakeAckPacket>, Receiver<FakeReqPacket>),
-        ctrl_tx: Sender<CtrlSignal>,
-        ack_rx: AckDataReceiver,
-    ) -> Self {
+    pub(super) fn new() -> Self {
         Self {
-            host_side_interface,
-            ctrl_tx,
-            ack_rx,
             iface_state: IfaceState::new(),
         }
     }
 
+    fn spawn_ctrl_module(
+        &self,
+        timestamp: Timestamp,
+        memory: Arc<Mutex<Memory>>,
+    ) -> (Sender<CtrlSignal>, AckDataReceiver) {
+        // Create channel to manage control module.
+        let (ctrl_tx, ctrl_rx) = channel(CTRL_CHANNEL_CAPACITY);
+
+        // Create channel to recieve data from control/event/stream module.
+        let (ack_tx, ack_rx) = ack_data_channel(
+            CTRL_ACK_DATA_CHANNELE_CAPACITY,
+            EVENT_ACK_DATA_CHANNELE_CAPACITY,
+            STREAM_ACK_DATA_CHANNEL_CAPACITY,
+        );
+
+        // Contruct and spawn control module.
+        let control_module = ControlModule::new(memory, timestamp);
+        task::spawn(control_module.run(self.iface_state.clone(), ctrl_rx, ack_tx));
+
+        (ctrl_tx, ack_rx)
+    }
+
     pub(super) async fn run(
         mut self,
+        tx_for_host: Sender<FakeAckPacket>,
+        rx_for_host: Receiver<FakeReqPacket>,
+        timestamp: Timestamp,
+        memory: Arc<Mutex<Memory>>,
         shutdown: oneshot::Receiver<()>,
         _completed: oneshot::Sender<()>,
     ) {
-        let mut receiver = self.host_side_interface.1.fuse();
+        // Contruct and spawn control module. We delegate other module contruction to the control module, so no need to build them.
+        let (ctrl_tx_for_mod, ack_rx_for_mod) = self.spawn_ctrl_module(timestamp, memory);
+        let mut rx_for_host = rx_for_host.fuse();
         let mut shutdown = shutdown.fuse();
-        let sender = self.host_side_interface.0;
 
         loop {
             let packet = select! {
-                req_packet =  receiver.next().fuse() => {
+                req_packet =  rx_for_host.next().fuse() => {
                     match req_packet {
                         Some(packet) => {
                             packet
@@ -67,7 +91,7 @@ impl Interface {
                 self.iface_state
                     .set_state(iface, IfaceStateKind::Ready)
                     .await;
-                send_or_log(&sender, iface, FakeAckKind::ClearHaltAck);
+                send_or_log(&tx_for_host, iface, FakeAckKind::ClearHaltAck);
                 continue;
             } else if req_kind.is_set_halt() {
                 if !self.iface_state.is_halt(iface).await {
@@ -77,44 +101,44 @@ impl Interface {
 
                     // Block until modules finish its processing correctly.
                     let (completed_tx, completed_rx) = oneshot::channel();
-                    self.ctrl_tx.send(CtrlSignal::SetHalt {
+                    ctrl_tx_for_mod.send(CtrlSignal::SetHalt {
                         iface,
                         completed: completed_tx,
                     });
                     completed_rx.await.ok();
 
                     // Discard all queued ack data.
-                    while let Some(_) = self.ack_rx.try_recv(iface) {}
+                    while let Some(_) = ack_rx_for_mod.try_recv(iface) {}
                 }
-                send_or_log(&sender, iface, FakeAckKind::SetHaltAck);
+                send_or_log(&tx_for_host, iface, FakeAckKind::SetHaltAck);
                 continue;
             }
 
             // If corresponding interface is halted, ignore the request and send `FakeAckKind::IfaceHalted` back.
             if self.iface_state.is_halt(iface).await {
-                send_or_log(&sender, iface, FakeAckKind::IfaceHalted);
+                send_or_log(&tx_for_host, iface, FakeAckKind::IfaceHalted);
                 continue;
             };
 
             match (iface, req_kind) {
                 (iface, FakeReqKind::Recv) => {
-                    let data = self.ack_rx.try_recv(iface);
+                    let data = ack_rx_for_mod.try_recv(iface);
                     let ack_kind = match data {
                         Some(data) => FakeAckKind::RecvAck(data),
                         None => FakeAckKind::RecvNak,
                     };
-                    send_or_log(&sender, iface, ack_kind);
+                    send_or_log(&tx_for_host, iface, ack_kind);
                 }
 
                 (IfaceKind::Control, FakeReqKind::Send(data)) => {
-                    let ack_kind = match self.ctrl_tx.try_send(CtrlSignal::SendDataReq(data)) {
+                    let ack_kind = match ctrl_tx_for_mod.try_send(CtrlSignal::SendDataReq(data)) {
                         Ok(()) => FakeAckKind::SendAck,
                         Err(err) => {
                             log::warn!("{}", err);
                             FakeAckKind::SendNak
                         }
                     };
-                    send_or_log(&sender, iface, ack_kind);
+                    send_or_log(&tx_for_host, iface, ack_kind);
                 }
 
                 (iface, req) => {
@@ -123,7 +147,7 @@ impl Interface {
                         iface,
                         req
                     );
-                    send_or_log(&sender, iface, FakeAckKind::BrokenReq);
+                    send_or_log(&tx_for_host, iface, FakeAckKind::BrokenReq);
                 }
             };
         }
@@ -132,22 +156,42 @@ impl Interface {
         // We delegate control of other modules to control module, so it's enough to just wait
         // control module shutdown.
         let (completed_tx, completed_rx) = oneshot::channel();
-        self.ctrl_tx.send(CtrlSignal::Shutdown(completed_tx)).await;
+        ctrl_tx_for_mod
+            .send(CtrlSignal::Shutdown(completed_tx))
+            .await;
         completed_rx.await.ok();
 
         debug_assert!(match (
-            self.ack_rx.ctrl.try_recv(),
-            self.ack_rx.event.try_recv(),
-            self.ack_rx.stream.try_recv()
+            ack_rx_for_mod.try_recv(IfaceKind::Control),
+            ack_rx_for_mod.try_recv(IfaceKind::Event),
+            ack_rx_for_mod.try_recv(IfaceKind::Stream)
         ) {
-            (
-                Err(TryRecvError::Disconnected),
-                Err(TryRecvError::Disconnected),
-                Err(TryRecvError::Disconnected),
-            ) => true,
+            (None, None, None) => true,
             _ => false,
         })
     }
+}
+
+pub(super) fn ack_data_channel(
+    ctrl_cap: usize,
+    event_cap: usize,
+    stream_cap: usize,
+) -> (AckDataSender, AckDataReceiver) {
+    let (ctrl_tx, ctrl_rx) = channel(ctrl_cap);
+    let (event_tx, event_rx) = channel(event_cap);
+    let (stream_tx, stream_rx) = channel(stream_cap);
+    (
+        AckDataSender {
+            ctrl: ctrl_tx,
+            event: event_tx,
+            stream: stream_tx,
+        },
+        AckDataReceiver {
+            ctrl: ctrl_rx,
+            event: event_rx,
+            stream: stream_rx,
+        },
+    )
 }
 
 pub(super) struct AckDataSender {
@@ -217,6 +261,11 @@ fn send_or_log(sender: &Sender<FakeAckPacket>, iface: IfaceKind, ack_kind: FakeA
     let ack = FakeAckPacket::new(iface, ack_kind);
     match sender.try_send(ack) {
         Ok(()) => {}
-        Err(_) => log::error!("can't send fake ack packet to the host"),
+        Err(TrySendError::Disconnected(..)) => {
+            log::error!("can't send fake ack packet to the host. cause: recv end is disconnected.")
+        }
+        Err(TrySendError::Full(..)) => {
+            log::error!("can't send fake ack packet to the host. cause: recv end is full.")
+        }
     }
 }
