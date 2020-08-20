@@ -9,15 +9,15 @@ use super::{
 };
 
 lazy_static! {
-    pub(crate) static ref DEVICE_CONTEXT: Arc<Mutex<DeviceContext>> =
-        Arc::new(Mutex::new(DeviceContext::new()));
+    pub(crate) static ref DEVICE_POOL: Arc<Mutex<DevicePool>> =
+        Arc::new(Mutex::new(DevicePool::new()));
 }
 
-pub(crate) struct DeviceContext {
+pub(crate) struct DevicePool {
     devices: Vec<Device>,
 }
 
-impl DeviceContext {
+impl DevicePool {
     pub(crate) fn connect(
         &mut self,
         device_idx: usize,
@@ -40,6 +40,14 @@ impl DeviceContext {
     const fn new() -> Self {
         Self {
             devices: Vec::new(),
+        }
+    }
+}
+
+impl Drop for DevicePool {
+    fn drop(&mut self) {
+        for device in &mut self.devices {
+            device.shutdown();
         }
     }
 }

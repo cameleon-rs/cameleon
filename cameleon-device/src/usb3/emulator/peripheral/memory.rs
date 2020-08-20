@@ -197,8 +197,6 @@ macro_rules! string_setter {
 impl ABRM {
     string_setter!(set_model_name, MODEL_NAME);
     string_setter!(set_family_name, FAMILY_NAME);
-    string_setter!(set_device_version, DEVICE_VERSION);
-    string_setter!(set_manufacturer_info, MANUFACTURER_INFO);
     string_setter!(set_serial_number, SERIAL_NUMBER);
     string_setter!(set_user_defined_name, USER_DEFINED_NAME);
 

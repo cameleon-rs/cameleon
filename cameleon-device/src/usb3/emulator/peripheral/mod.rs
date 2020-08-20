@@ -1,14 +1,16 @@
-use thiserror::Error;
+pub mod device_builder;
 
-mod context;
 mod control_module;
 mod device;
+mod device_pool;
 mod event_module;
 mod fake_protocol;
 mod interface;
 mod memory;
 mod signal;
 mod stream_module;
+
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum EmulatorError {
