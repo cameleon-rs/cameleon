@@ -27,7 +27,7 @@ pub(super) enum EventSignal {
 }
 
 pub(super) enum StreamSignal {
-    // TODO: Its' better to send strem protocol with enable signal.
+    // TODO: It's better to send strem protocol with enable signal.
     Enable,
     Disable(oneshot::Sender<()>),
     Shutdown(oneshot::Sender<()>),

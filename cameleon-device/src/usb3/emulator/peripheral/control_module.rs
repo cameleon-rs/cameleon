@@ -60,8 +60,7 @@ impl ControlModule {
         );
 
         // Spawn event and stream module.
-        let timestamp_ns = self.timestamp.as_nanos().await;
-        task::spawn(EventModule::new(timestamp_ns).run(event_rx, ack_sender.event));
+        task::spawn(EventModule::new(0).run(event_rx, ack_sender.event));
         task::spawn(StreamModule::new(self.timestamp.clone()).run(stream_rx, ack_sender.stream));
 
         while let Some(signal) = ctrl_rx.next().await {
@@ -226,7 +225,6 @@ impl Worker {
     }
 
     async fn process_write_mem<'a>(&self, command: cmd::CommandPacket<'a>) {
-        // TODO: Handle special events which occured by write mem command,
         let scd: cmd::WriteMem = match self.try_extract_scd(&command) {
             Some(scd) => scd,
             None => return,
@@ -236,45 +234,30 @@ impl Worker {
         let scd_kind = ccd.scd_kind;
 
         let mut memory = self.memory.lock().await;
-        let (event_chain, ack) = match memory.write_mem(scd.address as usize, scd.data) {
+        match memory.write_mem(scd.address as usize, scd.data) {
             Ok(Some(event_chain)) => {
+                // Explictly drop memory to avoid race condition.
+                drop(memory);
+                self.process_event_chain(event_chain).await;
                 let ack = ack::WriteMem::new(scd.data.len() as u16).finalize(req_id);
-                (event_chain, ack)
+                self.try_send_ack(ack);
             }
             Ok(None) => {
                 let ack = ack::WriteMem::new(scd.data.len() as u16).finalize(req_id);
                 self.try_send_ack(ack);
-                return;
             }
             Err(MemoryError::InvalidAddress) => {
                 let ack =
                     ack::ErrorAck::new(ack::GenCpStatus::InvalidAddress, scd_kind).finalize(req_id);
                 self.try_send_ack(ack);
-                return;
             }
             Err(MemoryError::AddressNotWritable) => {
                 let ack =
                     ack::ErrorAck::new(ack::GenCpStatus::WriteProtect, scd_kind).finalize(req_id);
                 self.try_send_ack(ack);
-                return;
             }
             Err(MemoryError::AddressNotReadable) => unreachable!(),
         };
-
-        // TODO: Implement event chain processor as another method.
-        for event in event_chain.chain() {
-            match event {
-                EventData::WriteTimestamp { addr } => {
-                    let timestamp_ns = self.timestamp.as_nanos().await;
-                    // TODO: Handle error.
-                    self.event_tx
-                        .try_send(EventSignal::UpdateTimestamp(timestamp_ns))
-                        .ok();
-                    memory.write_mem_u64_unchecked(*addr, timestamp_ns);
-                }
-            }
-        }
-        self.try_send_ack(ack);
     }
 
     async fn process_read_mem_stacked<'a>(&self, command: cmd::CommandPacket<'a>) {
@@ -319,8 +302,20 @@ impl Worker {
         self.try_send_ack(ack);
     }
 
-    async fn process_event_chain<T>(&self, chain: &EventChain, ack: ack::AckPacket<T>) {
-        todo!()
+    async fn process_event_chain(&self, chain: EventChain) {
+        let mut memory = self.memory.lock().await;
+        for event in chain.chain() {
+            match event {
+                EventData::WriteTimestamp { addr } => {
+                    let timestamp_ns = self.timestamp.as_nanos().await;
+                    // TODO: Handle error.
+                    self.event_tx
+                        .try_send(EventSignal::UpdateTimestamp(timestamp_ns))
+                        .ok();
+                    memory.write_mem_u64_unchecked(*addr, timestamp_ns);
+                }
+            }
+        }
     }
 
     fn try_extract_scd<'a, T>(&self, command: &cmd::CommandPacket<'a>) -> Option<T>

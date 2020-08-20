@@ -151,7 +151,7 @@ mod tests {
         let mut buf = vec![];
         gencp_packet.serialize(&mut buf).unwrap();
 
-        // Send ReadMem gencp packet over SendReq fake packet.
+        // Send ReadMem gencp packet over fake packet.
         let fake_req = FakeReqPacket::control(FakeReqKind::Send(buf));
         assert!(tx.try_send(fake_req).is_ok());
         let fake_ack = (task::block_on(timeout(FAKE_LAYER_TO, rx.recv())))
@@ -160,9 +160,9 @@ mod tests {
         assert_eq!(fake_ack.iface, IfaceKind::Control);
         assert_eq!(fake_ack.kind, FakeAckKind::SendAck);
 
-        // Send RecvReq to obtain WriteMem gencp ack packet.
-        // Device may be still processing write mem packet. So we need to continue sending recv request
-        // until RecvAck is returned or GENCP_LAYER_TO is expired.
+        // Send recv request to obtain WriteMem gencp ack packet.
+        // Device may be still in processing WriteMem packet, so we need to continue sending recv request
+        // until ack packet is returned or GENCP_LAYER_TO is expired.
         let timer = Instant::now();
         let mut fake_ack;
         loop {
@@ -180,15 +180,15 @@ mod tests {
             }
         }
 
-        // Extract gencp readmem packet from fake ack packet.
+        // Extract gencp ReadMem packet from fake ack packet.
         let gencp_writemem_ack = match fake_ack.kind {
             FakeAckKind::RecvAck(data) => data,
             _ => panic!(),
         };
         let ack_packet = ack::AckPacket::parse(&gencp_writemem_ack).unwrap();
-        assert_eq!(ack_packet.request_id(), req_id);
         let ack_scd: ack::WriteMem = ack_packet.scd_as().unwrap();
-        assert_eq!(ack_scd.length, 4);
+        assert_eq!(ack_packet.request_id(), req_id);
+        assert_eq!(ack_scd.length, tsl_len);
 
         // Get timestamp.
         let (ts_addr, ts_len, _) = TIMESTAMP;
@@ -197,7 +197,7 @@ mod tests {
         let mut buf = vec![];
         gencp_packet.serialize(&mut buf).unwrap();
 
-        // Send ReadMem gencp packet over SendReq fake packet.
+        // Send ReadMem gencp packet over fake packet.
         let fake_req = FakeReqPacket::control(FakeReqKind::Send(buf));
         assert!(tx.try_send(fake_req).is_ok());
         let fake_ack = (task::block_on(timeout(FAKE_LAYER_TO, rx.recv())))
@@ -206,9 +206,9 @@ mod tests {
         assert_eq!(fake_ack.kind, FakeAckKind::SendAck);
         assert_eq!(fake_ack.iface, IfaceKind::Control);
 
-        // Send RecvReq.
-        // Device may be still processing read mem packet. So we need to continue sending recv request
-        // while RecvAck is returned or GENCP_LAYER_TO is expired.
+        // Send recv request to obtain ReadMem gencp ack packet.
+        // Device may be still in processing ReadMem packet, so we need to continue sending recv request
+        // while ack is returned or GENCP_LAYER_TO is expired.
         let timer = Instant::now();
         let mut fake_ack;
         loop {
@@ -226,7 +226,7 @@ mod tests {
             }
         }
 
-        // Extract gencp readmem packet from fake ack packet.
+        // Extract gencp ReadMem packet from fake ack packet.
         let gencp_readmem_ack = match fake_ack.kind {
             FakeAckKind::RecvAck(data) => data,
             _ => panic!(),
@@ -236,7 +236,7 @@ mod tests {
         assert_eq!(ack_packet.request_id(), req_id);
         let mut ack_scd: ack::ReadMem = ack_packet.scd_as().unwrap();
 
-        // We write to Timestamp latch. So returned timestamp should be greater than zero.
+        // We wrote to TimestampLatch entry. So returned timestamp must be greater than zero.
         let timestamp = ack_scd.data.read_u64::<LE>().unwrap();
         assert!(timestamp > 0);
     }
