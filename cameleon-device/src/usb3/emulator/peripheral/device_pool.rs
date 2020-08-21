@@ -6,6 +6,8 @@ use std::{
 use async_std::sync::{Receiver, Sender};
 use lazy_static::lazy_static;
 
+use crate::usb3::{Error, LibUsbErrorKind, Result};
+
 use super::{
     device::Device,
     fake_protocol::{FakeAckPacket, FakeReqPacket, IfaceKind},
@@ -22,19 +24,18 @@ pub(crate) struct DevicePool {
 }
 
 impl DevicePool {
-    // TODO: Error
-
     pub(crate) fn claim_interface(
         &mut self,
         device_id: u32,
         iface: IfaceKind,
-    ) -> Option<(Sender<FakeReqPacket>, Receiver<FakeAckPacket>)> {
+    ) -> Result<(Sender<FakeReqPacket>, Receiver<FakeAckPacket>)> {
         self.ctx_mut(device_id)?.claim_interface(iface)
     }
 
-    pub(crate) fn release_interface(&mut self, device_id: u32, iface: IfaceKind) {
-        self.ctx_mut(device_id)
-            .map(|device| device.release_interface(iface));
+    pub(crate) fn release_interface(&mut self, device_id: u32, iface: IfaceKind) -> Result<()> {
+        let mut ctx = self.ctx_mut(device_id)?;
+        ctx.release_interface(iface);
+        Ok(())
     }
 
     pub(super) fn pool_and_run(&mut self, mut device: Device) {
@@ -44,8 +45,11 @@ impl DevicePool {
         self.contexts.push(ctx);
     }
 
-    fn ctx_mut(&mut self, id: u32) -> Option<&mut Context> {
-        self.contexts.iter_mut().find(|ctx| ctx.device_id == id)
+    fn ctx_mut(&mut self, id: u32) -> Result<&mut Context> {
+        self.contexts
+            .iter_mut()
+            .find(|ctx| ctx.device_id == id)
+            .ok_or(LibUsbErrorKind::NotFound.into())
     }
 
     fn new() -> Self {
@@ -88,13 +92,13 @@ impl Context {
     fn claim_interface(
         &mut self,
         iface: IfaceKind,
-    ) -> Option<(Sender<FakeReqPacket>, Receiver<FakeAckPacket>)> {
+    ) -> Result<(Sender<FakeReqPacket>, Receiver<FakeAckPacket>)> {
         if self.is_claimed(iface) {
-            None
+            Err(LibUsbErrorKind::Busy.into())
         } else {
             self.claim_interface(iface);
             *self.iface_state.get_mut(&iface).unwrap() = true;
-            Some(self.channel.clone())
+            Ok(self.channel.clone())
         }
     }
 
@@ -113,6 +117,6 @@ impl Context {
 
 impl Drop for Context {
     fn drop(&mut self) {
-        self.shutdown()
+        self.device.shutdown()
     }
 }

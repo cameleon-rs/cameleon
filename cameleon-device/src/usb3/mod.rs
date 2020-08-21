@@ -49,6 +49,12 @@ pub enum LibUsbErrorKind {
     Other,
 }
 
+impl Into<Error> for LibUsbErrorKind {
+    fn into(self) -> Error {
+        Error::LibusbError(self)
+    }
+}
+
 impl fmt::Display for LibUsbErrorKind {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         use LibUsbErrorKind::*;
