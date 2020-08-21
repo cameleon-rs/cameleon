@@ -1,12 +1,9 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashMap, sync::Arc};
 
-use async_std::sync::{Receiver, Sender};
+use async_std::sync::{Mutex, Receiver, Sender};
 use lazy_static::lazy_static;
 
-use crate::usb3::{Error, LibUsbErrorKind, Result};
+use crate::usb3::{LibUsbError, Result};
 
 use super::{
     device::Device,
@@ -24,32 +21,40 @@ pub(crate) struct DevicePool {
 }
 
 impl DevicePool {
-    pub(crate) fn claim_interface(
+    pub(super) fn claim_interface(
         &mut self,
         device_id: u32,
         iface: IfaceKind,
-    ) -> Result<(Sender<FakeReqPacket>, Receiver<FakeAckPacket>)> {
+    ) -> Result<Arc<Mutex<(Sender<FakeReqPacket>, Receiver<FakeAckPacket>)>>> {
         self.ctx_mut(device_id)?.claim_interface(iface)
     }
 
-    pub(crate) fn release_interface(&mut self, device_id: u32, iface: IfaceKind) -> Result<()> {
-        let mut ctx = self.ctx_mut(device_id)?;
+    pub(super) fn release_interface(&mut self, device_id: u32, iface: IfaceKind) -> Result<()> {
+        let ctx = self.ctx_mut(device_id)?;
         ctx.release_interface(iface);
         Ok(())
     }
 
-    pub(super) fn pool_and_run(&mut self, mut device: Device) {
+    pub(super) fn pool_and_run(&mut self, device: Device) {
         let ctx = Context::run(device, self.next_id);
 
         self.next_id += 1;
         self.contexts.push(ctx);
     }
 
+    pub(super) fn disconnect(&mut self, device_id: u32) {
+        self.contexts.retain(|ctx| ctx.device_id != device_id);
+    }
+
+    pub fn device_ids(&self) -> Vec<u32> {
+        self.contexts.iter().map(|ctx| ctx.device_id).collect()
+    }
+
     fn ctx_mut(&mut self, id: u32) -> Result<&mut Context> {
         self.contexts
             .iter_mut()
             .find(|ctx| ctx.device_id == id)
-            .ok_or(LibUsbErrorKind::NotFound.into())
+            .ok_or(LibUsbError::NotFound.into())
     }
 
     fn new() -> Self {
@@ -64,7 +69,7 @@ impl DevicePool {
 struct Context {
     device: Device,
     device_id: u32,
-    channel: (Sender<FakeReqPacket>, Receiver<FakeAckPacket>),
+    channel: Arc<Mutex<(Sender<FakeReqPacket>, Receiver<FakeAckPacket>)>>,
 
     /// Hold interface state.
     /// Currently just holds claimed state.
@@ -81,10 +86,11 @@ impl Context {
         ]
         .into_iter()
         .collect();
+
         Self {
             device,
             device_id,
-            channel,
+            channel: Arc::new(Mutex::new(channel)),
             iface_state,
         }
     }
@@ -92,11 +98,10 @@ impl Context {
     fn claim_interface(
         &mut self,
         iface: IfaceKind,
-    ) -> Result<(Sender<FakeReqPacket>, Receiver<FakeAckPacket>)> {
+    ) -> Result<Arc<Mutex<(Sender<FakeReqPacket>, Receiver<FakeAckPacket>)>>> {
         if self.is_claimed(iface) {
-            Err(LibUsbErrorKind::Busy.into())
+            Err(LibUsbError::Busy.into())
         } else {
-            self.claim_interface(iface);
             *self.iface_state.get_mut(&iface).unwrap() = true;
             Ok(self.channel.clone())
         }

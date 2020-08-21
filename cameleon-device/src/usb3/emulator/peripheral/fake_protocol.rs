@@ -1,12 +1,12 @@
 /// This packet is sent from a host.
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct FakeReqPacket {
-    pub(crate) iface: IfaceKind,
-    pub(crate) kind: FakeReqKind,
+pub(super) struct FakeReqPacket {
+    pub(super) iface: IfaceKind,
+    pub(super) kind: FakeReqKind,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) enum FakeReqKind {
+pub(super) enum FakeReqKind {
     Send(Vec<u8>),
     Recv,
     SetHalt,
@@ -14,19 +14,19 @@ pub(crate) enum FakeReqKind {
 }
 
 impl FakeReqPacket {
-    pub(crate) fn new(iface: IfaceKind, kind: FakeReqKind) -> Self {
+    pub(super) fn new(iface: IfaceKind, kind: FakeReqKind) -> Self {
         Self { iface, kind }
     }
 
-    pub(crate) fn control(kind: FakeReqKind) -> Self {
+    pub(super) fn control(kind: FakeReqKind) -> Self {
         Self::new(IfaceKind::Control, kind)
     }
 
-    pub(crate) fn event(kind: FakeReqKind) -> Self {
+    pub(super) fn event(kind: FakeReqKind) -> Self {
         Self::new(IfaceKind::Event, kind)
     }
 
-    pub(crate) fn stream(kind: FakeReqKind) -> Self {
+    pub(super) fn stream(kind: FakeReqKind) -> Self {
         Self::new(IfaceKind::Stream, kind)
     }
 }
@@ -49,9 +49,9 @@ impl FakeReqKind {
 
 /// This packet is sent from a device.
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct FakeAckPacket {
-    pub(crate) iface: IfaceKind,
-    pub(crate) kind: FakeAckKind,
+pub(super) struct FakeAckPacket {
+    pub(super) iface: IfaceKind,
+    pub(super) kind: FakeAckKind,
 }
 
 impl FakeAckPacket {
@@ -61,7 +61,7 @@ impl FakeAckPacket {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) enum FakeAckKind {
+pub(super) enum FakeAckKind {
     SendAck,
     SendNak,
     RecvAck(Vec<u8>),

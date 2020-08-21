@@ -59,7 +59,7 @@ impl Interface {
         shutdown: oneshot::Receiver<()>,
         _completed: oneshot::Sender<()>,
     ) {
-        // Contruct and spawn control module. We delegate other module contruction to the control module, so no need to build them.
+        // Construct and spawn control module. We delegate other modules contruction to the control module, so no need to build them.
         let (ctrl_tx_for_mod, ack_rx_for_mod) = self.spawn_ctrl_module(timestamp, memory);
         let mut rx_for_host = rx_for_host.fuse();
         let mut shutdown = shutdown.fuse();
@@ -86,25 +86,30 @@ impl Interface {
             let iface = packet.iface;
             let req_kind = packet.kind;
 
-            // Handle request related to halt.
+            // Handle claer halt request.
             if req_kind.is_clear_halt() {
                 self.iface_state
                     .set_state(iface, IfaceStateKind::Ready)
                     .await;
                 send_or_log(&tx_for_host, iface, FakeAckKind::ClearHaltAck);
                 continue;
-            } else if req_kind.is_set_halt() {
+            }
+
+            // Handle set halt request.
+            if req_kind.is_set_halt() {
                 if !self.iface_state.is_halt(iface).await {
                     self.iface_state
                         .set_state(iface, IfaceStateKind::Halt)
                         .await;
 
-                    // Block until modules finish its processing correctly.
+                    // Wait until modules finish processing correctly.
                     let (completed_tx, completed_rx) = oneshot::channel();
-                    ctrl_tx_for_mod.send(CtrlSignal::SetHalt {
-                        iface,
-                        completed: completed_tx,
-                    }).await;
+                    ctrl_tx_for_mod
+                        .send(CtrlSignal::SetHalt {
+                            iface,
+                            completed: completed_tx,
+                        })
+                        .await;
                     completed_rx.await.ok();
 
                     // Discard all queued ack data.

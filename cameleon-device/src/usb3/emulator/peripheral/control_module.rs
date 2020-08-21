@@ -261,7 +261,7 @@ impl Worker {
     }
 
     async fn process_read_mem_stacked<'a>(&self, command: cmd::CommandPacket<'a>) {
-        let scd: cmd::WriteMemStacked = match self.try_extract_scd(&command) {
+        let _scd: cmd::WriteMemStacked = match self.try_extract_scd(&command) {
             Some(scd) => scd,
             None => return,
         };
@@ -275,7 +275,7 @@ impl Worker {
     }
 
     async fn process_write_mem_stacked<'a>(&self, command: cmd::CommandPacket<'a>) {
-        let scd: cmd::WriteMemStacked = match self.try_extract_scd(&command) {
+        let _scd: cmd::WriteMemStacked = match self.try_extract_scd(&command) {
             Some(scd) => scd,
             None => return,
         };
@@ -289,7 +289,7 @@ impl Worker {
     }
 
     async fn process_custom<'a>(&self, command: cmd::CommandPacket<'a>) {
-        let scd: cmd::WriteMemStacked = match self.try_extract_scd(&command) {
+        let _scd: cmd::WriteMemStacked = match self.try_extract_scd(&command) {
             Some(scd) => scd,
             None => return,
         };
@@ -324,7 +324,7 @@ impl Worker {
     {
         match command.scd_as::<T>() {
             Ok(scd) => Some(scd),
-            Err(e) => {
+            Err(_) => {
                 let ccd = command.ccd();
                 let ack = ack::ErrorAck::new(ack::GenCpStatus::InvalidParameter, ccd.scd_kind)
                     .finalize(ccd.request_id);

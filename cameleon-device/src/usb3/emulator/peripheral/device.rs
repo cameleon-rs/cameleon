@@ -28,7 +28,7 @@ impl Device {
         }
     }
 
-    pub(super) fn run(&mut self) -> (Sender<FakeReqPacket>, Receiver<FakeAckPacket>){
+    pub(super) fn run(&mut self) -> (Sender<FakeReqPacket>, Receiver<FakeAckPacket>) {
         // Create channels for communication between device and host.
         let (req_tx_for_host, req_rx_for_device) = channel(REQ_PACKET_CHANNEL_CAPACITY);
         let (ack_tx_for_device, ack_rx_for_host) = channel(ACK_PACKET_CHANNEL_CAPACITY);
@@ -231,26 +231,38 @@ mod tests {
         let (tx, rx) = device.run();
 
         // Send set halt request.
-        tx.try_send(FakeReqPacket::control(FakeReqKind::SetHalt)).unwrap();
-        let ack =task::block_on(timeout(FAKE_LAYER_TO, rx.recv())).unwrap().unwrap();
+        tx.try_send(FakeReqPacket::control(FakeReqKind::SetHalt))
+            .unwrap();
+        let ack = task::block_on(timeout(FAKE_LAYER_TO, rx.recv()))
+            .unwrap()
+            .unwrap();
         assert_eq!(ack.kind, FakeAckKind::SetHaltAck);
         assert_eq!(ack.iface, IfaceKind::Control);
 
         // Verify interface state is halted.
-        tx.try_send(FakeReqPacket::control(FakeReqKind::Recv)).unwrap();
-        let ack =task::block_on(timeout(FAKE_LAYER_TO, rx.recv())).unwrap().unwrap();
+        tx.try_send(FakeReqPacket::control(FakeReqKind::Recv))
+            .unwrap();
+        let ack = task::block_on(timeout(FAKE_LAYER_TO, rx.recv()))
+            .unwrap()
+            .unwrap();
         assert_eq!(ack.kind, FakeAckKind::IfaceHalted);
         assert_eq!(ack.iface, IfaceKind::Control);
 
         // Send clear halt request.
-        tx.try_send(FakeReqPacket::control(FakeReqKind::ClearHalt)).unwrap();
-        let ack =task::block_on(timeout(FAKE_LAYER_TO, rx.recv())).unwrap().unwrap();
+        tx.try_send(FakeReqPacket::control(FakeReqKind::ClearHalt))
+            .unwrap();
+        let ack = task::block_on(timeout(FAKE_LAYER_TO, rx.recv()))
+            .unwrap()
+            .unwrap();
         assert_eq!(ack.kind, FakeAckKind::ClearHaltAck);
         assert_eq!(ack.iface, IfaceKind::Control);
 
         // Verify halted interface is cleared with meaningless gencp packet.
-        tx.try_send(FakeReqPacket::control(FakeReqKind::Send(vec![1, 2, 3]))).unwrap();
-        let ack =task::block_on(timeout(FAKE_LAYER_TO, rx.recv())).unwrap().unwrap();
+        tx.try_send(FakeReqPacket::control(FakeReqKind::Send(vec![1, 2, 3])))
+            .unwrap();
+        let ack = task::block_on(timeout(FAKE_LAYER_TO, rx.recv()))
+            .unwrap()
+            .unwrap();
         assert_eq!(ack.kind, FakeAckKind::SendAck);
         assert_eq!(ack.iface, IfaceKind::Control);
     }
@@ -261,32 +273,47 @@ mod tests {
         let (tx, rx) = device.run();
 
         // Send meaningless gencp packet.
-        tx.try_send(FakeReqPacket::control(FakeReqKind::Send(vec![1, 2, 3]))).unwrap();
-        let ack =task::block_on(timeout(FAKE_LAYER_TO, rx.recv())).unwrap().unwrap();
+        tx.try_send(FakeReqPacket::control(FakeReqKind::Send(vec![1, 2, 3])))
+            .unwrap();
+        let ack = task::block_on(timeout(FAKE_LAYER_TO, rx.recv()))
+            .unwrap()
+            .unwrap();
         assert_eq!(ack.kind, FakeAckKind::SendAck);
         assert_eq!(ack.iface, IfaceKind::Control);
 
         // Send set halt request.
-        tx.try_send(FakeReqPacket::control(FakeReqKind::SetHalt)).unwrap();
-        let ack =task::block_on(timeout(FAKE_LAYER_TO, rx.recv())).unwrap().unwrap();
+        tx.try_send(FakeReqPacket::control(FakeReqKind::SetHalt))
+            .unwrap();
+        let ack = task::block_on(timeout(FAKE_LAYER_TO, rx.recv()))
+            .unwrap()
+            .unwrap();
         assert_eq!(ack.kind, FakeAckKind::SetHaltAck);
         assert_eq!(ack.iface, IfaceKind::Control);
 
         // Verify interface state is halted.
-        tx.try_send(FakeReqPacket::control(FakeReqKind::Recv)).unwrap();
-        let ack =task::block_on(timeout(FAKE_LAYER_TO, rx.recv())).unwrap().unwrap();
+        tx.try_send(FakeReqPacket::control(FakeReqKind::Recv))
+            .unwrap();
+        let ack = task::block_on(timeout(FAKE_LAYER_TO, rx.recv()))
+            .unwrap()
+            .unwrap();
         assert_eq!(ack.kind, FakeAckKind::IfaceHalted);
         assert_eq!(ack.iface, IfaceKind::Control);
 
         // Send clear halt request.
-        tx.try_send(FakeReqPacket::control(FakeReqKind::ClearHalt)).unwrap();
-        let ack =task::block_on(timeout(FAKE_LAYER_TO, rx.recv())).unwrap().unwrap();
+        tx.try_send(FakeReqPacket::control(FakeReqKind::ClearHalt))
+            .unwrap();
+        let ack = task::block_on(timeout(FAKE_LAYER_TO, rx.recv()))
+            .unwrap()
+            .unwrap();
         assert_eq!(ack.kind, FakeAckKind::ClearHaltAck);
         assert_eq!(ack.iface, IfaceKind::Control);
 
         // Verify halt state removes ack packets corresponding packets sent before halt.
-        tx.try_send(FakeReqPacket::control(FakeReqKind::Recv)).unwrap();
-        let ack =task::block_on(timeout(FAKE_LAYER_TO, rx.recv())).unwrap().unwrap();
+        tx.try_send(FakeReqPacket::control(FakeReqKind::Recv))
+            .unwrap();
+        let ack = task::block_on(timeout(FAKE_LAYER_TO, rx.recv()))
+            .unwrap()
+            .unwrap();
         assert_eq!(ack.kind, FakeAckKind::RecvNak);
         assert_eq!(ack.iface, IfaceKind::Control);
     }
