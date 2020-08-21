@@ -122,9 +122,7 @@ mod tests {
     #[test]
     fn test_handle_ctrl_packet() {
         let mut device = create_device();
-        device.run();
-
-        let (tx, rx) = device.connect().unwrap();
+        let (tx, rx) = device.run();
 
         // Write to TimestampLatch.
         let (tsl_addr, tsl_len, _) = TIMESTAMP_LATCH;
@@ -230,9 +228,7 @@ mod tests {
     #[test]
     fn test_handle_halt() {
         let mut device = create_device();
-        device.run();
-
-        let (tx, rx) = device.connect().unwrap();
+        let (tx, rx) = device.run();
 
         // Send set halt request.
         tx.try_send(FakeReqPacket::control(FakeReqKind::SetHalt)).unwrap();
@@ -262,9 +258,7 @@ mod tests {
     #[test]
     fn test_handle_halt_while_processing() {
         let mut device = create_device();
-        device.run();
-
-        let (tx, rx) = device.connect().unwrap();
+        let (tx, rx) = device.run();
 
         // Send meaningless gencp packet.
         tx.try_send(FakeReqPacket::control(FakeReqKind::Send(vec![1, 2, 3]))).unwrap();
