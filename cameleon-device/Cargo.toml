@@ -14,20 +14,20 @@ async-std = {version = "1.6.2", features = ["unstable"]}
 futures = "0.3.5"
 lazy_static = "1.4.0"
 
-# Dependencies for usb3 vision device driver
+# Dependencies for libusb vision device driver
 rusb = { version = "0.6.2", optional = true }
 
 [features]
-default = ["usb3"]
+default = ["libusb"]
 
-usb3 = ["rusb"]
+libusb = ["rusb"]
 
 [[example]]
 name = "usb3_device_enumeration"
 path = "examples/usb3/device_enumeration.rs"
-required-features = ["usb3"]
+required-features = ["libusb"]
 
 [[example]]
 name = "usb3_device_control"
 path = "examples/usb3/device_control.rs"
-required-features = ["usb3"]
+required-features = ["libusb"]

@@ -1,9 +1,12 @@
 use byteorder::{ReadBytesExt, LE};
 use semver::Version;
 
-use super::channel::{ControlIfaceInfo, ReceiveIfaceInfo};
-use super::device::{DeviceInfo, RusbDevHandle, RusbDevice, SupportedSpeed};
-use super::{Device, Error, Result};
+use crate::usb3::{DeviceInfo, Error, Result, SupportedSpeed};
+
+use super::{
+    channel::{ControlIfaceInfo, ReceiveIfaceInfo},
+    device::{Device, RusbDevHandle, RusbDevice},
+};
 
 const MISCELLANEOUS_CLASS: u8 = 0xEF;
 
