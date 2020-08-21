@@ -14,8 +14,6 @@ const ACK_PACKET_CHANNEL_CAPACITY: usize = 1;
 pub(super) struct Device {
     timestamp: Timestamp,
     memory: Arc<Mutex<Memory>>,
-    tx_for_host: Option<Sender<FakeReqPacket>>,
-    rx_for_host: Option<Receiver<FakeAckPacket>>,
     shutdown_tx: Option<oneshot::Sender<()>>,
     completion_rx: Option<oneshot::Receiver<()>>,
 }
@@ -25,27 +23,15 @@ impl Device {
         Self {
             timestamp: Timestamp::new(),
             memory: Arc::new(Mutex::new(memory)),
-            tx_for_host: None,
-            rx_for_host: None,
             shutdown_tx: None,
             completion_rx: None,
         }
     }
 
-    pub(super) fn connect(&mut self) -> Option<(Sender<FakeReqPacket>, Receiver<FakeAckPacket>)> {
-        if let (Some(tx), Some(rx)) = (self.tx_for_host.take(), self.rx_for_host.take()) {
-            Some((tx, rx))
-        } else {
-            None
-        }
-    }
-
-    pub(super) fn run(&mut self) {
+    pub(super) fn run(&mut self) -> (Sender<FakeReqPacket>, Receiver<FakeAckPacket>){
         // Create channels for communication between device and host.
         let (req_tx_for_host, req_rx_for_device) = channel(REQ_PACKET_CHANNEL_CAPACITY);
         let (ack_tx_for_device, ack_rx_for_host) = channel(ACK_PACKET_CHANNEL_CAPACITY);
-        self.tx_for_host = Some(req_tx_for_host);
-        self.rx_for_host = Some(ack_rx_for_host);
 
         // Create channel for communication between device and its internal interface.
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
@@ -61,6 +47,8 @@ impl Device {
             shutdown_rx,
             completion_tx,
         ));
+
+        (req_tx_for_host, ack_rx_for_host)
     }
 
     pub(super) fn shutdown(&mut self) {
@@ -73,8 +61,6 @@ impl Device {
         }
 
         self.shutdown_tx = None;
-        self.tx_for_host = None;
-        self.rx_for_host = None;
     }
 }
 

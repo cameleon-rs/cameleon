@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use crate::usb3::register_map::*;
 
-use super::{EmulatorError, EmulatorResult};
+use super::device_builder::{BuilderError, BuilderResult};
 
 const SBRM_ADDRESS: u64 = 0xffff;
 
@@ -185,7 +185,7 @@ pub(super) struct ABRM {
 
 macro_rules! string_setter {
     ($fn_name:ident, $entry:ident) => {
-        pub(super) fn $fn_name(&mut self, name: &str) -> EmulatorResult<()> {
+        pub(super) fn $fn_name(&mut self, name: &str) -> BuilderResult<()> {
             use abrm::*;
             verify_str(name)?;
             *self.inner.get_mut(&$entry).unwrap() = RegisterEntryData::Str(name.to_owned().into());
@@ -267,16 +267,16 @@ impl Default for ABRM {
     }
 }
 
-fn verify_str(s: &str) -> EmulatorResult<()> {
+fn verify_str(s: &str) -> BuilderResult<()> {
     const STRING_LENGTH_LIMIT: usize = 64;
 
     if !s.is_ascii() {
-        return Err(EmulatorError::InvalidString("string format is not ascii"));
+        return Err(BuilderError::InvalidString("string format is not ascii"));
     }
 
     // String in register must be 0 terminated, so need to subtract 1 from STRING_LENGTH_LIMIT.
     if s.as_bytes().len() > STRING_LENGTH_LIMIT - 1 {
-        return Err(EmulatorError::InvalidString("string is too long."));
+        return Err(BuilderError::InvalidString("string is too long."));
     }
 
     Ok(())

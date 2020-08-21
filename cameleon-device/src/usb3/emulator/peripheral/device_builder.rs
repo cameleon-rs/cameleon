@@ -1,9 +1,18 @@
+use thiserror::Error;
+
 use super::{
     device::Device,
     device_pool::DEVICE_POOL,
     memory::{Memory, ABRM},
-    EmulatorResult,
 };
+
+#[derive(Debug, Error)]
+pub enum BuilderError {
+    #[error("invalid string: {}", 0)]
+    InvalidString(&'static str),
+}
+
+pub type BuilderResult<T> = std::result::Result<T, BuilderError>;
 
 /// USB3 emulated device builder.
 /// All initial configuration of the device must be done via this builder.
@@ -64,7 +73,7 @@ impl DeviceBuilder {
     pub fn build(&self) {
         let memory = Memory::new(self.abrm.clone());
         let device = Device::new(memory);
-        DEVICE_POOL.lock().unwrap().attach_device(device);
+        DEVICE_POOL.lock().unwrap().pool_and_run(device);
     }
 
     /// Setter of model name of the device. The data is flushed to ABRM segment of the device memory.
@@ -75,9 +84,9 @@ impl DeviceBuilder {
     ///
     /// # Errors
     /// If name is not ASCII string or the length is larger than 63, then
-    /// [`EmulatorError::InvalidString`] is returned.
+    /// [`BuilderError::InvalidString`] is returned.
     ///
-    /// [`EmulatorError::InvalidString`]: enum.EmulatorError.html#valirant.InvalidString
+    /// [`BuilderError::InvalidString`]: enum.BuilderError.html#valirant.InvalidString
     /// # Examples
     ///
     /// ```rust
@@ -87,7 +96,7 @@ impl DeviceBuilder {
     /// assert!(builder.model_name("my camera").is_ok());
     /// assert!(builder.model_name("私のカメラ").is_err());
     /// ```
-    pub fn model_name(&mut self, name: &str) -> EmulatorResult<&mut Self> {
+    pub fn model_name(&mut self, name: &str) -> BuilderResult<&mut Self> {
         self.abrm.set_model_name(name)?;
         Ok(self)
     }
@@ -100,9 +109,9 @@ impl DeviceBuilder {
     ///
     /// # Errors
     /// If name is not ASCII string or the length is larger than 63, then
-    /// [`EmulatorError::InvalidString`] is returned.
+    /// [`BuilderError::InvalidString`] is returned.
     ///
-    /// [`EmulatorError::InvalidString`]: enum.EmulatorError.html#valirant.InvalidString
+    /// [`BuilderError::InvalidString`]: enum.BuilderError.html#valirant.InvalidString
     /// # Examples
     ///
     /// ```rust
@@ -112,7 +121,7 @@ impl DeviceBuilder {
     /// assert!(builder.family_name("my camera family").is_ok());
     /// assert!(builder.family_name("私のカメラ家族").is_err());
     /// ```
-    pub fn family_name(&mut self, name: &str) -> EmulatorResult<&mut Self> {
+    pub fn family_name(&mut self, name: &str) -> BuilderResult<&mut Self> {
         self.abrm.set_family_name(name)?;
         Ok(self)
     }
@@ -125,9 +134,9 @@ impl DeviceBuilder {
     ///
     /// # Errors
     /// If serial is not ASCII string or the length is larger than 63, then
-    /// [`EmulatorError::InvalidString`] is returned.
+    /// [`BuilderError::InvalidString`] is returned.
     ///
-    /// [`EmulatorError::InvalidString`]: enum.EmulatorError.html#valirant.InvalidString
+    /// [`BuilderError::InvalidString`]: enum.BuilderError.html#valirant.InvalidString
     /// # Examples
     ///
     /// ```rust
@@ -137,7 +146,7 @@ impl DeviceBuilder {
     /// assert!(builder.serial_number("CAM1984").is_ok());
     /// assert!(builder.serial_number("1984年").is_err());
     /// ```
-    pub fn serial_number(&mut self, serial: &str) -> EmulatorResult<&mut Self> {
+    pub fn serial_number(&mut self, serial: &str) -> BuilderResult<&mut Self> {
         self.abrm.set_serial_number(serial)?;
         Ok(self)
     }
@@ -150,9 +159,9 @@ impl DeviceBuilder {
     ///
     /// # Errors
     /// If name is not ASCII string or the length is larger than 63, then
-    /// [`EmulatorError::InvalidString`] is returned.
+    /// [`BuilderError::InvalidString`] is returned.
     ///
-    /// [`EmulatorError::InvalidString`]: enum.EmulatorError.html#valirant.InvalidString
+    /// [`BuilderError::InvalidString`]: enum.BuilderError.html#valirant.InvalidString
     /// # Examples
     ///
     /// ```rust
@@ -162,7 +171,7 @@ impl DeviceBuilder {
     /// assert!(builder.user_defined_name("user define name").is_ok());
     /// assert!(builder.user_defined_name("使用者定義名前").is_err());
     /// ```
-    pub fn user_defined_name(&mut self, name: &str) -> EmulatorResult<&mut Self> {
+    pub fn user_defined_name(&mut self, name: &str) -> BuilderResult<&mut Self> {
         self.abrm.set_user_defined_name(name)?;
         Ok(self)
     }

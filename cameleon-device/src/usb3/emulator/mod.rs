@@ -1,3 +1,5 @@
 mod peripheral;
 
-pub use peripheral::{device_builder::DeviceBuilder, EmulatorError, EmulatorResult};
+pub(super) use peripheral::fake_protocol::*;
+
+pub use peripheral::device_builder::{BuilderError, BuilderResult, DeviceBuilder};
