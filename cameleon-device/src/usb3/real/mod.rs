@@ -6,11 +6,11 @@ pub use channel::{ControlChannel, ReceiveChannel};
 pub use device::Device;
 pub use device_builder::enumerate_device;
 
-use crate::usb3::{Error, LibUsbErrorKind};
+use crate::usb3::{Error, LibUsbError};
 
 impl From<rusb::Error> for Error {
     fn from(err: rusb::Error) -> Error {
-        use LibUsbErrorKind::*;
+        use LibUsbError::*;
         let kind = match err {
             rusb::Error::Io => Io,
             rusb::Error::InvalidParam => InvalidParam,
@@ -28,6 +28,6 @@ impl From<rusb::Error> for Error {
             rusb::Error::Other => Other,
         };
 
-        Error::LibusbError(kind)
+        Error::LibUsbError(kind)
     }
 }
