@@ -439,4 +439,72 @@ mod tests {
         assert!(protection.verify_address_with_range(2..5).is_ok());
         assert!(protection.verify_address_with_range(2..6).is_err());
     }
+
+    #[test]
+    fn test_read_mem() {
+        let abrm: ABRM = Default::default();
+        let mut memory = Memory::new(abrm);
+
+        let (addr, len, _) = abrm::GENCP_VERSION;
+        let range = addr as usize..addr as usize + len as usize;
+        assert!(memory.read_mem(range).is_ok())
+    }
+
+    #[test]
+    fn test_write_mem() {
+        let abrm: ABRM = Default::default();
+        let mut memory = Memory::new(abrm);
+
+        let (addr, len, _) = abrm::TIMESTAMP_LATCH;
+        let data = vec![0; len as usize];
+        assert!(memory.write_mem(addr as usize, &data).is_ok())
+    }
+
+    #[test]
+    fn test_read_mem_must_fail() {
+        let abrm: ABRM = Default::default();
+        let mut memory = Memory::new(abrm);
+
+        let (addr, len, _) = abrm::TIMESTAMP_LATCH;
+        let range = addr as usize..addr as usize + len as usize;
+        assert! {
+            match memory.read_mem(range) {
+                Err(MemoryError::AddressNotReadable) => true,
+                _ => false,
+            }
+        };
+
+        let (addr, len, _) = abrm::TIMESTAMP;
+        let range = addr as usize..addr as usize + len as usize + 1;
+        assert! {
+            match memory.read_mem(range) {
+                Err(MemoryError::AddressNotReadable) => true,
+                _ => false,
+            }
+        };
+    }
+
+    #[test]
+    fn test_write_mem_must_fail() {
+        let abrm: ABRM = Default::default();
+        let mut memory = Memory::new(abrm);
+
+        let (addr, len, _) = abrm::DEVICE_CONFIGURATION;
+        let data = vec![0; len as usize];
+        assert! {
+           match memory.write_mem(addr as usize, &data) {
+               Err(MemoryError::AddressNotWritable) => true,
+               _ => false,
+           }
+        };
+
+        let (addr, len, _) = abrm::MESSAGE_CHANNEL_ID;
+        let data = vec![0; (len + 1) as usize];
+        assert! {
+           match memory.write_mem(addr as usize, &data) {
+               Err(MemoryError::AddressNotWritable) => true,
+               _ => false,
+           }
+        };
+    }
 }
