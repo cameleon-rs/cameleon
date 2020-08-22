@@ -15,9 +15,15 @@ mod real;
 pub use real::*;
 
 #[cfg(all(not(feature = "libusb"), feature = "emulator"))]
-pub mod emulator;
+mod emulator;
 #[cfg(all(not(feature = "libusb"), feature = "emulator"))]
-pub use emulator::{enumerate_device, ControlChannel, Device, ReceiveChannel};
+pub use emulator::*;
+
+pub mod prelude {
+    use super::*;
+    pub use protocol::ack::ParseScd;
+    pub use protocol::command::CommandScd;
+}
 
 #[derive(Debug, Error)]
 pub enum Error {

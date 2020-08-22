@@ -31,6 +31,7 @@ fn test_normal_scenario() {
     assert!(stream_channel.open().is_ok());
 
     let mut req_id = 0;
+
     // Send WriteMem command to time stamp latch entry of the device.
     // The command will dispatch a internal event which cause write to time stamp entry of the
     // device.
@@ -54,8 +55,8 @@ fn test_normal_scenario() {
 
     // Send ReadMem command to time stamp entry.
     let (ts_addr, ts_len, _) = register_map::abrm::TIMESTAMP;
-    let (read_cmd, ack_len) = read_cmd(ts_addr, ts_len, req_id);
-    assert!(control_channel.send(&read_cmd, TIME_OUT).is_ok());
+    let (cmd, ack_len) = read_cmd(ts_addr, ts_len, req_id);
+    assert!(control_channel.send(&cmd, TIME_OUT).is_ok());
 
     // Receive acknowledge packet corresponding to ReadMem command sent above.
     let mut ack_bytes = vec![0; ack_len];
@@ -70,6 +71,26 @@ fn test_normal_scenario() {
     // Assert time stamp is larger than zero, it verify write to time stamp latch works correctly.
     let time_stamp = bytes_as_u64_le(&read_ack_command.data);
     assert!(time_stamp > 0);
+
+    // Increment req_id for next command.
+    req_id += 1;
+
+    // Send ReadMem command to time stamp entry.
+    let (ts_addr, ts_len, _) = register_map::abrm::TIMESTAMP;
+    let (cmd, _) = read_cmd(ts_addr, ts_len, req_id);
+    assert!(control_channel.send(&cmd, TIME_OUT).is_ok());
+
+    // Assert set/clear halt works.
+    assert!(control_channel.set_halt(TIME_OUT).is_ok());
+    assert!(control_channel.clear_halt().is_ok());
+
+    // Assert control channel is empty after halt.
+    assert! {
+       match control_channel.recv(&mut vec![], TIME_OUT) {
+           Err(Error::LibUsbError(LibUsbError::Timeout)) => true,
+           _ => false
+       }
+    };
 }
 
 fn bytes_as_u64_le(mut bytes: &[u8]) -> u64 {
