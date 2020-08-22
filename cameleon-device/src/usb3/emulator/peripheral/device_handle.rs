@@ -176,7 +176,7 @@ mod tests {
     }
 
     fn disconnect(device_id: u32) {
-         DevicePool::with(|pool| pool.disconnect(device_id));
+        DevicePool::with(|pool| pool.disconnect(device_id));
     }
 
     lazy_static! {

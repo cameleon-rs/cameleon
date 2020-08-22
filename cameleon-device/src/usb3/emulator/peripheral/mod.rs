@@ -11,4 +11,7 @@ mod signal;
 mod stream_module;
 
 pub use device_builder::*;
+
 pub(super) use device_handle::*;
+pub(super) use device_pool::DevicePool;
+pub(super) use fake_protocol::IfaceKind;

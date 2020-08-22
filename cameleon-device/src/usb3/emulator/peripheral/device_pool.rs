@@ -23,6 +23,23 @@ pub(crate) struct DevicePool {
 }
 
 impl DevicePool {
+    pub(crate) fn device_info(&self, device_id: u32) -> Result<DeviceInfo> {
+        let ctx = self.ctx(device_id)?;
+        Ok(ctx.device_info())
+    }
+
+    pub(crate) fn device_ids(&self) -> Vec<u32> {
+        self.contexts.iter().map(|ctx| ctx.device_id).collect()
+    }
+
+    pub(crate) fn with<F, R>(f: F) -> R
+    where
+        F: FnOnce(&mut DevicePool) -> R,
+    {
+        let mut pool = task::block_on(DEVICE_POOL.lock());
+        f(&mut *pool)
+    }
+
     pub(super) fn claim_interface(
         &mut self,
         device_id: u32,
@@ -37,11 +54,6 @@ impl DevicePool {
         Ok(())
     }
 
-    pub(super) fn device_info(&self, device_id: u32) -> Result<DeviceInfo> {
-        let ctx = self.ctx(device_id)?;
-        Ok(ctx.device_info())
-    }
-
     pub(super) fn pool_and_run(&mut self, device: Device) {
         let ctx = Context::run(device, self.next_id);
 
@@ -49,20 +61,8 @@ impl DevicePool {
         self.contexts.push(ctx);
     }
 
-    pub(super) fn with<F, R>(f: F) -> R
-    where
-        F: FnOnce(&mut DevicePool) -> R,
-    {
-        let mut pool = task::block_on(DEVICE_POOL.lock());
-        f(&mut *pool)
-    }
-
     pub(super) fn disconnect(&mut self, device_id: u32) {
         self.contexts.retain(|ctx| ctx.device_id != device_id);
-    }
-
-    pub(super) fn device_ids(&self) -> Vec<u32> {
-        self.contexts.iter().map(|ctx| ctx.device_id).collect()
     }
 
     fn ctx_mut(&mut self, id: u32) -> Result<&mut Context> {
