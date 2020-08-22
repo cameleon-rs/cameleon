@@ -95,51 +95,12 @@ impl AccessRight {
         self.as_num() >> 1 == 1
     }
 
-    pub(crate) fn meet(self, rhs: Self) -> Self {
-        use AccessRight::*;
-        match self {
-            RW => {
-                if rhs == RW {
-                    RW
-                } else {
-                    rhs
-                }
-            }
-            RO => {
-                if rhs.is_readable() {
-                    self
-                } else {
-                    NA
-                }
-            }
-            WO => {
-                if rhs.is_writable() {
-                    self
-                } else {
-                    NA
-                }
-            }
-            NA => NA,
-        }
-    }
-
     pub(crate) fn as_num(self) -> u8 {
         match self {
             Self::NA => 0b00,
             Self::RO => 0b01,
             Self::WO => 0b10,
             Self::RW => 0b11,
-        }
-    }
-
-    pub(crate) fn from_num(num: u8) -> Self {
-        debug_assert!(num >> 2 == 0);
-        match num {
-            0b00 => Self::NA,
-            0b01 => Self::RO,
-            0b10 => Self::WO,
-            0b11 => Self::RW,
-            _ => unreachable!(),
         }
     }
 }

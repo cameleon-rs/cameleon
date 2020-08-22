@@ -14,13 +14,13 @@ pub(super) enum CtrlSignal {
 }
 
 pub(super) enum EventSignal {
-    EventData {
+    _EventData {
         event_id: u16,
         data: Vec<u8>,
         request_id: u16,
     },
     UpdateTimestamp(u64),
-    Enable,
+    _Enable,
     Disable(oneshot::Sender<()>),
     Shutdown(oneshot::Sender<()>),
     // TODO: Multievent support.
@@ -28,7 +28,7 @@ pub(super) enum EventSignal {
 
 pub(super) enum StreamSignal {
     // TODO: It's better to send strem protocol with enable signal.
-    Enable,
+    _Enable,
     Disable(oneshot::Sender<()>),
     Shutdown(oneshot::Sender<()>),
 }

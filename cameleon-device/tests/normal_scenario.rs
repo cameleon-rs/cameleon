@@ -2,7 +2,6 @@ use std::time::Duration;
 
 use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 use cameleon_device::usb3::{
-    prelude::*,
     protocol::{ack, command},
     *,
 };
@@ -35,14 +34,14 @@ fn test_normal_scenario() {
     // Send WriteMem command to time stamp latch entry of the device.
     // The command will dispatch a internal event which cause write to time stamp entry of the
     // device.
-    let (tsl_addr, tsl_len, _) = register_map::abrm::TIMESTAMP_LATCH;
+    let (tsl_addr, _, _) = register_map::abrm::TIMESTAMP_LATCH;
     let cmd_data = u32_as_le_bytes(1);
     let (write_cmd, ack_len) = write_cmd(tsl_addr, &cmd_data, req_id);
     assert!(control_channel.send(&write_cmd, TIME_OUT).is_ok());
 
     // Receive acknowledge packet corresponding to WriteMem command sent above.
     let mut ack_bytes = vec![0; ack_len];
-    let write_ack = control_channel.recv(&mut ack_bytes, TIME_OUT);
+    assert!(control_channel.recv(&mut ack_bytes, TIME_OUT).is_ok());
     let ack_command = ack::AckPacket::parse(&ack_bytes).unwrap();
 
     assert_eq!(ack_command.request_id(), req_id);
@@ -60,7 +59,7 @@ fn test_normal_scenario() {
 
     // Receive acknowledge packet corresponding to ReadMem command sent above.
     let mut ack_bytes = vec![0; ack_len];
-    let write_ack = control_channel.recv(&mut ack_bytes, TIME_OUT);
+    assert!(control_channel.recv(&mut ack_bytes, TIME_OUT).is_ok());
     let ack_command = ack::AckPacket::parse(&ack_bytes).unwrap();
 
     assert_eq!(ack_command.request_id(), req_id);
@@ -86,7 +85,7 @@ fn test_normal_scenario() {
 
     // Assert control channel is empty after halt.
     assert! {
-       match control_channel.recv(&mut vec![], TIME_OUT) {
+       match control_channel.recv(&mut [], TIME_OUT) {
            Err(Error::LibUsbError(LibUsbError::Timeout)) => true,
            _ => false
        }

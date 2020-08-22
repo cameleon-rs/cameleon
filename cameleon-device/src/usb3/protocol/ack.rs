@@ -161,10 +161,7 @@ pub enum UsbSpecificStatus {
 
 impl Status {
     pub fn is_success(&self) -> bool {
-        match self.kind {
-            StatusKind::GenCp(GenCpStatus::Success) => true,
-            _ => false,
-        }
+        matches!(self.kind, StatusKind::GenCp(GenCpStatus::Success))
     }
 
     pub fn is_fatal(&self) -> bool {
@@ -369,7 +366,7 @@ impl<'a> ParseScd<'a> for WriteMemStacked {
             }
             let length = cursor.read_u16::<LE>()?;
             lengths.push(length);
-            to_read = to_read - 4;
+            to_read -= 4;
         }
 
         Ok(Self { lengths })

@@ -3,8 +3,6 @@ use async_std::{
     sync::{Receiver, Sender},
 };
 
-use futures::channel::oneshot;
-
 use super::signal::EventSignal;
 
 pub(super) struct EventModule {
@@ -25,7 +23,7 @@ impl EventModule {
 
         while let Some(signal) = ctrl_rx.next().await {
             match signal {
-                EventSignal::EventData {
+                EventSignal::_EventData {
                     event_id,
                     data,
                     request_id,
@@ -39,7 +37,7 @@ impl EventModule {
                 EventSignal::UpdateTimestamp(timestamp) => {
                     self.timestamp = timestamp;
                 }
-                EventSignal::Enable => {
+                EventSignal::_Enable => {
                     if self.enabled {
                         log::warn! {"receive event enable signal, but event module is already enabled"}
                     } else {
@@ -119,7 +117,7 @@ mod event_packet {
     pub(super) type ProtocolResult<T> = std::result::Result<T, ProtocolError>;
 
     pub(super) struct EventPacket<'a> {
-        scd_len: u16,
+        _scd_len: u16,
         request_id: u16,
         scd: EventScd<'a>,
     }
@@ -131,7 +129,7 @@ mod event_packet {
 
         fn from_scd(scd: EventScd<'a>, request_id: u16) -> Self {
             Self {
-                scd_len: scd.scd_len_unchecked(),
+                _scd_len: scd.scd_len_unchecked(),
                 request_id,
                 scd,
             }
@@ -189,11 +187,9 @@ mod event_packet {
             let data_len: u16 = self.data.len().try_into().map_err(|_| {
                 ProtocolError::InvalidPacket("event data size is larger than u16::MAX".into())
             })?;
-            (2u16 + 2u16 + 8u16)
-                .checked_add(data_len)
-                .ok_or(ProtocolError::InvalidPacket(
-                    "scd size is larger than u16::MAX".into(),
-                ))
+            (2u16 + 2u16 + 8u16).checked_add(data_len).ok_or_else(|| {
+                ProtocolError::InvalidPacket("scd size is larger than u16::MAX".into())
+            })
         }
     }
 
@@ -247,7 +243,7 @@ mod tests {
 
     #[test]
     fn test_run_and_stop() {
-        let (ctrl_tx, ack_rx) = spawn_module();
+        let (ctrl_tx, _ack_rx) = spawn_module();
 
         let (completed_tx, completed_rx) = oneshot::channel();
         assert!(ctrl_tx
@@ -260,14 +256,14 @@ mod tests {
     #[test]
     fn test_signal() {
         let (ctrl_tx, ack_rx) = spawn_module();
-        ctrl_tx.try_send(EventSignal::Enable).unwrap();
+        ctrl_tx.try_send(EventSignal::_Enable).unwrap();
 
         // Test EventData signal.
         let event_id = 10;
         let request_id = 20;
         let data = vec![1, 2, 3];
         ctrl_tx
-            .try_send(EventSignal::EventData {
+            .try_send(EventSignal::_EventData {
                 event_id,
                 data: data.clone(),
                 request_id,
@@ -285,9 +281,9 @@ mod tests {
             .try_send(EventSignal::UpdateTimestamp(timestamp))
             .unwrap();
         ctrl_tx
-            .try_send(EventSignal::EventData {
+            .try_send(EventSignal::_EventData {
                 event_id,
-                data: data.clone(),
+                data,
                 request_id,
             })
             .unwrap();

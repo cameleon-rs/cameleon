@@ -1,11 +1,6 @@
 use std::time::Duration;
 
-use byteorder::{ReadBytesExt, WriteBytesExt, LE};
-use cameleon_device::usb3::{
-    prelude::*,
-    protocol::{ack, command},
-    *,
-};
+use cameleon_device::usb3::*;
 
 const TIME_OUT: Duration = Duration::from_millis(100);
 
@@ -24,19 +19,13 @@ fn test_exceptional_scenario() {
     // The same channel can't open at the same time.
     control_channel.open().unwrap();
     assert! {
-        match control_channel2.open()  {
-            Err(Error::LibUsbError(LibUsbError::Busy)) => true,
-            _ => false,
-        }
+        matches!(control_channel2.open(), Err(Error::LibUsbError(LibUsbError::Busy)))
     };
 
     // Trying to receive data without sending a command ends in timeout error.
     let mut buf = vec![0; 1024];
     assert! {
-        match control_channel.recv(&mut buf, TIME_OUT) {
-            Err(Error::LibUsbError(LibUsbError::Timeout)) => true,
-            _ => false,
-        }
+        matches!(control_channel.recv(&mut buf, TIME_OUT), Err(Error::LibUsbError(LibUsbError::Timeout)))
     };
 
     // Trying to receive data with too small buffer ends in overflow error.
@@ -46,27 +35,18 @@ fn test_exceptional_scenario() {
     assert! {control_channel.send(dummy_data, TIME_OUT).is_ok()};
     let mut buf = vec![0; 1];
     assert! {
-        match control_channel.recv(&mut buf, TIME_OUT) {
-            Err(Error::LibUsbError(LibUsbError::Overflow)) => true,
-            _ => false,
-        }
+        matches!(control_channel.recv(&mut buf, TIME_OUT), Err(Error::LibUsbError(LibUsbError::Overflow)))
     };
 
     // Trying to use halted channel ends in pipe error.
     assert!(control_channel.set_halt(TIME_OUT).is_ok());
     assert! {
-       match control_channel.send(dummy_data, TIME_OUT) {
-           Err(Error::LibUsbError(LibUsbError::Pipe)) => true,
-           _ => false,
-       }
+       matches!(control_channel.send(dummy_data, TIME_OUT), Err(Error::LibUsbError(LibUsbError::Pipe)))
     };
 
     // Trying to use closed channel ends in io error.
-    control_channel.close();
+    control_channel.close().unwrap();
     assert! {
-       match control_channel.send(dummy_data, TIME_OUT) {
-           Err(Error::LibUsbError(LibUsbError::Io)) => true,
-           _ => false,
-       }
+       matches!(control_channel.send(dummy_data, TIME_OUT), Err(Error::LibUsbError(LibUsbError::Io)))
     };
 }

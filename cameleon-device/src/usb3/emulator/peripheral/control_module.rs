@@ -125,11 +125,11 @@ impl ControlModule {
 struct Worker {
     ack_tx: Sender<Vec<u8>>,
     memory: Arc<Mutex<Memory>>,
-    completed: Sender<()>,
+    _completed: Sender<()>,
     on_processing: Arc<AtomicBool>,
-    iface_state: IfaceState,
+    _iface_state: IfaceState,
     event_tx: Sender<EventSignal>,
-    stream_tx: Sender<StreamSignal>,
+    _stream_tx: Sender<StreamSignal>,
     timestamp: Timestamp,
 }
 
@@ -193,7 +193,7 @@ impl Worker {
         }
     }
 
-    async fn process_read_mem<'a>(&self, command: cmd::CommandPacket<'a>) {
+    async fn process_read_mem(&self, command: cmd::CommandPacket<'_>) {
         let scd: cmd::ReadMem = match self.try_extract_scd(&command) {
             Some(scd) => scd,
             None => return,
@@ -224,7 +224,7 @@ impl Worker {
         };
     }
 
-    async fn process_write_mem<'a>(&self, command: cmd::CommandPacket<'a>) {
+    async fn process_write_mem(&self, command: cmd::CommandPacket<'_>) {
         let scd: cmd::WriteMem = match self.try_extract_scd(&command) {
             Some(scd) => scd,
             None => return,
@@ -260,7 +260,7 @@ impl Worker {
         };
     }
 
-    async fn process_read_mem_stacked<'a>(&self, command: cmd::CommandPacket<'a>) {
+    async fn process_read_mem_stacked(&self, command: cmd::CommandPacket<'_>) {
         let _scd: cmd::WriteMemStacked = match self.try_extract_scd(&command) {
             Some(scd) => scd,
             None => return,
@@ -274,7 +274,7 @@ impl Worker {
         self.try_send_ack(ack);
     }
 
-    async fn process_write_mem_stacked<'a>(&self, command: cmd::CommandPacket<'a>) {
+    async fn process_write_mem_stacked(&self, command: cmd::CommandPacket<'_>) {
         let _scd: cmd::WriteMemStacked = match self.try_extract_scd(&command) {
             Some(scd) => scd,
             None => return,
@@ -288,7 +288,7 @@ impl Worker {
         self.try_send_ack(ack);
     }
 
-    async fn process_custom<'a>(&self, command: cmd::CommandPacket<'a>) {
+    async fn process_custom(&self, command: cmd::CommandPacket<'_>) {
         let _scd: cmd::WriteMemStacked = match self.try_extract_scd(&command) {
             Some(scd) => scd,
             None => return,
@@ -400,11 +400,11 @@ impl WorkerManager {
         Worker {
             ack_tx: self.ack_tx.clone(),
             memory: self.memory.clone(),
-            completed: self.completed_tx.clone(),
+            _completed: self.completed_tx.clone(),
             on_processing: self.on_processing.clone(),
-            iface_state: self.iface_state.clone(),
+            _iface_state: self.iface_state.clone(),
             event_tx: self.event_tx.clone(),
-            stream_tx: self.stream_tx.clone(),
+            _stream_tx: self.stream_tx.clone(),
             timestamp: self.timestamp.clone(),
         }
     }
@@ -489,7 +489,7 @@ mod cmd {
             Ok(Self {
                 flag,
                 scd_kind,
-                scd_len: scd_len,
+                scd_len,
                 request_id,
             })
         }
@@ -856,7 +856,7 @@ mod ack {
     }
 
     impl Pending {
-        pub(super) fn new(timeout: time::Duration) -> Self {
+        pub(super) fn _new(timeout: time::Duration) -> Self {
             debug_assert!(timeout.as_millis() <= std::u16::MAX as u128);
             Self { timeout }
         }
@@ -879,7 +879,7 @@ mod ack {
     }
 
     impl<'a> ReadMemStacked<'a> {
-        pub(super) fn new(data: &'a [u8]) -> Self {
+        pub(super) fn _new(data: &'a [u8]) -> Self {
             debug_assert!(data.len() <= u16::MAX as usize);
             Self { data }
         }
@@ -901,7 +901,7 @@ mod ack {
     }
 
     impl WriteMemStacked {
-        pub(super) fn new(lengths: Vec<u16>) -> Self {
+        pub(super) fn _new(lengths: Vec<u16>) -> Self {
             debug_assert!(Self::scd_len(&lengths) <= u16::MAX as usize);
             Self { lengths }
         }
@@ -936,7 +936,7 @@ mod ack {
     }
 
     impl<'a> CustomAck<'a> {
-        pub(super) fn new(command_id: u16, data: &'a [u8]) -> Self {
+        pub(super) fn _new(command_id: u16, data: &'a [u8]) -> Self {
             debug_assert!(data.len() <= u16::MAX as usize);
             debug_assert!(ScdKind::is_custom(command_id));
             Self { command_id, data }
@@ -1090,7 +1090,7 @@ mod ack {
         #[test]
         fn test_pending() {
             let timeout = time::Duration::from_millis(700);
-            let command = Pending::new(timeout).finalize(1);
+            let command = Pending::_new(timeout).finalize(1);
             let mut buf = vec![];
             command.serialize(&mut buf).unwrap();
 
@@ -1106,7 +1106,7 @@ mod ack {
         #[test]
         fn test_read_mem_stacked() {
             let data = &[0, 1, 2, 3, 4, 5, 6, 7, 8];
-            let command = ReadMemStacked::new(data).finalize(1);
+            let command = ReadMemStacked::_new(data).finalize(1);
             let mut buf = vec![];
             command.serialize(&mut buf).unwrap();
 
@@ -1122,7 +1122,7 @@ mod ack {
         #[test]
         fn test_write_mem_stacked() {
             let lengths = vec![8, 16];
-            let command = WriteMemStacked::new(lengths.clone()).finalize(1);
+            let command = WriteMemStacked::_new(lengths.clone()).finalize(1);
             let mut buf = vec![];
             command.serialize(&mut buf).unwrap();
 
@@ -1139,7 +1139,7 @@ mod ack {
         fn test_custom() {
             let code = 0xff01;
             let data = &[0, 1, 2, 3];
-            let command = CustomAck::new(code, data).finalize(1);
+            let command = CustomAck::_new(code, data).finalize(1);
             let mut buf = vec![];
             command.serialize(&mut buf).unwrap();
 

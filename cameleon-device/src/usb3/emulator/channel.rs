@@ -89,7 +89,7 @@ impl ReceiveChannel {
         Ok(self.device_handle.read_bulk(buf, timeout)?)
     }
 
-    pub fn set_halt(&self, timeout: time::Duration) -> Result<()> {
+    pub fn set_halt(&self, _timeout: time::Duration) -> Result<()> {
         // Set halt timeout isn't suppoted.
         self.device_handle.set_halt()
     }

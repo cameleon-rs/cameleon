@@ -8,27 +8,27 @@ use super::{device::Timestamp, signal::StreamSignal};
 // TODO: Implement stream module.
 pub(super) struct StreamModule {
     enabled: bool,
-    timestamp: Timestamp,
+    _timestamp: Timestamp,
 }
 
 impl StreamModule {
     pub(super) fn new(timestamp: Timestamp) -> Self {
         Self {
             enabled: false,
-            timestamp,
+            _timestamp: timestamp,
         }
     }
 
     pub(super) async fn run(
         mut self,
         mut ctrl_rx: Receiver<StreamSignal>,
-        ack_tx: Sender<Vec<u8>>,
+        _ack_tx: Sender<Vec<u8>>,
     ) {
         let mut completed = None;
 
         while let Some(signal) = ctrl_rx.next().await {
             match signal {
-                StreamSignal::Enable => {
+                StreamSignal::_Enable => {
                     if self.enabled {
                         log::warn! {"receive event enable signal, but event module is already enabled"}
                     } else {

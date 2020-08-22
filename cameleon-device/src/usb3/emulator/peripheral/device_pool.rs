@@ -13,6 +13,8 @@ use super::{
     fake_protocol::{FakeAckPacket, FakeReqPacket, IfaceKind},
 };
 
+pub(super) type DevicePipe = Arc<Mutex<(Sender<FakeReqPacket>, Receiver<FakeAckPacket>)>>;
+
 lazy_static! {
     static ref DEVICE_POOL: Arc<Mutex<DevicePool>> = Arc::new(Mutex::new(DevicePool::new()));
 }
@@ -44,7 +46,7 @@ impl DevicePool {
         &mut self,
         device_id: u32,
         iface: IfaceKind,
-    ) -> Result<Arc<Mutex<(Sender<FakeReqPacket>, Receiver<FakeAckPacket>)>>> {
+    ) -> Result<DevicePipe> {
         self.ctx_mut(device_id)?.claim_interface(iface)
     }
 
@@ -61,22 +63,18 @@ impl DevicePool {
         self.contexts.push(ctx);
     }
 
-    pub(super) fn disconnect(&mut self, device_id: u32) {
-        self.contexts.retain(|ctx| ctx.device_id != device_id);
-    }
-
     fn ctx_mut(&mut self, id: u32) -> Result<&mut Context> {
         self.contexts
             .iter_mut()
             .find(|ctx| ctx.device_id == id)
-            .ok_or(LibUsbError::NotFound.into())
+            .ok_or_else(|| LibUsbError::NotFound.into())
     }
 
     fn ctx(&self, id: u32) -> Result<&Context> {
         self.contexts
             .iter()
             .find(|ctx| ctx.device_id == id)
-            .ok_or(LibUsbError::NotFound.into())
+            .ok_or_else(|| LibUsbError::NotFound.into())
     }
 
     fn new() -> Self {
@@ -117,10 +115,7 @@ impl Context {
         }
     }
 
-    fn claim_interface(
-        &mut self,
-        iface: IfaceKind,
-    ) -> Result<Arc<Mutex<(Sender<FakeReqPacket>, Receiver<FakeAckPacket>)>>> {
+    fn claim_interface(&mut self, iface: IfaceKind) -> Result<DevicePipe> {
         if self.is_claimed(iface) {
             Err(LibUsbError::Busy.into())
         } else {
@@ -139,10 +134,6 @@ impl Context {
 
     fn device_info(&self) -> DeviceInfo {
         self.device.device_info().clone()
-    }
-
-    fn shutdown(&mut self) {
-        self.device.shutdown()
     }
 }
 

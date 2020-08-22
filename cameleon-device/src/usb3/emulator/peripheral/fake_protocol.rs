@@ -17,33 +17,15 @@ impl FakeReqPacket {
     pub(super) fn new(iface: IfaceKind, kind: FakeReqKind) -> Self {
         Self { iface, kind }
     }
-
-    pub(super) fn control(kind: FakeReqKind) -> Self {
-        Self::new(IfaceKind::Control, kind)
-    }
-
-    pub(super) fn event(kind: FakeReqKind) -> Self {
-        Self::new(IfaceKind::Event, kind)
-    }
-
-    pub(super) fn stream(kind: FakeReqKind) -> Self {
-        Self::new(IfaceKind::Stream, kind)
-    }
 }
 
 impl FakeReqKind {
     pub(super) fn is_set_halt(&self) -> bool {
-        match self {
-            Self::SetHalt => true,
-            _ => false,
-        }
+        matches!(self, Self::SetHalt)
     }
 
     pub(super) fn is_clear_halt(&self) -> bool {
-        match self {
-            Self::ClearHalt => true,
-            _ => false,
-        }
+        matches!(self, Self::ClearHalt)
     }
 }
 

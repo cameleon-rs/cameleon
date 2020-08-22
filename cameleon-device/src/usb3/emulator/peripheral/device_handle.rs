@@ -2,23 +2,17 @@ pub(crate) use super::fake_protocol::IfaceKind;
 
 use std::{
     io::Write,
-    sync::Arc,
     time::{Duration, Instant},
 };
 
-use async_std::{
-    sync::{Mutex, Receiver, Sender, TrySendError},
-    task,
-};
+use async_std::{sync::TrySendError, task};
 
-use crate::usb3::{Error, LibUsbError, Result};
+use crate::usb3::{LibUsbError, Result};
 
 use super::{
-    device_pool::DevicePool,
+    device_pool::{DevicePipe, DevicePool},
     fake_protocol::{FakeAckKind::*, FakeAckPacket, FakeReqKind, FakeReqPacket},
 };
-
-type DevicePipe = Arc<Mutex<(Sender<FakeReqPacket>, Receiver<FakeAckPacket>)>>;
 
 pub(crate) struct DeviceHandle {
     device_id: u32,
@@ -51,13 +45,13 @@ impl DeviceHandle {
                     continue;
                 }
                 IfaceHalted => {
-                    return Err(LibUsbError::Pipe)?;
+                    return Err(LibUsbError::Pipe.into());
                 }
                 _ => unreachable!(),
             }
         }
 
-        Err(LibUsbError::Timeout)?
+        Err(LibUsbError::Timeout.into())
     }
 
     pub(crate) fn write_bulk(&self, buf: &[u8], timeout: Duration) -> Result<usize> {
@@ -75,13 +69,13 @@ impl DeviceHandle {
                     continue;
                 }
                 IfaceHalted => {
-                    return Err(LibUsbError::Pipe)?;
+                    return Err(LibUsbError::Pipe.into());
                 }
                 _ => unreachable!(),
             }
         }
 
-        Err(LibUsbError::Timeout)?
+        Err(LibUsbError::Timeout.into())
     }
 
     pub(crate) fn set_halt(&self) -> Result<()> {
@@ -147,7 +141,7 @@ impl DeviceHandle {
     fn channel(&self) -> Result<&DevicePipe> {
         match &self.channel {
             Some(channel) => Ok(channel),
-            None => Err(LibUsbError::Io)?,
+            None => Err(LibUsbError::Io.into()),
         }
     }
 }

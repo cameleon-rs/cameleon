@@ -113,7 +113,7 @@ impl Interface {
                     completed_rx.await.ok();
 
                     // Discard all queued ack data.
-                    while let Some(_) = ack_rx_for_mod.try_recv(iface) {}
+                    while ack_rx_for_mod.try_recv(iface).is_some() {}
                 }
                 send_or_log(&tx_for_host, iface, FakeAckKind::SetHaltAck);
                 continue;

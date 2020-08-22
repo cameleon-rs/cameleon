@@ -100,32 +100,9 @@ impl Memory {
             .cloned())
     }
 
-    pub(super) fn write_mem_u8_unchecked(&mut self, address: usize, data: u8) {
-        self.inner[address] = data;
-    }
-
-    pub(super) fn write_mem_u16_unchecked(&mut self, address: usize, data: u16) {
-        let range = address..address + 2;
-        (&mut self.inner[range]).write_u16::<LE>(data).unwrap();
-    }
-
-    pub(super) fn write_mem_u32_unchecked(&mut self, address: usize, data: u32) {
-        let range = address..address + 4;
-        (&mut self.inner[range]).write_u32::<LE>(data).unwrap();
-    }
-
     pub(super) fn write_mem_u64_unchecked(&mut self, address: usize, data: u64) {
         let range = address..address + 8;
         (&mut self.inner[range]).write_u64::<LE>(data).unwrap();
-    }
-
-    pub(super) fn set_access_right(
-        &mut self,
-        range: impl IntoIterator<Item = usize>,
-        access_right: AccessRight,
-    ) {
-        self.protection
-            .set_access_right_with_range(range, access_right)
     }
 }
 
@@ -307,7 +284,6 @@ fn verify_str(s: &str) -> BuilderResult<()> {
 
 #[derive(Debug, Clone)]
 enum RegisterEntryData {
-    U16(u16),
     U32(u32),
     U64(u64),
     Ver(Version),
@@ -317,7 +293,6 @@ enum RegisterEntryData {
 impl RegisterEntryData {
     fn write(&self, mut wtr: impl Write) {
         match self {
-            Self::U16(data) => wtr.write_u16::<LE>(*data).unwrap(),
             Self::U32(data) => wtr.write_u32::<LE>(*data).unwrap(),
             Self::U64(data) => wtr.write_u64::<LE>(*data).unwrap(),
             Self::Ver(data) => {
@@ -403,6 +378,47 @@ impl MemoryProtection {
     }
 }
 
+impl AccessRight {
+    fn meet(self, rhs: Self) -> Self {
+        use AccessRight::*;
+        match self {
+            RW => {
+                if rhs == RW {
+                    RW
+                } else {
+                    rhs
+                }
+            }
+            RO => {
+                if rhs.is_readable() {
+                    self
+                } else {
+                    NA
+                }
+            }
+            WO => {
+                if rhs.is_writable() {
+                    self
+                } else {
+                    NA
+                }
+            }
+            NA => NA,
+        }
+    }
+
+    fn from_num(num: u8) -> Self {
+        debug_assert!(num >> 2 == 0);
+        match num {
+            0b00 => Self::NA,
+            0b01 => Self::RO,
+            0b10 => Self::WO,
+            0b11 => Self::RW,
+            _ => unreachable!(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::AccessRight::*;
@@ -443,7 +459,7 @@ mod tests {
     #[test]
     fn test_read_mem() {
         let abrm: ABRM = Default::default();
-        let mut memory = Memory::new(abrm);
+        let memory = Memory::new(abrm);
 
         let (addr, len, _) = abrm::GENCP_VERSION;
         let range = addr as usize..addr as usize + len as usize;
@@ -463,24 +479,18 @@ mod tests {
     #[test]
     fn test_read_mem_must_fail() {
         let abrm: ABRM = Default::default();
-        let mut memory = Memory::new(abrm);
+        let memory = Memory::new(abrm);
 
         let (addr, len, _) = abrm::TIMESTAMP_LATCH;
         let range = addr as usize..addr as usize + len as usize;
         assert! {
-            match memory.read_mem(range) {
-                Err(MemoryError::AddressNotReadable) => true,
-                _ => false,
-            }
+            matches!(memory.read_mem(range), Err(MemoryError::AddressNotReadable))
         };
 
         let (addr, len, _) = abrm::TIMESTAMP;
         let range = addr as usize..addr as usize + len as usize + 1;
         assert! {
-            match memory.read_mem(range) {
-                Err(MemoryError::AddressNotReadable) => true,
-                _ => false,
-            }
+            matches!(memory.read_mem(range), Err(MemoryError::AddressNotReadable))
         };
     }
 
@@ -492,19 +502,13 @@ mod tests {
         let (addr, len, _) = abrm::DEVICE_CONFIGURATION;
         let data = vec![0; len as usize];
         assert! {
-           match memory.write_mem(addr as usize, &data) {
-               Err(MemoryError::AddressNotWritable) => true,
-               _ => false,
-           }
+           matches!(memory.write_mem(addr as usize, &data), Err(MemoryError::AddressNotWritable))
         };
 
         let (addr, len, _) = abrm::MESSAGE_CHANNEL_ID;
         let data = vec![0; (len + 1) as usize];
         assert! {
-           match memory.write_mem(addr as usize, &data) {
-               Err(MemoryError::AddressNotWritable) => true,
-               _ => false,
-           }
+           matches!(memory.write_mem(addr as usize, &data), Err(MemoryError::AddressNotWritable))
         };
     }
 }

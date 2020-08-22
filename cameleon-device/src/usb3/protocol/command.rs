@@ -33,7 +33,7 @@ where
 
     pub fn cmd_len(&self) -> usize {
         // Magic(4bytes) + ccd + scd
-        4 + self.ccd.len() as usize + self.scd.len() as usize
+        4 + self.ccd.len() as usize + self.scd.scd_len() as usize
     }
 
     pub fn request_id(&self) -> u16 {
@@ -123,18 +123,18 @@ impl ReadMemStacked {
     }
 
     fn len(entries: &[ReadMem]) -> Result<u16> {
-        let len = entries.iter().fold(0, |acc, ent| acc + ent.len() as usize);
+        let len = entries
+            .iter()
+            .fold(0, |acc, ent| acc + ent.scd_len() as usize);
         into_scd_len(len)
     }
 
     fn ack_scd_len(entries: &[ReadMem]) -> Result<u16> {
         let mut acc: u16 = 0;
         for ent in entries {
-            acc = acc
-                .checked_add(ent.read_length)
-                .ok_or(Error::InvalidPacket(
-                    "total read length must be less than u16::MAX".into(),
-                ))?;
+            acc = acc.checked_add(ent.read_length).ok_or_else(|| {
+                Error::InvalidPacket("total read length must be less than u16::MAX".into())
+            })?;
         }
 
         Ok(acc)
@@ -212,7 +212,7 @@ impl CommandCcd {
             // Currently USB3 commands always request ack.
             flag: scd.flag(),
             scd_kind: scd.scd_kind(),
-            scd_len: scd.len(),
+            scd_len: scd.scd_len(),
             request_id,
         }
     }
@@ -280,7 +280,7 @@ pub trait CommandScd: std::fmt::Debug {
 
     fn scd_kind(&self) -> ScdKind;
 
-    fn len(&self) -> u16;
+    fn scd_len(&self) -> u16;
 
     fn serialize(&self, buf: impl Write) -> Result<()>;
 
@@ -296,7 +296,7 @@ impl CommandScd for ReadMem {
         ScdKind::ReadMem
     }
 
-    fn len(&self) -> u16 {
+    fn scd_len(&self) -> u16 {
         // Address(8 bytes) + reserved(2bytes) + length(2 bytes)
         12
     }
@@ -322,7 +322,7 @@ impl<'a> CommandScd for WriteMem<'a> {
         ScdKind::WriteMem
     }
 
-    fn len(&self) -> u16 {
+    fn scd_len(&self) -> u16 {
         self.len
     }
 
@@ -347,7 +347,7 @@ impl<'a> CommandScd for ReadMemStacked {
         ScdKind::ReadMemStacked
     }
 
-    fn len(&self) -> u16 {
+    fn scd_len(&self) -> u16 {
         self.len
     }
 
@@ -372,7 +372,7 @@ impl<'a> CommandScd for WriteMemStacked<'a> {
         ScdKind::WriteMemStacked
     }
 
-    fn len(&self) -> u16 {
+    fn scd_len(&self) -> u16 {
         // Each entry is composed of [address(8bytes), reserved(2bytes), data_len(2bytes), data(len bytes)]
         self.len
     }
@@ -401,7 +401,7 @@ impl<'a> CommandScd for CustomCommand<'a> {
         ScdKind::Custom(self.command_id)
     }
 
-    fn len(&self) -> u16 {
+    fn scd_len(&self) -> u16 {
         self.data_len
     }
 
