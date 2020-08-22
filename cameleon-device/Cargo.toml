@@ -13,6 +13,7 @@ byteorder = "1.3.4"
 async-std = {version = "1.6.2", features = ["unstable"]}
 futures = "0.3.5"
 lazy_static = "1.4.0"
+rand = "0.7.3"
 
 # Dependencies for libusb vision device driver
 rusb = { version = "0.6.2", optional = true }

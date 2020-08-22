@@ -1,4 +1,7 @@
+use semver::Version;
 use thiserror::Error;
+
+use crate::usb3::{register_map::*, DeviceInfo, SupportedSpeed};
 
 use super::{
     device::Device,
@@ -72,7 +75,8 @@ impl DeviceBuilder {
     /// ```
     pub fn build(&self) {
         let memory = Memory::new(self.abrm.clone());
-        let device = Device::new(memory);
+        let device_info = self.build_device_info();
+        let device = Device::new(memory, device_info);
         DevicePool::with(|pool| pool.pool_and_run(device));
     }
 
@@ -174,6 +178,46 @@ impl DeviceBuilder {
     pub fn user_defined_name(&mut self, name: &str) -> BuilderResult<&mut Self> {
         self.abrm.set_user_defined_name(name)?;
         Ok(self)
+    }
+
+    fn build_device_info(&self) -> DeviceInfo {
+        let gencp_version = self.abrm.version_from(abrm::GENCP_VERSION);
+        let vendor_name = self.abrm.string_from(abrm::MANUFACTURER_NAME);
+        let model_name = self.abrm.string_from(abrm::MODEL_NAME);
+        let family_name = Some(self.abrm.string_from(abrm::FAMILY_NAME));
+        let device_version = self.abrm.string_from(abrm::DEVICE_VERSION);
+        let manufacturer_info = self.abrm.string_from(abrm::MANUFACTURER_INFO);
+        let user_defined_name = Some(self.abrm.string_from(abrm::USER_DEFINED_NAME));
+        let supported_speed = SupportedSpeed::SuperSpeed;
+        let serial_number = self.abrm.string_from(abrm::SERIAL_NUMBER);
+
+        // TODO: Read from SBRM.
+        let u3v_version = Version::new(1, 0, 0);
+
+        // Device guid consists of 12 characters.
+        // First 4 characters are vendor ID and last 8 characters are unique id assigned by a vendor.
+        // We use a serial number as unique id.
+        let serial_len = serial_number.len();
+        let guid = if serial_len > 8 {
+            format!("EMU-{}", &serial_number[serial_len - 8..])
+        } else {
+            let pad: String = std::iter::repeat('0').take(8 - serial_len).collect();
+            format!("EMU-{}{}", pad, serial_number)
+        };
+
+        DeviceInfo {
+            gencp_version,
+            u3v_version,
+            guid,
+            vendor_name,
+            model_name,
+            family_name,
+            device_version,
+            manufacturer_info,
+            serial_number,
+            user_defined_name,
+            supported_speed,
+        }
     }
 }
 

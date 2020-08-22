@@ -6,6 +6,8 @@ use async_std::{
 };
 use futures::channel::oneshot;
 
+use crate::usb3::DeviceInfo;
+
 use super::{fake_protocol::*, interface::Interface, memory::Memory};
 
 const REQ_PACKET_CHANNEL_CAPACITY: usize = 1;
@@ -16,15 +18,17 @@ pub(super) struct Device {
     memory: Arc<Mutex<Memory>>,
     shutdown_tx: Option<oneshot::Sender<()>>,
     completion_rx: Option<oneshot::Receiver<()>>,
+    device_info: DeviceInfo,
 }
 
 impl Device {
-    pub(super) fn new(memory: Memory) -> Self {
+    pub(super) fn new(memory: Memory, device_info: DeviceInfo) -> Self {
         Self {
             timestamp: Timestamp::new(),
             memory: Arc::new(Mutex::new(memory)),
             shutdown_tx: None,
             completion_rx: None,
+            device_info,
         }
     }
 
@@ -60,7 +64,11 @@ impl Device {
             task::block_on(completion_rx).ok();
         }
 
-        self.shutdown_tx = None;
+        self.completion_rx = None;
+    }
+
+    pub(super) fn device_info(&self) -> &DeviceInfo {
+        &self.device_info
     }
 }
 

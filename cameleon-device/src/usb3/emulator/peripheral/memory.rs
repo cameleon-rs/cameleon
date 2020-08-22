@@ -228,11 +228,34 @@ impl ABRM {
     fn last_address(&self) -> usize {
         self.last_address
     }
+
+    pub(super) fn version_from(&self, entry: (u64, u16, AccessRight)) -> Version {
+        match &self.inner[&entry] {
+            RegisterEntryData::Ver(ver) => ver.clone(),
+            _ => panic!("That entry doesn't contain label"),
+        }
+    }
+
+    pub(super) fn string_from(&self, entry: (u64, u16, AccessRight)) -> String {
+        match &self.inner[&entry] {
+            RegisterEntryData::Str(s) => s.to_string(),
+            _ => panic!("That entry doesn't contain string"),
+        }
+    }
 }
 
 impl Default for ABRM {
     fn default() -> Self {
+        use rand::seq::SliceRandom;
         use RegisterEntryData::*;
+
+        // Default serial number is 8 length digit picked at random.
+        let mut rang = rand::thread_rng();
+        let serial_base = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        let serial_number: String = (0..8)
+            .map(|_| serial_base.choose(&mut rang).unwrap())
+            .collect();
+
         let raw_abrm = [
             (abrm::GENCP_VERSION, Ver(Version::new(1, 3, 0))),
             (abrm::MANUFACTURER_NAME, Str("cameleon".into())),
@@ -240,7 +263,7 @@ impl Default for ABRM {
             (abrm::FAMILY_NAME, Str("cameleon family".into())),
             (abrm::DEVICE_VERSION, Str("none".into())),
             (abrm::MANUFACTURER_INFO, Str("".into())),
-            (abrm::SERIAL_NUMBER, Str("0000".into())),
+            (abrm::SERIAL_NUMBER, Str(serial_number.into())),
             (abrm::USER_DEFINED_NAME, Str("none".into())),
             (abrm::DEVICE_CAPABILITY, U64(DEVICE_CAPABILITY)),
             (abrm::MAXIMUM_DEVICE_RESPONSE_TIME, U32(100)),

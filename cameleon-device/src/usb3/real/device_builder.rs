@@ -253,8 +253,8 @@ struct DeviceInfoDescriptor {
     descriptor_type: u8,
     #[allow(unused)]
     descriptor_subtype: u8,
-    gen_cp_version_major: u16,
-    gen_cp_version_minor: u16,
+    gencp_version_major: u16,
+    gencp_version_minor: u16,
     u3v_version_major: u16,
     u3v_version_minor: u16,
     guid_idx: u8,
@@ -289,8 +289,8 @@ impl DeviceInfoDescriptor {
             return Err(Error::InvalidDevice);
         }
 
-        let gen_cp_version_minor = bytes.read_u16::<LE>()?;
-        let gen_cp_version_major = bytes.read_u16::<LE>()?;
+        let gencp_version_minor = bytes.read_u16::<LE>()?;
+        let gencp_version_major = bytes.read_u16::<LE>()?;
         let u3v_version_minor = bytes.read_u16::<LE>()?;
         let u3v_version_major = bytes.read_u16::<LE>()?;
         let guid_idx = bytes.read_u8()?;
@@ -307,8 +307,8 @@ impl DeviceInfoDescriptor {
             length,
             descriptor_type,
             descriptor_subtype,
-            gen_cp_version_major,
-            gen_cp_version_minor,
+            gencp_version_major,
+            gencp_version_minor,
             u3v_version_major,
             u3v_version_minor,
             guid_idx,
@@ -324,9 +324,9 @@ impl DeviceInfoDescriptor {
     }
 
     fn interpret(&self, channel: &RusbDevHandle) -> Result<DeviceInfo> {
-        let gen_cp_version = Version::new(
-            self.gen_cp_version_major.into(),
-            self.gen_cp_version_minor.into(),
+        let gencp_version = Version::new(
+            self.gencp_version_major.into(),
+            self.gencp_version_minor.into(),
             0,
         );
 
@@ -368,7 +368,7 @@ impl DeviceInfoDescriptor {
         };
 
         Ok(DeviceInfo {
-            gen_cp_version,
+            gencp_version,
             u3v_version,
             guid,
             vendor_name,

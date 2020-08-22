@@ -6,7 +6,7 @@ use async_std::{
 };
 use lazy_static::lazy_static;
 
-use crate::usb3::{LibUsbError, Result};
+use crate::usb3::{DeviceInfo, LibUsbError, Result};
 
 use super::{
     device::Device,
@@ -37,6 +37,11 @@ impl DevicePool {
         Ok(())
     }
 
+    pub(super) fn device_info(&self, device_id: u32) -> Result<DeviceInfo> {
+        let ctx = self.ctx(device_id)?;
+        Ok(ctx.device_info())
+    }
+
     pub(super) fn pool_and_run(&mut self, device: Device) {
         let ctx = Context::run(device, self.next_id);
 
@@ -63,6 +68,13 @@ impl DevicePool {
     fn ctx_mut(&mut self, id: u32) -> Result<&mut Context> {
         self.contexts
             .iter_mut()
+            .find(|ctx| ctx.device_id == id)
+            .ok_or(LibUsbError::NotFound.into())
+    }
+
+    fn ctx(&self, id: u32) -> Result<&Context> {
+        self.contexts
+            .iter()
             .find(|ctx| ctx.device_id == id)
             .ok_or(LibUsbError::NotFound.into())
     }
@@ -123,6 +135,10 @@ impl Context {
 
     fn is_claimed(&self, iface: IfaceKind) -> bool {
         self.iface_state[&iface]
+    }
+
+    fn device_info(&self) -> DeviceInfo {
+        self.device.device_info().clone()
     }
 
     fn shutdown(&mut self) {

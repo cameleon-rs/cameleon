@@ -1153,7 +1153,7 @@ mod ack {
         }
 
         #[test]
-        fn test_gen_cp_error() {
+        fn test_gencp_error() {
             let err_status = GenCpStatus::AccessDenied;
             let command = ErrorAck::new(err_status, ScdKind::ReadMem).finalize(1);
             let mut buf = vec![];

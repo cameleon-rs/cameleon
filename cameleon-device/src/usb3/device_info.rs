@@ -6,7 +6,7 @@ use semver::Version;
 #[derive(Clone, Debug)]
 pub struct DeviceInfo {
     /// GenCP version the device provides.
-    pub gen_cp_version: Version,
+    pub gencp_version: Version,
 
     /// USB3-Vision version the device provides.
     pub u3v_version: Version,
@@ -15,7 +15,7 @@ pub struct DeviceInfo {
     /// First 4 characters are vendor ID and last 8 characters are unique id assigned by a vendor.
     pub guid: String,
 
-    /// Manufacture name of the device.
+    /// Manufacturer name of the device.
     pub vendor_name: String,
 
     /// Model name of the device.
@@ -24,7 +24,7 @@ pub struct DeviceInfo {
     /// A human readable name referring to multiple models of a single manufacturer.
     pub family_name: Option<String>,
 
-    /// Manufacture specific device version.
+    /// Manufacturer specific device version.
     /// An application can't make any assumptions of this version.
     pub device_version: String,
 
@@ -64,24 +64,39 @@ pub enum SupportedSpeed {
 
 impl fmt::Display for DeviceInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "### Device Information ###")?;
-        writeln!(f, "U3V Version: {}", self.u3v_version)?;
-        writeln!(f, "GUID: {}", self.guid)?;
-        writeln!(f, "Vendor Name: {}", self.vendor_name)?;
-        writeln!(f, "Model Name: {}", self.model_name)?;
+        f.write_str("### Device Information ###")?;
+
+        f.write_fmt(format_args!("GenCP Version: {}", self.gencp_version))?;
+
+        f.write_fmt(format_args!("U3V Version: {}", self.u3v_version))?;
+
+        f.write_fmt(format_args!("GUID: {}", self.guid))?;
+
+        f.write_fmt(format_args!("Vendor Name: {}", self.vendor_name))?;
+
+        f.write_fmt(format_args!("Model Name: {}", self.model_name))?;
+
         if let Some(family_name) = &self.family_name {
-            writeln!(f, "Family Name: {}", family_name)?;
+            f.write_fmt(format_args!("Family Name: {}", family_name))
         } else {
-            writeln!(f, "Family Name: N/A")?;
-        }
-        writeln!(f, "Manufacture Information: {}", self.manufacturer_info)?;
-        writeln!(f, "Serial Number: {}", self.serial_number)?;
+            f.write_fmt(format_args!("Family Name: N/A"))
+        }?;
+
+        f.write_fmt(format_args!(
+            "Manufacturer Information: {}",
+            self.manufacturer_info
+        ))?;
+
+        f.write_fmt(format_args!("Serial Number: {}", self.serial_number))?;
+
         if let Some(user_defined_name) = &self.user_defined_name {
-            writeln!(f, "User Defined Name: {}", user_defined_name)?;
+            f.write_fmt(format_args!("User Defined Name: {}", user_defined_name))
         } else {
-            writeln!(f, "User Defined Name: N/A")?;
-        }
-        write!(f, "Supported Speed: {:?}", self.supported_speed)?;
+            f.write_fmt(format_args!("User Defined Name: N/A"))
+        }?;
+
+        f.write_fmt(format_args!("Supported Speed: {:?}", self.supported_speed))?;
+
         Ok(())
     }
 }
