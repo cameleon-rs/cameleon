@@ -43,3 +43,8 @@ required-features = ["emulator"]
 name = "normal_scenario"
 path = "tests/normal_scenario.rs"
 required-features = ["emulator"]
+
+[[test]]
+name = "exceptional_scenario"
+path = "tests/exceptional_scenario.rs"
+required-features = ["emulator"]
