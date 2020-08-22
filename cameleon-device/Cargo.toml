@@ -38,3 +38,8 @@ required-features = ["libusb"]
 name = "usb3_emulator"
 path = "examples/usb3/emulator.rs"
 required-features = ["emulator"]
+
+[[test]]
+name = "normal_scenario"
+path = "tests/normal_scenario.rs"
+required-features = ["emulator"]

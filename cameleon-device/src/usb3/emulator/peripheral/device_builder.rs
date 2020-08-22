@@ -27,7 +27,7 @@ pub type BuilderResult<T> = std::result::Result<T, BuilderError>;
 ///
 /// # Example
 /// ```rust
-/// use cameleon_device::usb3::emulator::DeviceBuilder;
+/// use cameleon_device::usb3::DeviceBuilder;
 ///
 /// let mut builder = DeviceBuilder::new();
 ///
@@ -58,7 +58,7 @@ impl DeviceBuilder {
     ///
     /// # Example
     /// ```rust
-    /// use cameleon_device::usb3::emulator::DeviceBuilder;
+    /// use cameleon_device::usb3::DeviceBuilder;
     ///
     /// let mut builder = DeviceBuilder::new();
     ///
@@ -94,7 +94,7 @@ impl DeviceBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use cameleon_device::usb3::emulator::DeviceBuilder;
+    /// use cameleon_device::usb3::DeviceBuilder;
     ///
     /// let mut builder = DeviceBuilder::new();
     /// assert!(builder.model_name("my camera").is_ok());
@@ -119,7 +119,7 @@ impl DeviceBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use cameleon_device::usb3::emulator::DeviceBuilder;
+    /// use cameleon_device::usb3::DeviceBuilder;
     ///
     /// let mut builder = DeviceBuilder::new();
     /// assert!(builder.family_name("my camera family").is_ok());
@@ -144,7 +144,7 @@ impl DeviceBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use cameleon_device::usb3::emulator::DeviceBuilder;
+    /// use cameleon_device::usb3::DeviceBuilder;
     ///
     /// let mut builder = DeviceBuilder::new();
     /// assert!(builder.serial_number("CAM1984").is_ok());
@@ -169,7 +169,7 @@ impl DeviceBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use cameleon_device::usb3::emulator::DeviceBuilder;
+    /// use cameleon_device::usb3::DeviceBuilder;
     ///
     /// let mut builder = DeviceBuilder::new();
     /// assert!(builder.user_defined_name("user define name").is_ok());
