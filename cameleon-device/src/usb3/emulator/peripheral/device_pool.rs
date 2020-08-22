@@ -1,6 +1,9 @@
 use std::{collections::HashMap, sync::Arc};
 
-use async_std::sync::{Mutex, Receiver, Sender};
+use async_std::{
+    sync::{Mutex, Receiver, Sender},
+    task,
+};
 use lazy_static::lazy_static;
 
 use crate::usb3::{LibUsbError, Result};
@@ -11,8 +14,7 @@ use super::{
 };
 
 lazy_static! {
-    pub(crate) static ref DEVICE_POOL: Arc<Mutex<DevicePool>> =
-        Arc::new(Mutex::new(DevicePool::new()));
+    static ref DEVICE_POOL: Arc<Mutex<DevicePool>> = Arc::new(Mutex::new(DevicePool::new()));
 }
 
 pub(crate) struct DevicePool {
@@ -42,11 +44,19 @@ impl DevicePool {
         self.contexts.push(ctx);
     }
 
+    pub(super) fn with<F, R>(f: F) -> R
+    where
+        F: FnOnce(&mut DevicePool) -> R,
+    {
+        let mut pool = task::block_on(DEVICE_POOL.lock());
+        f(&mut *pool)
+    }
+
     pub(super) fn disconnect(&mut self, device_id: u32) {
         self.contexts.retain(|ctx| ctx.device_id != device_id);
     }
 
-    pub fn device_ids(&self) -> Vec<u32> {
+    pub(super) fn device_ids(&self) -> Vec<u32> {
         self.contexts.iter().map(|ctx| ctx.device_id).collect()
     }
 

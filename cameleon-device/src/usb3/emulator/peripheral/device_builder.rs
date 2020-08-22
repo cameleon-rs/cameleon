@@ -1,9 +1,8 @@
-use async_std::task;
 use thiserror::Error;
 
 use super::{
     device::Device,
-    device_pool::DEVICE_POOL,
+    device_pool::DevicePool,
     memory::{Memory, ABRM},
 };
 
@@ -74,7 +73,7 @@ impl DeviceBuilder {
     pub fn build(&self) {
         let memory = Memory::new(self.abrm.clone());
         let device = Device::new(memory);
-        task::block_on(DEVICE_POOL.lock()).pool_and_run(device);
+        DevicePool::with(|pool| pool.pool_and_run(device));
     }
 
     /// Setter of model name of the device. The data is flushed to ABRM segment of the device memory.

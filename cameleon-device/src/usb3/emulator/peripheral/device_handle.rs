@@ -14,7 +14,7 @@ use async_std::{
 use crate::usb3::{Error, LibUsbError, Result};
 
 use super::{
-    device_pool::DEVICE_POOL,
+    device_pool::DevicePool,
     fake_protocol::{FakeAckKind::*, FakeAckPacket, FakeReqKind, FakeReqPacket},
 };
 
@@ -107,8 +107,9 @@ impl DeviceHandle {
             return Ok(());
         }
 
-        let mut pool = task::block_on(DEVICE_POOL.lock());
-        self.channel = Some(pool.claim_interface(self.device_id, self.iface_kind)?);
+        let channel =
+            DevicePool::with(|pool| pool.claim_interface(self.device_id, self.iface_kind))?;
+        self.channel = Some(channel);
         Ok(())
     }
 
@@ -117,8 +118,7 @@ impl DeviceHandle {
             return Ok(());
         }
 
-        let mut pool = task::block_on(DEVICE_POOL.lock());
-        pool.release_interface(self.device_id, self.iface_kind)?;
+        DevicePool::with(|pool| pool.release_interface(self.device_id, self.iface_kind))?;
         self.channel = None;
         Ok(())
     }
@@ -160,8 +160,8 @@ impl Drop for DeviceHandle {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Mutex;
     use lazy_static::lazy_static;
+    use std::sync::Mutex;
 
     use super::super::*;
     use super::*;
@@ -171,17 +171,16 @@ mod tests {
     }
 
     fn get_handle(iface: IfaceKind) -> DeviceHandle {
-        let id = task::block_on(DEVICE_POOL.lock()).device_ids()[0];
+        let id = DevicePool::with(|pool| pool.device_ids())[0];
         DeviceHandle::new(id, iface)
     }
 
     fn disconnect(device_id: u32) {
-        task::block_on(DEVICE_POOL.lock()).disconnect(device_id);
+         DevicePool::with(|pool| pool.disconnect(device_id));
     }
 
     lazy_static! {
-        pub(crate) static ref TEST_GUARD: Mutex<()> =
-            Mutex::new(());
+        pub(crate) static ref TEST_GUARD: Mutex<()> = Mutex::new(());
     }
 
     #[test]
