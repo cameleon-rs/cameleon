@@ -64,38 +64,35 @@ pub enum SupportedSpeed {
 
 impl fmt::Display for DeviceInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str("### Device Information ###")?;
+        writeln!(f, "### Device Information ###")?;
 
-        f.write_fmt(format_args!("GenCP Version: {}", self.gencp_version))?;
+        writeln!(f, "GenCP Version: {}", self.gencp_version)?;
 
-        f.write_fmt(format_args!("U3V Version: {}", self.u3v_version))?;
+        writeln!(f, "U3V Version: {}", self.u3v_version)?;
 
-        f.write_fmt(format_args!("GUID: {}", self.guid))?;
+        writeln!(f, "GUID: {}", self.guid)?;
 
-        f.write_fmt(format_args!("Vendor Name: {}", self.vendor_name))?;
+        writeln!(f, "Vendor Name: {}", self.vendor_name)?;
 
-        f.write_fmt(format_args!("Model Name: {}", self.model_name))?;
+        writeln!(f, "Model Name: {}", self.model_name)?;
 
         if let Some(family_name) = &self.family_name {
-            f.write_fmt(format_args!("Family Name: {}", family_name))
+            writeln!(f, "Family Name: {}", family_name)
         } else {
-            f.write_fmt(format_args!("Family Name: N/A"))
+            writeln!(f, "{}", "Family Name: N/A")
         }?;
 
-        f.write_fmt(format_args!(
-            "Manufacturer Information: {}",
-            self.manufacturer_info
-        ))?;
+        writeln!(f, "Manufacturer Information: {}", self.manufacturer_info)?;
 
-        f.write_fmt(format_args!("Serial Number: {}", self.serial_number))?;
+        writeln!(f, "Serial Number: {}", self.serial_number)?;
 
         if let Some(user_defined_name) = &self.user_defined_name {
-            f.write_fmt(format_args!("User Defined Name: {}", user_defined_name))
+            writeln!(f, "User Defined Name: {}", user_defined_name)
         } else {
-            f.write_fmt(format_args!("User Defined Name: N/A"))
+            writeln!(f, "User Defined Name: N/A")
         }?;
 
-        f.write_fmt(format_args!("Supported Speed: {:?}", self.supported_speed))?;
+        write!(f, "Supported Speed: {:?}", self.supported_speed)?;
 
         Ok(())
     }

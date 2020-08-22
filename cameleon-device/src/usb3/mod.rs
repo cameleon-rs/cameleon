@@ -1,4 +1,3 @@
-pub mod emulator;
 pub mod protocol;
 pub mod register_map;
 
@@ -14,6 +13,11 @@ use thiserror::Error;
 mod real;
 #[cfg(feature = "libusb")]
 pub use real::*;
+
+#[cfg(all(not(feature = "libusb"), feature = "emulator"))]
+pub mod emulator;
+#[cfg(all(not(feature = "libusb"), feature = "emulator"))]
+pub use emulator::{enumerate_device, ControlChannel, Device, ReceiveChannel};
 
 #[derive(Debug, Error)]
 pub enum Error {

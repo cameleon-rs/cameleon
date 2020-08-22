@@ -262,7 +262,7 @@ impl Default for ABRM {
             (abrm::MODEL_NAME, Str("cameleon model".into())),
             (abrm::FAMILY_NAME, Str("cameleon family".into())),
             (abrm::DEVICE_VERSION, Str("none".into())),
-            (abrm::MANUFACTURER_INFO, Str("".into())),
+            (abrm::MANUFACTURER_INFO, Str("none".into())),
             (abrm::SERIAL_NUMBER, Str(serial_number.into())),
             (abrm::USER_DEFINED_NAME, Str("none".into())),
             (abrm::DEVICE_CAPABILITY, U64(DEVICE_CAPABILITY)),
