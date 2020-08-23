@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use crate::usb3::register_map::*;
 
-use super::device_builder::{BuilderError, BuilderResult};
+use super::emulator_builder::{BuilderError, BuilderResult};
 
 const SBRM_ADDRESS: u64 = 0xffff;
 

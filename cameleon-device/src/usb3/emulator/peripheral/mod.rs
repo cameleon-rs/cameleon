@@ -1,8 +1,8 @@
 mod control_module;
 mod device;
-mod device_builder;
 mod device_handle;
 mod device_pool;
+mod emulator_builder;
 mod event_module;
 mod fake_protocol;
 mod interface;
@@ -10,7 +10,7 @@ mod memory;
 mod signal;
 mod stream_module;
 
-pub use device_builder::*;
+pub use emulator_builder::*;
 
 pub(super) use device_handle::*;
 pub(super) use device_pool::DevicePool;

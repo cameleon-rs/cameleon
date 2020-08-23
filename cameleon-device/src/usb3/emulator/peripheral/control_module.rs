@@ -46,7 +46,6 @@ impl ControlModule {
         ack_sender: AckDataSender,
     ) {
         let mut completed = None;
-
         let (event_tx, event_rx) = channel(EVENT_CTRL_CHANNEL_CAPACITY);
         let (stream_tx, stream_rx) = channel(STREAM_CTRL_CHANNEL_CAPACITY);
 

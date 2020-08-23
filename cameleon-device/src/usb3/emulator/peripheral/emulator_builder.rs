@@ -27,9 +27,9 @@ pub type BuilderResult<T> = std::result::Result<T, BuilderError>;
 ///
 /// # Example
 /// ```rust
-/// use cameleon_device::usb3::DeviceBuilder;
+/// use cameleon_device::usb3::EmulatorBuilder;
 ///
-/// let mut builder = DeviceBuilder::new();
+/// let mut builder = EmulatorBuilder::new();
 ///
 /// // Build device with default configuration and pass it to device pool.
 /// // Now device pool has one device.
@@ -42,25 +42,25 @@ pub type BuilderResult<T> = std::result::Result<T, BuilderError>;
 /// // Now device pool has two devices.
 /// builder.build();
 /// ```
-pub struct DeviceBuilder {
+pub struct EmulatorBuilder {
     abrm: ABRM,
 }
 
-impl DeviceBuilder {
+impl EmulatorBuilder {
     pub fn new() -> Self {
         Self {
             abrm: Default::default(),
         }
     }
 
-    /// Build device then attach it to device pool. Built device is passed to device pool and user
+    /// Build emulator then attach it to device pool. Built device is passed to device pool and user
     /// can't operate device itself directly once this method is called.
     ///
     /// # Example
     /// ```rust
-    /// use cameleon_device::usb3::DeviceBuilder;
+    /// use cameleon_device::usb3::EmulatorBuilder;
     ///
-    /// let mut builder = DeviceBuilder::new();
+    /// let mut builder = EmulatorBuilder::new();
     ///
     /// // Build device with default configuration and pass it to device pool.
     /// // Now device pool has one device.
@@ -94,9 +94,9 @@ impl DeviceBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use cameleon_device::usb3::DeviceBuilder;
+    /// use cameleon_device::usb3::EmulatorBuilder;
     ///
-    /// let mut builder = DeviceBuilder::new();
+    /// let mut builder = EmulatorBuilder::new();
     /// assert!(builder.model_name("my camera").is_ok());
     /// assert!(builder.model_name("私のカメラ").is_err());
     /// ```
@@ -119,9 +119,9 @@ impl DeviceBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use cameleon_device::usb3::DeviceBuilder;
+    /// use cameleon_device::usb3::EmulatorBuilder;
     ///
-    /// let mut builder = DeviceBuilder::new();
+    /// let mut builder = EmulatorBuilder::new();
     /// assert!(builder.family_name("my camera family").is_ok());
     /// assert!(builder.family_name("私のカメラ家族").is_err());
     /// ```
@@ -132,7 +132,7 @@ impl DeviceBuilder {
 
     /// Setter of serial number of the device. The data is flushed to ABRM segment of the device memory.
     ///
-    /// If serial number isn't set, default is used.
+    /// If serial number isn't set, 8 length digit is picked at random.
     ///
     /// NOTE: Only ASCII string is accepted, and maximum string length is 63.
     ///
@@ -144,9 +144,9 @@ impl DeviceBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use cameleon_device::usb3::DeviceBuilder;
+    /// use cameleon_device::usb3::EmulatorBuilder;
     ///
-    /// let mut builder = DeviceBuilder::new();
+    /// let mut builder = EmulatorBuilder::new();
     /// assert!(builder.serial_number("CAM1984").is_ok());
     /// assert!(builder.serial_number("1984年").is_err());
     /// ```
@@ -169,9 +169,9 @@ impl DeviceBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use cameleon_device::usb3::DeviceBuilder;
+    /// use cameleon_device::usb3::EmulatorBuilder;
     ///
-    /// let mut builder = DeviceBuilder::new();
+    /// let mut builder = EmulatorBuilder::new();
     /// assert!(builder.user_defined_name("user define name").is_ok());
     /// assert!(builder.user_defined_name("使用者定義名前").is_err());
     /// ```
@@ -221,7 +221,7 @@ impl DeviceBuilder {
     }
 }
 
-impl Default for DeviceBuilder {
+impl Default for EmulatorBuilder {
     fn default() -> Self {
         Self::new()
     }

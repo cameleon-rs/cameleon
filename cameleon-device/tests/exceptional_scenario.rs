@@ -7,7 +7,7 @@ const TIME_OUT: Duration = Duration::from_millis(100);
 #[test]
 fn test_exceptional_scenario() {
     // Set emulated device.
-    DeviceBuilder::new().build();
+    EmulatorBuilder::new().build();
 
     let mut devices = enumerate_device().unwrap();
     assert_eq!(devices.len(), 1);

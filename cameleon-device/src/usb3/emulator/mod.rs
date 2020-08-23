@@ -4,7 +4,7 @@ mod peripheral;
 
 pub use channel::{ControlChannel, ReceiveChannel};
 pub use device::Device;
-pub use peripheral::{BuilderError, BuilderResult, DeviceBuilder};
+pub use peripheral::{BuilderError, BuilderResult, EmulatorBuilder};
 
 use crate::usb3::Result;
 

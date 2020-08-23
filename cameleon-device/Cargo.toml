@@ -27,17 +27,10 @@ emulator = ["async-std", "futures", "lazy_static", "rand"]
 [[example]]
 name = "usb3_device_enumeration"
 path = "examples/usb3/device_enumeration.rs"
-required-features = ["libusb"]
 
 [[example]]
 name = "usb3_device_control"
 path = "examples/usb3/device_control.rs"
-required-features = ["libusb"]
-
-[[example]]
-name = "usb3_emulator"
-path = "examples/usb3/emulator.rs"
-required-features = ["emulator"]
 
 [[test]]
 name = "normal_scenario"
