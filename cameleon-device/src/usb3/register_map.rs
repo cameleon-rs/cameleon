@@ -26,7 +26,7 @@ pub mod abrm {
 }
 
 /// (Offset, Length, Access Right) of entries in Technology Specific Boot Register Map (SBRM).
-/// SBRM base address can be obtained by reading [`abrm::SBRM_ADDRESS`](../abrm/constant.SBRM_ADDRESS.html)
+/// SBRM base address can be obtained by reading `abrm::SBRM_ADDRESS`.
 pub mod sbrm {
     use super::AccessRight::{self, *};
     pub const U3V_VERSION: (u64, u16, AccessRight) = (0x0000, 4, RO);
@@ -45,7 +45,7 @@ pub mod sbrm {
 
 /// (Offset, Length, Access Right) of all entries in Event Interface Register Map (EIRM).
 /// SIRM base address can be obtained by
-/// [`sbrm::EIRM_ADDRESS`](../sirm/constant.EIRM_ADDRESS.html).
+/// sbrm::EIRM_ADDRESS.
 pub mod eirm {
     use super::AccessRight::{self, *};
     pub const EI_CONTROL: (u64, u16, AccessRight) = (0x0000, 4, RW);
@@ -55,7 +55,7 @@ pub mod eirm {
 
 /// (Offset, Length, AccessRight) of all entries in Streaming Interface Register Map (SIRM).
 /// SIRM base address can be obtained by
-/// [`sbrm::SIRM_ADDRESS`](../sirm/constant.SIRM_ADDRESS.html).
+/// `sbrm::SIRM_ADDRESS`.
 pub mod sirm {
     use super::AccessRight::{self, *};
     pub const SI_INFO: (u64, u16, AccessRight) = (0x0000, 4, RO);

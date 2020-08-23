@@ -20,27 +20,36 @@ pub type BuilderResult<T> = std::result::Result<T, BuilderError>;
 /// USB3 emulated device builder.
 /// All initial configuration of the device must be done via this builder.
 ///
-/// Built device is passed to device pool so user can't operate device itself directly
-/// once build process is finished.
+/// An emulator is passed to the device pool and user can't control the emulator itself directly
+/// once build process is finished by calling [`build`].
 ///
-/// TODO: Add documentation of enumerate_device() and DeviceHandle.
+/// Emulators in the device pool can be found by [`cameleon_device::usb3::enumerate_device`] and controlled via
+/// [`cameleon_device::usb3::Device`] in the same way as real device.
+///
+/// [`cameleon_device::usb3::enumerate_device`]: fn.enumerate_device.html
+/// [`cameleon_device::usb3::Device`]: struct.Device.html
+/// [`build`]: ./struct.EmulatorBuilder.html#method.build
 ///
 /// # Example
 /// ```rust
-/// use cameleon_device::usb3::EmulatorBuilder;
+/// use cameleon_device::usb3::{EmulatorBuilder, enumerate_device};
 ///
 /// let mut builder = EmulatorBuilder::new();
 ///
-/// // Build device with default configuration and pass it to device pool.
-/// // Now device pool has one device.
+/// // Build device with default configuration and pass it to the device pool.
+/// // Now the device pool has one device.
 /// builder.build();
 ///
 /// // Set model name and serial number.
 /// builder.model_name("Cameleon Model").unwrap().serial_number("CAM1984").unwrap();
 ///
-/// // Build device and pass it to device pool.
+/// // Build device and pass it to the device pool.
 /// // Now device pool has two devices.
 /// builder.build();
+///
+/// let devices = enumerate_device().unwrap();
+/// assert_eq!(devices.len(), 2);
+///
 /// ```
 pub struct EmulatorBuilder {
     abrm: ABRM,
@@ -53,8 +62,14 @@ impl EmulatorBuilder {
         }
     }
 
-    /// Build emulator then attach it to device pool. Built device is passed to device pool and user
-    /// can't operate device itself directly once this method is called.
+    /// Build an emulator and pass it to the device pool. User can't control the emulator itself
+    /// directly once call this method.
+    ///
+    /// Emulators in the device pool can be found by [`cameleon_device::usb3::enumerate_device`] and controlled via
+    /// [`cameleon_device::usb3::Device`] in the same way as real device.
+    ///
+    /// [`cameleon_device::usb3::enumerate_device`]: fn.enumerate_device.html
+    /// [`cameleon_device::usb3::Device`]: struct.Device.html
     ///
     /// # Example
     /// ```rust
@@ -62,15 +77,15 @@ impl EmulatorBuilder {
     ///
     /// let mut builder = EmulatorBuilder::new();
     ///
-    /// // Build device with default configuration and pass it to device pool.
-    /// // Now device pool has one device.
+    /// // Build device with default configuration and pass it to the device pool.
+    /// // Now the device pool has one device.
     /// builder.build();
     ///
     /// // Set model name and serial number.
     /// builder.model_name("Cameleon Model").unwrap().serial_number("CAM1984").unwrap();
     ///
-    /// // Build device and pass it to device pool.
-    /// // Now device pool has two devices.
+    /// // Build device and pass it to the device pool.
+    /// // Now the device pool has two devices.
     /// builder.build();
     /// ```
     pub fn build(&self) {
@@ -82,7 +97,7 @@ impl EmulatorBuilder {
 
     /// Setter of model name of the device. The data is flushed to ABRM segment of the device memory.
     ///
-    /// If model name isn't set, default is used.
+    /// If model name isn't set, default name is used.
     ///
     /// NOTE: Only ASCII string is accepted, and maximum string length is 63.
     ///
@@ -107,7 +122,7 @@ impl EmulatorBuilder {
 
     /// Setter of family name of the device. The data is flushed to ABRM segment of the device memory.
     ///
-    /// If family name isn't set, default is used.
+    /// If family name isn't set, default name is used.
     ///
     /// NOTE: Only ASCII string is accepted, and maximum string length is 63.
     ///
@@ -132,7 +147,7 @@ impl EmulatorBuilder {
 
     /// Setter of serial number of the device. The data is flushed to ABRM segment of the device memory.
     ///
-    /// If serial number isn't set, 8 length digit is picked at random.
+    /// If serial number isn't set, 8 length digit is set at random.
     ///
     /// NOTE: Only ASCII string is accepted, and maximum string length is 63.
     ///
@@ -157,7 +172,7 @@ impl EmulatorBuilder {
 
     /// Setter of user defined name of the device. The data is flushed to ABRM segment of the device memory.
     ///
-    /// If user defined name isn't set, default("") is used.
+    /// If user defined name isn't set, default name is set.
     ///
     /// NOTE: Only ASCII string is accepted, and maximum string length is 63.
     ///

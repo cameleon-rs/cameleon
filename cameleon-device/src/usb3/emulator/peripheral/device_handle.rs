@@ -117,8 +117,8 @@ impl DeviceHandle {
         Ok(())
     }
 
-    /// Attempt to send a request packet and receive acknowledge packet from an emulated device.
-    /// It's necessary to send/recv operation atomic because fake protocol doesn't have state.
+    /// Attempt to send a request packet and receive an acknowledge packet from an emulated device.
+    /// It's necessary to make send/recv operation atomic because fake protocol doesn't have state.
     /// An emulated device immediately returns acknowledge packet, so no need to worry about
     /// latency.
     fn send_packet(&self, packet: FakeReqPacket) -> Result<FakeAckPacket> {
