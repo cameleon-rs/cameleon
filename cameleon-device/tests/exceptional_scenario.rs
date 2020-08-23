@@ -1,11 +1,12 @@
-use std::time::Duration;
-
-use cameleon_device::usb3::*;
-
-const TIME_OUT: Duration = Duration::from_millis(100);
-
+#[cfg(not(feature = "libusb"))]
 #[test]
 fn test_exceptional_scenario() {
+    use std::time::Duration;
+
+    use cameleon_device::usb3::*;
+
+    const TIME_OUT: Duration = Duration::from_millis(100);
+
     // Set emulated device.
     EmulatorBuilder::new().build();
 

@@ -7,8 +7,8 @@ extern crate cameleon_device;
 use cameleon_device::usb3::{protocol::*, *};
 
 fn main() {
-    // Build emulator in case build with emulator feature.
-    #[cfg(feature = "emulator")]
+    // Need to build emulator in case libusb is not supported.
+    #[cfg(not(feature = "libusb"))]
     EmulatorBuilder::new()
         .user_defined_name("emu")
         .unwrap()
@@ -68,7 +68,7 @@ fn main() {
     let serial_number = CStr::from_bytes_with_nul(&scd.data[..string_len + 1]).unwrap();
 
     println!(
-        "received serial number of the device: {}",
+        "Serial number received! {}",
         serial_number.to_str().unwrap()
     );
 }

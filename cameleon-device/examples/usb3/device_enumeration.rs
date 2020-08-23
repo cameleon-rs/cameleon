@@ -3,8 +3,8 @@ extern crate cameleon_device;
 use cameleon_device::usb3::*;
 
 fn main() {
-    // Build emulator in case build with emulator feature.
-    #[cfg(feature = "emulator")]
+    // Need to build emulator in case libusb is not supported.
+    #[cfg(not(feature = "libusb"))]
     EmulatorBuilder::new()
         .user_defined_name("emu")
         .unwrap()

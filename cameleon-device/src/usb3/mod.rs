@@ -14,9 +14,9 @@ mod real;
 #[cfg(feature = "libusb")]
 pub use real::*;
 
-#[cfg(all(not(feature = "libusb"), feature = "emulator"))]
+#[cfg(not(feature = "libusb"))]
 mod emulator;
-#[cfg(all(not(feature = "libusb"), feature = "emulator"))]
+#[cfg(not(feature = "libusb"))]
 pub use emulator::*;
 
 pub mod prelude {

@@ -1,15 +1,16 @@
-use std::time::Duration;
-
-use byteorder::{ReadBytesExt, WriteBytesExt, LE};
-use cameleon_device::usb3::{
-    protocol::{ack, command},
-    *,
-};
-
-const TIME_OUT: Duration = Duration::from_millis(100);
-
+#[cfg(not(feature = "libusb"))]
 #[test]
 fn test_normal_scenario() {
+    use std::time::Duration;
+
+    use byteorder::{ReadBytesExt, WriteBytesExt, LE};
+    use cameleon_device::usb3::{
+        protocol::{ack, command},
+        *,
+    };
+
+    const TIME_OUT: Duration = Duration::from_millis(100);
+
     // Set emulated device.
     EmulatorBuilder::new().build();
 
@@ -90,32 +91,32 @@ fn test_normal_scenario() {
            _ => false
        }
     };
-}
 
-fn bytes_as_u64_le(mut bytes: &[u8]) -> u64 {
-    bytes.read_u64::<LE>().unwrap()
-}
+    fn bytes_as_u64_le(mut bytes: &[u8]) -> u64 {
+        bytes.read_u64::<LE>().unwrap()
+    }
 
-fn u32_as_le_bytes(num: u32) -> Vec<u8> {
-    let mut bytes = vec![];
-    bytes.write_u32::<LE>(num).unwrap();
-    bytes
-}
+    fn u32_as_le_bytes(num: u32) -> Vec<u8> {
+        let mut bytes = vec![];
+        bytes.write_u32::<LE>(num).unwrap();
+        bytes
+    }
 
-fn write_cmd(addr: u64, data: &[u8], req_id: u16) -> (Vec<u8>, usize) {
-    let cmd = command::WriteMem::new(addr, &data)
-        .unwrap()
-        .finalize(req_id);
+    fn write_cmd(addr: u64, data: &[u8], req_id: u16) -> (Vec<u8>, usize) {
+        let cmd = command::WriteMem::new(addr, &data)
+            .unwrap()
+            .finalize(req_id);
 
-    let mut bytes = Vec::new();
-    cmd.serialize(&mut bytes).unwrap();
-    (bytes, cmd.maximum_ack_len().unwrap())
-}
+        let mut bytes = Vec::new();
+        cmd.serialize(&mut bytes).unwrap();
+        (bytes, cmd.maximum_ack_len().unwrap())
+    }
 
-fn read_cmd(addr: u64, len: u16, req_id: u16) -> (Vec<u8>, usize) {
-    let cmd = command::ReadMem::new(addr, len).finalize(req_id);
+    fn read_cmd(addr: u64, len: u16, req_id: u16) -> (Vec<u8>, usize) {
+        let cmd = command::ReadMem::new(addr, len).finalize(req_id);
 
-    let mut bytes = Vec::new();
-    cmd.serialize(&mut bytes).unwrap();
-    (bytes, cmd.maximum_ack_len().unwrap())
+        let mut bytes = Vec::new();
+        cmd.serialize(&mut bytes).unwrap();
+        (bytes, cmd.maximum_ack_len().unwrap())
+    }
 }
