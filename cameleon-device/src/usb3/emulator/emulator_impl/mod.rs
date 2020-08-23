@@ -7,6 +7,7 @@ mod event_module;
 mod fake_protocol;
 mod interface;
 mod memory;
+mod shared_queue;
 mod signal;
 mod stream_module;
 

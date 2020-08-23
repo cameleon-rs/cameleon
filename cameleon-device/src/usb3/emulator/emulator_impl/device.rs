@@ -34,8 +34,8 @@ impl Device {
 
     pub(super) fn run(&mut self) -> (Sender<FakeReqPacket>, Receiver<FakeAckPacket>) {
         // Create channels for communication between device and host.
-        let (req_tx_for_host, req_rx_for_device) = channel(REQ_PACKET_CHANNEL_CAPACITY);
-        let (ack_tx_for_device, ack_rx_for_host) = channel(ACK_PACKET_CHANNEL_CAPACITY);
+        let (req_tx, req_rx) = channel(REQ_PACKET_CHANNEL_CAPACITY);
+        let (ack_tx, ack_rx) = channel(ACK_PACKET_CHANNEL_CAPACITY);
 
         // Create channel for communication between device and its internal interface.
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
@@ -43,16 +43,16 @@ impl Device {
         self.shutdown_tx = Some(shutdown_tx);
         self.completion_rx = Some(completion_rx);
 
-        task::spawn(Interface::new().run(
-            ack_tx_for_device,
-            req_rx_for_device,
-            self.timestamp.clone(),
-            self.memory.clone(),
-            shutdown_rx,
-            completion_tx,
-        ));
+        task::spawn(
+            Interface::new(self.memory.clone(), self.timestamp.clone()).run(
+                ack_tx,
+                req_rx,
+                shutdown_rx,
+                completion_tx,
+            ),
+        );
 
-        (req_tx_for_host, ack_rx_for_host)
+        (req_tx, ack_rx)
     }
 
     pub(super) fn shutdown(&mut self) {
@@ -63,8 +63,6 @@ impl Device {
             let completion_rx = self.completion_rx.take().unwrap();
             task::block_on(completion_rx).ok();
         }
-
-        self.completion_rx = None;
     }
 
     pub(super) fn device_info(&self) -> &DeviceInfo {

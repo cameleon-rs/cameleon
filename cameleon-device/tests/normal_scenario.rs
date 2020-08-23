@@ -85,12 +85,9 @@ fn test_normal_scenario() {
     assert!(control_channel.clear_halt().is_ok());
 
     // Assert control channel is empty after halt.
-    assert! {
-       match control_channel.recv(&mut [], TIME_OUT) {
-           Err(Error::LibUsbError(LibUsbError::Timeout)) => true,
-           _ => false
-       }
-    };
+    assert!(
+        matches! { control_channel.recv(&mut [], TIME_OUT), Err(Error::LibUsbError(LibUsbError::Timeout)) }
+    );
 
     fn bytes_as_u64_le(mut bytes: &[u8]) -> u64 {
         bytes.read_u64::<LE>().unwrap()

@@ -3,30 +3,35 @@ use async_std::{
     sync::{Receiver, Sender},
 };
 
-use super::{device::Timestamp, signal::StreamSignal};
+use super::{
+    device::Timestamp,
+    shared_queue::SharedQueue,
+    signal::{InterfaceSignal, StreamSignal},
+};
 
 // TODO: Implement stream module.
 pub(super) struct StreamModule {
-    enabled: bool,
+    _queue: SharedQueue<Vec<u8>>,
     _timestamp: Timestamp,
+
+    enabled: bool,
 }
 
 impl StreamModule {
-    pub(super) fn new(timestamp: Timestamp) -> Self {
+    pub(super) fn new(timestamp: Timestamp, queue: SharedQueue<Vec<u8>>) -> Self {
         Self {
-            enabled: false,
             _timestamp: timestamp,
+            _queue: queue,
+            enabled: false,
         }
     }
 
     pub(super) async fn run(
         mut self,
-        mut ctrl_rx: Receiver<StreamSignal>,
-        _ack_tx: Sender<Vec<u8>>,
+        _signal_tx: Sender<InterfaceSignal>,
+        mut signal_rx: Receiver<StreamSignal>,
     ) {
-        let mut completed = None;
-
-        while let Some(signal) = ctrl_rx.next().await {
+        while let Some(signal) = signal_rx.next().await {
             match signal {
                 StreamSignal::_Enable => {
                     if self.enabled {
@@ -36,6 +41,7 @@ impl StreamModule {
                         log::info! {"event module is enabled"};
                     }
                 }
+
                 StreamSignal::Disable(_completed) => {
                     if self.enabled {
                         self.enabled = false;
@@ -44,15 +50,11 @@ impl StreamModule {
                         log::warn! {"receive event disable signal, but event module is already disabled"}
                     }
                 }
-                StreamSignal::Shutdown(completed_tx) => {
-                    completed = Some(completed_tx);
+
+                StreamSignal::Shutdown => {
                     break;
                 }
             }
-        }
-
-        if completed.is_none() {
-            log::error!("stream module ends abnormally. cause: stream signal sender is dropped");
         }
     }
 }

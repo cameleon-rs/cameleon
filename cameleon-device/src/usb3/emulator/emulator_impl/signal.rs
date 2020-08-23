@@ -1,34 +1,46 @@
 use futures::channel::oneshot;
 
-use super::fake_protocol::IfaceKind;
+use super::IfaceKind;
 
-pub(super) enum CtrlSignal {
-    SendDataReq(Vec<u8>),
+/// Signal sent to control module.
+pub(super) enum ControlSignal {
+    ReceiveData(Vec<u8>),
 
-    SetHalt {
-        iface: IfaceKind,
-        completed: oneshot::Sender<()>,
-    },
+    CancelJobs(oneshot::Sender<()>),
 
-    Shutdown(oneshot::Sender<()>),
+    ClearEiRegister,
+    ClearSiRegister,
+
+    Shutdown,
 }
 
+/// Signal sent to event module.
 pub(super) enum EventSignal {
     _EventData {
         event_id: u16,
         data: Vec<u8>,
         request_id: u16,
     },
+
     UpdateTimestamp(u64),
+
     _Enable,
     Disable(oneshot::Sender<()>),
-    Shutdown(oneshot::Sender<()>),
-    // TODO: Multievent support.
+
+    Shutdown,
 }
 
+/// Signal sent to stream module.
 pub(super) enum StreamSignal {
-    // TODO: It's better to send strem protocol with enable signal.
     _Enable,
     Disable(oneshot::Sender<()>),
-    Shutdown(oneshot::Sender<()>),
+    Shutdown,
+}
+
+/// Signal sent from each module to interface.
+pub(super) enum InterfaceSignal {
+    _ToControl(ControlSignal),
+    ToEvent(EventSignal),
+    _ToStream(StreamSignal),
+    Halt(IfaceKind),
 }

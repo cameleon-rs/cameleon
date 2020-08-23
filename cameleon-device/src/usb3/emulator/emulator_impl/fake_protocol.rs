@@ -45,7 +45,6 @@ impl FakeAckPacket {
 #[derive(Debug, PartialEq, Eq)]
 pub(super) enum FakeAckKind {
     SendAck,
-    SendNak,
     RecvAck(Vec<u8>),
     RecvNak,
     IfaceHalted,

@@ -65,9 +65,6 @@ impl DeviceHandle {
                 SendAck => {
                     return Ok(buf.len());
                 }
-                SendNak => {
-                    continue;
-                }
                 IfaceHalted => {
                     return Err(LibUsbError::Pipe.into());
                 }

@@ -16,7 +16,7 @@ use super::{
 pub(super) type DevicePipe = Arc<Mutex<(Sender<FakeReqPacket>, Receiver<FakeAckPacket>)>>;
 
 lazy_static! {
-    static ref DEVICE_POOL: Arc<Mutex<DevicePool>> = Arc::new(Mutex::new(DevicePool::new()));
+    static ref DEVICE_POOL: Mutex<DevicePool> = Mutex::new(DevicePool::new());
 }
 
 pub(crate) struct DevicePool {
@@ -89,7 +89,7 @@ impl DevicePool {
 struct Context {
     device: Device,
     device_id: u32,
-    channel: Arc<Mutex<(Sender<FakeReqPacket>, Receiver<FakeAckPacket>)>>,
+    channel: DevicePipe,
 
     /// Hold interface state.
     /// Currently just holds claimed state.

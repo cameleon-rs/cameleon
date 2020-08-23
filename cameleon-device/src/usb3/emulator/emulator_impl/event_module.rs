@@ -3,25 +3,34 @@ use async_std::{
     sync::{Receiver, Sender},
 };
 
-use super::signal::EventSignal;
+use super::{
+    shared_queue::SharedQueue,
+    signal::{EventSignal, InterfaceSignal},
+    IfaceKind,
+};
 
 pub(super) struct EventModule {
+    queue: SharedQueue<Vec<u8>>,
     timestamp: u64,
+
     enabled: bool,
 }
 
 impl EventModule {
-    pub(super) fn new(timestamp: u64) -> Self {
+    pub(super) fn new(queue: SharedQueue<Vec<u8>>, timestamp: u64) -> Self {
         Self {
+            queue,
             timestamp,
             enabled: false,
         }
     }
 
-    pub(super) async fn run(mut self, mut ctrl_rx: Receiver<EventSignal>, ack_tx: Sender<Vec<u8>>) {
-        let mut completed = None;
-
-        while let Some(signal) = ctrl_rx.next().await {
+    pub(super) async fn run(
+        mut self,
+        signal_tx: Sender<InterfaceSignal>,
+        mut signal_rx: Receiver<EventSignal>,
+    ) {
+        while let Some(signal) = signal_rx.next().await {
             match signal {
                 EventSignal::_EventData {
                     event_id,
@@ -29,14 +38,16 @@ impl EventModule {
                     request_id,
                 } => {
                     if self.enabled {
-                        self.try_send_event(&ack_tx, event_id, &data, request_id)
+                        self.enqueue_or_halt(event_id, &data, request_id, &signal_tx)
                     } else {
                         log::warn! {"receive event data signal, but event module is currently disabled"}
                     }
                 }
+
                 EventSignal::UpdateTimestamp(timestamp) => {
                     self.timestamp = timestamp;
                 }
+
                 EventSignal::_Enable => {
                     if self.enabled {
                         log::warn! {"receive event enable signal, but event module is already enabled"}
@@ -45,32 +56,29 @@ impl EventModule {
                         log::info! {"event module is enabled"};
                     }
                 }
+
                 EventSignal::Disable(_completed) => {
                     if self.enabled {
                         self.enabled = false;
-                        log::info! {"event module is disenabled"};
+                        log::info! {"event module is disabled"};
                     } else {
                         log::warn! {"receive event disable signal, but event module is already disabled"}
                     }
                 }
-                EventSignal::Shutdown(completed_tx) => {
-                    completed = Some(completed_tx);
+
+                EventSignal::Shutdown => {
                     break;
                 }
             }
         }
-
-        if completed.is_none() {
-            log::error!("event module ends abnormally. cause: event signal sender is dropped");
-        }
     }
 
-    fn try_send_event(
-        &self,
-        ack_tx: &Sender<Vec<u8>>,
+    fn enqueue_or_halt(
+        &mut self,
         event_id: u16,
         data: &[u8],
         request_id: u16,
+        signal_tx: &Sender<InterfaceSignal>,
     ) {
         let scd = match event_packet::EventScd::single_event(event_id, data, self.timestamp) {
             Ok(scd) => scd,
@@ -80,17 +88,23 @@ impl EventModule {
             }
         };
 
-        let mut buf = vec![];
-        if let Err(e) = scd.finalize(request_id).serialize(&mut buf) {
+        let mut bytes = vec![];
+        if let Err(e) = scd.finalize(request_id).serialize(&mut bytes) {
             log::error!("cant't serialize event packet: cause {}", e);
             return;
         }
 
-        if let Err(e) = ack_tx.try_send(buf) {
-            log::error!(
-                "can't send event packet to interface of the device: cause {}",
-                e
-            );
+        if !self.queue.enqueue(bytes) {
+            log::warn!("event queue is full, entering a halted state",);
+
+            let signal = InterfaceSignal::Halt(IfaceKind::Event);
+
+            match signal_tx.try_send(signal) {
+                Ok(()) => {}
+                Err(_) => {
+                    log::error!("Control module -> Interface channel is full");
+                }
+            }
         }
     }
 }
@@ -225,7 +239,6 @@ mod tests {
     use std::time::Duration;
 
     use async_std::{future::timeout, sync::channel, task};
-    use futures::channel::oneshot;
 
     use crate::usb3::protocol::event;
 
@@ -233,43 +246,58 @@ mod tests {
 
     const TO: Duration = Duration::from_millis(100);
 
-    fn spawn_module() -> (Sender<EventSignal>, Receiver<Vec<u8>>) {
-        let (ctrl_tx, ctrl_rx) = channel(10);
-        let (ack_tx, ack_rx) = channel(10);
-        let event_module = EventModule::new(0);
-        task::spawn(event_module.run(ctrl_rx, ack_tx));
-        (ctrl_tx, ack_rx)
+    fn spawn_module() -> (
+        Sender<EventSignal>,
+        Receiver<InterfaceSignal>,
+        SharedQueue<Vec<u8>>,
+    ) {
+        let (signal_tx, signal_rx) = channel(10);
+        let (iface_signal_tx, iface_signal_rx) = channel(10);
+        let queue = SharedQueue::new(10);
+        let event_module = EventModule::new(queue.clone(), 0);
+        task::spawn(event_module.run(iface_signal_tx, signal_rx));
+
+        (signal_tx, iface_signal_rx, queue)
+    }
+
+    fn receive_data(queue: &SharedQueue<Vec<u8>>) -> Option<Vec<u8>> {
+        let now = std::time::Instant::now();
+        while now.elapsed() < TO {
+            if let Some(data) = queue.dequeue() {
+                return Some(data);
+            }
+        }
+
+        None
     }
 
     #[test]
     fn test_run_and_stop() {
-        let (ctrl_tx, _ack_rx) = spawn_module();
+        let (signal_tx, mut iface_signal_rx, _) = spawn_module();
 
-        let (completed_tx, completed_rx) = oneshot::channel();
-        assert!(ctrl_tx
-            .try_send(EventSignal::Shutdown(completed_tx))
-            .is_ok());
-        let completed = task::block_on(timeout(TO, completed_rx)).unwrap();
-        assert_eq!(completed, Err(oneshot::Canceled));
+        assert!(signal_tx.try_send(EventSignal::Shutdown).is_ok());
+        task::block_on(timeout(TO, iface_signal_rx.next())).unwrap();
     }
 
     #[test]
     fn test_signal() {
-        let (ctrl_tx, ack_rx) = spawn_module();
-        ctrl_tx.try_send(EventSignal::_Enable).unwrap();
+        let (signal_tx, mut iface_signal_rx, queue) = spawn_module();
+        signal_tx.try_send(EventSignal::_Enable).unwrap();
 
         // Test EventData signal.
         let event_id = 10;
         let request_id = 20;
         let data = vec![1, 2, 3];
-        ctrl_tx
+        signal_tx
             .try_send(EventSignal::_EventData {
                 event_id,
                 data: data.clone(),
                 request_id,
             })
             .unwrap();
-        let received = task::block_on(timeout(TO, ack_rx.recv())).unwrap().unwrap();
+
+        let received = receive_data(&queue).unwrap();
+
         let event_packet = event::EventPacket::parse(&received).unwrap();
         assert_eq!(event_packet.request_id(), request_id);
         assert_eq!(event_packet.scd.len(), 1);
@@ -277,26 +305,22 @@ mod tests {
 
         // Test UpdateTimestamp signal.
         let timestamp = 123456789;
-        ctrl_tx
+        signal_tx
             .try_send(EventSignal::UpdateTimestamp(timestamp))
             .unwrap();
-        ctrl_tx
+        signal_tx
             .try_send(EventSignal::_EventData {
                 event_id,
                 data,
                 request_id,
             })
             .unwrap();
-        let received = task::block_on(timeout(TO, ack_rx.recv())).unwrap().unwrap();
+        let received = receive_data(&queue).unwrap();
         let event_packet = event::EventPacket::parse(&received).unwrap();
         assert_eq!(event_packet.scd[0].timestamp, timestamp);
 
         // Clean up.
-        let (completed_tx, completed_rx) = oneshot::channel();
-        assert!(ctrl_tx
-            .try_send(EventSignal::Shutdown(completed_tx))
-            .is_ok());
-        let completed = task::block_on(timeout(TO, completed_rx)).unwrap();
-        assert_eq!(completed, Err(oneshot::Canceled));
+        assert!(signal_tx.try_send(EventSignal::Shutdown).is_ok());
+        task::block_on(timeout(TO, iface_signal_rx.next())).unwrap();
     }
 }

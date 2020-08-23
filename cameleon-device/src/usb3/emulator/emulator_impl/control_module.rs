@@ -11,125 +11,158 @@ use async_std::{
     sync::{channel, Mutex, Receiver, Sender},
     task,
 };
-use futures::channel::oneshot;
 use thiserror::Error;
 
 use super::{
     device::Timestamp,
-    event_module::EventModule,
-    fake_protocol::IfaceKind,
-    interface::{AckDataSender, IfaceState},
+    interface::IfaceState,
     memory::{EventChain, EventData, Memory, MemoryError},
+    shared_queue::SharedQueue,
     signal::*,
-    stream_module::StreamModule,
+    IfaceKind,
 };
 
 use ack::AckSerialize;
 
-const EVENT_CTRL_CHANNEL_CAPACITY: usize = 32;
-const STREAM_CTRL_CHANNEL_CAPACITY: usize = 32;
-
 pub(super) struct ControlModule {
+    iface_state: IfaceState,
     memory: Arc<Mutex<Memory>>,
     timestamp: Timestamp,
+    queue: SharedQueue<Vec<u8>>,
 }
 
 impl ControlModule {
-    pub(super) fn new(memory: Arc<Mutex<Memory>>, timestamp: Timestamp) -> Self {
-        Self { memory, timestamp }
+    pub(super) fn new(
+        iface_state: IfaceState,
+        memory: Arc<Mutex<Memory>>,
+        timestamp: Timestamp,
+        queue: SharedQueue<Vec<u8>>,
+    ) -> Self {
+        Self {
+            iface_state,
+            memory,
+            timestamp,
+            queue,
+        }
     }
 
     pub(super) async fn run(
         self,
-        iface_state: IfaceState,
-        mut ctrl_rx: Receiver<CtrlSignal>,
-        ack_sender: AckDataSender,
+        signal_tx: Sender<InterfaceSignal>,
+        mut signal_rx: Receiver<ControlSignal>,
     ) {
-        let mut completed = None;
-        let (event_tx, event_rx) = channel(EVENT_CTRL_CHANNEL_CAPACITY);
-        let (stream_tx, stream_rx) = channel(STREAM_CTRL_CHANNEL_CAPACITY);
-
         let mut worker_manager = WorkerManager::new(
-            ack_sender.ctrl,
+            self.iface_state.clone(),
             self.memory.clone(),
-            iface_state,
-            event_tx.clone(),
-            stream_tx.clone(),
             self.timestamp.clone(),
+            self.queue.clone(),
+            signal_tx,
         );
 
-        // Spawn event and stream module.
-        task::spawn(EventModule::new(0).run(event_rx, ack_sender.event));
-        task::spawn(StreamModule::new(self.timestamp.clone()).run(stream_rx, ack_sender.stream));
-
-        while let Some(signal) = ctrl_rx.next().await {
+        while let Some(signal) = signal_rx.next().await {
             match signal {
-                CtrlSignal::SendDataReq(data) => {
+                ControlSignal::ReceiveData(data) => {
                     let worker = worker_manager.worker();
                     task::spawn(worker.run(data));
                 }
 
-                CtrlSignal::Shutdown(completed_tx) => {
-                    completed = Some(completed_tx);
-                    break;
+                ControlSignal::CancelJobs(_completed) => worker_manager.wait_completion().await,
+
+                ControlSignal::ClearSiRegister => {
+                    // TODO:
+                    todo!()
                 }
 
-                CtrlSignal::SetHalt {
-                    iface,
-                    completed: _completed,
-                } => {
-                    // We need to wait all workers completion even if the event is targeted at event/stream
-                    // module to avoid race condition related to EI/SI register.
+                ControlSignal::ClearEiRegister => {
+                    // TODO:
+                    todo!()
+                }
+
+                ControlSignal::Shutdown => {
                     worker_manager.wait_completion().await;
-                    match iface {
-                        IfaceKind::Control => {}
-
-                        IfaceKind::Event => {
-                            // TODO: Set zero to EI control register.
-                            let (completed_tx, completed_rx) = oneshot::channel();
-                            event_tx.send(EventSignal::Disable(completed_tx)).await;
-                            completed_rx.await.ok();
-                        }
-
-                        IfaceKind::Stream => {
-                            // TODO: Set zero to SI control register.
-                            let (completed_tx, completed_rx) = oneshot::channel();
-                            stream_tx.send(StreamSignal::Disable(completed_tx)).await;
-                            completed_rx.await.ok();
-                        }
-                    }
+                    break;
                 }
             }
         }
+    }
+}
 
-        if completed.is_none() {
-            log::error!("control module ends abnormally. cause: control signal sender is dropped");
+struct WorkerManager {
+    iface_state: IfaceState,
+    memory: Arc<Mutex<Memory>>,
+    timestamp: Timestamp,
+
+    queue: SharedQueue<Vec<u8>>,
+    signal_tx: Sender<InterfaceSignal>,
+
+    on_processing: Arc<AtomicBool>,
+
+    /// Work as join handle coupled with `completed_rx`.
+    /// All workers spawnd by the manager share this sender.
+    completed_tx: Sender<()>,
+    /// Work as join handle coupled with `completed_tx`.
+    /// Manager can wait all spawned worker completion via this receiver.
+    completed_rx: Receiver<()>,
+}
+
+impl WorkerManager {
+    fn new(
+        iface_state: IfaceState,
+        memory: Arc<Mutex<Memory>>,
+        timestamp: Timestamp,
+        queue: SharedQueue<Vec<u8>>,
+        signal_tx: Sender<InterfaceSignal>,
+    ) -> Self {
+        let (completed_tx, completed_rx) = channel(1);
+        let on_processing = Arc::new(AtomicBool::new(false));
+
+        Self {
+            iface_state,
+            memory,
+            timestamp,
+            signal_tx,
+            queue,
+            on_processing,
+            completed_tx,
+            completed_rx,
         }
+    }
 
-        // Shutdown event module and stream module.
-        let (event_completed_tx, event_completed_rx) = oneshot::channel();
-        let (stream_completed_tx, stream_completed_rx) = oneshot::channel();
-        event_tx
-            .send(EventSignal::Shutdown(event_completed_tx))
-            .await;
-        stream_tx
-            .send(StreamSignal::Shutdown(stream_completed_tx))
-            .await;
+    fn worker(&self) -> Worker {
+        Worker {
+            iface_state: self.iface_state.clone(),
+            memory: self.memory.clone(),
+            timestamp: self.timestamp.clone(),
+            queue: self.queue.clone(),
+            signal_tx: self.signal_tx.clone(),
+            on_processing: self.on_processing.clone(),
+            _completed: self.completed_tx.clone(),
+        }
+    }
 
-        event_completed_rx.await.ok();
-        stream_completed_rx.await.ok();
+    async fn wait_completion(&mut self) {
+        let (new_tx, new_rx) = channel(1);
+        // Drop old sender to wait workers completion only.
+        self.completed_tx = new_tx;
+
+        // Wait all workers completion.
+        while self.completed_rx.next().await.is_some() {}
+
+        self.completed_rx = new_rx;
     }
 }
 
 struct Worker {
-    ack_tx: Sender<Vec<u8>>,
+    iface_state: IfaceState,
     memory: Arc<Mutex<Memory>>,
-    _completed: Sender<()>,
-    on_processing: Arc<AtomicBool>,
-    _iface_state: IfaceState,
-    event_tx: Sender<EventSignal>,
-    _stream_tx: Sender<StreamSignal>,
     timestamp: Timestamp,
+
+    queue: SharedQueue<Vec<u8>>,
+    signal_tx: Sender<InterfaceSignal>,
+
+    on_processing: Arc<AtomicBool>,
+
+    _completed: Sender<()>,
 }
 
 impl Worker {
@@ -141,6 +174,20 @@ impl Worker {
         };
         let ccd = cmd_packet.ccd();
 
+        // If another module is halted, return endpoint halted error
+        if self.iface_state.is_halt(IfaceKind::Event).await {
+            let ack = ack::ErrorAck::new(ack::UsbSpecificStatus::EventEndpointHalted, ccd.scd_kind)
+                .finalize(ccd.request_id);
+            self.enqueue_or_halt(ack);
+            return;
+        } else if self.iface_state.is_halt(IfaceKind::Stream).await {
+            let ack =
+                ack::ErrorAck::new(ack::UsbSpecificStatus::StreamEndpointHalted, ccd.scd_kind)
+                    .finalize(ccd.request_id);
+            self.enqueue_or_halt(ack);
+            return;
+        }
+
         // If another thread is processing command simultaneously, return busy error ack.
         if self
             .on_processing
@@ -148,7 +195,7 @@ impl Worker {
         {
             let ack =
                 ack::ErrorAck::new(ack::GenCpStatus::Busy, ccd.scd_kind).finalize(ccd.request_id);
-            self.try_send_ack(ack);
+            self.enqueue_or_halt(ack);
             return;
         }
 
@@ -173,19 +220,7 @@ impl Worker {
                 let ack =
                     ack::ErrorAck::new(ack::GenCpStatus::InvalidParameter, ack::ScdKind::ReadMem)
                         .finalize(0);
-                let mut buf = vec![];
-
-                if let Err(e) = ack.serialize(&mut buf) {
-                    log::error!("{}", e);
-                    return None;
-                }
-
-                match self.ack_tx.try_send(buf) {
-                    Ok(()) => {}
-                    Err(e) => {
-                        log::warn!("can't push internal acknowledge packet queue. cause: {}", e)
-                    }
-                }
+                self.enqueue_or_halt(ack);
 
                 None
             }
@@ -204,21 +239,25 @@ impl Worker {
         let memory = self.memory.lock().await;
         let address = scd.address as usize;
         let read_length = scd.read_length as usize;
+
         match memory.read_mem(address..address + read_length) {
             Ok(data) => {
                 let ack = ack::ReadMem::new(data).finalize(req_id);
-                self.try_send_ack(ack);
+                self.enqueue_or_halt(ack);
             }
+
             Err(MemoryError::InvalidAddress) => {
                 let ack =
                     ack::ErrorAck::new(ack::GenCpStatus::InvalidAddress, scd_kind).finalize(req_id);
-                self.try_send_ack(ack);
+                self.enqueue_or_halt(ack);
             }
+
             Err(MemoryError::AddressNotReadable) => {
                 let ack =
                     ack::ErrorAck::new(ack::GenCpStatus::AccessDenied, scd_kind).finalize(req_id);
-                self.try_send_ack(ack);
+                self.enqueue_or_halt(ack);
             }
+
             Err(MemoryError::AddressNotWritable) => unreachable!(),
         };
     }
@@ -239,22 +278,26 @@ impl Worker {
                 drop(memory);
                 self.process_event_chain(event_chain).await;
                 let ack = ack::WriteMem::new(scd.data.len() as u16).finalize(req_id);
-                self.try_send_ack(ack);
+                self.enqueue_or_halt(ack);
             }
+
             Ok(None) => {
                 let ack = ack::WriteMem::new(scd.data.len() as u16).finalize(req_id);
-                self.try_send_ack(ack);
+                self.enqueue_or_halt(ack);
             }
+
             Err(MemoryError::InvalidAddress) => {
                 let ack =
                     ack::ErrorAck::new(ack::GenCpStatus::InvalidAddress, scd_kind).finalize(req_id);
-                self.try_send_ack(ack);
+                self.enqueue_or_halt(ack);
             }
+
             Err(MemoryError::AddressNotWritable) => {
                 let ack =
                     ack::ErrorAck::new(ack::GenCpStatus::WriteProtect, scd_kind).finalize(req_id);
-                self.try_send_ack(ack);
+                self.enqueue_or_halt(ack);
             }
+
             Err(MemoryError::AddressNotReadable) => unreachable!(),
         };
     }
@@ -270,7 +313,7 @@ impl Worker {
 
         // TODO: Should we implemnent this command?
         let ack = ack::ErrorAck::new(ack::GenCpStatus::NotImplemented, scd_kind).finalize(req_id);
-        self.try_send_ack(ack);
+        self.enqueue_or_halt(ack);
     }
 
     async fn process_write_mem_stacked(&self, command: cmd::CommandPacket<'_>) {
@@ -284,7 +327,7 @@ impl Worker {
 
         // TODO: Should we implemnent this command?
         let ack = ack::ErrorAck::new(ack::GenCpStatus::NotImplemented, scd_kind).finalize(req_id);
-        self.try_send_ack(ack);
+        self.enqueue_or_halt(ack);
     }
 
     async fn process_custom(&self, command: cmd::CommandPacket<'_>) {
@@ -298,7 +341,7 @@ impl Worker {
 
         // TODO: Should we implemnent this command?
         let ack = ack::ErrorAck::new(ack::GenCpStatus::NotImplemented, scd_kind).finalize(req_id);
-        self.try_send_ack(ack);
+        self.enqueue_or_halt(ack);
     }
 
     async fn process_event_chain(&self, chain: EventChain) {
@@ -307,10 +350,9 @@ impl Worker {
             match event {
                 EventData::WriteTimestamp { addr } => {
                     let timestamp_ns = self.timestamp.as_nanos().await;
-                    // TODO: Handle error.
-                    self.event_tx
-                        .try_send(EventSignal::UpdateTimestamp(timestamp_ns))
-                        .ok();
+                    let signal =
+                        InterfaceSignal::ToEvent(EventSignal::UpdateTimestamp(timestamp_ns));
+                    self.try_send_signal(signal);
                     memory.write_mem_u64_unchecked(*addr, timestamp_ns);
                 }
             }
@@ -327,13 +369,13 @@ impl Worker {
                 let ccd = command.ccd();
                 let ack = ack::ErrorAck::new(ack::GenCpStatus::InvalidParameter, ccd.scd_kind)
                     .finalize(ccd.request_id);
-                self.try_send_ack(ack);
+                self.enqueue_or_halt(ack);
                 None
             }
         }
     }
 
-    fn try_send_ack<T>(&self, ack: ack::AckPacket<T>)
+    fn enqueue_or_halt<T>(&self, ack: ack::AckPacket<T>)
     where
         T: AckSerialize,
     {
@@ -341,81 +383,22 @@ impl Worker {
 
         if let Err(e) = ack.serialize(&mut buf) {
             log::error!("{}", e);
+            return;
         }
 
-        match self.ack_tx.try_send(buf) {
+        if !self.queue.enqueue(buf) {
+            log::warn!("control queue is full, entering a halted state");
+            self.try_send_signal(InterfaceSignal::Halt(IfaceKind::Control));
+        }
+    }
+
+    fn try_send_signal(&self, signal: InterfaceSignal) {
+        match self.signal_tx.try_send(signal) {
             Ok(()) => {}
-            Err(e) => log::warn!(
-                "can't push data into internal acknowledge packet queue. cause: {}",
-                e
-            ),
+            Err(_) => {
+                log::error!("Control module -> Interface channel is full");
+            }
         }
-    }
-}
-
-struct WorkerManager {
-    /// Work as join handle coupled with `completed_rx`.
-    /// All workers spawnd by the manager share this sender.
-    completed_tx: Sender<()>,
-    /// Work as join handle coupled with `completed_tx`.
-    /// Manager can wait all spawned worker completion via this receiver.
-    completed_rx: Receiver<()>,
-
-    ack_tx: Sender<Vec<u8>>,
-    memory: Arc<Mutex<Memory>>,
-    iface_state: IfaceState,
-    on_processing: Arc<AtomicBool>,
-    event_tx: Sender<EventSignal>,
-    stream_tx: Sender<StreamSignal>,
-    timestamp: Timestamp,
-}
-
-impl WorkerManager {
-    fn new(
-        ack_tx: Sender<Vec<u8>>,
-        memory: Arc<Mutex<Memory>>,
-        iface_state: IfaceState,
-        event_tx: Sender<EventSignal>,
-        stream_tx: Sender<StreamSignal>,
-        timestamp: Timestamp,
-    ) -> Self {
-        let (completed_tx, completed_rx) = channel(1);
-        let on_processing = Arc::new(AtomicBool::new(false));
-
-        Self {
-            completed_tx,
-            completed_rx,
-            ack_tx,
-            memory,
-            iface_state,
-            on_processing,
-            event_tx,
-            stream_tx,
-            timestamp,
-        }
-    }
-
-    fn worker(&self) -> Worker {
-        Worker {
-            ack_tx: self.ack_tx.clone(),
-            memory: self.memory.clone(),
-            _completed: self.completed_tx.clone(),
-            on_processing: self.on_processing.clone(),
-            _iface_state: self.iface_state.clone(),
-            event_tx: self.event_tx.clone(),
-            _stream_tx: self.stream_tx.clone(),
-            timestamp: self.timestamp.clone(),
-        }
-    }
-
-    async fn wait_completion(&mut self) {
-        let (new_tx, new_rx) = channel(1);
-        // Drop old sender to wait workers completion only.
-        self.completed_tx = new_tx;
-
-        // Wait all workers completion.
-        self.completed_rx.recv().await.ok();
-        self.completed_rx = new_rx;
     }
 }
 
