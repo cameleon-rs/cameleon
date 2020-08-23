@@ -1,4 +1,4 @@
-name: CI
+name: CAMELEON-DEVICE
 
 on:
   push:
@@ -11,6 +11,7 @@ on:
 defaults:
   run:
     shell: bash
+    working-directory: cameleon-device
 
 jobs:
   lint:
@@ -25,7 +26,8 @@ jobs:
           profile: minimal
           components: rustfmt, clippy
       - run: cargo fmt --all -- --check --color always
-      - run: cargo clippy --workspace --all-targets --all-features --color always -- -D warnings
+      - run: cargo clippy --all-targets --color always -- -D warnings # Check without libusb feature.
+      - run: cargo clippy --all-targets --features libusb --color always -- -D warnings # Check with libusb feature.
 
   test:
     name: Test
@@ -59,4 +61,12 @@ jobs:
           profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
-      - run: cargo test --workspace --all-targets --all-features --color always
+      # Test without libusb feature.
+      - run: cargo test --all-targets --color always
+      # Test doc without libusb feature. --all-targets option doesn't invoke doctest, see https://github.com/rust-lang/cargo/issues/6669.
+      - run: cargo test --doc --color always
+
+      # Test with libusb feature.
+      - run: cargo test --all-targets --features libusb --color always
+      # Test doc with libusb feature. --all-targets option doesn't invoke doctest, see https://github.com/rust-lang/cargo/issues/6669.
+      - run: cargo test --doc --features libusb --color always
