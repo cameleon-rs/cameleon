@@ -2,7 +2,7 @@ use crate::usb3::{DeviceInfo, Result};
 
 use super::{
     channel::{ControlChannel, ReceiveChannel},
-    peripheral::{DeviceHandle, IfaceKind},
+    emulator_impl::{DeviceHandle, IfaceKind},
 };
 
 pub struct Device {

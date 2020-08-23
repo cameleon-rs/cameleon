@@ -2,7 +2,7 @@ use std::time;
 
 use crate::usb3::Result;
 
-use super::peripheral::DeviceHandle;
+use super::emulator_impl::DeviceHandle;
 
 pub struct ControlChannel {
     device_handle: DeviceHandle,
