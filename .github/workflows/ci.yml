@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  doc:
+    name: Doc and deadlinks check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          profile: minimal
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/*
+          key: ${{ runner.os }}-cargo-doc-cache
+
+      - name: Install cargo-deadlinks
+        run: cargo install cargo-deadlinks
+
+      - run: cargo doc --no-deps
+      - run: cargo deadlinks
+
+  lint:
+    name: Rustfmt and clippy
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          profile: minimal
+          components: rustfmt, clippy
+
+      - name: Rustfmt
+        run: cargo fmt --all -- --check --color always
+
+      - name: Clippy for cameleon-device without libusb
+        run: cargo clippy --all-targets --color always -- -D warnings # Check without libusb feature.
+        working-directory: cameleon-device
+
+      - name: Clippy for cameleon-device with libusb
+        run: cargo clippy --all-targets --features libusb --color always -- -D warnings # Check with libusb feature.
+        working-directory: cameleon-device
+
+  test:
+    name: Test
+    defaults:
+      run:
+        shell: bash
+        working-directory: cameleon-device
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          # - macos-latest
+          - windows-latest
+        rust:
+          - stable
+          - beta
+          - nightly
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+
+      - name: Install libusb
+        run: |
+          if [[ ${{ matrix.os }} == "ubuntu-latest" ]]; then
+            sudo apt install pkg-config libusb-1.0-0-dev
+          elif [[ ${{ matrix.os }} == "macos-latest" ]]; then
+            brew install pkg-config libusb
+          elif [[ ${{ matrix.os }} == "windows-latest" ]]; then
+            git clone https://github.com/microsoft/vcpkg.git --depth 1
+            vcpkg/bootstrap-vcpkg.bat
+            vcpkg/vcpkg integrate install
+            vcpkg/vcpkg install libusb
+          fi
+
+      # Test without libusb feature.
+      - name: Test cameleon-device without libusb
+        run: cargo test --all-targets --color always
+      # Test doc without libusb feature. --all-targets option doesn't invoke doctest, see https://github.com/rust-lang/cargo/issues/6669.
+      - name: Doctest cameleon-device without libusb
+        run: cargo test --doc --color always
+
+      # Test with libusb feature.
+      - name: Test cameleon-device with libsub
+        run: cargo test --all-targets --features libusb --color always
+      # Test doc with libusb feature. --all-targets option doesn't invoke doctest, see https://github.com/rust-lang/cargo/issues/6669.
+      - name: Doctest cameleon-device with libsub
+        run: cargo test --doc --features libusb --color always
