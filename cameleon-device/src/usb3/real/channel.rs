@@ -1,7 +1,8 @@
 use std::time;
 
+use crate::usb3::Result;
+
 use super::device::RusbDevHandle;
-use super::Result;
 
 pub struct ControlChannel {
     device_handle: RusbDevHandle,
@@ -10,14 +11,6 @@ pub struct ControlChannel {
 }
 
 impl ControlChannel {
-    pub(super) fn new(device_handle: RusbDevHandle, iface_info: ControlIfaceInfo) -> Self {
-        Self {
-            device_handle,
-            iface_info,
-            is_open: false,
-        }
-    }
-
     pub fn open(&mut self) -> Result<()> {
         if !self.is_open() {
             self.device_handle
@@ -32,9 +25,9 @@ impl ControlChannel {
         if self.is_open() {
             self.device_handle
                 .release_interface(self.iface_info.iface_number)?;
+            self.is_open = false;
         }
 
-        self.is_open = false;
         Ok(())
     }
 
@@ -66,6 +59,13 @@ impl ControlChannel {
         self.device_handle.clear_halt(self.iface_info.bulk_out_ep)?;
         Ok(())
     }
+    pub(super) fn new(device_handle: RusbDevHandle, iface_info: ControlIfaceInfo) -> Self {
+        Self {
+            device_handle,
+            iface_info,
+            is_open: false,
+        }
+    }
 }
 
 pub struct ReceiveChannel {
@@ -75,14 +75,6 @@ pub struct ReceiveChannel {
 }
 
 impl ReceiveChannel {
-    pub(super) fn new(device_handle: RusbDevHandle, iface_info: ReceiveIfaceInfo) -> Self {
-        Self {
-            device_handle,
-            iface_info,
-            is_open: false,
-        }
-    }
-
     pub fn open(&mut self) -> Result<()> {
         if !self.is_open() {
             self.device_handle
@@ -122,6 +114,14 @@ impl ReceiveChannel {
     pub fn clear_halt(&mut self) -> Result<()> {
         self.device_handle.clear_halt(self.iface_info.bulk_in_ep)?;
         Ok(())
+    }
+
+    pub(super) fn new(device_handle: RusbDevHandle, iface_info: ReceiveIfaceInfo) -> Self {
+        Self {
+            device_handle,
+            iface_info,
+            is_open: false,
+        }
     }
 }
 

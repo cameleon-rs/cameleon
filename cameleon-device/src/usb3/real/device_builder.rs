@@ -1,9 +1,12 @@
 use byteorder::{ReadBytesExt, LE};
 use semver::Version;
 
-use super::channel::{ControlIfaceInfo, ReceiveIfaceInfo};
-use super::device::{DeviceInfo, RusbDevHandle, RusbDevice, SupportedSpeed};
-use super::{Device, Error, Result};
+use crate::usb3::{DeviceInfo, Error, Result, SupportedSpeed};
+
+use super::{
+    channel::{ControlIfaceInfo, ReceiveIfaceInfo},
+    device::{Device, RusbDevHandle, RusbDevice},
+};
 
 const MISCELLANEOUS_CLASS: u8 = 0xEF;
 
@@ -250,8 +253,8 @@ struct DeviceInfoDescriptor {
     descriptor_type: u8,
     #[allow(unused)]
     descriptor_subtype: u8,
-    gen_cp_version_major: u16,
-    gen_cp_version_minor: u16,
+    gencp_version_major: u16,
+    gencp_version_minor: u16,
     u3v_version_major: u16,
     u3v_version_minor: u16,
     guid_idx: u8,
@@ -259,7 +262,7 @@ struct DeviceInfoDescriptor {
     model_name_idx: u8,
     family_name_idx: u8,
     device_version_idx: u8,
-    manufacture_info_idx: u8,
+    manufacturer_info_idx: u8,
     serial_number_idx: u8,
     user_defined_name_idx: u8,
     supported_speed_mask: u8,
@@ -286,8 +289,8 @@ impl DeviceInfoDescriptor {
             return Err(Error::InvalidDevice);
         }
 
-        let gen_cp_version_minor = bytes.read_u16::<LE>()?;
-        let gen_cp_version_major = bytes.read_u16::<LE>()?;
+        let gencp_version_minor = bytes.read_u16::<LE>()?;
+        let gencp_version_major = bytes.read_u16::<LE>()?;
         let u3v_version_minor = bytes.read_u16::<LE>()?;
         let u3v_version_major = bytes.read_u16::<LE>()?;
         let guid_idx = bytes.read_u8()?;
@@ -295,7 +298,7 @@ impl DeviceInfoDescriptor {
         let model_name_idx = bytes.read_u8()?;
         let family_name_idx = bytes.read_u8()?;
         let device_version_idx = bytes.read_u8()?;
-        let manufacture_info_idx = bytes.read_u8()?;
+        let manufacturer_info_idx = bytes.read_u8()?;
         let serial_number_idx = bytes.read_u8()?;
         let user_defined_name_idx = bytes.read_u8()?;
         let supported_speed_mask = bytes.read_u8()?;
@@ -304,8 +307,8 @@ impl DeviceInfoDescriptor {
             length,
             descriptor_type,
             descriptor_subtype,
-            gen_cp_version_major,
-            gen_cp_version_minor,
+            gencp_version_major,
+            gencp_version_minor,
             u3v_version_major,
             u3v_version_minor,
             guid_idx,
@@ -313,7 +316,7 @@ impl DeviceInfoDescriptor {
             model_name_idx,
             family_name_idx,
             device_version_idx,
-            manufacture_info_idx,
+            manufacturer_info_idx,
             serial_number_idx,
             user_defined_name_idx,
             supported_speed_mask,
@@ -321,9 +324,9 @@ impl DeviceInfoDescriptor {
     }
 
     fn interpret(&self, channel: &RusbDevHandle) -> Result<DeviceInfo> {
-        let gen_cp_version = Version::new(
-            self.gen_cp_version_major.into(),
-            self.gen_cp_version_minor.into(),
+        let gencp_version = Version::new(
+            self.gencp_version_major.into(),
+            self.gencp_version_minor.into(),
             0,
         );
 
@@ -343,7 +346,7 @@ impl DeviceInfoDescriptor {
         };
 
         let device_version = channel.read_string_descriptor_ascii(self.device_version_idx)?;
-        let manufacture_info = channel.read_string_descriptor_ascii(self.manufacture_info_idx)?;
+        let manufacturer_info = channel.read_string_descriptor_ascii(self.manufacturer_info_idx)?;
         let serial_number = channel.read_string_descriptor_ascii(self.serial_number_idx)?;
         let user_defined_name = if self.user_defined_name_idx == 0 {
             None
@@ -365,14 +368,14 @@ impl DeviceInfoDescriptor {
         };
 
         Ok(DeviceInfo {
-            gen_cp_version,
+            gencp_version,
             u3v_version,
             guid,
             vendor_name,
             model_name,
             family_name,
             device_version,
-            manufacture_info,
+            manufacturer_info,
             serial_number,
             user_defined_name,
             supported_speed,

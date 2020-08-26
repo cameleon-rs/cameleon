@@ -42,11 +42,11 @@ impl<'a> EventPacket<'a> {
 
 struct EventCcd {
     #[allow(unused)]
-    flag: u16,
+    pub(crate) flag: u16,
     #[allow(unused)]
-    command_id: u16,
-    scd_len: u16,
-    request_id: u16,
+    pub(crate) command_id: u16,
+    pub(crate) scd_len: u16,
+    pub(crate) request_id: u16,
 }
 
 impl EventCcd {
@@ -73,7 +73,7 @@ impl EventCcd {
 
 pub struct EventScd<'a> {
     #[allow(unused)]
-    event_size: u16,
+    pub event_size: u16,
     pub event_id: u16,
     pub timestamp: u64,
     pub data: &'a [u8],
