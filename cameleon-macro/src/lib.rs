@@ -1,3 +1,4 @@
+pub use byteorder;
 pub use cameleon_macro_impl::register;
 
 use thiserror::Error;
@@ -153,7 +154,9 @@ impl MemoryProtection {
 #[doc(hidden)]
 pub trait MemoryFragment {
     const SIZE: usize;
-    fn fragment() -> (Vec<u8>, MemoryProtection);
+    //fn fragment() -> &'static [u8];
+
+    fn memory_protection() -> MemoryProtection;
 }
 
 #[doc(hidden)]

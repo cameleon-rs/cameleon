@@ -10,10 +10,12 @@ pub(super) fn expand(
 
     let expanded_enum = register_enum.define_enum();
     let impl_enum = register_enum.impl_enum();
+    let impl_memory_fragment = register_enum.impl_memory_fragment();
 
     Ok(proc_macro::TokenStream::from(quote! {
             #expanded_enum
             #impl_enum
+            #impl_memory_fragment
     }))
 }
 
@@ -22,7 +24,7 @@ struct RegisterEnum {
     vis: syn::Visibility,
     endianess: Endianess,
     entries: Vec<RegisterEntry>,
-    //TODO:docs: Option<Vec<syn::Attribute>>,
+    attrs: Vec<syn::Attribute>,
 }
 
 impl RegisterEnum {
@@ -46,6 +48,7 @@ impl RegisterEnum {
             vis,
             endianess,
             entries,
+            attrs: input_enum.attrs,
         })
     }
 
@@ -56,8 +59,10 @@ impl RegisterEnum {
         });
         let enum_name = &self.ident;
         let vis = &self.vis;
+        let attrs = &self.attrs;
 
         quote! {
+            #(#attrs)*
             #vis enum #enum_name {
                 #(#variants),*
             }
@@ -95,6 +100,56 @@ impl RegisterEnum {
             }
         }
     }
+
+    fn impl_memory_fragment(&self) -> TokenStream {
+        let memory_protection = self.impl_memory_protection();
+        //let fragment = self.impl_frament();
+        let ident = &self.ident;
+        let size = self.size();
+
+        //quote! {
+        //    impl cameleon_macro::MemoryFragment for #ident {
+        //      const SIZE: usize = #size;
+        //      #memory_protection
+        //      //#fragment
+        //    }
+        //}
+        quote! {
+            impl cameleon_macro::MemoryFragment for #ident {
+              const SIZE: usize = #size;
+              #memory_protection
+              //#fragment
+            }
+        }
+    }
+
+    fn impl_memory_protection(&self) -> TokenStream {
+        let set_access_right = self.entries.iter().map(|entry| {
+            let start = entry.offset;
+            let end = start + entry.entry_attr.len;
+            let access_right = entry.entry_attr.access.as_ident();
+            quote! {
+                memory_protection.set_access_right_with_range(#start..#end, cameleon_macro::AccessRight::#access_right)
+            }});
+
+        let size = self.size();
+        quote! {
+            fn memory_protection() -> MemoryProtection {
+                let mut memory_protection = cameleon_macro::MemoryProtection::new(#size);
+                #(#set_access_right;)*
+                memory_protection
+            }
+        }
+    }
+
+    fn impl_frament(&self) -> TokenStream {
+        todo!();
+    }
+
+    fn size(&self) -> usize {
+        let last_field = self.entries.last().unwrap();
+        last_field.offset + last_field.entry_attr.len
+    }
 }
 
 struct RegisterEntry {
@@ -102,12 +157,12 @@ struct RegisterEntry {
     offset: usize,
     entry_attr: EntryAttr,
     init: Option<InitValue>,
-    //TODO:docs: Option<Vec<syn::Attribute>>,
+    attrs: Vec<syn::Attribute>,
 }
 
 impl RegisterEntry {
-    fn parse(variant: syn::Variant, offset: &mut usize) -> Result<Self> {
-        let entry_attr = Self::parse_entry_attr(&variant)?;
+    fn parse(mut variant: syn::Variant, offset: &mut usize) -> Result<Self> {
+        let entry_attr = Self::parse_entry_attr(&mut variant)?;
         let ident = variant.ident;
         let entry_offset = *offset;
 
@@ -124,15 +179,18 @@ impl RegisterEntry {
             offset: entry_offset,
             entry_attr,
             init,
+            attrs: variant.attrs,
         })
     }
 
-    fn parse_entry_attr(variant: &syn::Variant) -> Result<EntryAttr> {
+    fn parse_entry_attr(variant: &mut syn::Variant) -> Result<EntryAttr> {
         let mut entry_attr = None;
+        let mut i = 0;
 
-        for attr in variant.attrs.clone() {
-            match attr.path.get_ident() {
+        while i < variant.attrs.len() {
+            match variant.attrs[i].path.get_ident() {
                 Some(ident) if ident == "entry" => {
+                    let attr = variant.attrs.remove(i);
                     if entry_attr.is_none() {
                         let attr: EntryAttr = syn::parse(attr.tokens.into())?;
                         entry_attr = Some(attr);
@@ -140,7 +198,8 @@ impl RegisterEntry {
                         return Err(Error::new_spanned(attr, "duplicated entry attribute"));
                     }
                 }
-                _ => continue,
+
+                _ => i += 1,
             }
         }
 
@@ -181,7 +240,7 @@ impl syn::parse::Parse for EntryAttr {
 
         let ty = if let Ok(_) = ts.parse::<syn::token::Comma>() {
             match ts.parse::<syn::Ident>()? {
-                ty if ty == "type" => {}
+                ty if ty == "ty" => {}
                 other => return Err(Error::new_spanned(other, "expected type")),
             }
             ts.parse::<syn::Token![=]>()?;
@@ -213,6 +272,16 @@ impl AccessRight {
             Ok(AccessRight::RW)
         } else {
             Err(Error::new_spanned(ident, "expected NA, RO, WO, or RW"))
+        }
+    }
+
+    fn as_ident(&self) -> syn::Ident {
+        use AccessRight::*;
+        match self {
+            NA => quote::format_ident!("NA"),
+            RO => quote::format_ident!("RO"),
+            WO => quote::format_ident!("WO"),
+            RW => quote::format_ident!("RW"),
         }
     }
 }
@@ -291,7 +360,7 @@ impl syn::parse::Parse for Endianess {
             Ok(Endianess::LE)
         } else {
             Err(Error::new_spanned(
-                ident,
+                endianess,
                 "only BE or LE is allowed for endianess specifier",
             ))
         }
