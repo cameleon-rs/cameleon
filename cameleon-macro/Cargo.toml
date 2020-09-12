@@ -1,0 +1,12 @@
+[package]
+name = "cameleon-macro"
+version = "0.1.0"
+authors = ["Cameleon Project Developers"]
+edition = "2018"
+
+
+[dependencies]
+cameleon-macro-impl = {path = "impl"}
+
+[dev-dependencies]
+trybuild = "1.0.34"
