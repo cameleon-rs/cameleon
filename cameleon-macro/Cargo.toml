@@ -7,6 +7,8 @@ edition = "2018"
 
 [dependencies]
 cameleon-macro-impl = {path = "impl"}
+thiserror = "1.0.20"
+
 
 [dev-dependencies]
 trybuild = "1.0.34"
