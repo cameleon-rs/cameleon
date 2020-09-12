@@ -13,5 +13,7 @@ pub enum ABRM {
 }
 
 fn main() {
-    let _ = ABRM::GenCpVersionMajor;
+    let raw_entry_local = ABRM::GenCpVersionMajor.into_raw_entry_local();
+    assert_eq!(raw_entry_local.offset, 2);
+    assert_eq!(raw_entry_local.len, 2);
 }

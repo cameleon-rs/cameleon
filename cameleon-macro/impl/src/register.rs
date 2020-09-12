@@ -8,10 +8,12 @@ pub(super) fn expand(
 ) -> Result<proc_macro::TokenStream> {
     let register_enum = RegisterEnum::parse(args, input)?;
 
-    let expanded_enum = register_enum.expand_enum();
+    let expanded_enum = register_enum.define_enum();
+    let impl_enum = register_enum.impl_enum();
 
     Ok(proc_macro::TokenStream::from(quote! {
             #expanded_enum
+            #impl_enum
     }))
 }
 
@@ -47,10 +49,10 @@ impl RegisterEnum {
         })
     }
 
-    fn expand_enum(&self) -> TokenStream {
+    fn define_enum(&self) -> TokenStream {
         let variants = self.entries.iter().map(|entry| {
-            let variant = &entry.ident;
-            quote! {#variant}
+            let ident = &entry.ident;
+            quote! {#ident}
         });
         let enum_name = &self.ident;
         let vis = &self.vis;
@@ -58,6 +60,38 @@ impl RegisterEnum {
         quote! {
             #vis enum #enum_name {
                 #(#variants),*
+            }
+        }
+    }
+
+    fn impl_enum(&self) -> TokenStream {
+        let raw_entry_local = self.impl_into_raw_entry_local();
+        let ident = &self.ident;
+
+        quote! {
+            impl #ident {
+                #raw_entry_local
+            }
+        }
+    }
+
+    fn impl_into_raw_entry_local(&self) -> TokenStream {
+        let enum_ident = &self.ident;
+        let arms = self.entries.iter().map(|entry| {
+            let ident = &entry.ident;
+            let offset = entry.offset;
+            let len = entry.entry_attr.len;
+            quote! {
+                 #enum_ident::#ident => cameleon_macro::RawEntry::new(#offset, #len)
+            }
+        });
+
+        quote! {
+            #[doc(hidden)]
+            pub fn into_raw_entry_local(self) -> cameleon_macro::RawEntry {
+                match self {
+                    #(#arms,)*
+                }
             }
         }
     }

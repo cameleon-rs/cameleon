@@ -2,12 +2,6 @@ pub use cameleon_macro_impl::register;
 
 use thiserror::Error;
 
-#[doc(hidden)]
-pub struct RawEntry {
-    pub offset: usize,
-    pub len: usize,
-}
-
 pub type MemoryResult<T> = std::result::Result<T, MemoryError>;
 
 #[derive(Debug, Error)]
@@ -160,4 +154,16 @@ impl MemoryProtection {
 pub trait MemoryFragment {
     const SIZE: usize;
     fn fragment() -> (Vec<u8>, MemoryProtection);
+}
+
+#[doc(hidden)]
+pub struct RawEntry {
+    pub offset: usize,
+    pub len: usize,
+}
+
+impl RawEntry {
+    pub fn new(offset: usize, len: usize) -> Self {
+        Self { offset, len }
+    }
 }
