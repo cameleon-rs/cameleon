@@ -8,7 +8,11 @@ pub(super) fn expand(
 ) -> Result<proc_macro::TokenStream> {
     let register_enum = RegisterEnum::parse(args, input)?;
 
-    Ok(proc_macro::TokenStream::from(quote! {}))
+    let expanded_enum = register_enum.expand_enum();
+
+    Ok(proc_macro::TokenStream::from(quote! {
+            #expanded_enum
+    }))
 }
 
 struct RegisterEnum {
@@ -41,6 +45,21 @@ impl RegisterEnum {
             endianess,
             entries,
         })
+    }
+
+    fn expand_enum(&self) -> TokenStream {
+        let variants = self.entries.iter().map(|entry| {
+            let variant = &entry.ident;
+            quote! {#variant}
+        });
+        let enum_name = &self.ident;
+        let vis = &self.vis;
+
+        quote! {
+            #vis enum #enum_name {
+                #(#variants),*
+            }
+        }
     }
 }
 

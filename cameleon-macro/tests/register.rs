@@ -12,4 +12,6 @@ pub enum ABRM {
     ManufacturerName = "Cameleon",
 }
 
-fn main() {}
+fn main() {
+    let _ = ABRM::GenCpVersionMajor;
+}
