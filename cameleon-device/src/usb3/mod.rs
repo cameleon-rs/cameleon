@@ -1,29 +1,31 @@
 pub mod protocol;
 pub mod register_map;
+pub mod prelude {
+    pub use protocol::ack::ParseScd;
+    pub use protocol::command::CommandScd;
+
+    use super::*;
+}
 
 mod device_info;
+
+#[cfg(feature = "libusb")]
+mod real;
+
+#[cfg(not(feature = "libusb"))]
+mod emulator;
+
+#[cfg(feature = "libusb")]
+pub use real::*;
+
+#[cfg(not(feature = "libusb"))]
+pub use emulator::*;
 
 pub use device_info::{DeviceInfo, SupportedSpeed};
 
 use std::borrow::Cow;
 
 use thiserror::Error;
-
-#[cfg(feature = "libusb")]
-mod real;
-#[cfg(feature = "libusb")]
-pub use real::*;
-
-#[cfg(not(feature = "libusb"))]
-mod emulator;
-#[cfg(not(feature = "libusb"))]
-pub use emulator::*;
-
-pub mod prelude {
-    use super::*;
-    pub use protocol::ack::ParseScd;
-    pub use protocol::command::CommandScd;
-}
 
 #[derive(Debug, Error)]
 pub enum Error {

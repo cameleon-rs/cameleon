@@ -11,7 +11,7 @@ use super::emulator_builder::{BuilderError, BuilderResult};
 const SBRM_ADDRESS: u64 = 0xffff;
 
 // TODO: Multievent support.
-/// offset | value | Description.
+/// Offset | Value | Description.
 ///      0 |     1 | User Defined Name is supported.
 ///      1 |     0 | Access Privilege and Heartbeat are NOT supported.
 ///      2 |     0 | Message Channel is NOT supported.
@@ -25,7 +25,7 @@ const SBRM_ADDRESS: u64 = 0xffff;
 ///     13 |     1 | Stacked Commands is supported.
 ///     14 |     1 | Device Software Interface Version is supported.
 ///  63-15 |     0 | Reserved. All remained bits are set to 0.
-const DEVICE_CAPABILITY: u64 = 0b111011100001001;
+const DEVICE_CAPABILITY: u64 = 0b110111100001001;
 
 #[derive(Debug, Error)]
 pub(super) enum MemoryError {

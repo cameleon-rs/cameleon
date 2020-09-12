@@ -1,5 +1,4 @@
-use std::io::Cursor;
-use std::time;
+use std::{io::Cursor, time};
 
 use byteorder::{ReadBytesExt, LE};
 
