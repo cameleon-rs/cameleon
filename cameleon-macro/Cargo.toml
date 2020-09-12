@@ -3,12 +3,18 @@ name = "cameleon-macro"
 version = "0.1.0"
 authors = ["Cameleon Project Developers"]
 edition = "2018"
+autotests = false
 
 
 [dependencies]
-cameleon-macro-impl = {path = "impl"}
+cameleon-macro-impl = { path = "impl" }
 thiserror = "1.0.20"
+byteorder = "1.3.4"
 
 
 [dev-dependencies]
-trybuild = "1.0.34"
+trybuild = { version = "1.0.34", features = ["diff"] }
+
+[[test]]
+name = "tests"
+path = "tests/runner.rs"

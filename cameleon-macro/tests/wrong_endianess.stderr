@@ -1,0 +1,5 @@
+error: only BE or LE is allowed for endianess specifier
+ --> $DIR/wrong_endianess.rs:5:24
+  |
+5 | #[register(endianess = Be)]
+  |                        ^^
