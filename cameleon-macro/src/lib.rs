@@ -1,5 +1,5 @@
 pub use byteorder;
-pub use cameleon_macro_impl::register;
+pub use cameleon_macro_impl::{memory, register};
 
 use thiserror::Error;
 
@@ -157,8 +157,8 @@ impl MemoryProtection {
 #[doc(hidden)]
 pub trait MemoryFragment {
     const SIZE: usize;
-    fn fragment() -> MemoryResult<Vec<u8>>;
 
+    fn fragment() -> MemoryResult<Vec<u8>>;
     fn memory_protection() -> MemoryProtection;
 }
 
@@ -169,6 +169,12 @@ pub struct RawEntry {
 }
 
 impl RawEntry {
+    pub fn range(&self) -> std::ops::Range<usize> {
+        let start = self.offset;
+        let end = start + self.len;
+        start..end
+    }
+
     pub fn new(offset: usize, len: usize) -> Self {
         Self { offset, len }
     }
