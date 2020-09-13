@@ -1,4 +1,4 @@
-use cameleon_macro::register;
+use cameleon_impl::register;
 
 const SBRM_ADDRESS: u64 = 0x1000;
 

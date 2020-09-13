@@ -1,5 +1,5 @@
-use cameleon_macro::byteorder::{ReadBytesExt, LE};
-use cameleon_macro::*;
+use cameleon_impl::byteorder::{ReadBytesExt, LE};
+use cameleon_impl::*;
 use std::io::Read;
 
 const SBRM_ADDRESS: u64 = 0x1000;

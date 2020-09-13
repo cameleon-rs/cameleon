@@ -1,5 +1,5 @@
 pub use byteorder;
-pub use cameleon_macro_impl::{memory, register};
+pub use cameleon_impl_macros::{memory, register};
 
 use thiserror::Error;
 

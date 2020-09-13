@@ -1,2 +1,2 @@
 [workspace]
-members = ["cameleon-device", "cameleon-macro"]
+members = ["cameleon-device", "cameleon-impl"]

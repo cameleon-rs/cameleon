@@ -1,5 +1,5 @@
 [package]
-name = "cameleon-macro"
+name = "cameleon-impl"
 version = "0.1.0"
 authors = ["Cameleon Project Developers"]
 edition = "2018"
@@ -8,7 +8,7 @@ publish = false
 
 
 [dependencies]
-cameleon-macro-impl = { path = "impl" }
+cameleon-impl-macros = { path = "macros" }
 thiserror = "1.0.20"
 byteorder = "1.3.4"
 

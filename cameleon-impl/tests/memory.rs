@@ -1,4 +1,4 @@
-use cameleon_macro::{memory, prelude::*, register};
+use cameleon_impl::{memory, prelude::*, register};
 
 const SBRM_ADDRESS: u64 = 0x1000;
 const SIRM_ADDRESS: u64 = 0x2000;
@@ -44,7 +44,7 @@ pub enum SBRM {
 }
 
 fn main() {
-    use cameleon_macro::byteorder::{ReadBytesExt, LE};
+    use cameleon_impl::byteorder::{ReadBytesExt, LE};
 
     let mut memory = Memory::new();
     let mut gen_cp_minor = memory.read_entry(ABRM::GenCpVersionMinor).unwrap();
@@ -65,12 +65,12 @@ fn main() {
 
     assert_eq!(
         memory.access_right(SBRM::EirmLength),
-        cameleon_macro::AccessRight::RO
+        cameleon_impl::AccessRight::RO
     );
-    memory.set_access_right(SBRM::EirmLength, cameleon_macro::AccessRight::NA);
+    memory.set_access_right(SBRM::EirmLength, cameleon_impl::AccessRight::NA);
     assert_eq!(
         memory.access_right(SBRM::EirmLength),
-        cameleon_macro::AccessRight::NA
+        cameleon_impl::AccessRight::NA
     );
 
     assert!(memory.read(1000..1004).is_err());

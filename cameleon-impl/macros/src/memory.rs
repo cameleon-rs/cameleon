@@ -75,7 +75,7 @@ impl MemoryStruct {
             #(#attrs)*
             #vis struct #ident {
                 raw: [u8; #memory_size],
-                protection: cameleon_macro::MemoryProtection,
+                protection: cameleon_impl::MemoryProtection,
             }
         }
     }
@@ -95,51 +95,51 @@ impl MemoryStruct {
         let ident = &self.ident;
 
         quote! {
-            impl cameleon_macro::prelude::MemoryRead for #ident {
-                fn read(&self, range: std::ops::Range<usize>) -> cameleon_macro::MemoryResult<&[u8]> {
+            impl cameleon_impl::prelude::MemoryRead for #ident {
+                fn read(&self, range: std::ops::Range<usize>) -> cameleon_impl::MemoryResult<&[u8]> {
                     self.protection.verify_address_with_range(range.clone())?;
                     let access_right = self.protection.access_right_with_range(range.clone());
                     if !access_right.is_readable() {
-                        return Err(cameleon_macro::MemoryError::AddressNotReadable);
+                        return Err(cameleon_impl::MemoryError::AddressNotReadable);
                     }
 
                     Ok(&self.raw[range])
                 }
 
-                fn read_entry(&self, entry: impl std::convert::Into<cameleon_macro::RawEntry>) -> cameleon_macro::MemoryResult<&[u8]> {
-                    let entry: cameleon_macro::RawEntry = entry.into();
+                fn read_entry(&self, entry: impl std::convert::Into<cameleon_impl::RawEntry>) -> cameleon_impl::MemoryResult<&[u8]> {
+                    let entry: cameleon_impl::RawEntry = entry.into();
                     self.read(entry.range())
                 }
 
-                fn access_right(&self, entry: impl std::convert::Into<cameleon_macro::RawEntry>) -> cameleon_macro::AccessRight {
-                    let entry: cameleon_macro::RawEntry = entry.into();
+                fn access_right(&self, entry: impl std::convert::Into<cameleon_impl::RawEntry>) -> cameleon_impl::AccessRight {
+                    let entry: cameleon_impl::RawEntry = entry.into();
                     self.protection.access_right_with_range(entry.range())
                 }
             }
 
-            impl cameleon_macro::prelude::MemoryWrite for #ident {
-                fn write(&mut self, addr: usize, buf: &[u8]) -> cameleon_macro::MemoryResult<()> {
+            impl cameleon_impl::prelude::MemoryWrite for #ident {
+                fn write(&mut self, addr: usize, buf: &[u8]) -> cameleon_impl::MemoryResult<()> {
                     let range = addr..addr+buf.len();
                     self.protection.verify_address_with_range(range.clone())?;
                     let access_right = self.protection.access_right_with_range(range.clone());
                     if !access_right.is_writable() {
-                        return Err(cameleon_macro::MemoryError::AddressNotWritable);
+                        return Err(cameleon_impl::MemoryError::AddressNotWritable);
                     }
 
                     self.raw[range].copy_from_slice(buf);
                     Ok(())
                 }
 
-                fn set_access_right(&mut self, entry: impl std::convert::Into<cameleon_macro::RawEntry>, access_right: cameleon_macro::AccessRight) {
-                    let entry: cameleon_macro::RawEntry = entry.into();
+                fn set_access_right(&mut self, entry: impl std::convert::Into<cameleon_impl::RawEntry>, access_right: cameleon_impl::AccessRight) {
+                    let entry: cameleon_impl::RawEntry = entry.into();
                     self.protection.set_access_right_with_range(entry.range(), access_right);
                 }
 
 
-                fn write_entry(&mut self, entry: impl std::convert::Into<cameleon_macro::RawEntry>, buf: &[u8]) -> cameleon_macro::MemoryResult<()> {
-                    let entry: cameleon_macro::RawEntry = entry.into();
+                fn write_entry(&mut self, entry: impl std::convert::Into<cameleon_impl::RawEntry>, buf: &[u8]) -> cameleon_impl::MemoryResult<()> {
+                    let entry: cameleon_impl::RawEntry = entry.into();
                     if entry.len < buf.len() {
-                        return Err(cameleon_macro::MemoryError::EntryOverrun);
+                        return Err(cameleon_impl::MemoryError::EntryOverrun);
                     }
 
                     self.write(entry.offset, buf)
@@ -160,8 +160,8 @@ impl MemoryStruct {
             let size = f.size();
             let ty = &f.ty;
             quote! {
-                let fragment = <#ty as cameleon_macro::MemoryFragment>::fragment();
-                let fragment_protection = <#ty as cameleon_macro::MemoryFragment>::memory_protection();
+                let fragment = <#ty as cameleon_impl::MemoryFragment>::fragment();
+                let fragment_protection = <#ty as cameleon_impl::MemoryFragment>::memory_protection();
                 raw[#offset..#offset+#size].copy_from_slice(&fragment);
                 protection.copy_from(&fragment_protection, #offset);
             }
@@ -170,7 +170,7 @@ impl MemoryStruct {
         quote! {
             #vis fn new() -> Self {
                 let mut raw = [0; #memory_size];
-                let mut protection = cameleon_macro::MemoryProtection::new(#memory_size);
+                let mut protection = cameleon_impl::MemoryProtection::new(#memory_size);
                 #(#init_memory)*
                 Self {
                     raw,
@@ -213,7 +213,7 @@ impl MemoryFragment {
     fn size(&self) -> TokenStream {
         let ty = &self.ty;
         quote! {
-            <#ty as cameleon_macro::MemoryFragment>::SIZE
+            <#ty as cameleon_impl::MemoryFragment>::SIZE
         }
     }
 
@@ -221,10 +221,10 @@ impl MemoryFragment {
         let ty = &self.ty;
         let offset = self.offset();
         quote! {
-            impl std::convert::Into<cameleon_macro::RawEntry> for #ty {
-                fn into(self) -> cameleon_macro::RawEntry {
-                    let local_raw_entry = cameleon_macro::MemoryFragment::local_raw_entry(&self);
-                    cameleon_macro::RawEntry::new(local_raw_entry.offset + #offset, local_raw_entry.len)
+            impl std::convert::Into<cameleon_impl::RawEntry> for #ty {
+                fn into(self) -> cameleon_impl::RawEntry {
+                    let local_raw_entry = cameleon_impl::MemoryFragment::local_raw_entry(&self);
+                    cameleon_impl::RawEntry::new(local_raw_entry.offset + #offset, local_raw_entry.len)
                 }
             }
         }

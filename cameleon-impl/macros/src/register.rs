@@ -84,13 +84,13 @@ impl RegisterEnum {
             let offset = entry.offset;
             let len = entry.entry_attr.len();
             quote! {
-                 #enum_ident::#ident => cameleon_macro::RawEntry::new(#offset, #len)
+                 #enum_ident::#ident => cameleon_impl::RawEntry::new(#offset, #len)
             }
         });
 
         quote! {
             #[doc(hidden)]
-            fn local_raw_entry(&self) -> cameleon_macro::RawEntry {
+            fn local_raw_entry(&self) -> cameleon_impl::RawEntry {
                 match self {
                     #(#arms,)*
                 }
@@ -106,7 +106,7 @@ impl RegisterEnum {
         let raw_entry_local = self.impl_local_raw_entry();
 
         Ok(quote! {
-            impl cameleon_macro::MemoryFragment for #ident {
+            impl cameleon_impl::MemoryFragment for #ident {
               const SIZE: usize = #size;
               #memory_protection
               #fragment
@@ -121,13 +121,13 @@ impl RegisterEnum {
             let end = start + entry.entry_attr.len();
             let access_right = &entry.entry_attr.access;
             quote! {
-                memory_protection.set_access_right_with_range(#start..#end, cameleon_macro::AccessRight::#access_right);
+                memory_protection.set_access_right_with_range(#start..#end, cameleon_impl::AccessRight::#access_right);
             }});
 
         let size = self.size();
         quote! {
-            fn memory_protection() -> cameleon_macro::MemoryProtection {
-                let mut memory_protection = cameleon_macro::MemoryProtection::new(#size);
+            fn memory_protection() -> cameleon_impl::MemoryProtection {
+                let mut memory_protection = cameleon_impl::MemoryProtection::new(#size);
                 #(#set_access_right)*
                 memory_protection
             }
@@ -145,7 +145,7 @@ impl RegisterEnum {
         let size = self.size();
         Ok(quote! {
             fn fragment() -> Vec<u8> {
-                use cameleon_macro::byteorder::{#endianess, WriteBytesExt};
+                use cameleon_impl::byteorder::{#endianess, WriteBytesExt};
                 use std::io::Write;
                 let mut fragment_base = vec![0; #size];
                 let mut #fragment = std::io::Cursor::new(fragment_base.as_mut_slice());

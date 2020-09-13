@@ -1,5 +1,5 @@
 [package]
-name = "cameleon-macro-impl"
+name = "cameleon-impl-macros"
 version = "0.1.0"
 authors = ["Cameleon Project Developers"]
 edition = "2018"
