@@ -9,12 +9,10 @@ pub(super) fn expand(
     let register_enum = RegisterEnum::parse(args, input)?;
 
     let expanded_enum = register_enum.define_enum();
-    let impl_enum = register_enum.impl_enum();
     let impl_memory_fragment = register_enum.impl_memory_fragment()?;
 
     Ok(proc_macro::TokenStream::from(quote! {
             #expanded_enum
-            #impl_enum
             #impl_memory_fragment
     }))
 }
@@ -79,18 +77,7 @@ impl RegisterEnum {
         }
     }
 
-    fn impl_enum(&self) -> TokenStream {
-        let raw_entry_local = self.impl_into_raw_entry_local();
-        let ident = &self.ident;
-
-        quote! {
-            impl #ident {
-                #raw_entry_local
-            }
-        }
-    }
-
-    fn impl_into_raw_entry_local(&self) -> TokenStream {
+    fn impl_local_raw_entry(&self) -> TokenStream {
         let enum_ident = &self.ident;
         let arms = self.entries.iter().map(|entry| {
             let ident = &entry.ident;
@@ -103,7 +90,7 @@ impl RegisterEnum {
 
         quote! {
             #[doc(hidden)]
-            pub fn into_raw_entry_local(self) -> cameleon_macro::RawEntry {
+            fn local_raw_entry(&self) -> cameleon_macro::RawEntry {
                 match self {
                     #(#arms,)*
                 }
@@ -116,12 +103,14 @@ impl RegisterEnum {
         let fragment = self.impl_frament()?;
         let ident = &self.ident;
         let size = self.size();
+        let raw_entry_local = self.impl_local_raw_entry();
 
         Ok(quote! {
             impl cameleon_macro::MemoryFragment for #ident {
               const SIZE: usize = #size;
               #memory_protection
               #fragment
+              #raw_entry_local
             }
         })
     }

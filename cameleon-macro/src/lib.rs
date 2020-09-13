@@ -169,6 +169,7 @@ pub trait MemoryFragment {
 
     fn fragment() -> Vec<u8>;
     fn memory_protection() -> MemoryProtection;
+    fn local_raw_entry(&self) -> RawEntry;
 }
 
 #[doc(hidden)]
