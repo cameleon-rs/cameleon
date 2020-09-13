@@ -10,10 +10,12 @@ pub(super) fn expand(
 
     let expanded_struct = memory_struct.define_struct();
     let methods = memory_struct.impl_methods();
+    let impl_into_raw_entry_for_fragments = memory_struct.impl_into_raw_entry_for_fragments();
 
     Ok(proc_macro::TokenStream::from(quote! {
         #expanded_struct
         #methods
+        #impl_into_raw_entry_for_fragments
     }))
 }
 
@@ -167,6 +169,13 @@ impl MemoryStruct {
             }
         }
     }
+
+    fn impl_into_raw_entry_for_fragments(&self) -> TokenStream {
+        let impls = self.fragments.iter().map(|f| f.impl_into_raw_entry());
+        quote! {
+            #(#impls)*
+        }
+    }
 }
 
 struct MemoryFragment {
@@ -195,6 +204,19 @@ impl MemoryFragment {
         let ty = &self.ty;
         quote! {
             <#ty as cameleon_macro::MemoryFragment>::SIZE
+        }
+    }
+
+    fn impl_into_raw_entry(&self) -> TokenStream {
+        let ty = &self.ty;
+        let offset = self.offset();
+        quote! {
+            impl std::convert::Into<cameleon_macro::RawEntry> for #ty {
+                fn into(self) -> cameleon_macro::RawEntry {
+                    let local_raw_entry = cameleon_macro::MemoryFragment::local_raw_entry(&self);
+                    cameleon_macro::RawEntry::new(local_raw_entry.offset + #offset, local_raw_entry.len)
+                }
+            }
         }
     }
 }

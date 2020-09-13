@@ -179,13 +179,13 @@ pub struct RawEntry {
 }
 
 impl RawEntry {
+    pub fn new(offset: usize, len: usize) -> Self {
+        Self { offset, len }
+    }
+
     pub fn range(&self) -> std::ops::Range<usize> {
         let start = self.offset;
         let end = start + self.len;
         start..end
-    }
-
-    pub fn new(offset: usize, len: usize) -> Self {
-        Self { offset, len }
     }
 }
