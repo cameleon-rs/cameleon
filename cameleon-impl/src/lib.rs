@@ -205,3 +205,41 @@ impl RawEntry {
         start..end
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::AccessRight::*;
+    use super::*;
+
+    #[test]
+    fn test_protection() {
+        // [RO, RW, NA, WO, RO];
+        let mut protection = MemoryProtection::new(5);
+        protection.set_access_right(0, RO);
+        protection.set_access_right(1, RW);
+        protection.set_access_right(2, NA);
+        protection.set_access_right(3, WO);
+        protection.set_access_right(4, RO);
+
+        assert_eq!(protection.inner.len(), 2);
+        assert_eq!(protection.access_right(0), RO);
+        assert_eq!(protection.access_right(1), RW);
+        assert_eq!(protection.access_right(2), NA);
+        assert_eq!(protection.access_right(3), WO);
+        assert_eq!(protection.access_right(4), RO);
+
+        assert_eq!(protection.access_right_with_range(0..2), RO);
+        assert_eq!(protection.access_right_with_range(2..4), NA);
+        assert_eq!(protection.access_right_with_range(3..5), NA);
+    }
+
+    #[test]
+    fn test_verify_address() {
+        let protection = MemoryProtection::new(5);
+        assert!(protection.verify_address(0).is_ok());
+        assert!(protection.verify_address(4).is_ok());
+        assert!(protection.verify_address(5).is_err());
+        assert!(protection.verify_address_with_range(2..5).is_ok());
+        assert!(protection.verify_address_with_range(2..6).is_err());
+    }
+}

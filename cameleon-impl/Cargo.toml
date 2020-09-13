@@ -19,3 +19,8 @@ trybuild = { version = "1.0.34", features = ["diff"] }
 [[test]]
 name = "tests"
 path = "tests/runner.rs"
+
+[[test]]
+name = "unit-tests"
+path = "src/lib.rs"
+
