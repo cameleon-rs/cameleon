@@ -76,6 +76,7 @@ impl MemoryStruct {
             #vis struct #ident {
                 raw: [u8; #memory_size],
                 protection: cameleon_impl::MemoryProtection,
+                observers: std::collections::BTreeMap<usize, std::vec::Vec<(cameleon_impl::RawEntry, std::boxed::Box<dyn cameleon_impl::MemoryObserver>)>>,
             }
         }
     }
@@ -87,6 +88,18 @@ impl MemoryStruct {
         quote! {
             impl #ident {
                 #new
+                fn notify_all(&self, start: usize, end: usize) {
+                    use std::ops::Bound::Included;
+
+                    let range = self.observers.range((Included(start), Included(end)));
+                    for (_, observers) in range {
+                        observers.iter().for_each(|(raw_entry, observer)| {
+                            let range = raw_entry.range();
+                            let data = &self.raw[range];
+                            observer.update(data);
+                        });
+                    }
+                }
             }
         }
     }
@@ -119,7 +132,8 @@ impl MemoryStruct {
 
             impl cameleon_impl::prelude::MemoryWrite for #ident {
                 fn write(&mut self, addr: usize, buf: &[u8]) -> cameleon_impl::MemoryResult<()> {
-                    let range = addr..addr+buf.len();
+                    let (start, end) = (addr, addr + buf.len());
+                    let range = start..end;
                     self.protection.verify_address_with_range(range.clone())?;
                     let access_right = self.protection.access_right_with_range(range.clone());
                     if !access_right.is_writable() {
@@ -127,6 +141,9 @@ impl MemoryStruct {
                     }
 
                     self.raw[range].copy_from_slice(buf);
+
+                    self.notify_all(start, end - 1);
+
                     Ok(())
                 }
 
@@ -144,6 +161,17 @@ impl MemoryStruct {
 
                     self.write(entry.offset, buf)
                 }
+
+                fn register_observer(&mut self, observer: impl cameleon_impl::MemoryObserver + 'static + std::clone::Clone, target: impl Into<cameleon_impl::RawEntry>)
+                {
+                    let target: cameleon_impl::RawEntry = target.into();
+
+                    // Insert both start and end address to efficient search.
+                    let (start, end) = (target.offset, target.offset + target.len - 1);
+                    self.observers.entry(start).or_insert(vec![]).push((target, Box::new(observer.clone())));
+                    self.observers.entry(end).or_insert(vec![]).push((target, Box::new(observer)));
+                }
+
             }
         }
     }
@@ -174,7 +202,8 @@ impl MemoryStruct {
                 #(#init_memory)*
                 Self {
                     raw,
-                    protection
+                    protection,
+                    observers: std::collections::BTreeMap::new(),
                 }
             }
         }

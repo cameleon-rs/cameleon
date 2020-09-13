@@ -26,21 +26,61 @@ pub mod prelude {
 
 pub trait MemoryRead {
     fn read(&self, range: std::ops::Range<usize>) -> MemoryResult<&[u8]>;
+
     fn access_right(&self, entry: impl Into<RawEntry>) -> AccessRight;
+
     fn read_entry(&self, entry: impl Into<RawEntry>) -> MemoryResult<&[u8]>;
 }
 
 pub trait MemoryWrite {
     fn write(&mut self, addr: usize, buf: &[u8]) -> MemoryResult<()>;
+
     fn write_entry(&mut self, entry: impl Into<RawEntry>, buf: &[u8]) -> MemoryResult<()>;
+
     fn set_access_right(&mut self, entry: impl Into<RawEntry>, access_right: AccessRight);
+
+    fn register_observer(
+        &mut self,
+        observer: impl MemoryObserver + Clone + 'static,
+        target: impl Into<RawEntry>,
+    );
 }
 
+pub trait MemoryObserver {
+    fn update(&self, data: &[u8]);
+}
+
+/// Represents each register entry address and length.
+#[derive(Debug, Clone, Copy)]
+pub struct RawEntry {
+    /// Offset of the entry.
+    pub offset: usize,
+    /// Length of the entry.
+    pub len: usize,
+}
+
+impl RawEntry {
+    pub fn new(offset: usize, len: usize) -> Self {
+        Self { offset, len }
+    }
+
+    pub fn range(&self) -> std::ops::Range<usize> {
+        let start = self.offset;
+        let end = start + self.len;
+        start..end
+    }
+}
+
+/// Represent access right of each memory cell.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AccessRight {
+    /// Not Available.
     NA,
+    /// Read Only.
     RO,
+    /// Write Only.
     WO,
+    /// Read Write.
     RW,
 }
 
@@ -170,7 +210,7 @@ impl MemoryProtection {
     }
 
     pub fn copy_from(&mut self, rhs: &Self, offset: usize) {
-        // Super slow operation.
+        // Really slow operation.
         // TODO: use bitwise operation to copy.
         for i in 0..rhs.memory_size {
             let access_right = rhs.access_right(i);
@@ -186,24 +226,6 @@ pub trait MemoryFragment {
     fn fragment() -> Vec<u8>;
     fn memory_protection() -> MemoryProtection;
     fn local_raw_entry(&self) -> RawEntry;
-}
-
-#[doc(hidden)]
-pub struct RawEntry {
-    pub offset: usize,
-    pub len: usize,
-}
-
-impl RawEntry {
-    pub fn new(offset: usize, len: usize) -> Self {
-        Self { offset, len }
-    }
-
-    pub fn range(&self) -> std::ops::Range<usize> {
-        let start = self.offset;
-        let end = start + self.len;
-        start..end
-    }
 }
 
 #[cfg(test)]
