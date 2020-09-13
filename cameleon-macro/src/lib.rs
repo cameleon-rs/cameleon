@@ -15,6 +15,9 @@ pub enum MemoryError {
 
     #[error("attempt to access not existed memory location")]
     InvalidAddress,
+
+    #[error("attemt to write bytes to entry, but the bytes length is greater than entry length")]
+    EntryOverrun,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -154,7 +157,7 @@ impl MemoryProtection {
 #[doc(hidden)]
 pub trait MemoryFragment {
     const SIZE: usize;
-    //fn fragment() -> &'static [u8];
+    fn fragment() -> MemoryResult<Vec<u8>>;
 
     fn memory_protection() -> MemoryProtection;
 }

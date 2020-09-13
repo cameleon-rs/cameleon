@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::{Error, Result};
 
 pub(super) fn expand(
@@ -10,7 +10,7 @@ pub(super) fn expand(
 
     let expanded_enum = register_enum.define_enum();
     let impl_enum = register_enum.impl_enum();
-    let impl_memory_fragment = register_enum.impl_memory_fragment();
+    let impl_memory_fragment = register_enum.impl_memory_fragment()?;
 
     Ok(proc_macro::TokenStream::from(quote! {
             #expanded_enum
@@ -53,13 +53,18 @@ impl RegisterEnum {
     }
 
     fn define_enum(&self) -> TokenStream {
-        let variants = self.entries.iter().map(|entry| {
-            let ident = &entry.ident;
-            quote! {#ident}
-        });
         let enum_name = &self.ident;
         let vis = &self.vis;
         let attrs = &self.attrs;
+
+        let variants = self.entries.iter().map(|entry| {
+            let ident = &entry.ident;
+            let attrs = entry.attrs.iter();
+            quote! {
+                #(#attrs)*
+                #ident
+            }
+        });
 
         quote! {
             #(#attrs)*
@@ -101,49 +106,59 @@ impl RegisterEnum {
         }
     }
 
-    fn impl_memory_fragment(&self) -> TokenStream {
+    fn impl_memory_fragment(&self) -> Result<TokenStream> {
         let memory_protection = self.impl_memory_protection();
-        //let fragment = self.impl_frament();
+        let fragment = self.impl_frament()?;
         let ident = &self.ident;
         let size = self.size();
 
-        //quote! {
-        //    impl cameleon_macro::MemoryFragment for #ident {
-        //      const SIZE: usize = #size;
-        //      #memory_protection
-        //      //#fragment
-        //    }
-        //}
-        quote! {
+        Ok(quote! {
             impl cameleon_macro::MemoryFragment for #ident {
               const SIZE: usize = #size;
               #memory_protection
-              //#fragment
+              #fragment
             }
-        }
+        })
     }
 
     fn impl_memory_protection(&self) -> TokenStream {
         let set_access_right = self.entries.iter().map(|entry| {
             let start = entry.offset;
             let end = start + entry.entry_attr.len;
-            let access_right = entry.entry_attr.access.as_ident();
+            let access_right = &entry.entry_attr.access;
             quote! {
-                memory_protection.set_access_right_with_range(#start..#end, cameleon_macro::AccessRight::#access_right)
+                memory_protection.set_access_right_with_range(#start..#end, cameleon_macro::AccessRight::#access_right);
             }});
 
         let size = self.size();
         quote! {
             fn memory_protection() -> MemoryProtection {
                 let mut memory_protection = cameleon_macro::MemoryProtection::new(#size);
-                #(#set_access_right;)*
+                #(#set_access_right)*
                 memory_protection
             }
         }
     }
 
-    fn impl_frament(&self) -> TokenStream {
-        todo!();
+    fn impl_frament(&self) -> Result<TokenStream> {
+        let fragment = format_ident!("fragment");
+        let mut writes = vec![];
+        for entry in &self.entries {
+            writes.push(entry.write_to_fragment(fragment.clone(), self.endianess)?);
+        }
+
+        let endianess = self.endianess;
+        let size = self.size();
+        Ok(quote! {
+            fn fragment() -> cameleon_macro::MemoryResult<Vec<u8>> {
+                use cameleon_macro::byteorder::{#endianess, WriteBytesExt};
+                use std::io::Write;
+                let mut fragment_base = vec![0; #size];
+                let mut #fragment = std::io::Cursor::new(fragment_base.as_mut_slice());
+                #(#writes)*
+                Ok(fragment_base)
+            }
+        })
     }
 
     fn size(&self) -> usize {
@@ -183,6 +198,55 @@ impl RegisterEntry {
         })
     }
 
+    fn write_to_fragment(&self, fragment: syn::Ident, endianess: Endianess) -> Result<TokenStream> {
+        if self.init.is_none() {
+            return Ok(quote! {});
+        }
+
+        let init = self.init.as_ref().unwrap();
+        let start = self.offset as u64;
+        let endianess = endianess;
+
+        let set_position_expand = quote! {#fragment.set_position(#start);};
+
+        let write_expand = match self.infer_init_ty()?.unwrap() {
+            EntryType::Str => {
+                let len = self.entry_attr.len;
+                quote! {
+                    if #len < #init.as_bytes().len() {
+                        return Err(cameleon_macro::MemoryError::EntryOverrun);
+                    }
+                    #fragment.write(#init.as_bytes()).unwrap();
+                }
+            }
+            EntryType::U8 => {
+                quote! {
+                    #fragment.write_u8(#init).unwrap();
+                }
+            }
+            EntryType::U16 => {
+                quote! {
+                    #fragment.write_u16::<#endianess>(#init).unwrap();
+                }
+            }
+            EntryType::U32 => {
+                quote! {
+                    #fragment.write_u32::<#endianess>(#init).unwrap();
+                }
+            }
+            EntryType::U64 => {
+                quote! {
+                    #fragment.write_u64::<#endianess>(#init).unwrap();
+                }
+            }
+        };
+
+        Ok(quote! {
+            #set_position_expand
+            #write_expand
+        })
+    }
+
     fn parse_entry_attr(variant: &mut syn::Variant) -> Result<EntryAttr> {
         let mut entry_attr = None;
         let mut i = 0;
@@ -207,6 +271,38 @@ impl RegisterEntry {
             Ok(entry_attr)
         } else {
             Err(Error::new_spanned(variant, "entry attributes must exist"))
+        }
+    }
+
+    fn infer_init_ty(&self) -> Result<Option<EntryType>> {
+        if self.init.is_none() {
+            return Ok(None);
+        }
+
+        match self.init.as_ref().unwrap() {
+            InitValue::LitStr(string) => match self.entry_attr.ty {
+                Some(_) => Err(Error::new_spanned(
+                    string,
+                    "ty attribute can't be accepted when the initial value is specified as literal",
+                )),
+                None => Ok(Some(EntryType::Str)),
+            },
+
+            InitValue::LitInt(int) => match self.entry_attr.ty {
+                Some(_) => Err(Error::new_spanned(
+                    int,
+                    "ty attribute can't be accepted when the initial value is specified as literal",
+                )),
+                None => Ok(Some(EntryType::integral_from_size(self.entry_attr.len * 8))),
+            },
+
+            InitValue::Var(var) => match self.entry_attr.ty {
+                Some(ty) => Ok(Some(ty)),
+                None => Err(Error::new_spanned(
+                    var,
+                    "ty attribute is required when initial value is specified by ident",
+                )),
+            },
         }
     }
 }
@@ -274,14 +370,16 @@ impl AccessRight {
             Err(Error::new_spanned(ident, "expected NA, RO, WO, or RW"))
         }
     }
+}
 
-    fn as_ident(&self) -> syn::Ident {
+impl quote::ToTokens for AccessRight {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         use AccessRight::*;
         match self {
-            NA => quote::format_ident!("NA"),
-            RO => quote::format_ident!("RO"),
-            WO => quote::format_ident!("WO"),
-            RW => quote::format_ident!("RW"),
+            NA => format_ident!("NA").to_tokens(tokens),
+            RO => format_ident!("RO").to_tokens(tokens),
+            WO => format_ident!("WO").to_tokens(tokens),
+            RW => format_ident!("RW").to_tokens(tokens),
         }
     }
 }
@@ -307,6 +405,17 @@ impl InitValue {
     }
 }
 
+impl quote::ToTokens for InitValue {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            InitValue::LitStr(string) => string.to_tokens(tokens),
+            InitValue::LitInt(int) => int.to_tokens(tokens),
+            InitValue::Var(var) => var.to_tokens(tokens),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 enum EntryType {
     Str,
     U8,
@@ -334,11 +443,31 @@ impl EntryType {
             ))
         }
     }
+
+    fn integral_from_size(size: usize) -> Self {
+        match size {
+            8 => EntryType::U8,
+            16 => EntryType::U16,
+            32 => EntryType::U32,
+            64 => EntryType::U64,
+            _ => panic!(),
+        }
+    }
 }
 
+#[derive(Debug, Clone, Copy)]
 enum Endianess {
     BE,
     LE,
+}
+
+impl quote::ToTokens for Endianess {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            Endianess::BE => format_ident!("BE").to_tokens(tokens),
+            Endianess::LE => format_ident!("LE").to_tokens(tokens),
+        }
+    }
 }
 
 impl syn::parse::Parse for Endianess {
