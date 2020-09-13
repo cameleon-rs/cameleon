@@ -1,4 +1,4 @@
-use cameleon_macro::{memory, register};
+use cameleon_macro::{memory, prelude::*, register};
 
 const SBRM_ADDRESS: u64 = 0x1000;
 const SIRM_ADDRESS: u64 = 0x2000;

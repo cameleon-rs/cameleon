@@ -20,6 +20,22 @@ pub enum MemoryError {
     EntryOverrun,
 }
 
+pub mod prelude {
+    pub use super::{MemoryRead, MemoryWrite};
+}
+
+pub trait MemoryRead {
+    fn read(&self, range: std::ops::Range<usize>) -> MemoryResult<&[u8]>;
+    fn access_right(&self, entry: impl Into<RawEntry>) -> AccessRight;
+    fn read_entry(&self, entry: impl Into<RawEntry>) -> MemoryResult<&[u8]>;
+}
+
+pub trait MemoryWrite {
+    fn write(&mut self, addr: usize, buf: &[u8]) -> MemoryResult<()>;
+    fn write_entry(&mut self, entry: impl Into<RawEntry>, buf: &[u8]) -> MemoryResult<()>;
+    fn set_access_right(&mut self, entry: impl Into<RawEntry>, access_right: AccessRight);
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AccessRight {
     NA,

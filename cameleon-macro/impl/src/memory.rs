@@ -10,12 +10,14 @@ pub(super) fn expand(
 
     let expanded_struct = memory_struct.define_struct();
     let methods = memory_struct.impl_methods();
-    let impl_into_raw_entry_for_fragments = memory_struct.impl_into_raw_entry_for_fragments();
+    let memory_trait = memory_struct.impl_memory_trait();
+    let into_raw_entry_for_fragments = memory_struct.impl_into_raw_entry_for_fragments();
 
     Ok(proc_macro::TokenStream::from(quote! {
         #expanded_struct
+        #memory_trait
         #methods
-        #impl_into_raw_entry_for_fragments
+        #into_raw_entry_for_fragments
     }))
 }
 
@@ -81,64 +83,67 @@ impl MemoryStruct {
     fn impl_methods(&self) -> TokenStream {
         let ident = &self.ident;
         let new = self.impl_new();
-        let memory_modifier = self.impl_memory_modifier();
 
         quote! {
             impl #ident {
                 #new
-                #memory_modifier
             }
         }
     }
 
-    fn impl_memory_modifier(&self) -> TokenStream {
-        let vis = &self.vis;
+    fn impl_memory_trait(&self) -> TokenStream {
+        let ident = &self.ident;
 
         quote! {
-            #vis fn read(&self, range: std::ops::Range<usize>) -> cameleon_macro::MemoryResult<&[u8]> {
-                self.protection.verify_address_with_range(range.clone())?;
-                let access_right = self.protection.access_right_with_range(range.clone());
-                if !access_right.is_readable() {
-                    return Err(cameleon_macro::MemoryError::AddressNotReadable);
+            impl cameleon_macro::prelude::MemoryRead for #ident {
+                fn read(&self, range: std::ops::Range<usize>) -> cameleon_macro::MemoryResult<&[u8]> {
+                    self.protection.verify_address_with_range(range.clone())?;
+                    let access_right = self.protection.access_right_with_range(range.clone());
+                    if !access_right.is_readable() {
+                        return Err(cameleon_macro::MemoryError::AddressNotReadable);
+                    }
+
+                    Ok(&self.raw[range])
                 }
 
-                Ok(&self.raw[range])
-            }
-
-            #vis fn write(&mut self, addr: usize, buf: &[u8]) -> cameleon_macro::MemoryResult<()> {
-                let range = addr..addr+buf.len();
-                self.protection.verify_address_with_range(range.clone())?;
-                let access_right = self.protection.access_right_with_range(range.clone());
-                if !access_right.is_writable() {
-                    return Err(cameleon_macro::MemoryError::AddressNotWritable);
+                fn read_entry(&self, entry: impl std::convert::Into<cameleon_macro::RawEntry>) -> cameleon_macro::MemoryResult<&[u8]> {
+                    let entry: cameleon_macro::RawEntry = entry.into();
+                    self.read(entry.range())
                 }
 
-                self.raw[range].copy_from_slice(buf);
-                Ok(())
+                fn access_right(&self, entry: impl std::convert::Into<cameleon_macro::RawEntry>) -> cameleon_macro::AccessRight {
+                    let entry: cameleon_macro::RawEntry = entry.into();
+                    self.protection.access_right_with_range(entry.range())
+                }
             }
 
-            #vis fn set_access_right(&mut self, entry: impl std::convert::Into<cameleon_macro::RawEntry>, access_right: cameleon_macro::AccessRight) {
-                let entry: cameleon_macro::RawEntry = entry.into();
-                self.protection.set_access_right_with_range(entry.range(), access_right);
-            }
+            impl cameleon_macro::prelude::MemoryWrite for #ident {
+                fn write(&mut self, addr: usize, buf: &[u8]) -> cameleon_macro::MemoryResult<()> {
+                    let range = addr..addr+buf.len();
+                    self.protection.verify_address_with_range(range.clone())?;
+                    let access_right = self.protection.access_right_with_range(range.clone());
+                    if !access_right.is_writable() {
+                        return Err(cameleon_macro::MemoryError::AddressNotWritable);
+                    }
 
-            #vis fn access_right(&self, entry: impl std::convert::Into<cameleon_macro::RawEntry>) -> cameleon_macro::AccessRight {
-                let entry: cameleon_macro::RawEntry = entry.into();
-                self.protection.access_right_with_range(entry.range())
-            }
-
-            #vis fn read_entry(&self, entry: impl std::convert::Into<cameleon_macro::RawEntry>) -> cameleon_macro::MemoryResult<&[u8]> {
-                let entry: cameleon_macro::RawEntry = entry.into();
-                self.read(entry.range())
-            }
-
-            #vis fn write_entry(&mut self, entry: impl std::convert::Into<cameleon_macro::RawEntry>, buf: &[u8]) -> cameleon_macro::MemoryResult<()> {
-                let entry: cameleon_macro::RawEntry = entry.into();
-                if entry.len < buf.len() {
-                    return Err(cameleon_macro::MemoryError::EntryOverrun);
+                    self.raw[range].copy_from_slice(buf);
+                    Ok(())
                 }
 
-                self.write(entry.offset, buf)
+                fn set_access_right(&mut self, entry: impl std::convert::Into<cameleon_macro::RawEntry>, access_right: cameleon_macro::AccessRight) {
+                    let entry: cameleon_macro::RawEntry = entry.into();
+                    self.protection.set_access_right_with_range(entry.range(), access_right);
+                }
+
+
+                fn write_entry(&mut self, entry: impl std::convert::Into<cameleon_macro::RawEntry>, buf: &[u8]) -> cameleon_macro::MemoryResult<()> {
+                    let entry: cameleon_macro::RawEntry = entry.into();
+                    if entry.len < buf.len() {
+                        return Err(cameleon_macro::MemoryError::EntryOverrun);
+                    }
+
+                    self.write(entry.offset, buf)
+                }
             }
         }
     }
