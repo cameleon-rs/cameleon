@@ -150,13 +150,13 @@ impl RegisterEnum {
         let endianess = self.endianess;
         let size = self.size();
         Ok(quote! {
-            fn fragment() -> cameleon_macro::MemoryResult<Vec<u8>> {
+            fn fragment() -> Vec<u8> {
                 use cameleon_macro::byteorder::{#endianess, WriteBytesExt};
                 use std::io::Write;
                 let mut fragment_base = vec![0; #size];
                 let mut #fragment = std::io::Cursor::new(fragment_base.as_mut_slice());
                 #(#writes)*
-                Ok(fragment_base)
+                fragment_base
             }
         })
     }
@@ -214,7 +214,7 @@ impl RegisterEntry {
                 let len = self.entry_attr.len;
                 quote! {
                     if #len < #init.as_bytes().len() {
-                        return Err(cameleon_macro::MemoryError::EntryOverrun);
+                        panic!("String length overruns entry length");
                     }
                     #fragment.write(#init.as_bytes()).unwrap();
                 }

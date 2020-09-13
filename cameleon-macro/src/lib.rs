@@ -152,13 +152,22 @@ impl MemoryProtection {
         }
         Ok(())
     }
+
+    pub fn copy_from(&mut self, rhs: &Self, offset: usize) {
+        // Super slow operation.
+        // TODO: use bitwise operation to copy.
+        for i in 0..rhs.memory_size {
+            let access_right = rhs.access_right(i);
+            self.set_access_right(offset + i, access_right);
+        }
+    }
 }
 
 #[doc(hidden)]
 pub trait MemoryFragment {
     const SIZE: usize;
 
-    fn fragment() -> MemoryResult<Vec<u8>>;
+    fn fragment() -> Vec<u8>;
     fn memory_protection() -> MemoryProtection;
 }
 

@@ -33,7 +33,7 @@ fn main() {
         AccessRight::RW
     );
 
-    let fragment = ABRM::fragment().unwrap();
+    let fragment = ABRM::fragment();
     let mut cursor = std::io::Cursor::new(&fragment);
 
     assert_eq!(cursor.read_u16::<LE>().unwrap(), 321);
