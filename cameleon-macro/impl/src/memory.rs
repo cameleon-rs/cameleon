@@ -95,7 +95,7 @@ impl MemoryStruct {
         let vis = &self.vis;
 
         quote! {
-            #vis fn read_mem(&self, range: std::ops::Range<usize>) -> cameleon_macro::MemoryResult<&[u8]> {
+            #vis fn read(&self, range: std::ops::Range<usize>) -> cameleon_macro::MemoryResult<&[u8]> {
                 self.protection.verify_address_with_range(range.clone())?;
                 let access_right = self.protection.access_right_with_range(range.clone());
                 if !access_right.is_readable() {
@@ -105,7 +105,7 @@ impl MemoryStruct {
                 Ok(&self.raw[range])
             }
 
-            #vis fn write_mem(&mut self, addr: usize, buf: &[u8]) -> cameleon_macro::MemoryResult<()> {
+            #vis fn write(&mut self, addr: usize, buf: &[u8]) -> cameleon_macro::MemoryResult<()> {
                 let range = addr..addr+buf.len();
                 self.protection.verify_address_with_range(range.clone())?;
                 let access_right = self.protection.access_right_with_range(range.clone());
@@ -122,9 +122,14 @@ impl MemoryStruct {
                 self.protection.set_access_right_with_range(entry.range(), access_right);
             }
 
+            #vis fn access_right(&self, entry: impl std::convert::Into<cameleon_macro::RawEntry>) -> cameleon_macro::AccessRight {
+                let entry: cameleon_macro::RawEntry = entry.into();
+                self.protection.access_right_with_range(entry.range())
+            }
+
             #vis fn read_entry(&self, entry: impl std::convert::Into<cameleon_macro::RawEntry>) -> cameleon_macro::MemoryResult<&[u8]> {
                 let entry: cameleon_macro::RawEntry = entry.into();
-                self.read_mem(entry.range())
+                self.read(entry.range())
             }
 
             #vis fn write_entry(&mut self, entry: impl std::convert::Into<cameleon_macro::RawEntry>, buf: &[u8]) -> cameleon_macro::MemoryResult<()> {
@@ -133,7 +138,7 @@ impl MemoryStruct {
                     return Err(cameleon_macro::MemoryError::EntryOverrun);
                 }
 
-                self.write_mem(entry.offset, buf)
+                self.write(entry.offset, buf)
             }
         }
     }
