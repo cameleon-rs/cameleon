@@ -27,6 +27,7 @@ struct MemoryStruct {
 impl MemoryStruct {
     fn parse(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> Result<Self> {
         let input_struct: syn::ItemStruct = syn::parse(input)?;
+        let span = input_struct.span();
 
         let ident = input_struct.ident;
         let attrs = input_struct.attrs;
@@ -42,6 +43,10 @@ impl MemoryStruct {
             other => {
                 return Err(Error::new_spanned(other, "expected named field"));
             }
+        }
+
+        if fragments.is_empty() {
+            return Err(Error::new(span, "at least one field required"));
         }
 
         Ok(Self {

@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{Error, Result};
+use syn::{spanned::Spanned, Error, Result};
 
 pub(super) fn expand(
     args: proc_macro::TokenStream,
@@ -30,6 +30,7 @@ struct RegisterEnum {
 impl RegisterEnum {
     fn parse(args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> Result<Self> {
         let input_enum: syn::ItemEnum = syn::parse(input)?;
+        let span = input_enum.span();
 
         let ident = input_enum.ident;
         let vis = input_enum.vis;
@@ -41,6 +42,10 @@ impl RegisterEnum {
         for variant in input_enum.variants.into_iter() {
             let ent = RegisterEntry::parse(variant, &mut offset)?;
             entries.push(ent);
+        }
+
+        if entries.is_empty() {
+            return Err(Error::new(span, "at least one variant is required"));
         }
 
         Ok(Self {
