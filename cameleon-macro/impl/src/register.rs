@@ -132,7 +132,7 @@ impl RegisterEnum {
 
         let size = self.size();
         quote! {
-            fn memory_protection() -> MemoryProtection {
+            fn memory_protection() -> cameleon_macro::MemoryProtection {
                 let mut memory_protection = cameleon_macro::MemoryProtection::new(#size);
                 #(#set_access_right)*
                 memory_protection
