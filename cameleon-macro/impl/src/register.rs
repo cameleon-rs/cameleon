@@ -82,7 +82,7 @@ impl RegisterEnum {
         let arms = self.entries.iter().map(|entry| {
             let ident = &entry.ident;
             let offset = entry.offset;
-            let len = entry.entry_attr.len;
+            let len = entry.entry_attr.len();
             quote! {
                  #enum_ident::#ident => cameleon_macro::RawEntry::new(#offset, #len)
             }
@@ -118,7 +118,7 @@ impl RegisterEnum {
     fn impl_memory_protection(&self) -> TokenStream {
         let set_access_right = self.entries.iter().map(|entry| {
             let start = entry.offset;
-            let end = start + entry.entry_attr.len;
+            let end = start + entry.entry_attr.len();
             let access_right = &entry.entry_attr.access;
             quote! {
                 memory_protection.set_access_right_with_range(#start..#end, cameleon_macro::AccessRight::#access_right);
@@ -157,7 +157,7 @@ impl RegisterEnum {
 
     fn size(&self) -> usize {
         let last_field = self.entries.last().unwrap();
-        last_field.offset + last_field.entry_attr.len
+        last_field.offset + last_field.entry_attr.len()
     }
 }
 
@@ -175,7 +175,7 @@ impl RegisterEntry {
         let ident = variant.ident;
         let entry_offset = *offset;
 
-        *offset += entry_attr.len;
+        *offset += entry_attr.len();
 
         let init = if let Some((_, expr)) = variant.discriminant {
             Some(InitValue::from_expr(expr)?)
@@ -205,7 +205,7 @@ impl RegisterEntry {
 
         let write_expand = match self.infer_init_ty()?.unwrap() {
             EntryType::Str => {
-                let len = self.entry_attr.len;
+                let len = self.entry_attr.len();
                 quote! {
                     if #len < #init.as_bytes().len() {
                         panic!("String length overruns entry length");
@@ -287,11 +287,22 @@ impl RegisterEntry {
                     int,
                     "ty attribute can't be accepted when the initial value is specified as literal",
                 )),
-                None => Ok(Some(EntryType::integral_from_size(self.entry_attr.len * 8))),
+                None => Ok(Some(EntryType::integral_from_size(
+                    self.entry_attr.len() * 8,
+                ))),
             },
 
             InitValue::Var(var) => match self.entry_attr.ty {
-                Some(ty) => Ok(Some(ty)),
+                Some(ty) => {
+                    if ty.is_integral() && self.entry_attr.len() != ty.integral_bits() / 8 {
+                        Err(Error::new_spanned(
+                            var,
+                            "specified len doesn't fit with specified ty",
+                        ))
+                    } else {
+                        Ok(Some(ty))
+                    }
+                }
                 None => Err(Error::new_spanned(
                     var,
                     "ty attribute is required when initial value is specified by ident",
@@ -302,9 +313,15 @@ impl RegisterEntry {
 }
 
 struct EntryAttr {
-    len: usize,
+    len: syn::LitInt,
     access: AccessRight,
     ty: Option<EntryType>,
+}
+
+impl EntryAttr {
+    fn len(&self) -> usize {
+        self.len.base10_parse().unwrap()
+    }
 }
 
 impl syn::parse::Parse for EntryAttr {
@@ -318,7 +335,8 @@ impl syn::parse::Parse for EntryAttr {
         };
 
         ts.parse::<syn::Token![=]>()?;
-        let len = ts.parse::<syn::LitInt>()?.base10_parse()?;
+        let len = ts.parse::<syn::LitInt>()?;
+        len.base10_parse::<usize>()?;
         ts.parse::<syn::token::Comma>()?;
 
         match ts.parse::<syn::Ident>()? {
@@ -420,16 +438,17 @@ enum EntryType {
 
 impl EntryType {
     fn from_ident(ident: syn::Ident) -> Result<Self> {
+        use EntryType::*;
         if ident == "String" || ident == "&str" {
-            Ok(EntryType::Str)
+            Ok(Str)
         } else if ident == "u8" {
-            Ok(EntryType::U8)
+            Ok(U8)
         } else if ident == "u16" {
-            Ok(EntryType::U16)
+            Ok(U16)
         } else if ident == "u32" {
-            Ok(EntryType::U32)
+            Ok(U32)
         } else if ident == "u64" {
-            Ok(EntryType::U64)
+            Ok(U64)
         } else {
             Err(Error::new_spanned(
                 ident,
@@ -439,12 +458,32 @@ impl EntryType {
     }
 
     fn integral_from_size(size: usize) -> Self {
+        use EntryType::*;
         match size {
-            8 => EntryType::U8,
-            16 => EntryType::U16,
-            32 => EntryType::U32,
-            64 => EntryType::U64,
+            8 => U8,
+            16 => U16,
+            32 => U32,
+            64 => U64,
             _ => panic!(),
+        }
+    }
+
+    fn is_integral(&self) -> bool {
+        use EntryType::*;
+        match self {
+            U8 | U16 | U32 | U64 => true,
+            Str => false,
+        }
+    }
+
+    fn integral_bits(&self) -> usize {
+        use EntryType::*;
+        match self {
+            U8 => 8,
+            U16 => 16,
+            U32 => 32,
+            U64 => 64,
+            Str => panic!(),
         }
     }
 }
