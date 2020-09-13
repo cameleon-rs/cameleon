@@ -1,0 +1,5 @@
+error: ty attribute is required when initial value is specified by ident
+  --> $DIR/wrong_ty_attr1.rs:17:19
+   |
+17 |     SBRMAddress = SBRM_ADDRESS,
+   |                   ^^^^^^^^^^^^

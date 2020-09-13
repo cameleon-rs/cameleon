@@ -1,0 +1,5 @@
+error: ty attribute can't be accepted when the initial value is specified as literal
+ --> $DIR/wrong_ty_attr2.rs:8:25
+  |
+8 |     GenCpVersionMinor = 321,
+  |                         ^^^
