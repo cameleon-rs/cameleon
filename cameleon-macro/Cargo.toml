@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Cameleon Project Developers"]
 edition = "2018"
 autotests = false
+publish = false
 
 
 [dependencies]
