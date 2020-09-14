@@ -76,7 +76,7 @@ impl MemoryStruct {
             #vis struct #ident {
                 raw: [u8; #memory_size],
                 protection: cameleon_impl::MemoryProtection,
-                observers: std::collections::BTreeMap<usize, std::vec::Vec<(cameleon_impl::RawEntry, std::boxed::Box<dyn cameleon_impl::MemoryObserver>)>>,
+                observers: std::vec::Vec<(cameleon_impl::RawEntry, std::boxed::Box<dyn cameleon_impl::MemoryObserver>)>,
             }
         }
     }
@@ -88,16 +88,15 @@ impl MemoryStruct {
         quote! {
             impl #ident {
                 #new
-                fn notify_all(&self, start: usize, end: usize) {
-                    use std::ops::Bound::Included;
+                fn notify_all(&self, written_range: std::ops::Range<usize>) {
 
-                    let range = self.observers.range((Included(start), Included(end)));
-                    for (_, observers) in range {
-                        observers.iter().for_each(|(raw_entry, observer)| {
-                            let range = raw_entry.range();
-                            let data = &self.raw[range];
-                            observer.update(data);
-                        });
+                    for (raw_entry, observer) in &self.observers {
+
+                        let entry_range = raw_entry.range();
+                        if written_range.start >= entry_range.end || written_range.end <= entry_range.end {
+                            continue;
+                        }
+                        observer.update(&self.raw[entry_range]);
                     }
                 }
             }
@@ -142,7 +141,7 @@ impl MemoryStruct {
 
                     self.raw[range].copy_from_slice(buf);
 
-                    self.notify_all(start, end - 1);
+                    self.notify_all(start..end);
 
                     Ok(())
                 }
@@ -166,10 +165,7 @@ impl MemoryStruct {
                 {
                     let target: cameleon_impl::RawEntry = target.into();
 
-                    // Insert both start and end address to efficient search.
-                    let (start, end) = (target.offset, target.offset + target.len - 1);
-                    self.observers.entry(start).or_insert(vec![]).push((target, Box::new(observer.clone())));
-                    self.observers.entry(end).or_insert(vec![]).push((target, Box::new(observer)));
+                    self.observers.push((target, Box::new(observer)));
                 }
 
             }
@@ -203,7 +199,7 @@ impl MemoryStruct {
                 Self {
                     raw,
                     protection,
-                    observers: std::collections::BTreeMap::new(),
+                    observers: std::vec::Vec::new(),
                 }
             }
         }
