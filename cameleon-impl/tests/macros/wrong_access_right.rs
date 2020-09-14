@@ -1,4 +1,4 @@
-use cameleon_impl::register;
+use cameleon_impl::memory::register;
 
 #[register(endianess = LE)]
 pub enum ABRM {

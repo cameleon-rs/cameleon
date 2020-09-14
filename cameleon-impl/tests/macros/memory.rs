@@ -1,4 +1,4 @@
-use cameleon_impl::{memory, prelude::*, register};
+use cameleon_impl::memory::{memory, prelude::*, register, AccessRight};
 
 const SBRM_ADDRESS: u64 = 0x1000;
 const SIRM_ADDRESS: u64 = 0x2000;
@@ -63,15 +63,9 @@ fn main() {
     let sirm_address = sirm_address.read_u64::<LE>().unwrap();
     assert_eq!(sirm_address, SIRM_ADDRESS);
 
-    assert_eq!(
-        memory.access_right(SBRM::EirmLength),
-        cameleon_impl::AccessRight::RO
-    );
-    memory.set_access_right(SBRM::EirmLength, cameleon_impl::AccessRight::NA);
-    assert_eq!(
-        memory.access_right(SBRM::EirmLength),
-        cameleon_impl::AccessRight::NA
-    );
+    assert_eq!(memory.access_right(SBRM::EirmLength), AccessRight::RO);
+    memory.set_access_right(SBRM::EirmLength, AccessRight::NA);
+    assert_eq!(memory.access_right(SBRM::EirmLength), AccessRight::NA);
 
     assert!(memory.read(1000..1004).is_err());
 }
