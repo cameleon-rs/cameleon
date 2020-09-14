@@ -11,13 +11,11 @@ pub(super) fn expand(
     let expanded_struct = memory_struct.define_struct();
     let methods = memory_struct.impl_methods();
     let memory_trait = memory_struct.impl_memory_trait();
-    let into_raw_entry_for_fragments = memory_struct.impl_into_raw_entry_for_fragments();
 
     Ok(proc_macro::TokenStream::from(quote! {
         #expanded_struct
         #memory_trait
         #methods
-        #into_raw_entry_for_fragments
     }))
 }
 
@@ -64,8 +62,8 @@ impl MemoryStruct {
     fn define_struct(&self) -> TokenStream {
         let last_fragment = self.fragments.last().unwrap();
         let last_fragment_size = last_fragment.size();
-        let last_fragment_offset = last_fragment.offset();
-        let memory_size = quote! {#last_fragment_size + #last_fragment_offset};
+        let last_fragment_base = last_fragment.base();
+        let memory_size = quote! {#last_fragment_size + #last_fragment_base};
 
         let ident = &self.ident;
         let vis = &self.vis;
@@ -118,14 +116,15 @@ impl MemoryStruct {
                     Ok(&self.raw[range])
                 }
 
-                fn read_entry(&self, entry: impl std::convert::Into<cameleon_impl::memory::RawEntry>) -> cameleon_impl::memory::MemoryResult<&[u8]> {
-                    let entry: cameleon_impl::memory::RawEntry = entry.into();
-                    self.read(entry.range())
+                fn read_entry<T: cameleon_impl::memory::RegisterEntry>(&self) -> cameleon_impl::memory::MemoryResult<T::Ty> {
+                    let range = T::raw_entry().range();
+                    debug_assert!(self.protection.verify_address_with_range(range.clone()).is_ok());
+
+                    T::parse(&self.raw[range])
                 }
 
-                fn access_right(&self, entry: impl std::convert::Into<cameleon_impl::memory::RawEntry>) -> cameleon_impl::memory::AccessRight {
-                    let entry: cameleon_impl::memory::RawEntry = entry.into();
-                    self.protection.access_right_with_range(entry.range())
+                fn access_right<T: cameleon_impl::memory::RegisterEntry>(&self) -> cameleon_impl::memory::AccessRight {
+                    self.protection.access_right_with_range(T::raw_entry().range())
                 }
             }
 
@@ -146,26 +145,34 @@ impl MemoryStruct {
                     Ok(())
                 }
 
-                fn set_access_right(&mut self, entry: impl std::convert::Into<cameleon_impl::memory::RawEntry>, access_right: cameleon_impl::memory::AccessRight) {
-                    let entry: cameleon_impl::memory::RawEntry = entry.into();
-                    self.protection.set_access_right_with_range(entry.range(), access_right);
+                fn set_access_right<T: cameleon_impl::memory::RegisterEntry>(&mut self, access_right: cameleon_impl::memory::AccessRight) {
+                    self.protection.set_access_right_with_range(T::raw_entry().range(), access_right);
                 }
 
 
-                fn write_entry(&mut self, entry: impl std::convert::Into<cameleon_impl::memory::RawEntry>, buf: &[u8]) -> cameleon_impl::memory::MemoryResult<()> {
-                    let entry: cameleon_impl::memory::RawEntry = entry.into();
-                    if entry.len < buf.len() {
-                        return Err(cameleon_impl::memory::MemoryError::EntryOverrun);
-                    }
+                fn write_entry<T: cameleon_impl::memory::RegisterEntry>(&mut self, data: T::Ty) -> cameleon_impl::memory::MemoryResult<()>{
+                    let entry = T::raw_entry();
+                    let data = T::serialize(data)?;
+                    let range = entry.range();
 
-                    self.write(entry.offset, buf)
+                    debug_assert!(entry.len == data.len());
+                    debug_assert!(self.protection.verify_address_with_range(range.clone()).is_ok());
+
+                    self.raw[range.clone()].copy_from_slice(data.as_slice());
+
+                    self.notify_all(range);
+
+                    Ok(())
                 }
 
-                fn register_observer(&mut self, observer: impl cameleon_impl::memory::MemoryObserver + 'static + std::clone::Clone, target: impl Into<cameleon_impl::memory::RawEntry>)
+                fn register_observer<T: cameleon_impl::memory::RegisterEntry>(
+                    &mut self,
+                    observer: impl cameleon_impl::memory::MemoryObserver + 'static + std::clone::Clone
+                )
                 {
-                    let target: cameleon_impl::memory::RawEntry = target.into();
+                    let entry = T::raw_entry();
 
-                    self.observers.push((target, Box::new(observer)));
+                    self.observers.push((entry, Box::new(observer)));
                 }
 
             }
@@ -176,18 +183,18 @@ impl MemoryStruct {
         let vis = &self.vis;
         let last_fragment = self.fragments.last().unwrap();
         let last_fragment_size = last_fragment.size();
-        let last_fragment_offset = last_fragment.offset();
+        let last_fragment_offset = last_fragment.base();
         let memory_size = quote! {#last_fragment_size + #last_fragment_offset};
 
         let init_memory = self.fragments.iter().map(|f| {
-            let offset = f.offset();
+            let base = f.base();
             let size = f.size();
             let ty = &f.ty;
             quote! {
-                let fragment = <#ty as cameleon_impl::memory::MemoryFragment>::fragment();
-                let fragment_protection = <#ty as cameleon_impl::memory::MemoryFragment>::memory_protection();
-                raw[#offset..#offset+#size].copy_from_slice(&fragment);
-                protection.copy_from(&fragment_protection, #offset);
+                let fragment = #ty::raw();
+                let fragment_protection = #ty::memory_protection();
+                raw[#base..#base+#size].copy_from_slice(&fragment);
+                protection.copy_from(&fragment_protection, #base);
             }
         });
 
@@ -204,108 +211,29 @@ impl MemoryStruct {
             }
         }
     }
-
-    fn impl_into_raw_entry_for_fragments(&self) -> TokenStream {
-        let impls = self.fragments.iter().map(|f| f.impl_into_raw_entry());
-        quote! {
-            #(#impls)*
-        }
-    }
 }
 
 struct MemoryFragment {
     ty: syn::Path,
-    offset: FragmentOffset,
 }
 
 impl MemoryFragment {
     fn parse(field: syn::Field) -> Result<Self> {
-        let span = field.span();
         let ty = match field.ty {
             syn::Type::Path(p) => p.path,
             other => return Err(Error::new_spanned(other, "expected type path")),
         };
 
-        let offset = FragmentOffset::parse(field.attrs, span)?;
-        Ok(Self { ty, offset })
+        Ok(Self { ty })
     }
 
-    fn offset(&self) -> TokenStream {
-        let offset = &self.offset;
-        quote! {#offset as usize}
+    fn base(&self) -> TokenStream {
+        let ty = &self.ty;
+        quote!(#ty::BASE)
     }
 
     fn size(&self) -> TokenStream {
         let ty = &self.ty;
-        quote! {
-            <#ty as cameleon_impl::memory::MemoryFragment>::SIZE
-        }
-    }
-
-    fn impl_into_raw_entry(&self) -> TokenStream {
-        let ty = &self.ty;
-        let offset = self.offset();
-        quote! {
-            impl std::convert::Into<cameleon_impl::memory::RawEntry> for #ty {
-                fn into(self) -> cameleon_impl::memory::RawEntry {
-                    let local_raw_entry = cameleon_impl::memory::MemoryFragment::local_raw_entry(&self);
-                    cameleon_impl::memory::RawEntry::new(local_raw_entry.offset + #offset, local_raw_entry.len)
-                }
-            }
-        }
-    }
-}
-
-enum FragmentOffset {
-    Lit(syn::LitInt),
-    Var(syn::Path),
-}
-
-impl quote::ToTokens for FragmentOffset {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        match self {
-            FragmentOffset::Lit(ref lit) => lit.to_tokens(tokens),
-            FragmentOffset::Var(ref var) => var.to_tokens(tokens),
-        }
-    }
-}
-
-impl FragmentOffset {
-    fn parse(attrs: Vec<syn::Attribute>, field_span: proc_macro2::Span) -> Result<Self> {
-        let mut offset = None;
-        for attr in attrs.into_iter() {
-            if let Some(ident) = attr.path.get_ident() {
-                if ident != "offset" {
-                    continue;
-                }
-
-                if offset.is_some() {
-                    return Err(Error::new_spanned(attr, "duplicated offset attribute"));
-                }
-
-                let expr: syn::Expr = attr.parse_args()?;
-                offset = match expr {
-                    syn::Expr::Lit(expr_lit) => {
-                        if let syn::Lit::Int(litint) = expr_lit.lit {
-                            Some(FragmentOffset::Lit(litint))
-                        } else {
-                            return Err(Error::new_spanned(
-                                expr_lit,
-                                "argument of offset attribute must be path or litint",
-                            ));
-                        }
-                    }
-                    syn::Expr::Path(p) => Some(FragmentOffset::Var(p.path)),
-                    other => {
-                        return Err(Error::new_spanned(
-                            other,
-                            "argument of offset attribute must be path or litint",
-                        ));
-                    }
-                };
-            }
-        }
-
-        offset.ok_or_else(|| Error::new(field_span, "`#[offset(..)]` is required"))
+        quote!(#ty::SIZE)
     }
 }

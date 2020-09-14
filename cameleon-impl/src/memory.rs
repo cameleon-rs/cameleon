@@ -17,6 +17,9 @@ pub enum MemoryError {
 
     #[error("attemt to write bytes to entry, but the bytes length is greater than entry length")]
     EntryOverrun,
+
+    #[error("entry is broken: {}", 0)]
+    EntryBroken(String),
 }
 
 pub mod prelude {
@@ -26,26 +29,29 @@ pub mod prelude {
 pub trait MemoryRead {
     fn read(&self, range: std::ops::Range<usize>) -> MemoryResult<&[u8]>;
 
-    fn access_right(&self, entry: impl Into<RawEntry>) -> AccessRight;
+    fn access_right<T: RegisterEntry>(&self) -> AccessRight;
 
-    fn read_entry(&self, entry: impl Into<RawEntry>) -> MemoryResult<&[u8]>;
+    /// Read value from the entry.
+    /// Since the host side know nothing about `RawEntry`, this method can be called from the machine side so access rights are temporarily set to `RW`.
+    fn read_entry<T: RegisterEntry>(&self) -> MemoryResult<T::Ty>;
 }
 
 pub trait MemoryWrite {
     fn write(&mut self, addr: usize, buf: &[u8]) -> MemoryResult<()>;
 
-    fn write_entry(&mut self, entry: impl Into<RawEntry>, buf: &[u8]) -> MemoryResult<()>;
+    /// Read value to the entry.
+    /// Since the host side know nothing about `RawEntry`, this method can be called from the machine side so access rights are temporarily set to `RW`.
+    fn write_entry<T: RegisterEntry>(&mut self, data: T::Ty) -> MemoryResult<()>;
 
-    fn set_access_right(&mut self, entry: impl Into<RawEntry>, access_right: AccessRight);
+    fn set_access_right<T: RegisterEntry>(&mut self, access_right: AccessRight);
 
-    fn register_observer(
+    fn register_observer<T: RegisterEntry>(
         &mut self,
         observer: impl MemoryObserver + Clone + 'static,
-        target: impl Into<RawEntry>,
     );
 }
 
-pub trait MemoryObserver {
+pub trait MemoryObserver: Send {
     fn update(&self, data: &[u8]);
 }
 
@@ -219,12 +225,12 @@ impl MemoryProtection {
 }
 
 #[doc(hidden)]
-pub trait MemoryFragment {
-    const SIZE: usize;
+pub trait RegisterEntry {
+    type Ty;
 
-    fn fragment() -> Vec<u8>;
-    fn memory_protection() -> MemoryProtection;
-    fn local_raw_entry(&self) -> RawEntry;
+    fn parse(data: &[u8]) -> MemoryResult<Self::Ty>;
+    fn serialize(data: Self::Ty) -> MemoryResult<Vec<u8>>;
+    fn raw_entry() -> RawEntry;
 }
 
 #[cfg(test)]

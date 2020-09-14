@@ -1,32 +1,34 @@
-use cameleon_impl::{
-    byteorder::{ReadBytesExt, LE},
-    memory::*,
-};
-use std::io::Read;
+use cameleon_impl::memory::*;
 
 const SBRM_ADDRESS: u64 = 0x1000;
 
-#[register(endianess = LE)]
+#[register(base = 0, endianess = LE)]
 pub enum ABRM {
-    #[entry(len = 2, access = RO)]
+    #[entry(len = 2, access = RO, ty = u16)]
     GenCpVersionMinor = 321,
 
-    #[entry(len = 2, access = RO)]
+    #[entry(len = 2, access = RO, ty = u16)]
     GenCpVersionMajor,
 
-    #[entry(len = 64, access = RW)]
+    #[entry(len = 64, access = RW, ty = String)]
     ManufacturerName = "Cameleon\0",
 
     #[entry(len = 8, access = RO, ty = u64)]
     SBRMAddress = SBRM_ADDRESS,
 }
 
-fn main() {
-    assert_eq!(<ABRM as MemoryFragment>::SIZE, 76);
+#[register(base = SBRM_ADDRESS, endianess = LE)]
+pub enum SBRM {
+    #[entry(len = 64, access = RW, ty = String)]
+    ManufacturerName = "Cameleon\0",
+}
 
-    let raw_entry_local = ABRM::GenCpVersionMajor.local_raw_entry();
-    assert_eq!(raw_entry_local.offset, 2);
-    assert_eq!(raw_entry_local.len, 2);
+fn main() {
+    assert_eq!(ABRM::SIZE, 76);
+
+    let raw_entry = ABRM::GenCpVersionMajor::raw_entry();
+    assert_eq!(raw_entry.offset, 2);
+    assert_eq!(raw_entry.len, 2);
 
     let protection = ABRM::memory_protection();
     assert_eq!(protection.access_right_with_range(0..2), AccessRight::RO);
@@ -35,22 +37,7 @@ fn main() {
         AccessRight::RW
     );
 
-    let fragment = ABRM::fragment();
-    let mut cursor = std::io::Cursor::new(&fragment);
-
-    assert_eq!(cursor.read_u16::<LE>().unwrap(), 321);
-
-    cursor.set_position(ABRM::ManufacturerName.local_raw_entry().offset as u64);
-    let mut buf = vec![0; 9];
-    cursor.read(&mut buf).unwrap();
-    assert_eq!(
-        std::ffi::CStr::from_bytes_with_nul(&buf)
-            .unwrap()
-            .to_str()
-            .unwrap(),
-        "Cameleon"
-    );
-
-    cursor.set_position(ABRM::SBRMAddress.local_raw_entry().offset as u64);
-    assert_eq!(cursor.read_u64::<LE>().unwrap(), SBRM_ADDRESS);
+    let raw_entry = SBRM::ManufacturerName::raw_entry();
+    assert_eq!(raw_entry.offset, SBRM_ADDRESS as usize);
+    assert_eq!(raw_entry.len, 64);
 }

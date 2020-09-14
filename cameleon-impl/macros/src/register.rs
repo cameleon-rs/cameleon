@@ -8,19 +8,17 @@ pub(super) fn expand(
 ) -> Result<proc_macro::TokenStream> {
     let register_enum = RegisterEnum::parse(args, input)?;
 
-    let expanded_enum = register_enum.define_enum();
-    let impl_memory_fragment = register_enum.impl_memory_fragment()?;
+    let expanded_module = register_enum.define_module();
 
     Ok(proc_macro::TokenStream::from(quote! {
-            #expanded_enum
-            #impl_memory_fragment
+            #expanded_module
     }))
 }
 
 struct RegisterEnum {
     ident: syn::Ident,
     vis: syn::Visibility,
-    endianess: Endianess,
+    args: Args,
     entries: Vec<RegisterEntry>,
     attrs: Vec<syn::Attribute>,
 }
@@ -32,8 +30,16 @@ impl RegisterEnum {
 
         let ident = input_enum.ident;
         let vis = input_enum.vis;
+        match &vis {
+            syn::Visibility::Restricted(restricted) => {
+                if restricted.in_token.is_some() {
+                    return Err(Error::new_spanned(vis, "pub(in ...) can't be used"));
+                }
+            }
+            _ => {}
+        };
 
-        let endianess: Endianess = syn::parse(args)?;
+        let args: Args = syn::parse(args)?;
 
         let mut offset = 0;
         let mut entries = vec![];
@@ -49,70 +55,58 @@ impl RegisterEnum {
         Ok(Self {
             ident,
             vis,
-            endianess,
+            args,
             entries,
             attrs: input_enum.attrs,
         })
     }
 
-    fn define_enum(&self) -> TokenStream {
-        let enum_name = &self.ident;
+    fn define_module(&self) -> TokenStream {
+        let mod_name = &self.ident;
         let vis = &self.vis;
         let attrs = &self.attrs;
 
-        let variants = self.entries.iter().map(|entry| {
+        let vis_inside_mod = self.modify_visibility();
+
+        let structs = self.entries.iter().map(|entry| {
             let ident = &entry.ident;
             let attrs = entry.attrs.iter();
             quote! {
                 #(#attrs)*
-                #ident
+                #vis_inside_mod struct #ident {}
             }
         });
+
+        let raw = self.impl_raw();
+        let memory_protection = self.impl_memory_protection();
+        let base = self.const_base();
+        let size = self.const_size();
+        let impl_register_entry = self.impl_register_entry();
 
         quote! {
             #(#attrs)*
-            #vis enum #enum_name {
-                #(#variants),*
+            #[allow(non_snake_case)]
+            #vis mod #mod_name {
+                use super::*;
+                #base
+                #size
+                #raw
+                #memory_protection
+                #impl_register_entry
+                #(#structs)*
             }
         }
     }
 
-    fn impl_local_raw_entry(&self) -> TokenStream {
-        let enum_ident = &self.ident;
-        let arms = self.entries.iter().map(|entry| {
-            let ident = &entry.ident;
-            let offset = entry.offset;
-            let len = entry.entry_attr.len();
-            quote! {
-                 #enum_ident::#ident => cameleon_impl::memory::RawEntry::new(#offset, #len)
-            }
-        });
+    fn impl_register_entry(&self) -> TokenStream {
+        let impls = self
+            .entries
+            .iter()
+            .map(|entry| entry.impl_register_entry(&self.args.base, self.args.endianess));
 
         quote! {
-            #[doc(hidden)]
-            fn local_raw_entry(&self) -> cameleon_impl::memory::RawEntry {
-                match self {
-                    #(#arms,)*
-                }
-            }
+            #(#impls)*
         }
-    }
-
-    fn impl_memory_fragment(&self) -> Result<TokenStream> {
-        let memory_protection = self.impl_memory_protection();
-        let fragment = self.impl_frament()?;
-        let ident = &self.ident;
-        let size = self.size();
-        let raw_entry_local = self.impl_local_raw_entry();
-
-        Ok(quote! {
-            impl cameleon_impl::memory::MemoryFragment for #ident {
-              const SIZE: usize = #size;
-              #memory_protection
-              #fragment
-              #raw_entry_local
-            }
-        })
     }
 
     fn impl_memory_protection(&self) -> TokenStream {
@@ -125,8 +119,9 @@ impl RegisterEnum {
             }});
 
         let size = self.size();
+        let vis = self.modify_visibility();
         quote! {
-            fn memory_protection() -> cameleon_impl::memory::MemoryProtection {
+            #vis fn memory_protection() -> cameleon_impl::memory::MemoryProtection {
                 let mut memory_protection = cameleon_impl::memory::MemoryProtection::new(#size);
                 #(#set_access_right)*
                 memory_protection
@@ -134,30 +129,67 @@ impl RegisterEnum {
         }
     }
 
-    fn impl_frament(&self) -> Result<TokenStream> {
+    fn impl_raw(&self) -> TokenStream {
         let fragment = format_ident!("fragment");
         let mut writes = vec![];
         for entry in &self.entries {
-            writes.push(entry.write_to_fragment(fragment.clone(), self.endianess)?);
+            writes.push(entry.init_entry(fragment.clone(), self.args.endianess));
         }
 
-        let endianess = self.endianess;
+        let endianess = self.args.endianess;
         let size = self.size();
-        Ok(quote! {
-            fn fragment() -> Vec<u8> {
+        let vis = self.modify_visibility();
+        quote! {
+            #vis fn raw() -> Vec<u8> {
                 use cameleon_impl::byteorder::{#endianess, WriteBytesExt};
                 use std::io::Write;
-                let mut fragment_base = vec![0; #size];
-                let mut #fragment = std::io::Cursor::new(fragment_base.as_mut_slice());
+                let mut fragment_vec = vec![0; #size];
+                let mut #fragment = std::io::Cursor::new(fragment_vec.as_mut_slice());
                 #(#writes)*
-                fragment_base
+                fragment_vec
             }
-        })
+        }
+    }
+
+    fn const_base(&self) -> TokenStream {
+        let base = &self.args.base;
+        let vis = self.modify_visibility();
+        quote! {
+            #vis const BASE: usize = #base as usize;
+        }
+    }
+
+    fn const_size(&self) -> TokenStream {
+        let size = self.size();
+        let vis = self.modify_visibility();
+        quote! {
+            #vis const SIZE: usize = #size;
+        }
     }
 
     fn size(&self) -> usize {
         let last_field = self.entries.last().unwrap();
         last_field.offset + last_field.entry_attr.len()
+    }
+
+    fn modify_visibility(&self) -> syn::Visibility {
+        use syn::Visibility::*;
+        match &self.vis {
+            Public(_) | Crate(_) => self.vis.clone(),
+            Inherited => syn::parse_str("pub(super)").unwrap(),
+            Restricted(restricted) => {
+                let original = restricted.path.get_ident().unwrap();
+                if original == "crate" {
+                    syn::parse_str("pub(crate)").unwrap()
+                } else if original == "super" {
+                    syn::parse_str("pub(in super::super)").unwrap()
+                } else if original == "self" {
+                    syn::parse_str("pub(super)").unwrap()
+                } else {
+                    unreachable!();
+                }
+            }
+        }
     }
 }
 
@@ -192,9 +224,9 @@ impl RegisterEntry {
         })
     }
 
-    fn write_to_fragment(&self, fragment: syn::Ident, endianess: Endianess) -> Result<TokenStream> {
+    fn init_entry(&self, fragment: syn::Ident, endianess: Endianess) -> TokenStream {
         if self.init.is_none() {
-            return Ok(quote! {});
+            return quote! {};
         }
 
         let init = self.init.as_ref().unwrap();
@@ -203,7 +235,7 @@ impl RegisterEntry {
 
         let set_position_expand = quote! {#fragment.set_position(#start);};
 
-        let write_expand = match self.infer_init_ty()?.unwrap() {
+        let write_expand = match self.entry_attr.ty {
             EntryType::Str => {
                 let len = self.entry_attr.len();
                 quote! {
@@ -235,10 +267,104 @@ impl RegisterEntry {
             }
         };
 
-        Ok(quote! {
+        quote! {
             #set_position_expand
             #write_expand
-        })
+        }
+    }
+
+    fn impl_register_entry(&self, base: &Base, endianess: Endianess) -> TokenStream {
+        let ty = &self.entry_attr.ty;
+        let len = self.entry_attr.len();
+
+        let parse = {
+            let main = match ty {
+                EntryType::Str => quote! {
+                    std::str::from_utf8(data)
+                    .map(|s| s.to_string())
+                    .map_err(|e| cameleon_impl::memory::MemoryError::EntryBroken(format! {"{}", e}))
+                },
+
+                EntryType::U8 => quote! {
+                    data.read_u8().map_err(|e| cameleon_impl::memory::MemoryError::EntryBroken(format! {"{}", e}))
+                },
+
+                EntryType::U16 => quote! {
+                    data.read_u16::<#endianess>().map_err(|e| cameleon_impl::memory::MemoryError::EntryBroken(format! {"{}", e}))
+                },
+
+                EntryType::U32 => quote! {
+                    data.read_u32::<#endianess>().map_err(|e| cameleon_impl::memory::MemoryError::EntryBroken(format! {"{}", e}))
+                },
+
+                EntryType::U64 => quote! {
+                    data.read_u64::<#endianess>().map_err(|e| cameleon_impl::memory::MemoryError::EntryBroken(format! {"{}", e}))
+                },
+            };
+            quote! {
+                fn parse(mut data: &[u8]) -> cameleon_impl::memory::MemoryResult<Self::Ty> {
+                    use cameleon_impl::byteorder::{#endianess, ReadBytesExt};
+                    #main
+                }
+            }
+        };
+
+        let serialize = {
+            let main = match ty {
+                EntryType::Str => quote! {
+                    let mut result = data.into_bytes();
+                    if result.len() < #len {
+                        result.resize(#len, 0);
+                    } else if result.len() > #len {
+                        return Err(cameleon_impl::memory::MemoryError::EntryOverrun);
+                    }
+                },
+                EntryType::U8 => quote! {
+                    let mut result = std::vec::Vec::with_capacity(#len);
+                    result.write_u8(data).unwrap();
+                },
+                EntryType::U16 => quote! {
+                    let mut result = std::vec::Vec::with_capacity(#len);
+                    result.write_u16::<#endianess>(data).unwrap();
+                },
+                EntryType::U32 => quote! {
+                    let mut result = std::vec::Vec::with_capacity(#len);
+                    result.write_u32::<#endianess>(data).unwrap();
+                },
+                EntryType::U64 => quote! {
+                    let mut result = std::vec::Vec::with_capacity(#len);
+                    result.write_u64::<#endianess>(data).unwrap();
+                },
+            };
+            quote! {
+                fn serialize(data: Self::Ty) -> cameleon_impl::memory::MemoryResult<Vec<u8>>
+                {
+                    use cameleon_impl::byteorder::{#endianess, WriteBytesExt};
+
+                    #main
+
+                    Ok(result)
+                }
+            }
+        };
+
+        let offset = self.offset;
+        let raw_entry = quote! {
+            fn raw_entry() -> cameleon_impl::memory::RawEntry {
+                cameleon_impl::memory::RawEntry::new(#base as usize + #offset, #len)
+            }
+        };
+
+        let ident = &self.ident;
+        quote! {
+            impl cameleon_impl::memory::RegisterEntry for #ident {
+                type Ty = #ty;
+
+                #parse
+                #serialize
+                #raw_entry
+            }
+        }
     }
 
     fn parse_entry_attr(variant: &mut syn::Variant) -> Result<EntryAttr> {
@@ -267,55 +393,12 @@ impl RegisterEntry {
             Err(Error::new_spanned(variant, "entry attributes must exist"))
         }
     }
-
-    fn infer_init_ty(&self) -> Result<Option<EntryType>> {
-        if self.init.is_none() {
-            return Ok(None);
-        }
-
-        match self.init.as_ref().unwrap() {
-            InitValue::LitStr(string) => match self.entry_attr.ty {
-                Some(_) => Err(Error::new_spanned(
-                    string,
-                    "ty attribute can't be accepted when the initial value is specified as literal",
-                )),
-                None => Ok(Some(EntryType::Str)),
-            },
-
-            InitValue::LitInt(int) => match self.entry_attr.ty {
-                Some(_) => Err(Error::new_spanned(
-                    int,
-                    "ty attribute can't be accepted when the initial value is specified as literal",
-                )),
-                None => Ok(Some(EntryType::integral_from_size(
-                    self.entry_attr.len() * 8,
-                ))),
-            },
-
-            InitValue::Var(var) => match self.entry_attr.ty {
-                Some(ty) => {
-                    if ty.is_integral() && self.entry_attr.len() != ty.integral_bits() / 8 {
-                        Err(Error::new_spanned(
-                            var,
-                            "specified len doesn't fit with specified ty",
-                        ))
-                    } else {
-                        Ok(Some(ty))
-                    }
-                }
-                None => Err(Error::new_spanned(
-                    var,
-                    "ty attribute is required when initial value is specified by ident",
-                )),
-            },
-        }
-    }
 }
 
 struct EntryAttr {
     len: syn::LitInt,
     access: AccessRight,
-    ty: Option<EntryType>,
+    ty: EntryType,
 }
 
 impl EntryAttr {
@@ -333,12 +416,12 @@ impl syn::parse::Parse for EntryAttr {
             len if len == "len" => {}
             other => return Err(Error::new_spanned(other, "expected len")),
         };
-
         ts.parse::<syn::Token![=]>()?;
         let len = ts.parse::<syn::LitInt>()?;
+        // Verify litint.
         len.base10_parse::<usize>()?;
-        ts.parse::<syn::token::Comma>()?;
 
+        ts.parse::<syn::token::Comma>()?;
         match ts.parse::<syn::Ident>()? {
             access_right if access_right == "access" => {}
             other => return Err(Error::new_spanned(other, "expected access")),
@@ -346,16 +429,20 @@ impl syn::parse::Parse for EntryAttr {
         ts.parse::<syn::Token![=]>()?;
         let access = AccessRight::from_ident(ts.parse::<syn::Ident>()?)?;
 
-        let ty = if let Ok(_) = ts.parse::<syn::token::Comma>() {
-            match ts.parse::<syn::Ident>()? {
-                ty if ty == "ty" => {}
-                other => return Err(Error::new_spanned(other, "expected type")),
-            }
-            ts.parse::<syn::Token![=]>()?;
-            Some(EntryType::from_ident(ts.parse::<syn::Ident>()?)?)
-        } else {
-            None
+        ts.parse::<syn::token::Comma>()?;
+        match ts.parse::<syn::Ident>()? {
+            ty if ty == "ty" => {}
+            other => return Err(Error::new_spanned(other, "expected ty")),
         };
+        ts.parse::<syn::Token![=]>()?;
+        let ty = EntryType::from_ident(ts.parse::<syn::Ident>()?)?;
+
+        if ty.is_integral() && ty.integral_bits() / 8 != len.base10_parse().unwrap() {
+            return Err(Error::new_spanned(
+                len,
+                "specified len doesn't fit with specified ty",
+            ));
+        }
 
         Ok(Self { len, access, ty })
     }
@@ -422,7 +509,10 @@ impl quote::ToTokens for InitValue {
         match self {
             InitValue::LitStr(string) => string.to_tokens(tokens),
             InitValue::LitInt(int) => int.to_tokens(tokens),
-            InitValue::Var(var) => var.to_tokens(tokens),
+            InitValue::Var(path) => {
+                let path = prepend_super_if_needed(path);
+                path.to_tokens(tokens)
+            }
         }
     }
 }
@@ -457,17 +547,6 @@ impl EntryType {
         }
     }
 
-    fn integral_from_size(size: usize) -> Self {
-        use EntryType::*;
-        match size {
-            8 => U8,
-            16 => U16,
-            32 => U32,
-            64 => U64,
-            _ => panic!(),
-        }
-    }
-
     fn is_integral(&self) -> bool {
         use EntryType::*;
         match self {
@@ -488,6 +567,26 @@ impl EntryType {
     }
 }
 
+impl quote::ToTokens for EntryType {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        use EntryType::*;
+        match self {
+            Str => syn::parse_str::<syn::Path>("std::string::String")
+                .unwrap()
+                .to_tokens(tokens),
+            U8 => format_ident!("u8").to_tokens(tokens),
+            U16 => format_ident!("u16").to_tokens(tokens),
+            U32 => format_ident!("u32").to_tokens(tokens),
+            U64 => format_ident!("u64").to_tokens(tokens),
+        }
+    }
+}
+
+struct Args {
+    base: Base,
+    endianess: Endianess,
+}
+
 #[derive(Debug, Clone, Copy)]
 enum Endianess {
     BE,
@@ -503,28 +602,86 @@ impl quote::ToTokens for Endianess {
     }
 }
 
-impl syn::parse::Parse for Endianess {
-    fn parse(input: syn::parse::ParseStream) -> Result<Self> {
+#[derive(Clone)]
+enum Base {
+    Lit(syn::LitInt),
+    Var(syn::Path),
+}
+
+impl quote::ToTokens for Base {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            Base::Lit(lit) => lit.to_tokens(tokens),
+            Base::Var(path) => {
+                let path = prepend_super_if_needed(path);
+                path.to_tokens(tokens)
+            }
+        }
+    }
+}
+
+impl syn::parse::Parse for Args {
+    fn parse(input: syn::parse::ParseStream) -> Result<Args> {
+        let ident = input.parse::<syn::Ident>()?;
+        if ident != "base" {
+            return Err(Error::new_spanned(
+                ident,
+                "expected `#[register(base = .., endianess = ..)]`",
+            ));
+        }
+        input.parse::<syn::Token![=]>()?;
+        let base = input.parse::<syn::Expr>()?;
+        let base = match base {
+            syn::Expr::Lit(expr_lit) => {
+                if let syn::Lit::Int(litint) = expr_lit.lit {
+                    Base::Lit(litint)
+                } else {
+                    return Err(Error::new_spanned(
+                        expr_lit,
+                        "argument of offset attribute must be path or litint",
+                    ));
+                }
+            }
+            syn::Expr::Path(p) => Base::Var(p.path),
+            other => {
+                return Err(Error::new_spanned(
+                    other,
+                    "argument of offset attribute must be path or litint",
+                ));
+            }
+        };
+
+        input.parse::<syn::Token![,]>()?;
         let ident = input.parse::<syn::Ident>()?;
         if ident != "endianess" {
             return Err(Error::new_spanned(
                 ident,
-                "args must be `endianess = LE` or `endianess = BE`",
+                "expected `#[register(base = .., endianess = ..)]`",
             ));
         }
-
         input.parse::<syn::Token![=]>()?;
-
         let endianess = input.parse::<syn::Ident>()?;
-        if endianess == "BE" {
-            Ok(Endianess::BE)
+        let endianess = if endianess == "BE" {
+            Endianess::BE
         } else if endianess == "LE" {
-            Ok(Endianess::LE)
+            Endianess::LE
         } else {
-            Err(Error::new_spanned(
+            return Err(Error::new_spanned(
                 endianess,
                 "only BE or LE is allowed for endianess specifier",
-            ))
-        }
+            ));
+        };
+
+        Ok(Self { base, endianess })
     }
+}
+
+fn prepend_super_if_needed(path: &syn::Path) -> syn::Path {
+    let ident = &path.segments[0];
+    if ident.ident != "super" {
+        return path.clone();
+    }
+
+    let trailing_super = format_ident!("super");
+    syn::parse(quote! { #trailing_super::#path }.into()).unwrap()
 }

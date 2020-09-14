@@ -1,5 +1,5 @@
 error: only BE or LE is allowed for endianess specifier
- --> $DIR/wrong_endianess.rs:5:24
+ --> $DIR/wrong_endianess.rs:5:34
   |
-5 | #[register(endianess = Be)]
-  |                        ^^
+5 | #[register(base = 0, endianess = Le)]
+  |                                  ^^

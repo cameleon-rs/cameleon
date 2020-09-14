@@ -1,0 +1,5 @@
+error: specified len doesn't fit with specified ty
+ --> $DIR/wrong_ty_attr.rs:5:19
+  |
+5 |     #[entry(len = 2, access = RO, ty = u32)]
+  |                   ^
