@@ -340,8 +340,8 @@ impl syn::parse::Parse for EntryAttr {
         ts.parse::<syn::token::Comma>()?;
 
         match ts.parse::<syn::Ident>()? {
-            access_right if access_right == "access_right" => {}
-            other => return Err(Error::new_spanned(other, "expected access_right")),
+            access_right if access_right == "access" => {}
+            other => return Err(Error::new_spanned(other, "expected access")),
         };
         ts.parse::<syn::Token![=]>()?;
         let access = AccessRight::from_ident(ts.parse::<syn::Ident>()?)?;
