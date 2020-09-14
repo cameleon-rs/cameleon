@@ -45,10 +45,10 @@ pub trait MemoryWrite {
 
     fn set_access_right<T: RegisterEntry>(&mut self, access_right: AccessRight);
 
-    fn register_observer<T: RegisterEntry>(
-        &mut self,
-        observer: impl MemoryObserver + Clone + 'static,
-    );
+    fn register_observer<T, U>(&mut self, observer: U)
+    where
+        T: RegisterEntry,
+        U: MemoryObserver + 'static;
 }
 
 pub trait MemoryObserver: Send {

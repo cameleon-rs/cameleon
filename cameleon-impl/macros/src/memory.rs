@@ -165,10 +165,12 @@ impl MemoryStruct {
                     Ok(())
                 }
 
-                fn register_observer<T: cameleon_impl::memory::RegisterEntry>(
+                fn register_observer<T, U>(
                     &mut self,
-                    observer: impl cameleon_impl::memory::MemoryObserver + 'static + std::clone::Clone
+                    observer: U
                 )
+                    where T: cameleon_impl::memory::RegisterEntry,
+                          U: cameleon_impl::memory::MemoryObserver + 'static
                 {
                     let entry = T::raw_entry();
 
