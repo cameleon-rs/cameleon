@@ -17,7 +17,9 @@ const SBRM_ADDRESS: u64 = 0xffff;
 ///     13 |     1 | Stacked Commands is supported.
 ///     14 |     1 | Device Software Interface Version is supported.
 ///  63-15 |     0 | Reserved. All remained bits are set to 0.
-const DEVICE_CAPABILITY: u64 = 0b110111100001001;
+const DEVICE_CAPABILITY: &[u8] = &[
+    0b1001, 0b0000, 0b1111, 0b0110, 0b0000, 0b0000, 0b0000, 0b0000,
+];
 
 #[memory]
 pub(super) struct Memory {
@@ -53,7 +55,7 @@ pub(super) enum ABRM {
     #[entry(len = 64, access = RW, ty = String)]
     UserDefinedName,
 
-    #[entry(len = 8, access = RO, ty = u64)]
+    #[entry(len = 8, access = RO, ty = Bytes)]
     DeviceCapability = DEVICE_CAPABILITY,
 
     #[entry(len = 4, access = RO, ty = u32)]
@@ -83,13 +85,13 @@ pub(super) enum ABRM {
     #[entry(len = 8, access = RO, ty = u64)]
     TimestampIncrement = 1000, // Dummy value indicating device clock runs at 1MHZ.
 
-    #[entry(len = 4, access = NA, ty = u32)]
+    #[entry(len = 4, access = NA, ty = Bytes)]
     AccessPrivilege,
 
-    #[entry(len = 4, access = RO, ty = u32)]
-    ProtocolEndianness = 0xFFFF_FFFF, // Little endian.
+    #[entry(len = 4, access = RO, ty = Bytes)]
+    ProtocolEndianness = &[0xFF, 0xFF, 0xFF, 0xFF], // Little endian.
 
-    #[entry(len = 4, access = NA, ty = u32)]
+    #[entry(len = 4, access = NA, ty = Bytes)]
     ImplementationEndianness,
 
     #[entry(len = 64, access = RO, ty = String)]

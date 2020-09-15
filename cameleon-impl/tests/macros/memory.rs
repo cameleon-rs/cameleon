@@ -32,7 +32,7 @@ enum ABRM {
     DeviceCapability = DEVICE_CAPABILITY,
 
     #[entry(len = 4, access = RO, ty = Bytes)]
-    ProtocolEndianess = &[0x11, 0x22, 0x33, 0x44],
+    ProtocolEndianness = &[0x11, 0x22, 0x33, 0x44],
 }
 
 #[register(base = SBRM_ADDRESS, endianness = BE)]
@@ -69,8 +69,8 @@ fn main() {
     let device_capability = memory.read_entry::<ABRM::DeviceCapability>().unwrap();
     assert_eq!(device_capability.as_slice(), DEVICE_CAPABILITY);
 
-    let protocol_endianess = memory.read_entry::<ABRM::ProtocolEndianess>().unwrap();
-    assert_eq!(protocol_endianess.as_slice(), &[0x11, 0x22, 0x33, 0x44]);
+    let protocol_endianness = memory.read_entry::<ABRM::ProtocolEndianness>().unwrap();
+    assert_eq!(protocol_endianness.as_slice(), &[0x11, 0x22, 0x33, 0x44]);
 
     // Test write entry.
     memory
