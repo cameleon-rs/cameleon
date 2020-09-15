@@ -32,7 +32,7 @@ pub trait MemoryRead {
     fn access_right<T: RegisterEntry>(&self) -> AccessRight;
 
     /// Read value from the entry.
-    /// Since the host side know nothing about `RawEntry`, this method can be called from the machine side so access rights are temporarily set to `RW`.
+    /// Since the host side know nothing about `RegisterEntry`, this method can be called only from the machine side so access rights are temporarily set to `RW`.
     fn read_entry<T: RegisterEntry>(&self) -> MemoryResult<T::Ty>;
 }
 
@@ -40,7 +40,7 @@ pub trait MemoryWrite {
     fn write(&mut self, addr: usize, buf: &[u8]) -> MemoryResult<()>;
 
     /// Read value to the entry.
-    /// Since the host side know nothing about `RawEntry`, this method can be called from the machine side so access rights are temporarily set to `RW`.
+    /// Since the host side know nothing about `RegisterEntry`, this method can be called only from the machine side so access rights are temporarily set to `RW`.
     fn write_entry<T: RegisterEntry>(&mut self, data: T::Ty) -> MemoryResult<()>;
 
     fn set_access_right<T: RegisterEntry>(&mut self, access_right: AccessRight);
