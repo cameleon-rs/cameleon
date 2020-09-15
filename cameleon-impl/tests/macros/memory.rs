@@ -3,6 +3,9 @@ use cameleon_impl::memory::{memory, prelude::*, register, AccessRight};
 const SBRM_ADDRESS: u64 = 0x1000;
 const SIRM_ADDRESS: u64 = 0x2000;
 const EIRM_ADDRESS: u64 = 0x3000;
+const DEVICE_CAPABILITY: &[u8] = &[
+    0b1001, 0b0000, 0b1111, 0b0110, 0b0000, 0b0000, 0b0000, 0b0000,
+];
 
 #[memory]
 pub struct Memory {
@@ -24,6 +27,12 @@ enum ABRM {
 
     #[entry(len = 8, access = RO, ty = u64)]
     SBRMAddress = SBRM_ADDRESS,
+
+    #[entry(len = 8, access = RO, ty = Bytes)]
+    DeviceCapability = DEVICE_CAPABILITY,
+
+    #[entry(len = 4, access = RO, ty = Bytes)]
+    ProtocolEndianess = &[0x11, 0x22, 0x33, 0x44],
 }
 
 #[register(base = SBRM_ADDRESS, endianness = BE)]
@@ -56,6 +65,12 @@ fn main() {
 
     let sirm_address = memory.read_entry::<SBRM::SIRMAddress>().unwrap();
     assert_eq!(sirm_address, SIRM_ADDRESS);
+
+    let device_capability = memory.read_entry::<ABRM::DeviceCapability>().unwrap();
+    assert_eq!(device_capability.as_slice(), DEVICE_CAPABILITY);
+
+    let protocol_endianess = memory.read_entry::<ABRM::ProtocolEndianess>().unwrap();
+    assert_eq!(protocol_endianess.as_slice(), &[0x11, 0x22, 0x33, 0x44]);
 
     // Test write entry.
     memory
