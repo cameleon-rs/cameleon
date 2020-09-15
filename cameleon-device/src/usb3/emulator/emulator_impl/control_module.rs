@@ -13,10 +13,12 @@ use async_std::{
 };
 use thiserror::Error;
 
+use cameleon_impl::memory::{prelude::*, MemoryError, MemoryObserver};
+
 use super::{
     device::Timestamp,
     interface::IfaceState,
-    memory::{EventChain, EventData, Memory, MemoryError},
+    memory::{Memory, ABRM},
     shared_queue::SharedQueue,
     signal::*,
     IfaceKind,
@@ -30,6 +32,8 @@ pub(super) struct ControlModule {
     timestamp: Timestamp,
     queue: SharedQueue<Vec<u8>>,
 }
+
+const MEMORY_EVENT_CHANNEL_CAPACITY: usize = 100;
 
 impl ControlModule {
     pub(super) fn new(
@@ -51,10 +55,13 @@ impl ControlModule {
         signal_tx: Sender<InterfaceSignal>,
         mut signal_rx: Receiver<ControlSignal>,
     ) {
+        let event_handler = self.register_observers().await;
+
         let mut worker_manager = WorkerManager::new(
             self.iface_state.clone(),
             self.memory.clone(),
             self.timestamp.clone(),
+            event_handler,
             self.queue.clone(),
             signal_tx,
         );
@@ -85,6 +92,14 @@ impl ControlModule {
             }
         }
     }
+
+    async fn register_observers(&self) -> MemoryEventHandler {
+        let mut memory = self.memory.lock().await;
+        let (tx, rx) = channel(MEMORY_EVENT_CHANNEL_CAPACITY);
+        memory.register_observer::<ABRM::TimestampLatch, _>(TimeStampLatchObserver { sender: tx });
+
+        MemoryEventHandler { rx }
+    }
 }
 
 struct WorkerManager {
@@ -96,6 +111,8 @@ struct WorkerManager {
     signal_tx: Sender<InterfaceSignal>,
 
     on_processing: Arc<AtomicBool>,
+
+    memory_event_handler: MemoryEventHandler,
 
     /// Work as join handle coupled with `completed_rx`.
     /// All workers spawnd by the manager share this sender.
@@ -110,6 +127,7 @@ impl WorkerManager {
         iface_state: IfaceState,
         memory: Arc<Mutex<Memory>>,
         timestamp: Timestamp,
+        memory_event_handler: MemoryEventHandler,
         queue: SharedQueue<Vec<u8>>,
         signal_tx: Sender<InterfaceSignal>,
     ) -> Self {
@@ -120,9 +138,14 @@ impl WorkerManager {
             iface_state,
             memory,
             timestamp,
-            signal_tx,
+
             queue,
+            signal_tx,
+
             on_processing,
+
+            memory_event_handler,
+
             completed_tx,
             completed_rx,
         }
@@ -133,9 +156,14 @@ impl WorkerManager {
             iface_state: self.iface_state.clone(),
             memory: self.memory.clone(),
             timestamp: self.timestamp.clone(),
+
             queue: self.queue.clone(),
             signal_tx: self.signal_tx.clone(),
+
             on_processing: self.on_processing.clone(),
+
+            memory_event_handler: self.memory_event_handler.clone(),
+
             _completed: self.completed_tx.clone(),
         }
     }
@@ -161,6 +189,8 @@ struct Worker {
     signal_tx: Sender<InterfaceSignal>,
 
     on_processing: Arc<AtomicBool>,
+
+    memory_event_handler: MemoryEventHandler,
 
     _completed: Sender<()>,
 }
@@ -240,7 +270,7 @@ impl Worker {
         let address = scd.address as usize;
         let read_length = scd.read_length as usize;
 
-        match memory.read_mem(address..address + read_length) {
+        match memory.read(address..address + read_length) {
             Ok(data) => {
                 let ack = ack::ReadMem::new(data).finalize(req_id);
                 self.enqueue_or_halt(ack);
@@ -258,7 +288,9 @@ impl Worker {
                 self.enqueue_or_halt(ack);
             }
 
-            Err(MemoryError::AddressNotWritable) => unreachable!(),
+            Err(MemoryError::AddressNotWritable)
+            | Err(MemoryError::EntryOverrun)
+            | Err(MemoryError::EntryBroken(..)) => unreachable!(),
         };
     }
 
@@ -272,16 +304,12 @@ impl Worker {
         let scd_kind = ccd.scd_kind;
 
         let mut memory = self.memory.lock().await;
-        match memory.write_mem(scd.address as usize, scd.data) {
-            Ok(Some(event_chain)) => {
-                // Explictly drop memory to avoid race condition.
+        match memory.write(scd.address as usize, scd.data) {
+            Ok(()) => {
+                // Explicitly drop memory to avoid race condition.
                 drop(memory);
-                self.process_event_chain(event_chain).await;
-                let ack = ack::WriteMem::new(scd.data.len() as u16).finalize(req_id);
-                self.enqueue_or_halt(ack);
-            }
 
-            Ok(None) => {
+                self.memory_event_handler.handle_events(self).await;
                 let ack = ack::WriteMem::new(scd.data.len() as u16).finalize(req_id);
                 self.enqueue_or_halt(ack);
             }
@@ -298,7 +326,9 @@ impl Worker {
                 self.enqueue_or_halt(ack);
             }
 
-            Err(MemoryError::AddressNotReadable) => unreachable!(),
+            Err(MemoryError::AddressNotReadable)
+            | Err(MemoryError::EntryOverrun)
+            | Err(MemoryError::EntryBroken(..)) => unreachable!(),
         };
     }
 
@@ -311,7 +341,7 @@ impl Worker {
         let req_id = ccd.request_id;
         let scd_kind = ccd.scd_kind;
 
-        // TODO: Should we implemnent this command?
+        // TODO: Should we implement this command?
         let ack = ack::ErrorAck::new(ack::GenCpStatus::NotImplemented, scd_kind).finalize(req_id);
         self.enqueue_or_halt(ack);
     }
@@ -325,7 +355,7 @@ impl Worker {
         let req_id = ccd.request_id;
         let scd_kind = ccd.scd_kind;
 
-        // TODO: Should we implemnent this command?
+        // TODO: Should we implement this command?
         let ack = ack::ErrorAck::new(ack::GenCpStatus::NotImplemented, scd_kind).finalize(req_id);
         self.enqueue_or_halt(ack);
     }
@@ -339,24 +369,9 @@ impl Worker {
         let req_id = ccd.request_id;
         let scd_kind = ccd.scd_kind;
 
-        // TODO: Should we implemnent this command?
+        // TODO: Should we implement this command?
         let ack = ack::ErrorAck::new(ack::GenCpStatus::NotImplemented, scd_kind).finalize(req_id);
         self.enqueue_or_halt(ack);
-    }
-
-    async fn process_event_chain(&self, chain: EventChain) {
-        let mut memory = self.memory.lock().await;
-        for event in chain.chain() {
-            match event {
-                EventData::WriteTimestamp { addr } => {
-                    let timestamp_ns = self.timestamp.as_nanos().await;
-                    let signal =
-                        InterfaceSignal::ToEvent(EventSignal::UpdateTimestamp(timestamp_ns));
-                    self.try_send_signal(signal);
-                    memory.write_mem_u64_unchecked(*addr, timestamp_ns);
-                }
-            }
-        }
     }
 
     fn try_extract_scd<'a, T>(&self, command: &cmd::CommandPacket<'a>) -> Option<T>
@@ -398,6 +413,60 @@ impl Worker {
             Err(_) => {
                 log::error!("Control module -> Interface channel is full");
             }
+        }
+    }
+}
+
+enum MemoryEvent {
+    TimestampLatch,
+}
+
+#[derive(Clone)]
+struct MemoryEventHandler {
+    rx: Receiver<MemoryEvent>,
+}
+
+impl MemoryEventHandler {
+    async fn handle_events(&self, worker: &Worker) {
+        loop {
+            match self.rx.try_recv() {
+                Ok(MemoryEvent::TimestampLatch) => self.handle_timestamp_latch(worker).await,
+                Err(_) => break,
+            }
+        }
+    }
+
+    async fn handle_timestamp_latch(&self, worker: &Worker) {
+        let mut memory = worker.memory.lock().await;
+        match memory.read_entry::<ABRM::TimestampLatch>() {
+            Ok(value) => {
+                if value != 1 {
+                    return;
+                }
+            }
+            Err(e) => {
+                log::warn!("failed to read ABRM::TimestampLatch {}", e);
+                return;
+            }
+        }
+
+        let timestamp_ns = worker.timestamp.as_nanos().await;
+        let signal = InterfaceSignal::ToEvent(EventSignal::UpdateTimestamp(timestamp_ns));
+        worker.try_send_signal(signal);
+        if let Err(e) = memory.write_entry::<ABRM::Timestamp>(timestamp_ns) {
+            log::warn!("failed to write to ABRM::Timestamp entry {}", e)
+        }
+    }
+}
+
+struct TimeStampLatchObserver {
+    sender: Sender<MemoryEvent>,
+}
+
+impl MemoryObserver for TimeStampLatchObserver {
+    fn update(&self, _data: &[u8]) {
+        if let Err(e) = self.sender.try_send(MemoryEvent::TimestampLatch) {
+            log::warn!("memory observer error: {}", e);
         }
     }
 }

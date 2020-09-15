@@ -91,7 +91,7 @@ impl MemoryStruct {
                     for (raw_entry, observer) in &self.observers {
 
                         let entry_range = raw_entry.range();
-                        if written_range.start >= entry_range.end || written_range.end <= entry_range.end {
+                        if written_range.start >= entry_range.end || written_range.end <= entry_range.start {
                             continue;
                         }
                         observer.update(&self.raw[entry_range]);

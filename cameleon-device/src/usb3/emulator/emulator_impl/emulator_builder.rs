@@ -37,18 +37,13 @@ pub type BuilderResult<T> = std::result::Result<T, BuilderError>;
 /// ```rust
 /// use cameleon_device::usb3::{EmulatorBuilder, enumerate_device};
 ///
-/// let mut builder = EmulatorBuilder::new();
-///
 /// // Build device with default configuration and pass it to the device pool.
 /// // Now the device pool has one device.
-/// builder.build();
+/// EmulatorBuilder::new().build();
 ///
-/// // Set model name and serial number.
-/// builder.model_name("Cameleon Model").unwrap().serial_number("CAM1984").unwrap();
-///
-/// // Build device and pass it to the device pool.
-/// // Now device pool has two devices.
-/// builder.build();
+/// // Set model name and serial number, then build device.
+/// // Now the device pool has two devices.
+/// EmulatorBuilder::new().model_name("Cameleon Model\0").unwrap().serial_number("CAM1984\0").unwrap().build();
 ///
 /// let devices = enumerate_device().unwrap();
 /// assert_eq!(devices.len(), 2);
@@ -62,7 +57,7 @@ impl EmulatorBuilder {
     pub fn new() -> Self {
         let mut memory = Memory::new();
 
-        // Write dummy serial number.
+        // Set dummy serial number.
         let mut rang = rand::thread_rng();
         let serial_base = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
         let serial_number: String = (0..8)
@@ -92,13 +87,10 @@ impl EmulatorBuilder {
     /// // Now the device pool has one device.
     /// EmulatorBuilder::new().build();
     ///
-    /// // Set model name and serial number.
-    /// let mut builder = EmulatorBuilder::new();
-    /// builder.model_name("Cameleon Model").unwrap().serial_number("CAM1984").unwrap().build();
-    ///
-    /// // Build device and pass it to the device pool.
+    /// // Set model name and serial number, then build device.
     /// // Now the device pool has two devices.
-    /// builder.build();
+    /// EmulatorBuilder::new().model_name("Cameleon Model\0").unwrap().serial_number("CAM1984\0").unwrap().build();
+    ///
     /// ```
     pub fn build(self) {
         let device_info = self.build_device_info();
@@ -122,12 +114,11 @@ impl EmulatorBuilder {
     /// ```rust
     /// use cameleon_device::usb3::EmulatorBuilder;
     ///
-    /// let mut builder = EmulatorBuilder::new();
-    /// assert!(builder.model_name("my camera\0").is_ok());
-    /// assert!(builder.model_name("my camera").is_err());
-    /// assert!(builder.model_name("私のカメラ\0").is_err());
+    /// assert!(EmulatorBuilder::new().model_name("my camera\0").is_ok());
+    /// assert!(EmulatorBuilder::new().model_name("my camera").is_err());
+    /// assert!(EmulatorBuilder::new().model_name("私のカメラ\0").is_err());
     /// ```
-    pub fn model_name(&mut self, name: &str) -> BuilderResult<&mut Self> {
+    pub fn model_name(mut self, name: &str) -> BuilderResult<Self> {
         Self::assert_ascii_zero_terminated_string(name)?;
         self.memory
             .write_entry::<ABRM::ModelName>(name.into())
@@ -151,12 +142,11 @@ impl EmulatorBuilder {
     /// ```rust
     /// use cameleon_device::usb3::EmulatorBuilder;
     ///
-    /// let mut builder = EmulatorBuilder::new();
-    /// assert!(builder.family_name("my camera family\0").is_ok());
-    /// assert!(builder.family_name("my camera family").is_ok());
-    /// assert!(builder.family_name("私のカメラ家族\0").is_err());
+    /// assert!(EmulatorBuilder::new().family_name("my camera family\0").is_ok());
+    /// assert!(EmulatorBuilder::new().family_name("my camera family").is_err());
+    /// assert!(EmulatorBuilder::new().family_name("私のカメラ家族\0").is_err());
     /// ```
-    pub fn family_name(&mut self, name: &str) -> BuilderResult<&mut Self> {
+    pub fn family_name(mut self, name: &str) -> BuilderResult<Self> {
         Self::assert_ascii_zero_terminated_string(name)?;
         self.memory
             .write_entry::<ABRM::FamilyName>(name.into())
@@ -180,12 +170,11 @@ impl EmulatorBuilder {
     /// ```rust
     /// use cameleon_device::usb3::EmulatorBuilder;
     ///
-    /// let mut builder = EmulatorBuilder::new();
-    /// assert!(builder.serial_number("CAM1984\0").is_ok());
-    /// assert!(builder.serial_number("CAM1984").is_err());
-    /// assert!(builder.serial_number("1984年\0").is_err());
+    /// assert!(EmulatorBuilder::new().serial_number("CAM1984\0").is_ok());
+    /// assert!(EmulatorBuilder::new().serial_number("CAM1984").is_err());
+    /// assert!(EmulatorBuilder::new().serial_number("1984年\0").is_err());
     /// ```
-    pub fn serial_number(&mut self, serial: &str) -> BuilderResult<&mut Self> {
+    pub fn serial_number(mut self, serial: &str) -> BuilderResult<Self> {
         Self::assert_ascii_zero_terminated_string(serial)?;
         self.memory
             .write_entry::<ABRM::SerialNumber>(serial.into())
@@ -209,12 +198,11 @@ impl EmulatorBuilder {
     /// ```rust
     /// use cameleon_device::usb3::EmulatorBuilder;
     ///
-    /// let mut builder = EmulatorBuilder::new();
-    /// assert!(builder.user_defined_name("user define name\0").is_ok());
-    /// assert!(builder.user_defined_name("user define name").is_err());
-    /// assert!(builder.user_defined_name("使用者定義名前\0").is_err());
+    /// assert!(EmulatorBuilder::new().user_defined_name("user define name\0").is_ok());
+    /// assert!(EmulatorBuilder::new().user_defined_name("user define name").is_err());
+    /// assert!(EmulatorBuilder::new().user_defined_name("使用者定義名前\0").is_err());
     /// ```
-    pub fn user_defined_name(&mut self, name: &str) -> BuilderResult<&mut Self> {
+    pub fn user_defined_name(mut self, name: &str) -> BuilderResult<Self> {
         Self::assert_ascii_zero_terminated_string(name)?;
         self.memory
             .write_entry::<ABRM::UserDefinedName>(name.into())
