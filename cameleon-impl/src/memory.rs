@@ -52,7 +52,7 @@ pub trait MemoryWrite {
 }
 
 pub trait MemoryObserver: Send {
-    fn update(&self, data: &[u8]);
+    fn update(&self);
 }
 
 /// Represents each register entry address and length.

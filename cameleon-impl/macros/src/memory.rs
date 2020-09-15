@@ -94,7 +94,7 @@ impl MemoryStruct {
                         if written_range.start >= entry_range.end || written_range.end <= entry_range.start {
                             continue;
                         }
-                        observer.update(&self.raw[entry_range]);
+                        observer.update();
                     }
                 }
             }

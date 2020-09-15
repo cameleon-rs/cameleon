@@ -464,7 +464,7 @@ struct TimeStampLatchObserver {
 }
 
 impl MemoryObserver for TimeStampLatchObserver {
-    fn update(&self, _data: &[u8]) {
+    fn update(&self) {
         if let Err(e) = self.sender.try_send(MemoryEvent::TimestampLatch) {
             log::warn!("memory observer error: {}", e);
         }
