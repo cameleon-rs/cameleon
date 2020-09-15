@@ -30,13 +30,10 @@ impl RegisterEnum {
 
         let ident = input_enum.ident;
         let vis = input_enum.vis;
-        match &vis {
-            syn::Visibility::Restricted(restricted) => {
-                if restricted.in_token.is_some() {
-                    return Err(Error::new_spanned(vis, "pub(in ...) can't be used"));
-                }
+        if let syn::Visibility::Restricted(restricted) = &vis {
+            if restricted.in_token.is_some() {
+                return Err(Error::new_spanned(vis, "pub(in ...) can't be used"));
             }
-            _ => {}
         };
 
         let args: Args = syn::parse(args)?;
@@ -86,6 +83,7 @@ impl RegisterEnum {
         quote! {
             #(#attrs)*
             #[allow(non_snake_case)]
+            #[allow(clippy::string_lit_as_bytes)]
             #vis mod #mod_name {
                 use super::*;
                 #base
@@ -242,7 +240,7 @@ impl RegisterEntry {
                     if #len < #init.as_bytes().len() {
                         panic!("String length overruns entry length");
                     }
-                    #fragment.write(#init.as_bytes()).unwrap();
+                    #fragment.write_all(#init.as_bytes()).unwrap();
                 }
             }
             EntryType::U8 => {

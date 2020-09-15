@@ -428,10 +428,9 @@ struct MemoryEventHandler {
 
 impl MemoryEventHandler {
     async fn handle_events(&self, worker: &Worker) {
-        loop {
-            match self.rx.try_recv() {
-                Ok(MemoryEvent::TimestampLatch) => self.handle_timestamp_latch(worker).await,
-                Err(_) => break,
+        while let Ok(event) = self.rx.try_recv() {
+            match event {
+                MemoryEvent::TimestampLatch => self.handle_timestamp_latch(worker).await,
             }
         }
     }
