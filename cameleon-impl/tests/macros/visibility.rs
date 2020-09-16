@@ -41,7 +41,7 @@ mod register {
         EIRMAddress = super::EIRM_ADDRESS,
 
         #[entry(len = 4, access = RO, ty = u32)]
-        EirmLength = 0x20,
+        EIRMLength = 0x20,
     }
 }
 

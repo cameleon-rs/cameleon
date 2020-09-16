@@ -96,7 +96,7 @@ impl ControlModule {
     async fn register_observers(&self) -> MemoryEventHandler {
         let mut memory = self.memory.lock().await;
         let (tx, rx) = channel(MEMORY_EVENT_CHANNEL_CAPACITY);
-        memory.register_observer::<ABRM::TimestampLatch, _>(TimeStampLatchObserver { sender: tx });
+        memory.register_observer::<ABRM::TimestampLatch, _>(TimestampLatchObserver { sender: tx });
 
         MemoryEventHandler { rx }
     }
@@ -458,11 +458,11 @@ impl MemoryEventHandler {
     }
 }
 
-struct TimeStampLatchObserver {
+struct TimestampLatchObserver {
     sender: Sender<MemoryEvent>,
 }
 
-impl MemoryObserver for TimeStampLatchObserver {
+impl MemoryObserver for TimestampLatchObserver {
     fn update(&self) {
         if let Err(e) = self.sender.try_send(MemoryEvent::TimestampLatch) {
             log::warn!("memory observer error: {}", e);

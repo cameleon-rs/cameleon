@@ -38,7 +38,7 @@ enum SBRM {
     EIRMAddress = EIRM_ADDRESS,
 
     #[entry(len = 4, access = RO, ty = u32)]
-    EirmLength = 0x20,
+    EIRMLength = 0x20,
 }
 
 fn main() {
@@ -64,9 +64,9 @@ fn main() {
     let manufacturer_name = memory.read_entry::<ABRM::ManufacturerName>().unwrap();
     assert_eq!(from_zero_terminated_string(&manufacturer_name), "New name");
 
-    assert_eq!(memory.access_right::<SBRM::EirmLength>(), AccessRight::RO);
-    memory.set_access_right::<SBRM::EirmLength>(AccessRight::NA);
-    assert_eq!(memory.access_right::<SBRM::EirmLength>(), AccessRight::NA);
+    assert_eq!(memory.access_right::<SBRM::EIRMLength>(), AccessRight::RO);
+    memory.set_access_right::<SBRM::EIRMLength>(AccessRight::NA);
+    assert_eq!(memory.access_right::<SBRM::EIRMLength>(), AccessRight::NA);
 
     assert!(memory.read(1000..1004).is_err());
 }
