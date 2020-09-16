@@ -280,7 +280,7 @@ impl RegisterEntry {
                 EntryType::Str => quote! {
                     let str_end = data.iter().position(|c| *c == 0)
                         .ok_or_else(|| cameleon_impl::memory::MemoryError::InvalidEntryData("string entry must be null terminated".into()))?;
-                    let result = std::str::from_utf8(&data[..str_end]).map_err(|e| cameleon_impl::memory::MemoryError::InvalidEntryData(format! {"{}", e}))?;
+                    let result = std::str::from_utf8(&data[..str_end]).map_err(|e| cameleon_impl::memory::MemoryError::InvalidEntryData(format! {"{}", e}.into()))?;
                     if !result.is_ascii() {
                         return Err(cameleon_impl::memory::MemoryError::InvalidEntryData("string entry must be ASCII".into()));
                     }
@@ -289,19 +289,19 @@ impl RegisterEntry {
                 },
 
                 EntryType::U8 => quote! {
-                    data.read_u8().map_err(|e| cameleon_impl::memory::MemoryError::InvalidEntryData(format! {"{}", e}))
+                    data.read_u8().map_err(|e| cameleon_impl::memory::MemoryError::InvalidEntryData(format! {"{}", e}.into()))
                 },
 
                 EntryType::U16 => quote! {
-                    data.read_u16::<#endianess>().map_err(|e| cameleon_impl::memory::MemoryError::InvalidEntryData(format! {"{}", e}))
+                    data.read_u16::<#endianess>().map_err(|e| cameleon_impl::memory::MemoryError::InvalidEntryData(format! {"{}", e}.into()))
                 },
 
                 EntryType::U32 => quote! {
-                    data.read_u32::<#endianess>().map_err(|e| cameleon_impl::memory::MemoryError::InvalidEntryData(format! {"{}", e}))
+                    data.read_u32::<#endianess>().map_err(|e| cameleon_impl::memory::MemoryError::InvalidEntryData(format! {"{}", e}.into()))
                 },
 
                 EntryType::U64 => quote! {
-                    data.read_u64::<#endianess>().map_err(|e| cameleon_impl::memory::MemoryError::InvalidEntryData(format! {"{}", e}))
+                    data.read_u64::<#endianess>().map_err(|e| cameleon_impl::memory::MemoryError::InvalidEntryData(format! {"{}", e}.into()))
                 },
             };
             quote! {

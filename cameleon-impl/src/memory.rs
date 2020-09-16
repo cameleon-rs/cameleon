@@ -16,7 +16,7 @@ pub enum MemoryError {
     InvalidAddress,
 
     #[error("invalid entry data: {}", 0)]
-    InvalidEntryData(String),
+    InvalidEntryData(std::borrow::Cow<'static, str>),
 }
 
 pub mod prelude {
