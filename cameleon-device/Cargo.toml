@@ -31,11 +31,3 @@ path = "examples/usb3/device_enumeration.rs"
 [[example]]
 name = "usb3_device_control"
 path = "examples/usb3/device_control.rs"
-
-[[test]]
-name = "normal_scenario"
-path = "tests/normal_scenario.rs"
-
-[[test]]
-name = "exceptional_scenario"
-path = "tests/exceptional_scenario.rs"

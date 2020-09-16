@@ -288,8 +288,9 @@ impl Worker {
                 self.enqueue_or_halt(ack);
             }
 
-            Err(MemoryError::AddressNotWritable)
-            | Err(MemoryError::InvalidEntryData(..)) => unreachable!(),
+            Err(MemoryError::AddressNotWritable) | Err(MemoryError::InvalidEntryData(..)) => {
+                unreachable!()
+            }
         };
     }
 
@@ -325,8 +326,9 @@ impl Worker {
                 self.enqueue_or_halt(ack);
             }
 
-            Err(MemoryError::AddressNotReadable)
-            | Err(MemoryError::InvalidEntryData(..)) => unreachable!(),
+            Err(MemoryError::AddressNotReadable) | Err(MemoryError::InvalidEntryData(..)) => {
+                unreachable!()
+            }
         };
     }
 

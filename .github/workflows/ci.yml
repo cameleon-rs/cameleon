@@ -48,9 +48,8 @@ jobs:
       - name: Rustfmt
         run: cargo fmt --all -- --check --color always
 
-      - name: Clippy for cameleon-device without libusb
-        run: cargo clippy --all-targets --color always -- -D warnings # Check without libusb feature.
-        working-directory: cameleon-device
+      - name: Clippy with default features
+        run: cargo clippy --all-targets --color always -- -D warnings
 
       - name: Clippy for cameleon-device with libusb
         run: cargo clippy --all-targets --features libusb --color always -- -D warnings # Check with libusb feature.
