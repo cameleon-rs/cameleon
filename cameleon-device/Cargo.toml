@@ -18,6 +18,8 @@ cameleon-impl = { path = "../cameleon-impl" }
 # Dependencies for libusb.
 rusb = { version = "0.6.2", optional = true }
 
+[dev-dependencies]
+trybuild = { version = "1.0.34" }
 
 [features]
 libusb = ["rusb"]
