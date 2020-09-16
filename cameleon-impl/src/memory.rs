@@ -15,11 +15,8 @@ pub enum MemoryError {
     #[error("attempt to access not existed memory location")]
     InvalidAddress,
 
-    #[error("attemt to write bytes to entry, but the bytes length is greater than entry length")]
-    EntryOverrun,
-
-    #[error("entry is broken: {}", 0)]
-    EntryBroken(String),
+    #[error("invalid entry data: {}", 0)]
+    InvalidEntryData(String),
 }
 
 pub mod prelude {

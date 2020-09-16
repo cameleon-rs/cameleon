@@ -20,7 +20,7 @@ enum ABRM {
     GenCpVersionMajor,
 
     #[entry(len = 64, access = RW, ty = String)]
-    ManufacturerName = "Cameleon\0",
+    ManufacturerName = "Cameleon",
 
     #[entry(len = 8, access = RO, ty = u64)]
     SBRMAddress = SBRM_ADDRESS,
@@ -52,26 +52,21 @@ fn main() {
     assert_eq!(sbrm_address, SBRM_ADDRESS);
 
     let manufacturer_name = memory.read_entry::<ABRM::ManufacturerName>().unwrap();
-    assert_eq!(from_zero_terminated_string(&manufacturer_name), "Cameleon");
+    assert_eq!(&manufacturer_name, "Cameleon");
 
     let sirm_address = memory.read_entry::<SBRM::SIRMAddress>().unwrap();
     assert_eq!(sirm_address, SIRM_ADDRESS);
 
     // Test write entry.
     memory
-        .write_entry::<ABRM::ManufacturerName>("New name\0".into())
+        .write_entry::<ABRM::ManufacturerName>("New name".into())
         .unwrap();
     let manufacturer_name = memory.read_entry::<ABRM::ManufacturerName>().unwrap();
-    assert_eq!(from_zero_terminated_string(&manufacturer_name), "New name");
+    assert_eq!(&manufacturer_name, "New name");
 
     assert_eq!(memory.access_right::<SBRM::EIRMLength>(), AccessRight::RO);
     memory.set_access_right::<SBRM::EIRMLength>(AccessRight::NA);
     assert_eq!(memory.access_right::<SBRM::EIRMLength>(), AccessRight::NA);
 
     assert!(memory.read(1000..1004).is_err());
-}
-
-fn from_zero_terminated_string(s: &str) -> &str {
-    let string_len = s.as_bytes().iter().position(|c| *c == 0).unwrap();
-    &s[0..string_len]
 }

@@ -15,7 +15,7 @@ use cameleon_impl::memory::prelude::*;
 #[derive(Debug, Error)]
 pub enum BuilderError {
     #[error("invalid string: {}", 0)]
-    InvalidString(&'static str),
+    InvalidString(String),
 }
 
 pub type BuilderResult<T> = std::result::Result<T, BuilderError>;
@@ -43,7 +43,7 @@ pub type BuilderResult<T> = std::result::Result<T, BuilderError>;
 ///
 /// // Set model name and serial number, then build device.
 /// // Now the device pool has two devices.
-/// EmulatorBuilder::new().model_name("Cameleon Model\0").unwrap().serial_number("CAM1984\0").unwrap().build();
+/// EmulatorBuilder::new().model_name("Cameleon Model").unwrap().serial_number("CAM1984").unwrap().build();
 ///
 /// let devices = enumerate_device().unwrap();
 /// assert_eq!(devices.len(), 2);
@@ -89,7 +89,7 @@ impl EmulatorBuilder {
     ///
     /// // Set model name and serial number, then build device.
     /// // Now the device pool has two devices.
-    /// EmulatorBuilder::new().model_name("Cameleon Model\0").unwrap().serial_number("CAM1984\0").unwrap().build();
+    /// EmulatorBuilder::new().model_name("Cameleon Model").unwrap().serial_number("CAM1984").unwrap().build();
     ///
     /// ```
     pub fn build(self) {
@@ -102,7 +102,7 @@ impl EmulatorBuilder {
     ///
     /// If model name isn't set, default name is used.
     ///
-    /// NOTE: Only zero-terminated ASCII string is accepted, and maximum string length is 64.
+    /// NOTE: Only ASCII string is accepted, and maximum string length is 64.
     ///
     /// # Errors
     /// If name is not ASCII string or the length is larger than 64, then
@@ -114,15 +114,13 @@ impl EmulatorBuilder {
     /// ```rust
     /// use cameleon_device::usb3::EmulatorBuilder;
     ///
-    /// assert!(EmulatorBuilder::new().model_name("my camera\0").is_ok());
-    /// assert!(EmulatorBuilder::new().model_name("my camera").is_err());
-    /// assert!(EmulatorBuilder::new().model_name("私のカメラ\0").is_err());
+    /// assert!(EmulatorBuilder::new().model_name("my camera").is_ok());
+    /// assert!(EmulatorBuilder::new().model_name("私のカメラ").is_err());
     /// ```
     pub fn model_name(mut self, name: &str) -> BuilderResult<Self> {
-        Self::assert_ascii_zero_terminated_string(name)?;
         self.memory
-            .write_entry::<ABRM::ModelName>(name.into())
-            .map_err(|_| BuilderError::InvalidString("string length is too large"))?;
+            .write_entry::<ABRM::UserDefinedName>(name.into())
+            .map_err(|e| BuilderError::InvalidString(format! {"{}", e}))?;
         Ok(self)
     }
 
@@ -130,7 +128,7 @@ impl EmulatorBuilder {
     ///
     /// If family name isn't set, default name is used.
     ///
-    /// NOTE: Only zero-terminated ASCII string is accepted, and maximum string length is 64.
+    /// NOTE: Only ASCII string is accepted, and maximum string length is 64.
     ///
     /// # Errors
     /// If name is not ASCII string or the length is larger than 64, then
@@ -142,15 +140,13 @@ impl EmulatorBuilder {
     /// ```rust
     /// use cameleon_device::usb3::EmulatorBuilder;
     ///
-    /// assert!(EmulatorBuilder::new().family_name("my camera family\0").is_ok());
-    /// assert!(EmulatorBuilder::new().family_name("my camera family").is_err());
-    /// assert!(EmulatorBuilder::new().family_name("私のカメラ家族\0").is_err());
+    /// assert!(EmulatorBuilder::new().family_name("my camera family").is_ok());
+    /// assert!(EmulatorBuilder::new().family_name("私のカメラ家族").is_err());
     /// ```
     pub fn family_name(mut self, name: &str) -> BuilderResult<Self> {
-        Self::assert_ascii_zero_terminated_string(name)?;
         self.memory
-            .write_entry::<ABRM::FamilyName>(name.into())
-            .map_err(|_| BuilderError::InvalidString("string length is too large"))?;
+            .write_entry::<ABRM::UserDefinedName>(name.into())
+            .map_err(|e| BuilderError::InvalidString(format! {"{}", e}))?;
         Ok(self)
     }
 
@@ -158,7 +154,7 @@ impl EmulatorBuilder {
     ///
     /// If serial number isn't set, 8 length digit is set at random.
     ///
-    /// NOTE: Only zero-terminated ASCII string is accepted, and maximum string length is 64.
+    /// NOTE: Only ASCII string is accepted, and maximum string length is 64.
     ///
     /// # Errors
     /// If serial is not ASCII string or the length is larger than 64, then
@@ -170,15 +166,13 @@ impl EmulatorBuilder {
     /// ```rust
     /// use cameleon_device::usb3::EmulatorBuilder;
     ///
-    /// assert!(EmulatorBuilder::new().serial_number("CAM1984\0").is_ok());
-    /// assert!(EmulatorBuilder::new().serial_number("CAM1984").is_err());
-    /// assert!(EmulatorBuilder::new().serial_number("1984年\0").is_err());
+    /// assert!(EmulatorBuilder::new().serial_number("CAM1984").is_ok());
+    /// assert!(EmulatorBuilder::new().serial_number("カム1984年").is_err());
     /// ```
     pub fn serial_number(mut self, serial: &str) -> BuilderResult<Self> {
-        Self::assert_ascii_zero_terminated_string(serial)?;
         self.memory
-            .write_entry::<ABRM::SerialNumber>(serial.into())
-            .map_err(|_| BuilderError::InvalidString("string length is too large"))?;
+            .write_entry::<ABRM::UserDefinedName>(serial.into())
+            .map_err(|e| BuilderError::InvalidString(format! {"{}", e}))?;
         Ok(self)
     }
 
@@ -186,7 +180,7 @@ impl EmulatorBuilder {
     ///
     /// If user defined name isn't set, default name is set.
     ///
-    /// NOTE: Only zero-terminated ASCII string is accepted, and maximum string length is 64.
+    /// NOTE: Only ASCII string is accepted, and maximum string length is 64.
     ///
     /// # Errors
     /// If name is not ASCII string or the length is larger than 64, then
@@ -198,15 +192,13 @@ impl EmulatorBuilder {
     /// ```rust
     /// use cameleon_device::usb3::EmulatorBuilder;
     ///
-    /// assert!(EmulatorBuilder::new().user_defined_name("user define name\0").is_ok());
-    /// assert!(EmulatorBuilder::new().user_defined_name("user define name").is_err());
-    /// assert!(EmulatorBuilder::new().user_defined_name("使用者定義名前\0").is_err());
+    /// assert!(EmulatorBuilder::new().user_defined_name("user define name").is_ok());
+    /// assert!(EmulatorBuilder::new().user_defined_name("使用者が定義した名前").is_err());
     /// ```
     pub fn user_defined_name(mut self, name: &str) -> BuilderResult<Self> {
-        Self::assert_ascii_zero_terminated_string(name)?;
         self.memory
             .write_entry::<ABRM::UserDefinedName>(name.into())
-            .map_err(|_| BuilderError::InvalidString("string length is too large"))?;
+            .map_err(|e| BuilderError::InvalidString(format! {"{}", e}))?;
         Ok(self)
     }
 
@@ -251,14 +243,6 @@ impl EmulatorBuilder {
             serial_number,
             user_defined_name,
             supported_speed,
-        }
-    }
-
-    fn assert_ascii_zero_terminated_string(s: &str) -> BuilderResult<()> {
-        if !s.is_empty() && s.is_ascii() && *s.as_bytes().last().unwrap() == 0 {
-            Ok(())
-        } else {
-            Err(BuilderError::InvalidString("Not zero terminated ascii"))
         }
     }
 }

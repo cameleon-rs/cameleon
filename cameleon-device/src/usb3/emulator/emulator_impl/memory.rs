@@ -33,19 +33,19 @@ pub(super) enum ABRM {
     GenCpVersionMajor = 1,
 
     #[entry(len = 64, access = RO, ty = String)]
-    ManufacturerName = "cameleon\0",
+    ManufacturerName = "cameleon",
 
     #[entry(len = 64, access = RO, ty = String)]
-    ModelName = "cameleon model\0",
+    ModelName = "cameleon model",
 
     #[entry(len = 64, access = RO, ty = String)]
-    FamilyName = "cameleon family\0",
+    FamilyName = "cameleon family",
 
     #[entry(len = 64, access = RO, ty = String)]
-    DeviceVersion = "none\0",
+    DeviceVersion = "none",
 
     #[entry(len = 64, access = RO, ty = String)]
-    ManufacturerInfo = "none\0",
+    ManufacturerInfo = "none",
 
     #[entry(len = 64, access = RO, ty = String)]
     SerialNumber,

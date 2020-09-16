@@ -278,25 +278,30 @@ impl RegisterEntry {
         let parse = {
             let main = match ty {
                 EntryType::Str => quote! {
-                    std::str::from_utf8(data)
-                    .map(|s| s.to_string())
-                    .map_err(|e| cameleon_impl::memory::MemoryError::EntryBroken(format! {"{}", e}))
+                    let str_end = data.iter().position(|c| *c == 0)
+                        .ok_or_else(|| cameleon_impl::memory::MemoryError::InvalidEntryData("string entry must be null terminated".into()))?;
+                    let result = std::str::from_utf8(&data[..str_end]).map_err(|e| cameleon_impl::memory::MemoryError::InvalidEntryData(format! {"{}", e}))?;
+                    if !result.is_ascii() {
+                        return Err(cameleon_impl::memory::MemoryError::InvalidEntryData("string entry must be ASCII".into()));
+                    }
+
+                    Ok(result.to_string())
                 },
 
                 EntryType::U8 => quote! {
-                    data.read_u8().map_err(|e| cameleon_impl::memory::MemoryError::EntryBroken(format! {"{}", e}))
+                    data.read_u8().map_err(|e| cameleon_impl::memory::MemoryError::InvalidEntryData(format! {"{}", e}))
                 },
 
                 EntryType::U16 => quote! {
-                    data.read_u16::<#endianess>().map_err(|e| cameleon_impl::memory::MemoryError::EntryBroken(format! {"{}", e}))
+                    data.read_u16::<#endianess>().map_err(|e| cameleon_impl::memory::MemoryError::InvalidEntryData(format! {"{}", e}))
                 },
 
                 EntryType::U32 => quote! {
-                    data.read_u32::<#endianess>().map_err(|e| cameleon_impl::memory::MemoryError::EntryBroken(format! {"{}", e}))
+                    data.read_u32::<#endianess>().map_err(|e| cameleon_impl::memory::MemoryError::InvalidEntryData(format! {"{}", e}))
                 },
 
                 EntryType::U64 => quote! {
-                    data.read_u64::<#endianess>().map_err(|e| cameleon_impl::memory::MemoryError::EntryBroken(format! {"{}", e}))
+                    data.read_u64::<#endianess>().map_err(|e| cameleon_impl::memory::MemoryError::InvalidEntryData(format! {"{}", e}))
                 },
             };
             quote! {
@@ -310,25 +315,39 @@ impl RegisterEntry {
         let serialize = {
             let main = match ty {
                 EntryType::Str => quote! {
+                    if !data.is_ascii() {
+                        return Err(cameleon_impl::memory::MemoryError::InvalidEntryData("string must be ASCII string".into()))
+                    }
+
                     let mut result = data.into_bytes();
+                    // Zero teminate.
+                    match result.last() {
+                        Some(0) => {}
+                        _ => {result.push(0)}
+                    }
+
                     if result.len() < #len {
                         result.resize(#len, 0);
                     } else if result.len() > #len {
-                        return Err(cameleon_impl::memory::MemoryError::EntryOverrun);
+                        return Err(cameleon_impl::memory::MemoryError::InvalidEntryData("data length is larger than the entry length".into()))
                     }
                 },
+
                 EntryType::U8 => quote! {
                     let mut result = std::vec::Vec::with_capacity(#len);
                     result.write_u8(data).unwrap();
                 },
+
                 EntryType::U16 => quote! {
                     let mut result = std::vec::Vec::with_capacity(#len);
                     result.write_u16::<#endianess>(data).unwrap();
                 },
+
                 EntryType::U32 => quote! {
                     let mut result = std::vec::Vec::with_capacity(#len);
                     result.write_u32::<#endianess>(data).unwrap();
                 },
+
                 EntryType::U64 => quote! {
                     let mut result = std::vec::Vec::with_capacity(#len);
                     result.write_u64::<#endianess>(data).unwrap();

@@ -289,8 +289,7 @@ impl Worker {
             }
 
             Err(MemoryError::AddressNotWritable)
-            | Err(MemoryError::EntryOverrun)
-            | Err(MemoryError::EntryBroken(..)) => unreachable!(),
+            | Err(MemoryError::InvalidEntryData(..)) => unreachable!(),
         };
     }
 
@@ -327,8 +326,7 @@ impl Worker {
             }
 
             Err(MemoryError::AddressNotReadable)
-            | Err(MemoryError::EntryOverrun)
-            | Err(MemoryError::EntryBroken(..)) => unreachable!(),
+            | Err(MemoryError::InvalidEntryData(..)) => unreachable!(),
         };
     }
 
