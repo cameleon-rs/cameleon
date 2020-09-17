@@ -469,16 +469,17 @@ type ProtocolResult<T> = std::result::Result<T, ProtocolError>;
 
 /// Command packet parser implementaion.
 mod cmd {
+    pub(super) use crate::usb3::protocol::cmd::{
+        ReadMem, ReadMemStacked, ScdKind, WriteMem, WriteMemStacked,
+    };
+
     use std::io::Cursor;
 
     use byteorder::{ReadBytesExt, LE};
 
-    use crate::usb3::protocol::{command::*, parse_util};
+    use crate::usb3::protocol::{cmd::*, parse_util};
 
     use super::{ProtocolError, ProtocolResult};
-    pub(super) use crate::usb3::protocol::command::{
-        ReadMem, ReadMemStacked, ScdKind, WriteMem, WriteMemStacked,
-    };
 
     pub(super) struct CommandPacket<'a> {
         ccd: CommandCcd,
@@ -731,7 +732,7 @@ mod ack {
 
     use crate::usb3::protocol::{
         ack::{AckCcd, Status, StatusKind},
-        command,
+        cmd,
     };
 
     use super::ProtocolResult;
@@ -1013,13 +1014,13 @@ mod ack {
         }
     }
 
-    impl From<command::ScdKind> for ScdKind {
-        fn from(kind: command::ScdKind) -> Self {
+    impl From<cmd::ScdKind> for ScdKind {
+        fn from(kind: cmd::ScdKind) -> Self {
             match kind {
-                command::ScdKind::ReadMem => ScdKind::ReadMem,
-                command::ScdKind::WriteMem => ScdKind::WriteMem,
-                command::ScdKind::ReadMemStacked => ScdKind::ReadMemStacked,
-                command::ScdKind::WriteMemStacked => ScdKind::WriteMemStacked,
+                cmd::ScdKind::ReadMem => ScdKind::ReadMem,
+                cmd::ScdKind::WriteMem => ScdKind::WriteMem,
+                cmd::ScdKind::ReadMemStacked => ScdKind::ReadMemStacked,
+                cmd::ScdKind::WriteMemStacked => ScdKind::WriteMemStacked,
             }
         }
     }

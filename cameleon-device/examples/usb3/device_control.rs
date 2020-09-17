@@ -36,7 +36,7 @@ fn main() {
     let (addr, len) = register_map::abrm::SERIAL_NUMBER;
 
     // Create ReadMem Command with request id.
-    let command = command::ReadMem::new(addr, len).finalize(request_id);
+    let command = cmd::ReadMem::new(addr, len).finalize(request_id);
 
     // Seirialize the command.
     let mut serialized_command = vec![];
