@@ -6,8 +6,8 @@ use crate::usb3::{Error, Result};
 
 #[derive(Debug)]
 pub struct CommandPacket<T> {
-    pub ccd: CommandCcd,
-    pub scd: T,
+    ccd: CommandCcd,
+    scd: T,
 }
 
 impl<T> CommandPacket<T>
@@ -30,6 +30,14 @@ where
         Ok(())
     }
 
+    pub fn ccd(&self) -> &CommandCcd {
+        &self.ccd
+    }
+
+    pub fn scd(&self) -> &T {
+        &self.scd
+    }
+
     pub fn cmd_len(&self) -> usize {
         // Magic(4bytes) + ccd + scd
         4 + self.ccd.len() as usize + self.scd.scd_len() as usize
@@ -48,7 +56,7 @@ where
     }
 
     pub fn new(scd: T, request_id: u16) -> Self {
-        let ccd = CommandCcd::new(&scd, request_id);
+        let ccd = CommandCcd::from_scd(&scd, request_id);
         Self { ccd, scd }
     }
 }
@@ -172,21 +180,40 @@ impl<'a> WriteMemStacked<'a> {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CommandCcd {
-    pub flag: CommandFlag,
-    pub scd_kind: ScdKind,
-    pub scd_len: u16,
-    pub request_id: u16,
+    flag: CommandFlag,
+    scd_kind: ScdKind,
+    scd_len: u16,
+    request_id: u16,
 }
 
 impl CommandCcd {
-    fn new(scd: &impl CommandScd, request_id: u16) -> Self {
+    pub fn flag(&self) -> CommandFlag {
+        self.flag
+    }
+
+    pub fn scd_kind(&self) -> ScdKind {
+        self.scd_kind
+    }
+
+    pub fn scd_len(&self) -> u16 {
+        self.scd_len
+    }
+
+    pub fn request_id(&self) -> u16 {
+        self.request_id
+    }
+
+    pub(crate) fn new(flag: CommandFlag, scd_kind: ScdKind, scd_len: u16, request_id: u16) -> Self {
         Self {
-            // Currently USB3 commands always request ack.
-            flag: scd.flag(),
-            scd_kind: scd.scd_kind(),
-            scd_len: scd.scd_len(),
+            flag,
+            scd_kind,
+            scd_len,
             request_id,
         }
+    }
+
+    fn from_scd(scd: &impl CommandScd, request_id: u16) -> Self {
+        Self::new(scd.flag(), scd.scd_kind(), scd.scd_len(), request_id)
     }
 
     fn serialize(&self, mut buf: impl Write) -> Result<()> {

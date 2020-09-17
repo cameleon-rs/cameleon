@@ -206,14 +206,15 @@ impl Worker {
 
         // If another module is halted, return endpoint halted error
         if self.iface_state.is_halt(IfaceKind::Event).await {
-            let ack = ack::ErrorAck::new(ack::UsbSpecificStatus::EventEndpointHalted, ccd.scd_kind)
-                .finalize(ccd.request_id);
+            let ack =
+                ack::ErrorAck::new(ack::UsbSpecificStatus::EventEndpointHalted, ccd.scd_kind())
+                    .finalize(ccd.request_id());
             self.enqueue_or_halt(ack);
             return;
         } else if self.iface_state.is_halt(IfaceKind::Stream).await {
             let ack =
-                ack::ErrorAck::new(ack::UsbSpecificStatus::StreamEndpointHalted, ccd.scd_kind)
-                    .finalize(ccd.request_id);
+                ack::ErrorAck::new(ack::UsbSpecificStatus::StreamEndpointHalted, ccd.scd_kind())
+                    .finalize(ccd.request_id());
             self.enqueue_or_halt(ack);
             return;
         }
@@ -223,13 +224,13 @@ impl Worker {
             .on_processing
             .compare_and_swap(false, true, Ordering::Relaxed)
         {
-            let ack =
-                ack::ErrorAck::new(ack::GenCpStatus::Busy, ccd.scd_kind).finalize(ccd.request_id);
+            let ack = ack::ErrorAck::new(ack::GenCpStatus::Busy, ccd.scd_kind())
+                .finalize(ccd.request_id());
             self.enqueue_or_halt(ack);
             return;
         }
 
-        match ccd.scd_kind {
+        match ccd.scd_kind() {
             cmd::ScdKind::ReadMem => self.process_read_mem(cmd_packet).await,
             cmd::ScdKind::WriteMem => self.process_write_mem(cmd_packet).await,
             cmd::ScdKind::ReadMemStacked => self.process_read_mem_stacked(cmd_packet).await,
@@ -262,8 +263,8 @@ impl Worker {
             None => return,
         };
         let ccd = command.ccd();
-        let req_id = ccd.request_id;
-        let scd_kind = ccd.scd_kind;
+        let req_id = ccd.request_id();
+        let scd_kind = ccd.scd_kind();
 
         let memory = self.memory.lock().await;
         let address = scd.address as usize;
@@ -299,8 +300,8 @@ impl Worker {
             None => return,
         };
         let ccd = command.ccd();
-        let req_id = ccd.request_id;
-        let scd_kind = ccd.scd_kind;
+        let req_id = ccd.request_id();
+        let scd_kind = ccd.scd_kind();
 
         let mut memory = self.memory.lock().await;
         match memory.write(scd.address as usize, scd.data) {
@@ -337,8 +338,8 @@ impl Worker {
             None => return,
         };
         let ccd = command.ccd();
-        let req_id = ccd.request_id;
-        let scd_kind = ccd.scd_kind;
+        let req_id = ccd.request_id();
+        let scd_kind = ccd.scd_kind();
 
         // TODO: Should we implement this command?
         let ack = ack::ErrorAck::new(ack::GenCpStatus::NotImplemented, scd_kind).finalize(req_id);
@@ -351,14 +352,13 @@ impl Worker {
             None => return,
         };
         let ccd = command.ccd();
-        let req_id = ccd.request_id;
-        let scd_kind = ccd.scd_kind;
+        let req_id = ccd.request_id();
+        let scd_kind = ccd.scd_kind();
 
         // TODO: Should we implement this command?
         let ack = ack::ErrorAck::new(ack::GenCpStatus::NotImplemented, scd_kind).finalize(req_id);
         self.enqueue_or_halt(ack);
     }
-
 
     fn try_extract_scd<'a, T>(&self, command: &cmd::CommandPacket<'a>) -> Option<T>
     where
@@ -368,8 +368,8 @@ impl Worker {
             Ok(scd) => Some(scd),
             Err(_) => {
                 let ccd = command.ccd();
-                let ack = ack::ErrorAck::new(ack::GenCpStatus::InvalidParameter, ccd.scd_kind)
-                    .finalize(ccd.request_id);
+                let ack = ack::ErrorAck::new(ack::GenCpStatus::InvalidParameter, ccd.scd_kind())
+                    .finalize(ccd.request_id());
                 self.enqueue_or_halt(ack);
                 None
             }
@@ -523,12 +523,7 @@ mod cmd {
             let scd_len = cursor.read_u16::<LE>()?;
             let request_id = cursor.read_u16::<LE>()?;
 
-            Ok(Self {
-                flag,
-                scd_kind,
-                scd_len,
-                request_id,
-            })
+            Ok(Self::new(flag, scd_kind, scd_len, request_id))
         }
     }
 
@@ -581,7 +576,7 @@ mod cmd {
         fn parse(buf: &'a [u8], ccd: &CommandCcd) -> ProtocolResult<Self> {
             let mut cursor = Cursor::new(buf);
             let address = cursor.read_u64::<LE>()?;
-            let data = parse_util::read_bytes(&mut cursor, ccd.scd_len - 8)?;
+            let data = parse_util::read_bytes(&mut cursor, ccd.scd_len() - 8)?;
             Self::new(address, data)
                 .map_err(|err| ProtocolError::InvalidPacket(err.to_string().into()))
         }
@@ -590,7 +585,7 @@ mod cmd {
     impl<'a> ParseScd<'a> for ReadMemStacked {
         fn parse(buf: &'a [u8], ccd: &CommandCcd) -> ProtocolResult<Self> {
             let mut cursor = Cursor::new(buf);
-            let mut len = ccd.scd_len;
+            let mut len = ccd.scd_len();
             let mut entries = Vec::with_capacity(len as usize / 12);
             while len > 0 {
                 let address = cursor.read_u64::<LE>()?;
@@ -614,7 +609,7 @@ mod cmd {
         fn parse(buf: &'a [u8], ccd: &CommandCcd) -> ProtocolResult<Self> {
             let mut cursor = Cursor::new(buf);
             let mut entries = vec![];
-            let mut len = ccd.scd_len;
+            let mut len = ccd.scd_len();
 
             while len > 0 {
                 let address = cursor.read_u64::<LE>()?;
@@ -638,7 +633,6 @@ mod cmd {
         }
     }
 
-
     #[cfg(test)]
     mod tests {
         use super::*;
@@ -651,9 +645,9 @@ mod cmd {
 
             let parsed_cmd = CommandPacket::parse(&buf).unwrap();
             let parsed_ccd = &parsed_cmd.ccd;
-            assert_eq!(parsed_ccd.flag, CommandFlag::RequestAck);
-            assert_eq!(parsed_ccd.scd_kind, ScdKind::ReadMem);
-            assert_eq!(parsed_ccd.request_id, 1);
+            assert_eq!(parsed_ccd.flag(), CommandFlag::RequestAck);
+            assert_eq!(parsed_ccd.scd_kind(), ScdKind::ReadMem);
+            assert_eq!(parsed_ccd.request_id(), 1);
 
             let parsed_scd = parsed_cmd.scd_as::<ReadMem>().unwrap();
             assert_eq!(parsed_scd.address, 0x1f);
@@ -669,9 +663,9 @@ mod cmd {
 
             let parsed_cmd = CommandPacket::parse(&buf).unwrap();
             let parsed_ccd = &parsed_cmd.ccd;
-            assert_eq!(parsed_ccd.flag, CommandFlag::RequestAck);
-            assert_eq!(parsed_ccd.scd_kind, ScdKind::WriteMem);
-            assert_eq!(parsed_ccd.request_id, 1);
+            assert_eq!(parsed_ccd.flag(), CommandFlag::RequestAck);
+            assert_eq!(parsed_ccd.scd_kind(), ScdKind::WriteMem);
+            assert_eq!(parsed_ccd.request_id(), 1);
 
             let parsed_scd = parsed_cmd.scd_as::<WriteMem>().unwrap();
             assert_eq!(parsed_scd.address, 0xfff);
@@ -687,9 +681,9 @@ mod cmd {
 
             let parsed_cmd = CommandPacket::parse(&buf).unwrap();
             let parsed_ccd = &parsed_cmd.ccd;
-            assert_eq!(parsed_ccd.flag, CommandFlag::RequestAck);
-            assert_eq!(parsed_ccd.scd_kind, ScdKind::ReadMemStacked);
-            assert_eq!(parsed_ccd.request_id, 1);
+            assert_eq!(parsed_ccd.flag(), CommandFlag::RequestAck);
+            assert_eq!(parsed_ccd.scd_kind(), ScdKind::ReadMemStacked);
+            assert_eq!(parsed_ccd.request_id(), 1);
 
             let parsed_scd = parsed_cmd.scd_as::<ReadMemStacked>().unwrap();
             assert_eq!(parsed_scd.entries[0], ReadMem::new(0x0f, 4));
@@ -710,9 +704,9 @@ mod cmd {
 
             let parsed_cmd = CommandPacket::parse(&buf).unwrap();
             let parsed_ccd = &parsed_cmd.ccd;
-            assert_eq!(parsed_ccd.flag, CommandFlag::RequestAck);
-            assert_eq!(parsed_ccd.scd_kind, ScdKind::WriteMemStacked);
-            assert_eq!(parsed_ccd.request_id, 1);
+            assert_eq!(parsed_ccd.flag(), CommandFlag::RequestAck);
+            assert_eq!(parsed_ccd.scd_kind(), ScdKind::WriteMemStacked);
+            assert_eq!(parsed_ccd.request_id(), 1);
 
             let parsed_scd = parsed_cmd.scd_as::<WriteMemStacked>().unwrap();
             assert_eq!(parsed_scd.entries[0].address, 0x0f);
@@ -776,10 +770,10 @@ mod ack {
         }
 
         fn serialize(&self, mut buf: impl Write) -> ProtocolResult<()> {
-            buf.write_u16::<LE>(self.status.code())?;
-            self.scd_kind.serialize(&mut buf)?;
-            buf.write_u16::<LE>(self.scd_len)?;
-            buf.write_u16::<LE>(self.request_id)?;
+            buf.write_u16::<LE>(self.status().code())?;
+            self.scd_kind().serialize(&mut buf)?;
+            buf.write_u16::<LE>(self.scd_len())?;
+            buf.write_u16::<LE>(self.request_id())?;
             Ok(())
         }
     }
@@ -931,7 +925,6 @@ mod ack {
             ScdKind::WriteMemStacked
         }
     }
-
 
     pub(super) struct ErrorAck {
         status: Status,

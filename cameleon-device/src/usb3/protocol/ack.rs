@@ -8,8 +8,8 @@ use super::parse_util;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AckPacket<'a> {
-    pub ccd: AckCcd,
-    pub raw_scd: &'a [u8],
+    ccd: AckCcd,
+    raw_scd: &'a [u8],
 }
 
 impl<'a> AckPacket<'a> {
@@ -32,6 +32,10 @@ impl<'a> AckPacket<'a> {
 
     pub fn ccd(&self) -> &AckCcd {
         &self.ccd
+    }
+
+    pub fn raw_scd(&self) -> &'a [u8] {
+        self.raw_scd
     }
 
     pub fn scd_as<T: ParseScd<'a>>(&self) -> Result<T> {
@@ -58,13 +62,29 @@ impl<'a> AckPacket<'a> {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AckCcd {
-    pub status: Status,
-    pub scd_kind: ScdKind,
-    pub request_id: u16,
-    pub scd_len: u16,
+    pub(crate) status: Status,
+    pub(crate) scd_kind: ScdKind,
+    pub(crate) request_id: u16,
+    pub(crate) scd_len: u16,
 }
 
 impl AckCcd {
+    pub fn status(&self) -> Status {
+        self.status
+    }
+
+    pub fn scd_kind(&self) -> ScdKind {
+        self.scd_kind
+    }
+
+    pub fn request_id(&self) -> u16 {
+        self.request_id
+    }
+
+    pub fn scd_len(&self) -> u16 {
+        self.scd_len
+    }
+
     fn parse(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
         let status = Status::parse(cursor)?;
         let scd_kind = ScdKind::parse(cursor)?;
