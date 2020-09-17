@@ -234,7 +234,6 @@ impl Worker {
             cmd::ScdKind::WriteMem => self.process_write_mem(cmd_packet).await,
             cmd::ScdKind::ReadMemStacked => self.process_read_mem_stacked(cmd_packet).await,
             cmd::ScdKind::WriteMemStacked => self.process_write_mem_stacked(cmd_packet).await,
-            cmd::ScdKind::Custom(_) => self.process_custom(cmd_packet).await,
         }
 
         self.on_processing.store(false, Ordering::Relaxed);
@@ -360,19 +359,6 @@ impl Worker {
         self.enqueue_or_halt(ack);
     }
 
-    async fn process_custom(&self, command: cmd::CommandPacket<'_>) {
-        let _scd: cmd::WriteMemStacked = match self.try_extract_scd(&command) {
-            Some(scd) => scd,
-            None => return,
-        };
-        let ccd = command.ccd();
-        let req_id = ccd.request_id;
-        let scd_kind = ccd.scd_kind;
-
-        // TODO: Should we implement this command?
-        let ack = ack::ErrorAck::new(ack::GenCpStatus::NotImplemented, scd_kind).finalize(req_id);
-        self.enqueue_or_halt(ack);
-    }
 
     fn try_extract_scd<'a, T>(&self, command: &cmd::CommandPacket<'a>) -> Option<T>
     where
@@ -491,7 +477,7 @@ mod cmd {
 
     use super::{ProtocolError, ProtocolResult};
     pub(super) use crate::usb3::protocol::command::{
-        CustomCommand, ReadMem, ReadMemStacked, ScdKind, WriteMem, WriteMemStacked,
+        ReadMem, ReadMemStacked, ScdKind, WriteMem, WriteMemStacked,
     };
 
     pub(super) struct CommandPacket<'a> {
@@ -566,7 +552,6 @@ mod cmd {
                 0x0802 => Ok(Self::WriteMem),
                 0x0806 => Ok(Self::ReadMemStacked),
                 0x0808 => Ok(Self::WriteMemStacked),
-                custom if ScdKind::is_custom(raw) => Ok(Self::Custom(custom)),
                 _ => Err(ProtocolError::InvalidPacket("invalid  command id".into())),
             }
         }
@@ -652,19 +637,6 @@ mod cmd {
         }
     }
 
-    impl<'a> ParseScd<'a> for CustomCommand<'a> {
-        fn parse(buf: &'a [u8], ccd: &CommandCcd) -> ProtocolResult<Self> {
-            let command_id = match ccd.scd_kind {
-                ScdKind::Custom(id) => id,
-                _ => return Err(ProtocolError::InvalidPacket("invalid scd type".into())),
-            };
-
-            let mut cursor = Cursor::new(buf);
-            let data = parse_util::read_bytes(&mut cursor, ccd.scd_len)?;
-            Ok(CustomCommand::new(command_id, data)
-                .map_err(|err| ProtocolError::InvalidPacket(err.to_string().into()))?)
-        }
-    }
 
     #[cfg(test)]
     mod tests {
@@ -747,23 +719,6 @@ mod cmd {
             assert_eq!(parsed_scd.entries[1].address, 0xf0);
             assert_eq!(parsed_scd.entries[1].data, data1);
         }
-
-        #[test]
-        fn test_custom_cmd() {
-            let data = &[0, 1, 2];
-            let cmd = CustomCommand::new(0xfff0, data).unwrap().finalize(1);
-            let mut buf = vec![];
-            cmd.serialize(&mut buf).unwrap();
-
-            let parsed_cmd = CommandPacket::parse(&buf).unwrap();
-            let parsed_ccd = &parsed_cmd.ccd;
-            assert_eq!(parsed_ccd.flag, CommandFlag::RequestAck);
-            assert_eq!(parsed_ccd.scd_kind, ScdKind::Custom(0xfff0));
-            assert_eq!(parsed_ccd.request_id, 1);
-
-            let parsed_scd = parsed_cmd.scd_as::<CustomCommand>().unwrap();
-            assert_eq!(parsed_scd.data, data);
-        }
     }
 }
 
@@ -836,10 +791,6 @@ mod ack {
                 Self::Pending => 0x0805,
                 Self::ReadMemStacked => 0x0807,
                 Self::WriteMemStacked => 0x0809,
-                Self::Custom(raw) => {
-                    debug_assert!(ScdKind::is_custom(raw));
-                    raw
-                }
             };
 
             buf.write_u16::<LE>(raw)?;
@@ -980,33 +931,6 @@ mod ack {
         }
     }
 
-    pub(super) struct CustomAck<'a> {
-        command_id: u16,
-        data: &'a [u8],
-    }
-
-    impl<'a> CustomAck<'a> {
-        pub(super) fn _new(command_id: u16, data: &'a [u8]) -> Self {
-            debug_assert!(data.len() <= u16::MAX as usize);
-            debug_assert!(ScdKind::is_custom(command_id));
-            Self { command_id, data }
-        }
-    }
-
-    impl<'a> AckSerialize for CustomAck<'a> {
-        fn serialize(&self, mut buf: impl Write) -> ProtocolResult<()> {
-            buf.write_all(self.data)?;
-            Ok(())
-        }
-
-        fn scd_len(&self) -> u16 {
-            self.data.len() as u16
-        }
-
-        fn scd_kind(&self) -> ScdKind {
-            ScdKind::Custom(self.command_id)
-        }
-    }
 
     pub(super) struct ErrorAck {
         status: Status,
@@ -1096,7 +1020,6 @@ mod ack {
                 command::ScdKind::WriteMem => ScdKind::WriteMem,
                 command::ScdKind::ReadMemStacked => ScdKind::ReadMemStacked,
                 command::ScdKind::WriteMemStacked => ScdKind::WriteMemStacked,
-                command::ScdKind::Custom(code) => ScdKind::Custom(code | 1),
             }
         }
     }
@@ -1183,23 +1106,6 @@ mod ack {
 
             let parsed_scd = parsed.scd_as::<WriteMemStacked>().unwrap();
             assert_eq!(parsed_scd.lengths, lengths);
-        }
-
-        #[test]
-        fn test_custom() {
-            let code = 0xff01;
-            let data = &[0, 1, 2, 3];
-            let command = CustomAck::_new(code, data).finalize(1);
-            let mut buf = vec![];
-            command.serialize(&mut buf).unwrap();
-
-            let parsed = host_side_ack::AckPacket::parse(&buf).unwrap();
-            assert!(parsed.status().is_success());
-            assert_eq!(parsed.scd_kind(), ScdKind::Custom(0xff01));
-            assert_eq!(parsed.request_id(), 1);
-
-            let parsed_scd = parsed.scd_as::<host_side_ack::CustomAck>().unwrap();
-            assert_eq!(parsed_scd.data, data);
         }
 
         #[test]

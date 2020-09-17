@@ -46,13 +46,6 @@ impl<'a> AckPacket<'a> {
         self.ccd.request_id
     }
 
-    pub fn custom_command_id(&self) -> Option<u16> {
-        match self.ccd.scd_kind {
-            ScdKind::Custom(id) => Some(id),
-            _ => None,
-        }
-    }
-
     fn parse_prefix(cursor: &mut Cursor<&[u8]>) -> Result<()> {
         let magic = cursor.read_u32::<LE>()?;
         if magic == Self::PREFIX_MAGIC {
@@ -251,7 +244,6 @@ pub enum ScdKind {
     ReadMemStacked,
     WriteMemStacked,
     Pending,
-    Custom(u16),
 }
 
 impl ScdKind {
@@ -263,15 +255,10 @@ impl ScdKind {
             0x0805 => Ok(ScdKind::Pending),
             0x0807 => Ok(ScdKind::ReadMemStacked),
             0x0809 => Ok(ScdKind::WriteMemStacked),
-            _ if Self::is_custom(id) => Ok(ScdKind::Custom(id)),
             _ => Err(Error::InvalidPacket(
                 format!("unknown ack command id {:#X}", id).into(),
             )),
         }
-    }
-
-    pub(crate) fn is_custom(id: u16) -> bool {
-        id >> 15 == 1 && id & 1 == 1
     }
 }
 
@@ -372,14 +359,6 @@ impl<'a> ParseScd<'a> for WriteMemStacked {
     }
 }
 
-impl<'a> ParseScd<'a> for CustomAck<'a> {
-    fn parse(buf: &'a [u8], ccd: &AckCcd) -> Result<Self> {
-        let data = parse_util::read_bytes(&mut Cursor::new(buf), ccd.scd_len)?;
-
-        Ok(Self { data })
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -410,7 +389,6 @@ mod tests {
         assert!(ack.status().is_success());
         assert!(!ack.status().is_fatal());
         assert_eq!(ack.request_id(), 1);
-        assert!(ack.custom_command_id().is_none());
 
         let parsed_scd = ack.scd_as::<ReadMem>().unwrap();
         assert_eq!(parsed_scd.data, scd);
@@ -427,7 +405,6 @@ mod tests {
         assert!(ack.status().is_success());
         assert!(!ack.status().is_fatal());
         assert_eq!(ack.request_id(), 1);
-        assert!(ack.custom_command_id().is_none());
 
         let parsed_scd = ack.scd_as::<WriteMem>().unwrap();
         assert_eq!(parsed_scd.length, 0x0a);
@@ -444,7 +421,6 @@ mod tests {
         assert!(ack.status().is_success());
         assert!(!ack.status().is_fatal());
         assert_eq!(ack.request_id(), 1);
-        assert!(ack.custom_command_id().is_none());
 
         let parsed_scd = ack.scd_as::<ReadMemStacked>().unwrap();
         assert_eq!(parsed_scd.data, scd);
@@ -462,7 +438,6 @@ mod tests {
         assert!(ack.status().is_success());
         assert!(!ack.status().is_fatal());
         assert_eq!(ack.request_id(), 1);
-        assert!(ack.custom_command_id().is_none());
 
         let parsed_scd = ack.scd_as::<WriteMemStacked>().unwrap();
         assert_eq!(&parsed_scd.lengths, &[3, 10]);
@@ -481,7 +456,6 @@ mod tests {
         assert!(ack.status().is_success());
         assert!(!ack.status().is_fatal());
         assert_eq!(ack.request_id(), 1);
-        assert!(ack.custom_command_id().is_none());
 
         let parsed_scd = ack.scd_as::<Pending>().unwrap();
         assert_eq!(parsed_scd.timeout, Duration::from_millis(700));

@@ -106,7 +106,7 @@ fn test_normal_scenario() {
 
         let mut bytes = Vec::new();
         cmd.serialize(&mut bytes).unwrap();
-        (bytes, cmd.maximum_ack_len().unwrap())
+        (bytes, cmd.maximum_ack_len())
     }
 
     fn read_cmd(addr: u64, len: u16, req_id: u16) -> (Vec<u8>, usize) {
@@ -114,6 +114,6 @@ fn test_normal_scenario() {
 
         let mut bytes = Vec::new();
         cmd.serialize(&mut bytes).unwrap();
-        (bytes, cmd.maximum_ack_len().unwrap())
+        (bytes, cmd.maximum_ack_len())
     }
 }

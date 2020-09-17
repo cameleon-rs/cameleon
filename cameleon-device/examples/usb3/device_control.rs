@@ -48,7 +48,7 @@ fn main() {
         .unwrap();
 
     // Receive Acknowledge packet from the device.
-    let mut serialized_ack = vec![0; command.maximum_ack_len().unwrap()];
+    let mut serialized_ack = vec![0; command.maximum_ack_len()];
     control_channel
         .recv(&mut serialized_ack, Duration::from_millis(100))
         .unwrap();

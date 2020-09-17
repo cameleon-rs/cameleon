@@ -40,11 +40,11 @@ where
     }
 
     /// Maximum length of corresponding ack packet.
-    pub fn maximum_ack_len(&self) -> Option<usize> {
-        let scd_len = self.scd.ack_scd_len()?;
+    pub fn maximum_ack_len(&self) -> usize {
+        let scd_len = self.scd.ack_scd_len();
         let maximum_scd_length = std::cmp::max(scd_len, Self::MINIMUM_ACK_SCD_LENGTH) as usize;
 
-        Some(Self::ACK_HEADER_LENGTH + maximum_scd_length)
+        Self::ACK_HEADER_LENGTH + maximum_scd_length
     }
 
     pub fn new(scd: T, request_id: u16) -> Self {
@@ -171,33 +171,6 @@ impl<'a> WriteMemStacked<'a> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct CustomCommand<'a> {
-    pub(crate) command_id: u16,
-    pub(crate) data: &'a [u8],
-    data_len: u16,
-}
-
-impl<'a> CustomCommand<'a> {
-    pub fn new(command_id: u16, data: &'a [u8]) -> Result<Self> {
-        if !ScdKind::is_custom(command_id) {
-            return Err(Error::InvalidPacket("invalid custom command id".into()));
-        }
-
-        let data_len: u16 = into_scd_len(data.len())?;
-
-        Ok(Self {
-            command_id,
-            data,
-            data_len,
-        })
-    }
-
-    pub fn finalize(self, request_id: u16) -> CommandPacket<Self> {
-        CommandPacket::new(self, request_id)
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CommandCcd {
     pub flag: CommandFlag,
     pub scd_kind: ScdKind,
@@ -253,7 +226,6 @@ pub enum ScdKind {
     WriteMem,
     ReadMemStacked,
     WriteMemStacked,
-    Custom(u16),
 }
 
 impl ScdKind {
@@ -263,14 +235,9 @@ impl ScdKind {
             Self::WriteMem => 0x0802,
             Self::ReadMemStacked => 0x0806,
             Self::WriteMemStacked => 0x0808,
-            Self::Custom(id) if Self::is_custom(id) => id,
-            _ => return Err(Error::InvalidPacket("invalid scd kind id".into())),
         };
-        Ok(buf.write_u16::<LE>(kind_id)?)
-    }
 
-    pub(crate) fn is_custom(id: u16) -> bool {
-        id >> 15 == 1 && id.trailing_zeros() > 0
+        Ok(buf.write_u16::<LE>(kind_id)?)
     }
 }
 
@@ -283,7 +250,7 @@ pub trait CommandScd: std::fmt::Debug {
 
     fn serialize(&self, buf: impl Write) -> Result<()>;
 
-    fn ack_scd_len(&self) -> Option<u16>;
+    fn ack_scd_len(&self) -> u16;
 }
 
 impl CommandScd for ReadMem {
@@ -307,8 +274,8 @@ impl CommandScd for ReadMem {
         Ok(())
     }
 
-    fn ack_scd_len(&self) -> Option<u16> {
-        Some(self.read_length)
+    fn ack_scd_len(&self) -> u16 {
+        self.read_length
     }
 }
 
@@ -331,9 +298,9 @@ impl<'a> CommandScd for WriteMem<'a> {
         Ok(())
     }
 
-    fn ack_scd_len(&self) -> Option<u16> {
+    fn ack_scd_len(&self) -> u16 {
         // Reserved(2bytes)+ length written(2bytes);
-        Some(4)
+        4
     }
 }
 
@@ -357,8 +324,8 @@ impl<'a> CommandScd for ReadMemStacked {
         Ok(())
     }
 
-    fn ack_scd_len(&self) -> Option<u16> {
-        Some(self.ack_scd_len)
+    fn ack_scd_len(&self) -> u16 {
+        self.ack_scd_len
     }
 }
 
@@ -386,31 +353,8 @@ impl<'a> CommandScd for WriteMemStacked<'a> {
         Ok(())
     }
 
-    fn ack_scd_len(&self) -> Option<u16> {
-        Some(self.ack_scd_len)
-    }
-}
-
-impl<'a> CommandScd for CustomCommand<'a> {
-    fn flag(&self) -> CommandFlag {
-        CommandFlag::RequestAck
-    }
-
-    fn scd_kind(&self) -> ScdKind {
-        ScdKind::Custom(self.command_id)
-    }
-
-    fn scd_len(&self) -> u16 {
-        self.data_len
-    }
-
-    fn serialize(&self, mut buf: impl Write) -> Result<()> {
-        buf.write_all(self.data)?;
-        Ok(())
-    }
-
-    fn ack_scd_len(&self) -> Option<u16> {
-        None
+    fn ack_scd_len(&self) -> u16 {
+        self.ack_scd_len
     }
 }
 
