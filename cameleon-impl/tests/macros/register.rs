@@ -2,7 +2,7 @@ use cameleon_impl::memory::*;
 
 const SBRM_ADDRESS: u64 = 0x1000;
 
-#[register(base = 0, endianess = LE)]
+#[register(base = 0, endianness = LE)]
 pub enum ABRM {
     #[entry(len = 2, access = RO, ty = u16)]
     GenCpVersionMinor = 321,
@@ -17,7 +17,7 @@ pub enum ABRM {
     SBRMAddress = SBRM_ADDRESS,
 }
 
-#[register(base = SBRM_ADDRESS, endianess = LE)]
+#[register(base = SBRM_ADDRESS, endianness = LE)]
 pub enum SBRM {
     #[entry(len = 64, access = RW, ty = String)]
     ManufacturerName = "Cameleon\0",

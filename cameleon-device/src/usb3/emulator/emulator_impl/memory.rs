@@ -11,7 +11,7 @@ const SBRM_ADDRESS: u64 = 0xffff;
 ///    7-4 |  0000 | String Encoding (Ascii).
 ///      8 |     1 | Family Name is supported.
 ///      9 |     1 | SBRM is supported.
-///     10 |     1 | Endianess Register is supported.
+///     10 |     1 | Endianness Register is supported.
 ///     11 |     1 | Written Length Field is supported.
 ///     12 |     0 | Multi Event is currentrly NOT supported.
 ///     13 |     1 | Stacked Commands is supported.
@@ -24,7 +24,7 @@ pub(super) struct Memory {
     abrm: ABRM,
 }
 
-#[register(base = 0, endianess = LE)]
+#[register(base = 0, endianness = LE)]
 pub(super) enum ABRM {
     #[entry(len = 2, access = RO, ty = u16)]
     GenCpVersionMinor = 1,
@@ -87,10 +87,10 @@ pub(super) enum ABRM {
     AccessPrivilege,
 
     #[entry(len = 4, access = RO, ty = u32)]
-    ProtocolEndianess = 0xFFFF_FFFF, // Little endian.
+    ProtocolEndianness = 0xFFFF_FFFF, // Little endian.
 
     #[entry(len = 4, access = NA, ty = u32)]
-    ImplementationEndianess,
+    ImplementationEndianness,
 
     #[entry(len = 64, access = RO, ty = String)]
     DeviceSoftwareInterfaceVersion = "1.0.0",

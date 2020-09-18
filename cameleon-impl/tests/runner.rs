@@ -7,6 +7,6 @@ fn tests() {
 
     t.compile_fail("tests/macros/forbidden_visibility.rs");
     t.compile_fail("tests/macros/wrong_access_right.rs");
-    t.compile_fail("tests/macros/wrong_endianess.rs");
+    t.compile_fail("tests/macros/wrong_endianness.rs");
     t.compile_fail("tests/macros/wrong_ty_attr.rs");
 }

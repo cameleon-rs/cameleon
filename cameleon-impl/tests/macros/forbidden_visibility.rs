@@ -4,7 +4,7 @@ mod outer {
     pub(super) mod inner {
         use cameleon_impl::memory::register;
 
-        #[register(base = 0, endianess = LE)]
+        #[register(base = 0, endianness = LE)]
         pub(in super::super) enum ABRM {
             #[entry(len = 2, access = RO, ty = u16)]
             GenCpVersionMinor = 321,

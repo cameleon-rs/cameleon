@@ -100,7 +100,7 @@ impl RegisterEnum {
         let impls = self
             .entries
             .iter()
-            .map(|entry| entry.impl_register_entry(&self.args.base, self.args.endianess));
+            .map(|entry| entry.impl_register_entry(&self.args.base, self.args.endianness));
 
         quote! {
             #(#impls)*
@@ -131,15 +131,15 @@ impl RegisterEnum {
         let fragment = format_ident!("fragment");
         let mut writes = vec![];
         for entry in &self.entries {
-            writes.push(entry.init_entry(fragment.clone(), self.args.endianess));
+            writes.push(entry.init_entry(fragment.clone(), self.args.endianness));
         }
 
-        let endianess = self.args.endianess;
+        let endianness = self.args.endianness;
         let size = self.size();
         let vis = self.modify_visibility();
         quote! {
             #vis fn raw() -> Vec<u8> {
-                use cameleon_impl::byteorder::{#endianess, WriteBytesExt};
+                use cameleon_impl::byteorder::{#endianness, WriteBytesExt};
                 use std::io::Write;
                 let mut fragment_vec = vec![0; #size];
                 let mut #fragment = std::io::Cursor::new(fragment_vec.as_mut_slice());
@@ -222,14 +222,14 @@ impl RegisterEntry {
         })
     }
 
-    fn init_entry(&self, fragment: syn::Ident, endianess: Endianess) -> TokenStream {
+    fn init_entry(&self, fragment: syn::Ident, endianness: Endianness) -> TokenStream {
         if self.init.is_none() {
             return quote! {};
         }
 
         let init = self.init.as_ref().unwrap();
         let start = self.offset as u64;
-        let endianess = endianess;
+        let endianness = endianness;
 
         let set_position_expand = quote! {#fragment.set_position(#start);};
 
@@ -250,17 +250,17 @@ impl RegisterEntry {
             }
             EntryType::U16 => {
                 quote! {
-                    #fragment.write_u16::<#endianess>(#init).unwrap();
+                    #fragment.write_u16::<#endianness>(#init).unwrap();
                 }
             }
             EntryType::U32 => {
                 quote! {
-                    #fragment.write_u32::<#endianess>(#init).unwrap();
+                    #fragment.write_u32::<#endianness>(#init).unwrap();
                 }
             }
             EntryType::U64 => {
                 quote! {
-                    #fragment.write_u64::<#endianess>(#init).unwrap();
+                    #fragment.write_u64::<#endianness>(#init).unwrap();
                 }
             }
         };
@@ -271,7 +271,7 @@ impl RegisterEntry {
         }
     }
 
-    fn impl_register_entry(&self, base: &Base, endianess: Endianess) -> TokenStream {
+    fn impl_register_entry(&self, base: &Base, endianness: Endianness) -> TokenStream {
         let ty = &self.entry_attr.ty;
         let len = self.entry_attr.len();
 
@@ -293,20 +293,20 @@ impl RegisterEntry {
                 },
 
                 EntryType::U16 => quote! {
-                    data.read_u16::<#endianess>().map_err(|e| cameleon_impl::memory::MemoryError::InvalidEntryData(format! {"{}", e}.into()))
+                    data.read_u16::<#endianness>().map_err(|e| cameleon_impl::memory::MemoryError::InvalidEntryData(format! {"{}", e}.into()))
                 },
 
                 EntryType::U32 => quote! {
-                    data.read_u32::<#endianess>().map_err(|e| cameleon_impl::memory::MemoryError::InvalidEntryData(format! {"{}", e}.into()))
+                    data.read_u32::<#endianness>().map_err(|e| cameleon_impl::memory::MemoryError::InvalidEntryData(format! {"{}", e}.into()))
                 },
 
                 EntryType::U64 => quote! {
-                    data.read_u64::<#endianess>().map_err(|e| cameleon_impl::memory::MemoryError::InvalidEntryData(format! {"{}", e}.into()))
+                    data.read_u64::<#endianness>().map_err(|e| cameleon_impl::memory::MemoryError::InvalidEntryData(format! {"{}", e}.into()))
                 },
             };
             quote! {
                 fn parse(mut data: &[u8]) -> cameleon_impl::memory::MemoryResult<Self::Ty> {
-                    use cameleon_impl::byteorder::{#endianess, ReadBytesExt};
+                    use cameleon_impl::byteorder::{#endianness, ReadBytesExt};
                     #main
                 }
             }
@@ -340,23 +340,23 @@ impl RegisterEntry {
 
                 EntryType::U16 => quote! {
                     let mut result = std::vec::Vec::with_capacity(#len);
-                    result.write_u16::<#endianess>(data).unwrap();
+                    result.write_u16::<#endianness>(data).unwrap();
                 },
 
                 EntryType::U32 => quote! {
                     let mut result = std::vec::Vec::with_capacity(#len);
-                    result.write_u32::<#endianess>(data).unwrap();
+                    result.write_u32::<#endianness>(data).unwrap();
                 },
 
                 EntryType::U64 => quote! {
                     let mut result = std::vec::Vec::with_capacity(#len);
-                    result.write_u64::<#endianess>(data).unwrap();
+                    result.write_u64::<#endianness>(data).unwrap();
                 },
             };
             quote! {
                 fn serialize(data: Self::Ty) -> cameleon_impl::memory::MemoryResult<Vec<u8>>
                 {
-                    use cameleon_impl::byteorder::{#endianess, WriteBytesExt};
+                    use cameleon_impl::byteorder::{#endianness, WriteBytesExt};
 
                     #main
 
@@ -601,20 +601,20 @@ impl quote::ToTokens for EntryType {
 
 struct Args {
     base: Base,
-    endianess: Endianess,
+    endianness: Endianness,
 }
 
 #[derive(Debug, Clone, Copy)]
-enum Endianess {
+enum Endianness {
     BE,
     LE,
 }
 
-impl quote::ToTokens for Endianess {
+impl quote::ToTokens for Endianness {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
-            Endianess::BE => format_ident!("BE").to_tokens(tokens),
-            Endianess::LE => format_ident!("LE").to_tokens(tokens),
+            Endianness::BE => format_ident!("BE").to_tokens(tokens),
+            Endianness::LE => format_ident!("LE").to_tokens(tokens),
         }
     }
 }
@@ -643,7 +643,7 @@ impl syn::parse::Parse for Args {
         if ident != "base" {
             return Err(Error::new_spanned(
                 ident,
-                "expected `#[register(base = .., endianess = ..)]`",
+                "expected `#[register(base = .., endianness = ..)]`",
             ));
         }
         input.parse::<syn::Token![=]>()?;
@@ -670,26 +670,26 @@ impl syn::parse::Parse for Args {
 
         input.parse::<syn::Token![,]>()?;
         let ident = input.parse::<syn::Ident>()?;
-        if ident != "endianess" {
+        if ident != "endianness" {
             return Err(Error::new_spanned(
                 ident,
-                "expected `#[register(base = .., endianess = ..)]`",
+                "expected `#[register(base = .., endianness = ..)]`",
             ));
         }
         input.parse::<syn::Token![=]>()?;
-        let endianess = input.parse::<syn::Ident>()?;
-        let endianess = if endianess == "BE" {
-            Endianess::BE
-        } else if endianess == "LE" {
-            Endianess::LE
+        let endianness = input.parse::<syn::Ident>()?;
+        let endianness = if endianness == "BE" {
+            Endianness::BE
+        } else if endianness == "LE" {
+            Endianness::LE
         } else {
             return Err(Error::new_spanned(
-                endianess,
-                "only BE or LE is allowed for endianess specifier",
+                endianness,
+                "only BE or LE is allowed for endianness specifier",
             ));
         };
 
-        Ok(Self { base, endianess })
+        Ok(Self { base, endianness })
     }
 }
 

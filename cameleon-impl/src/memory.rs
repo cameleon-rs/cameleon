@@ -12,7 +12,7 @@ pub enum MemoryError {
     #[error("attempt to write to unwritable address")]
     AddressNotWritable,
 
-    #[error("attempt to access not existed memory location")]
+    #[error("attempt to access non-existent memory location")]
     InvalidAddress,
 
     #[error("invalid entry data: {}", 0)]

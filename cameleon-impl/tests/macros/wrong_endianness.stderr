@@ -1,0 +1,5 @@
+error: only BE or LE is allowed for endianness specifier
+ --> $DIR/wrong_endianness.rs:5:35
+  |
+5 | #[register(base = 0, endianness = Le)]
+  |                                   ^^

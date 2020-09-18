@@ -14,7 +14,7 @@ pub struct Memory {
 mod register {
     use cameleon_impl::memory::register;
 
-    #[register(base = 0, endianess = LE)]
+    #[register(base = 0, endianness = LE)]
     pub(super) enum ABRM {
         #[entry(len = 2, access = RO, ty = u16)]
         GenCpVersionMinor = 321,
@@ -29,7 +29,7 @@ mod register {
         SBRMAddress = super::SBRM_ADDRESS,
     }
 
-    #[register(base = super::SBRM_ADDRESS, endianess = BE)]
+    #[register(base = super::SBRM_ADDRESS, endianness = BE)]
     pub(super) enum SBRM {
         #[entry(len = 8, access = RO, ty = u64)]
         SIRMAddress = super::SIRM_ADDRESS,

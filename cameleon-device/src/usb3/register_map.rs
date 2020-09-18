@@ -19,8 +19,8 @@ pub mod abrm {
     pub const TIMESTAMP_LATCH: (u64, u16) = (0x01F8, 4);
     pub const TIMESTAMP_INCREMENT: (u64, u16) = (0x01FC, 8);
     pub const ACCESS_PRIVILEGE: (u64, u16) = (0x0204, 4);
-    pub const PROTOCOL_ENDIANESS: (u64, u16) = (0x0208, 4);
-    pub const IMPLEMENTATION_ENDIANESS: (u64, u16) = (0x020C, 4);
+    pub const PROTOCOL_ENDIANNESS: (u64, u16) = (0x0208, 4);
+    pub const IMPLEMENTATION_ENDIANNESS: (u64, u16) = (0x020C, 4);
     pub const DEVICE_SOFTWARE_INTERFACE_VERSION: (u64, u16) = (0x0210, 64);
 }
 

@@ -11,7 +11,7 @@ pub struct Memory {
     sbrm: SBRM,
 }
 
-#[register(base = 0, endianess = LE)]
+#[register(base = 0, endianness = LE)]
 enum ABRM {
     #[entry(len = 2, access = RO, ty = u16)]
     GenCpVersionMinor = 321,
@@ -26,7 +26,7 @@ enum ABRM {
     SBRMAddress = SBRM_ADDRESS,
 }
 
-#[register(base = SBRM_ADDRESS, endianess = BE)]
+#[register(base = SBRM_ADDRESS, endianness = BE)]
 enum SBRM {
     #[entry(len = 8, access = RO, ty = u64)]
     SIRMAddress = SIRM_ADDRESS,
