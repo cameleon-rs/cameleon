@@ -52,27 +52,6 @@ pub trait MemoryObserver: Send {
     fn update(&self);
 }
 
-/// Represents each register entry address and length.
-#[derive(Debug, Clone, Copy)]
-pub struct RawEntry {
-    /// Offset of the entry.
-    pub offset: usize,
-    /// Length of the entry.
-    pub len: usize,
-}
-
-impl RawEntry {
-    pub fn new(offset: usize, len: usize) -> Self {
-        Self { offset, len }
-    }
-
-    pub fn range(&self) -> std::ops::Range<usize> {
-        let start = self.offset;
-        let end = start + self.len;
-        start..end
-    }
-}
-
 /// Represent access right of each memory cell.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AccessRight {
@@ -228,6 +207,28 @@ pub trait RegisterEntry {
     fn parse(data: &[u8]) -> MemoryResult<Self::Ty>;
     fn serialize(data: Self::Ty) -> MemoryResult<Vec<u8>>;
     fn raw_entry() -> RawEntry;
+}
+
+/// Represents each register entry address and length.
+#[derive(Debug, Clone, Copy)]
+#[doc(hidden)]
+pub struct RawEntry {
+    /// Offset of the entry.
+    pub offset: usize,
+    /// Length of the entry.
+    pub len: usize,
+}
+
+impl RawEntry {
+    pub fn new(offset: usize, len: usize) -> Self {
+        Self { offset, len }
+    }
+
+    pub fn range(&self) -> std::ops::Range<usize> {
+        let start = self.offset;
+        let end = start + self.len;
+        start..end
+    }
 }
 
 #[cfg(test)]
