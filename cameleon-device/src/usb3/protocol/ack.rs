@@ -8,8 +8,8 @@ use super::parse_util;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AckPacket<'a> {
-    pub ccd: AckCcd,
-    pub raw_scd: &'a [u8],
+    ccd: AckCcd,
+    raw_scd: &'a [u8],
 }
 
 impl<'a> AckPacket<'a> {
@@ -34,6 +34,10 @@ impl<'a> AckPacket<'a> {
         &self.ccd
     }
 
+    pub fn raw_scd(&self) -> &'a [u8] {
+        self.raw_scd
+    }
+
     pub fn scd_as<T: ParseScd<'a>>(&self) -> Result<T> {
         T::parse(self.raw_scd, &self.ccd)
     }
@@ -44,13 +48,6 @@ impl<'a> AckPacket<'a> {
 
     pub fn request_id(&self) -> u16 {
         self.ccd.request_id
-    }
-
-    pub fn custom_command_id(&self) -> Option<u16> {
-        match self.ccd.scd_kind {
-            ScdKind::Custom(id) => Some(id),
-            _ => None,
-        }
     }
 
     fn parse_prefix(cursor: &mut Cursor<&[u8]>) -> Result<()> {
@@ -65,13 +62,29 @@ impl<'a> AckPacket<'a> {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AckCcd {
-    pub status: Status,
-    pub scd_kind: ScdKind,
-    pub request_id: u16,
-    pub scd_len: u16,
+    pub(crate) status: Status,
+    pub(crate) scd_kind: ScdKind,
+    pub(crate) request_id: u16,
+    pub(crate) scd_len: u16,
 }
 
 impl AckCcd {
+    pub fn status(&self) -> Status {
+        self.status
+    }
+
+    pub fn scd_kind(&self) -> ScdKind {
+        self.scd_kind
+    }
+
+    pub fn request_id(&self) -> u16 {
+        self.request_id
+    }
+
+    pub fn scd_len(&self) -> u16 {
+        self.scd_len
+    }
+
     fn parse(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
         let status = Status::parse(cursor)?;
         let scd_kind = ScdKind::parse(cursor)?;
@@ -251,7 +264,6 @@ pub enum ScdKind {
     ReadMemStacked,
     WriteMemStacked,
     Pending,
-    Custom(u16),
 }
 
 impl ScdKind {
@@ -263,15 +275,10 @@ impl ScdKind {
             0x0805 => Ok(ScdKind::Pending),
             0x0807 => Ok(ScdKind::ReadMemStacked),
             0x0809 => Ok(ScdKind::WriteMemStacked),
-            _ if Self::is_custom(id) => Ok(ScdKind::Custom(id)),
             _ => Err(Error::InvalidPacket(
                 format!("unknown ack command id {:#X}", id).into(),
             )),
         }
-    }
-
-    pub(crate) fn is_custom(id: u16) -> bool {
-        id >> 15 == 1 && id & 1 == 1
     }
 }
 
@@ -372,14 +379,6 @@ impl<'a> ParseScd<'a> for WriteMemStacked {
     }
 }
 
-impl<'a> ParseScd<'a> for CustomAck<'a> {
-    fn parse(buf: &'a [u8], ccd: &AckCcd) -> Result<Self> {
-        let data = parse_util::read_bytes(&mut Cursor::new(buf), ccd.scd_len)?;
-
-        Ok(Self { data })
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -410,7 +409,6 @@ mod tests {
         assert!(ack.status().is_success());
         assert!(!ack.status().is_fatal());
         assert_eq!(ack.request_id(), 1);
-        assert!(ack.custom_command_id().is_none());
 
         let parsed_scd = ack.scd_as::<ReadMem>().unwrap();
         assert_eq!(parsed_scd.data, scd);
@@ -427,7 +425,6 @@ mod tests {
         assert!(ack.status().is_success());
         assert!(!ack.status().is_fatal());
         assert_eq!(ack.request_id(), 1);
-        assert!(ack.custom_command_id().is_none());
 
         let parsed_scd = ack.scd_as::<WriteMem>().unwrap();
         assert_eq!(parsed_scd.length, 0x0a);
@@ -444,7 +441,6 @@ mod tests {
         assert!(ack.status().is_success());
         assert!(!ack.status().is_fatal());
         assert_eq!(ack.request_id(), 1);
-        assert!(ack.custom_command_id().is_none());
 
         let parsed_scd = ack.scd_as::<ReadMemStacked>().unwrap();
         assert_eq!(parsed_scd.data, scd);
@@ -462,7 +458,6 @@ mod tests {
         assert!(ack.status().is_success());
         assert!(!ack.status().is_fatal());
         assert_eq!(ack.request_id(), 1);
-        assert!(ack.custom_command_id().is_none());
 
         let parsed_scd = ack.scd_as::<WriteMemStacked>().unwrap();
         assert_eq!(&parsed_scd.lengths, &[3, 10]);
@@ -481,7 +476,6 @@ mod tests {
         assert!(ack.status().is_success());
         assert!(!ack.status().is_fatal());
         assert_eq!(ack.request_id(), 1);
-        assert!(ack.custom_command_id().is_none());
 
         let parsed_scd = ack.scd_as::<Pending>().unwrap();
         assert_eq!(parsed_scd.timeout, Duration::from_millis(700));

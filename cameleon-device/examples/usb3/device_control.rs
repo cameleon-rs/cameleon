@@ -36,7 +36,7 @@ fn main() {
     let (addr, len) = register_map::abrm::SERIAL_NUMBER;
 
     // Create ReadMem Command with request id.
-    let command = command::ReadMem::new(addr, len).finalize(request_id);
+    let command = cmd::ReadMem::new(addr, len).finalize(request_id);
 
     // Seirialize the command.
     let mut serialized_command = vec![];
@@ -48,7 +48,7 @@ fn main() {
         .unwrap();
 
     // Receive Acknowledge packet from the device.
-    let mut serialized_ack = vec![0; command.maximum_ack_len().unwrap()];
+    let mut serialized_ack = vec![0; command.maximum_ack_len()];
     control_channel
         .recv(&mut serialized_ack, Duration::from_millis(100))
         .unwrap();

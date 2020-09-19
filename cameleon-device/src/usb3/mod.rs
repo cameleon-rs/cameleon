@@ -2,7 +2,7 @@ pub mod protocol;
 pub mod register_map;
 pub mod prelude {
     pub use protocol::ack::ParseScd;
-    pub use protocol::command::CommandScd;
+    pub use protocol::cmd::CommandScd;
 
     use super::*;
 }
