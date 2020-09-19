@@ -233,31 +233,44 @@ impl RegisterEntry {
 
         let set_position_expand = quote! {#fragment.set_position(#start);};
 
+        let len = self.entry_attr.len();
         let write_expand = match self.entry_attr.ty {
             EntryType::Str => {
-                let len = self.entry_attr.len();
                 quote! {
                     if #len < #init.as_bytes().len() {
-                        panic!("String length overruns entry length");
+                        panic!("string length overruns entry length");
                     }
                     #fragment.write_all(#init.as_bytes()).unwrap();
                 }
             }
+
+            EntryType::Bytes => {
+                quote! {
+                    if #len < #init.len() {
+                        panic!("bytes length doesn't fit with entry length");
+                    }
+                    #fragment.write_all(&#init).unwrap();
+                }
+            }
+
             EntryType::U8 => {
                 quote! {
                     #fragment.write_u8(#init).unwrap();
                 }
             }
+
             EntryType::U16 => {
                 quote! {
                     #fragment.write_u16::<#endianness>(#init).unwrap();
                 }
             }
+
             EntryType::U32 => {
                 quote! {
                     #fragment.write_u32::<#endianness>(#init).unwrap();
                 }
             }
+
             EntryType::U64 => {
                 quote! {
                     #fragment.write_u64::<#endianness>(#init).unwrap();
@@ -286,6 +299,10 @@ impl RegisterEntry {
                     }
 
                     Ok(result.to_string())
+                },
+
+                EntryType::Bytes => quote! {
+                    Ok(data.into())
                 },
 
                 EntryType::U8 => quote! {
@@ -333,6 +350,13 @@ impl RegisterEntry {
                     }
                 },
 
+                EntryType::Bytes => quote! {
+                    let result = data;
+                    if result.len() != #len {
+                        return Err(cameleon_impl::memory::MemoryError::InvalidEntryData("data length is larget than the entry length".into()));
+                    }
+                },
+
                 EntryType::U8 => quote! {
                     let mut result = std::vec::Vec::with_capacity(#len);
                     result.write_u8(data).unwrap();
@@ -353,6 +377,7 @@ impl RegisterEntry {
                     result.write_u64::<#endianness>(data).unwrap();
                 },
             };
+
             quote! {
                 fn serialize(data: Self::Ty) -> cameleon_impl::memory::MemoryResult<Vec<u8>>
                 {
@@ -503,6 +528,7 @@ impl quote::ToTokens for AccessRight {
 enum InitValue {
     LitStr(syn::LitStr),
     LitInt(syn::LitInt),
+    Array(syn::ExprArray),
     Var(syn::Path),
 }
 
@@ -515,7 +541,20 @@ impl InitValue {
                 syn::Lit::Int(lit_int) => Ok(InitValue::LitInt(lit_int)),
                 other => Err(Error::new_spanned(other, error_msg)),
             },
+
             syn::Expr::Path(path) => Ok(InitValue::Var(path.path)),
+
+            syn::Expr::Reference(ref_expr) => {
+                if let syn::Expr::Array(arr) = *ref_expr.expr {
+                    Ok(InitValue::Array(arr))
+                } else {
+                    Err(Error::new_spanned(
+                        ref_expr.expr,
+                        "only &[.., .., ..] is accepted",
+                    ))
+                }
+            }
+
             other => Err(Error::new_spanned(other, error_msg)),
         }
     }
@@ -526,6 +565,7 @@ impl quote::ToTokens for InitValue {
         match self {
             InitValue::LitStr(string) => string.to_tokens(tokens),
             InitValue::LitInt(int) => int.to_tokens(tokens),
+            InitValue::Array(arr) => arr.to_tokens(tokens),
             InitValue::Var(path) => {
                 let path = prepend_super_if_needed(path);
                 path.to_tokens(tokens)
@@ -537,6 +577,7 @@ impl quote::ToTokens for InitValue {
 #[derive(Debug, Clone, Copy)]
 enum EntryType {
     Str,
+    Bytes,
     U8,
     U16,
     U32,
@@ -546,8 +587,10 @@ enum EntryType {
 impl EntryType {
     fn from_ident(ident: syn::Ident) -> Result<Self> {
         use EntryType::*;
-        if ident == "String" || ident == "&str" {
+        if ident == "String" {
             Ok(Str)
+        } else if ident == "Bytes" {
+            Ok(Bytes)
         } else if ident == "u8" {
             Ok(U8)
         } else if ident == "u16" {
@@ -559,7 +602,7 @@ impl EntryType {
         } else {
             Err(Error::new_spanned(
                 ident,
-                "expected String, &str, u8, u16, u32 or u64",
+                "expected String, u8, u16, u32, u64, or Bytes",
             ))
         }
     }
@@ -568,7 +611,7 @@ impl EntryType {
         use EntryType::*;
         match self {
             U8 | U16 | U32 | U64 => true,
-            Str => false,
+            Str | Bytes => false,
         }
     }
 
@@ -579,7 +622,7 @@ impl EntryType {
             U16 => 16,
             U32 => 32,
             U64 => 64,
-            Str => panic!(),
+            Str | Bytes => panic!(),
         }
     }
 }
@@ -595,6 +638,9 @@ impl quote::ToTokens for EntryType {
             U16 => format_ident!("u16").to_tokens(tokens),
             U32 => format_ident!("u32").to_tokens(tokens),
             U64 => format_ident!("u64").to_tokens(tokens),
+            Bytes => syn::parse_str::<syn::Path>("Vec<u8>")
+                .unwrap()
+                .to_tokens(tokens),
         }
     }
 }
