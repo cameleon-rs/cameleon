@@ -48,16 +48,46 @@ jobs:
       - name: Rustfmt
         run: cargo fmt --all -- --check --color always
 
-      - name: Clippy for cameleon-device without libusb
-        run: cargo clippy --all-targets --color always -- -D warnings # Check without libusb feature.
-        working-directory: cameleon-device
+      - name: Clippy with default features
+        run: cargo clippy --all-targets --color always -- -D warnings
 
       - name: Clippy for cameleon-device with libusb
         run: cargo clippy --all-targets --features libusb --color always -- -D warnings # Check with libusb feature.
         working-directory: cameleon-device
 
-  test:
-    name: Test
+  test-default-feature:
+    name: Test with default features
+    defaults:
+      run:
+        shell: bash
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          # - macos-latest
+          - windows-latest
+        rust:
+          - stable
+          - beta
+          - nightly
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+
+      - name: Test cameleon
+        run: cargo test --all-targets --color always
+      # NOTE. --all-targets option doesn't invoke doctest, see https://github.com/rust-lang/cargo/issues/6669.
+      - name: Doctest cameleon
+        run: cargo test --doc --color always
+
+  test-libusb-feature:
+    name: Test with libusb feature
     defaults:
       run:
         shell: bash
@@ -95,16 +125,9 @@ jobs:
             vcpkg/vcpkg install libusb
           fi
 
-      # Test without libusb feature.
-      - name: Test cameleon-device without libusb
-        run: cargo test --all-targets --color always
-      # Test doc without libusb feature. --all-targets option doesn't invoke doctest, see https://github.com/rust-lang/cargo/issues/6669.
-      - name: Doctest cameleon-device without libusb
-        run: cargo test --doc --color always
-
-      # Test with libusb feature.
-      - name: Test cameleon-device with libsub
+      # Test cameleon-device with libusb feature.
+      - name: Test cameleon-device
         run: cargo test --all-targets --features libusb --color always
-      # Test doc with libusb feature. --all-targets option doesn't invoke doctest, see https://github.com/rust-lang/cargo/issues/6669.
-      - name: Doctest cameleon-device with libsub
+      # Doctest cameleon-device with libusb feature. --all-targets option doesn't invoke doctest, see https://github.com/rust-lang/cargo/issues/6669.
+      - name: Doctest cameleon-device
         run: cargo test --doc --features libusb --color always

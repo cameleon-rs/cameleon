@@ -1,0 +1,5 @@
+error: expected NA, RO, WO, or RW
+ --> $DIR/wrong_access_right.rs:5:31
+  |
+5 |     #[entry(len = 2, access = Ro, ty = u16)]
+  |                               ^^

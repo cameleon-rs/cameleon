@@ -131,8 +131,8 @@ impl Interface {
         let (stream_signal_tx, stream_signal_rx) = channel(CHANNEL_CAPACITY);
 
         // Construct and spawn control module.
-        let event_module = StreamModule::new(self.timestamp.clone(), self.stream_queue.clone());
-        task::spawn(event_module.run(signal_tx, stream_signal_rx));
+        let stream_module = StreamModule::new(self.timestamp.clone(), self.stream_queue.clone());
+        task::spawn(stream_module.run(signal_tx, stream_signal_rx));
 
         stream_signal_tx
     }

@@ -1,7 +1,8 @@
+use rand::seq::SliceRandom;
 use semver::Version;
 use thiserror::Error;
 
-use crate::usb3::{register_map::*, DeviceInfo, SupportedSpeed};
+use crate::usb3::{DeviceInfo, SupportedSpeed};
 
 use super::{
     device::Device,
@@ -9,10 +10,12 @@ use super::{
     memory::{Memory, ABRM},
 };
 
+use cameleon_impl::memory::prelude::*;
+
 #[derive(Debug, Error)]
 pub enum BuilderError {
     #[error("invalid string: {}", 0)]
-    InvalidString(&'static str),
+    InvalidString(String),
 }
 
 pub type BuilderResult<T> = std::result::Result<T, BuilderError>;
@@ -34,32 +37,37 @@ pub type BuilderResult<T> = std::result::Result<T, BuilderError>;
 /// ```rust
 /// use cameleon_device::usb3::{EmulatorBuilder, enumerate_device};
 ///
-/// let mut builder = EmulatorBuilder::new();
-///
 /// // Build device with default configuration and pass it to the device pool.
 /// // Now the device pool has one device.
-/// builder.build();
+/// EmulatorBuilder::new().build();
 ///
-/// // Set model name and serial number.
-/// builder.model_name("Cameleon Model").unwrap().serial_number("CAM1984").unwrap();
-///
-/// // Build device and pass it to the device pool.
-/// // Now device pool has two devices.
-/// builder.build();
+/// // Set model name and serial number, then build device.
+/// // Now the device pool has two devices.
+/// EmulatorBuilder::new().model_name("Cameleon Model").unwrap().serial_number("CAM1984").unwrap().build();
 ///
 /// let devices = enumerate_device().unwrap();
 /// assert_eq!(devices.len(), 2);
 ///
 /// ```
 pub struct EmulatorBuilder {
-    abrm: ABRM,
+    memory: Memory,
 }
 
 impl EmulatorBuilder {
     pub fn new() -> Self {
-        Self {
-            abrm: Default::default(),
-        }
+        let mut memory = Memory::new();
+
+        // Set dummy serial number.
+        let mut rang = rand::thread_rng();
+        let serial_base = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        let serial_number: String = (0..8)
+            .map(|_| serial_base.choose(&mut rang).unwrap())
+            .collect();
+        memory
+            .write_entry::<ABRM::SerialNumber>(serial_number)
+            .unwrap();
+
+        Self { memory }
     }
 
     /// Build an emulator and pass it to the device pool. User can't control the emulator itself
@@ -75,23 +83,18 @@ impl EmulatorBuilder {
     /// ```rust
     /// use cameleon_device::usb3::EmulatorBuilder;
     ///
-    /// let mut builder = EmulatorBuilder::new();
-    ///
     /// // Build device with default configuration and pass it to the device pool.
     /// // Now the device pool has one device.
-    /// builder.build();
+    /// EmulatorBuilder::new().build();
     ///
-    /// // Set model name and serial number.
-    /// builder.model_name("Cameleon Model").unwrap().serial_number("CAM1984").unwrap();
-    ///
-    /// // Build device and pass it to the device pool.
+    /// // Set model name and serial number, then build device.
     /// // Now the device pool has two devices.
-    /// builder.build();
+    /// EmulatorBuilder::new().model_name("Cameleon Model").unwrap().serial_number("CAM1984").unwrap().build();
+    ///
     /// ```
-    pub fn build(&self) {
-        let memory = Memory::new(self.abrm.clone());
+    pub fn build(self) {
         let device_info = self.build_device_info();
-        let device = Device::new(memory, device_info);
+        let device = Device::new(self.memory, device_info);
         DevicePool::with(|pool| pool.pool_and_run(device));
     }
 
@@ -99,10 +102,10 @@ impl EmulatorBuilder {
     ///
     /// If model name isn't set, default name is used.
     ///
-    /// NOTE: Only ASCII string is accepted, and maximum string length is 63.
+    /// NOTE: Only ASCII string is accepted, and maximum string length is 64.
     ///
     /// # Errors
-    /// If name is not ASCII string or the length is larger than 63, then
+    /// If name is not ASCII string or the length is larger than 64, then
     /// [`BuilderError::InvalidString`] is returned.
     ///
     /// [`BuilderError::InvalidString`]: enum.BuilderError.html#valirant.InvalidString
@@ -111,12 +114,13 @@ impl EmulatorBuilder {
     /// ```rust
     /// use cameleon_device::usb3::EmulatorBuilder;
     ///
-    /// let mut builder = EmulatorBuilder::new();
-    /// assert!(builder.model_name("my camera").is_ok());
-    /// assert!(builder.model_name("私のカメラ").is_err());
+    /// assert!(EmulatorBuilder::new().model_name("my camera").is_ok());
+    /// assert!(EmulatorBuilder::new().model_name("私のカメラ").is_err());
     /// ```
-    pub fn model_name(&mut self, name: &str) -> BuilderResult<&mut Self> {
-        self.abrm.set_model_name(name)?;
+    pub fn model_name(mut self, name: &str) -> BuilderResult<Self> {
+        self.memory
+            .write_entry::<ABRM::UserDefinedName>(name.into())
+            .map_err(|e| BuilderError::InvalidString(format! {"{}", e}))?;
         Ok(self)
     }
 
@@ -124,10 +128,10 @@ impl EmulatorBuilder {
     ///
     /// If family name isn't set, default name is used.
     ///
-    /// NOTE: Only ASCII string is accepted, and maximum string length is 63.
+    /// NOTE: Only ASCII string is accepted, and maximum string length is 64.
     ///
     /// # Errors
-    /// If name is not ASCII string or the length is larger than 63, then
+    /// If name is not ASCII string or the length is larger than 64, then
     /// [`BuilderError::InvalidString`] is returned.
     ///
     /// [`BuilderError::InvalidString`]: enum.BuilderError.html#valirant.InvalidString
@@ -136,12 +140,13 @@ impl EmulatorBuilder {
     /// ```rust
     /// use cameleon_device::usb3::EmulatorBuilder;
     ///
-    /// let mut builder = EmulatorBuilder::new();
-    /// assert!(builder.family_name("my camera family").is_ok());
-    /// assert!(builder.family_name("私のカメラ家族").is_err());
+    /// assert!(EmulatorBuilder::new().family_name("my camera family").is_ok());
+    /// assert!(EmulatorBuilder::new().family_name("私のカメラ家族").is_err());
     /// ```
-    pub fn family_name(&mut self, name: &str) -> BuilderResult<&mut Self> {
-        self.abrm.set_family_name(name)?;
+    pub fn family_name(mut self, name: &str) -> BuilderResult<Self> {
+        self.memory
+            .write_entry::<ABRM::UserDefinedName>(name.into())
+            .map_err(|e| BuilderError::InvalidString(format! {"{}", e}))?;
         Ok(self)
     }
 
@@ -149,10 +154,10 @@ impl EmulatorBuilder {
     ///
     /// If serial number isn't set, 8 length digit is set at random.
     ///
-    /// NOTE: Only ASCII string is accepted, and maximum string length is 63.
+    /// NOTE: Only ASCII string is accepted, and maximum string length is 64.
     ///
     /// # Errors
-    /// If serial is not ASCII string or the length is larger than 63, then
+    /// If serial is not ASCII string or the length is larger than 64, then
     /// [`BuilderError::InvalidString`] is returned.
     ///
     /// [`BuilderError::InvalidString`]: enum.BuilderError.html#valirant.InvalidString
@@ -161,12 +166,13 @@ impl EmulatorBuilder {
     /// ```rust
     /// use cameleon_device::usb3::EmulatorBuilder;
     ///
-    /// let mut builder = EmulatorBuilder::new();
-    /// assert!(builder.serial_number("CAM1984").is_ok());
-    /// assert!(builder.serial_number("1984年").is_err());
+    /// assert!(EmulatorBuilder::new().serial_number("CAM1984").is_ok());
+    /// assert!(EmulatorBuilder::new().serial_number("カム1984年").is_err());
     /// ```
-    pub fn serial_number(&mut self, serial: &str) -> BuilderResult<&mut Self> {
-        self.abrm.set_serial_number(serial)?;
+    pub fn serial_number(mut self, serial: &str) -> BuilderResult<Self> {
+        self.memory
+            .write_entry::<ABRM::UserDefinedName>(serial.into())
+            .map_err(|e| BuilderError::InvalidString(format! {"{}", e}))?;
         Ok(self)
     }
 
@@ -174,10 +180,10 @@ impl EmulatorBuilder {
     ///
     /// If user defined name isn't set, default name is set.
     ///
-    /// NOTE: Only ASCII string is accepted, and maximum string length is 63.
+    /// NOTE: Only ASCII string is accepted, and maximum string length is 64.
     ///
     /// # Errors
-    /// If name is not ASCII string or the length is larger than 63, then
+    /// If name is not ASCII string or the length is larger than 64, then
     /// [`BuilderError::InvalidString`] is returned.
     ///
     /// [`BuilderError::InvalidString`]: enum.BuilderError.html#valirant.InvalidString
@@ -186,25 +192,30 @@ impl EmulatorBuilder {
     /// ```rust
     /// use cameleon_device::usb3::EmulatorBuilder;
     ///
-    /// let mut builder = EmulatorBuilder::new();
-    /// assert!(builder.user_defined_name("user define name").is_ok());
-    /// assert!(builder.user_defined_name("使用者定義名前").is_err());
+    /// assert!(EmulatorBuilder::new().user_defined_name("user define name").is_ok());
+    /// assert!(EmulatorBuilder::new().user_defined_name("使用者が定義した名前").is_err());
     /// ```
-    pub fn user_defined_name(&mut self, name: &str) -> BuilderResult<&mut Self> {
-        self.abrm.set_user_defined_name(name)?;
+    pub fn user_defined_name(mut self, name: &str) -> BuilderResult<Self> {
+        self.memory
+            .write_entry::<ABRM::UserDefinedName>(name.into())
+            .map_err(|e| BuilderError::InvalidString(format! {"{}", e}))?;
         Ok(self)
     }
 
     fn build_device_info(&self) -> DeviceInfo {
-        let gencp_version = self.abrm.version_from(abrm::GENCP_VERSION);
-        let vendor_name = self.abrm.string_from(abrm::MANUFACTURER_NAME);
-        let model_name = self.abrm.string_from(abrm::MODEL_NAME);
-        let family_name = Some(self.abrm.string_from(abrm::FAMILY_NAME));
-        let device_version = self.abrm.string_from(abrm::DEVICE_VERSION);
-        let manufacturer_info = self.abrm.string_from(abrm::MANUFACTURER_INFO);
-        let user_defined_name = Some(self.abrm.string_from(abrm::USER_DEFINED_NAME));
+        use ABRM::*;
+        let gencp_version_major = self.memory.read_entry::<GenCpVersionMajor>().unwrap();
+        let gencp_version_minor = self.memory.read_entry::<GenCpVersionMinor>().unwrap();
+        let gencp_version = Version::new(gencp_version_major as u64, gencp_version_minor as u64, 0);
+
+        let vendor_name = self.memory.read_entry::<ManufacturerName>().unwrap();
+        let model_name = self.memory.read_entry::<ModelName>().unwrap();
+        let family_name = Some(self.memory.read_entry::<FamilyName>().unwrap());
+        let device_version = self.memory.read_entry::<DeviceVersion>().unwrap();
+        let manufacturer_info = self.memory.read_entry::<ManufacturerInfo>().unwrap();
+        let user_defined_name = Some(self.memory.read_entry::<UserDefinedName>().unwrap());
         let supported_speed = SupportedSpeed::SuperSpeed;
-        let serial_number = self.abrm.string_from(abrm::SERIAL_NUMBER);
+        let serial_number = self.memory.read_entry::<SerialNumber>().unwrap();
 
         // TODO: Read from SBRM.
         let u3v_version = Version::new(1, 0, 0);

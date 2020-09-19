@@ -1,5 +1,4 @@
-use std::convert::TryInto;
-use std::io::Write;
+use std::{convert::TryInto, io::Write};
 
 use byteorder::{WriteBytesExt, LE};
 

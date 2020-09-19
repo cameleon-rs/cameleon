@@ -33,7 +33,7 @@ fn main() {
     control_channel.open().unwrap();
 
     // Get address and length of serial number entry in ABRM.
-    let (addr, len, _) = register_map::abrm::SERIAL_NUMBER;
+    let (addr, len) = register_map::abrm::SERIAL_NUMBER;
 
     // Create ReadMem Command with request id.
     let command = command::ReadMem::new(addr, len).finalize(request_id);

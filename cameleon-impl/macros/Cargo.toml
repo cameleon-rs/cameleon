@@ -1,0 +1,14 @@
+[package]
+name = "cameleon-impl-macros"
+version = "0.1.0"
+authors = ["Cameleon Project Developers"]
+edition = "2018"
+publish = false
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "1.0.40", features = ["full"] }
+proc-macro2 = "1.0.21"
+quote = "1.0.7"
