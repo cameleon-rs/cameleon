@@ -41,7 +41,15 @@ impl<'a, 'input> Node<'a, 'input> {
     }
 
     pub(super) fn peek_child(&mut self) -> Option<Span<Self>> {
-        let inner = self.children.peek()?;
+        let mut inner;
+        loop {
+            inner = self.children.peek()?;
+            if inner.node_type() == roxmltree::NodeType::Text {
+                self.children.next();
+            } else {
+                break;
+            }
+        }
         let node = Self::from_xmltree_node(*inner);
 
         Some(node)
