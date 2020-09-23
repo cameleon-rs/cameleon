@@ -1,8 +1,10 @@
 mod elem_type;
+mod node;
 mod node_base;
 mod verifier;
 mod xml;
 
+pub use node::*;
 pub use node_base::*;
 
 use std::ops::{Deref, Range};

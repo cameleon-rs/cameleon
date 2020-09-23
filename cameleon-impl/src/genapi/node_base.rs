@@ -11,8 +11,11 @@ macro_rules! optional_string_elem_getter {
         $name:ident
     ) => {
         $(#[$meta])*
-        pub fn $name(&self) -> Option<&Span<String>> {
-            self.elem.$name.as_ref()
+        pub fn $name(&self) -> Option<Span<&str>> {
+            match self.elem.$name {
+                Some(ref elem) => Some(elem.span(elem.as_str())),
+                _ => None
+            }
         }
     };
 }
@@ -22,8 +25,8 @@ impl<'a> NodeBase<'a> {
         Self { attr, elem }
     }
 
-    pub fn name(&self) -> &Span<String> {
-        &self.attr.name
+    pub fn name(&self) -> Span<&str> {
+        self.attr.name.span(self.attr.name.as_str())
     }
 
     pub fn name_space(&self) -> Span<NameSpace> {
@@ -38,24 +41,24 @@ impl<'a> NodeBase<'a> {
         self.attr.expose_static
     }
 
-    pub fn display_name(&self) -> &str {
-        if let Some(display_name) = self.elem.display_name.as_ref() {
-            &display_name
+    pub fn display_name(&self) -> Span<&str> {
+        if let Some(ref display_name) = self.elem.display_name {
+            display_name.span(display_name.as_str())
         } else {
             self.name()
         }
     }
 
-    pub fn visibility(&self) -> &Span<Visibility> {
-        &self.elem.visibility
+    pub fn visibility(&self) -> Span<Visibility> {
+        self.elem.visibility
     }
 
-    pub fn is_deprecated(&self) -> &Span<bool> {
-        &self.elem.is_deprecated
+    pub fn is_deprecated(&self) -> Span<bool> {
+        self.elem.is_deprecated
     }
 
-    pub fn imposed_access_mode(&self) -> &Span<AccessMode> {
-        &self.elem.imposed_access_mode
+    pub fn imposed_access_mode(&self) -> Span<AccessMode> {
+        self.elem.imposed_access_mode
     }
 
     optional_string_elem_getter! {tool_tip}
@@ -149,7 +152,7 @@ pub(super) struct NodeElementBase {
 
 impl NodeElementBase {
     pub(super) fn parse(node: &mut Span<xml::Node>) -> GenApiResult<Self> {
-        node.next_child_if("Extension");
+        node.next_child_elem_if("Extension");
 
         let tool_tip: Option<Span<String>> =
             Self::next_text_with_verifier(node, "ToolTip", |_| Ok(()))?;
@@ -213,7 +216,7 @@ impl NodeElementBase {
     where
         F: FnOnce(Span<&str>) -> GenApiResult<()>,
     {
-        if let Some(text) = node.next_child_text_if(tag_name)? {
+        if let Some(text) = node.next_child_elem_text_if(tag_name)? {
             verifier(text)?;
             Ok(Some(text.map(Into::into)))
         } else {
@@ -229,7 +232,7 @@ impl NodeElementBase {
     where
         F: FnOnce(Span<&str>) -> GenApiResult<U>,
     {
-        if let Some(text) = node.next_child_text_if(tag_name)? {
+        if let Some(text) = node.next_child_elem_text_if(tag_name)? {
             Some(converter(text)).transpose()
         } else {
             Ok(None)

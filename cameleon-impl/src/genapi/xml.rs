@@ -24,27 +24,27 @@ impl<'a, 'input> Node<'a, 'input> {
         )
     }
 
-    pub(super) fn next_child(&mut self) -> Option<Span<Self>> {
-        let node = self.peek_child()?;
+    pub(super) fn next_child_elem(&mut self) -> Option<Span<Self>> {
+        let node = self.peek_child_elem()?;
         self.children.next();
 
         Some(node)
     }
 
-    pub(super) fn next_child_if(&mut self, tag_name: &str) -> Option<Span<Self>> {
-        let next_node = self.peek_child()?;
+    pub(super) fn next_child_elem_if(&mut self, tag_name: &str) -> Option<Span<Self>> {
+        let next_node = self.peek_child_elem()?;
         if next_node.tag_name() == tag_name {
-            self.next_child()
+            self.next_child_elem()
         } else {
             None
         }
     }
 
-    pub(super) fn peek_child(&mut self) -> Option<Span<Self>> {
+    pub(super) fn peek_child_elem(&mut self) -> Option<Span<Self>> {
         let mut inner;
         loop {
             inner = self.children.peek()?;
-            if inner.node_type() == roxmltree::NodeType::Text {
+            if inner.node_type() != roxmltree::NodeType::Element {
                 self.children.next();
             } else {
                 break;
@@ -97,11 +97,11 @@ impl<'a, 'input> Node<'a, 'input> {
         })
     }
 
-    pub(super) fn next_child_text_if(
+    pub(super) fn next_child_elem_text_if(
         &mut self,
         tag_name: &str,
     ) -> GenApiResult<Option<Span<&'a str>>> {
-        if let Some(node) = self.next_child_if(tag_name) {
+        if let Some(node) = self.next_child_elem_if(tag_name) {
             let text = node.expect_text()?;
             Ok(Some(text))
         } else {
