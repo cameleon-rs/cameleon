@@ -1,3 +1,5 @@
+use super::xml;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NameSpace {
     Standard,
@@ -88,16 +90,34 @@ impl From<&str> for AccessMode {
     }
 }
 
-#[derive(Debug, Clone)]
-pub enum ImmOrPNode<T: Clone> {
+#[derive(Debug, Clone, PartialEq)]
+pub enum ImmOrPNode<T: Clone + PartialEq> {
     Imm(T),
     PNode(String),
 }
 
 impl<T> ImmOrPNode<T>
 where
-    T: Clone,
+    T: Clone + PartialEq,
 {
+    fn parse_impl<F>(
+        node: &mut xml::Node,
+        imm_name: &str,
+        pnode_name: &str,
+        converter: F,
+    ) -> Option<Self>
+    where
+        F: FnOnce(&str) -> T,
+    {
+        if let Some(text) = node.next_text_if(imm_name) {
+            Some(ImmOrPNode::imm(converter(&text)))
+        } else if let Some(text) = node.next_text_if(pnode_name) {
+            Some(ImmOrPNode::pnode(text))
+        } else {
+            None
+        }
+    }
+
     pub(super) fn imm(value: T) -> Self {
         Self::Imm(value)
     }
@@ -107,6 +127,13 @@ where
     }
 }
 
+impl ImmOrPNode<i64> {
+    pub(super) fn parse(node: &mut xml::Node, imm_name: &str, pnode_name: &str) -> Option<Self> {
+        Self::parse_impl(node, imm_name, pnode_name, convert_to_int)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IntegerRepresentation {
     Linear,
     Logarithmic,
@@ -137,5 +164,13 @@ pub(super) fn convert_to_bool(value: &str) -> bool {
         "Yes" => true,
         "No" => false,
         _ => unreachable!(),
+    }
+}
+
+pub(super) fn convert_to_int(value: &str) -> i64 {
+    if value.starts_with("0x") || value.starts_with("0X") {
+        i64::from_str_radix(&value[2..], 16).unwrap()
+    } else {
+        i64::from_str_radix(value, 10).unwrap()
     }
 }

@@ -3,6 +3,7 @@ use std::vec::IntoIter;
 
 use libxml::tree::node::Node as XmlNode;
 
+#[derive(Debug)]
 pub(super) struct Node {
     inner: XmlNode,
     children: Peekable<IntoIter<XmlNode>>,
@@ -35,8 +36,7 @@ impl Node {
     }
 
     pub(super) fn next_text_if(&mut self, tag_name: &str) -> Option<String> {
-        let next_node = self.next_if(tag_name)?;
-        Some(next_node.text())
+        self.next_if(tag_name).map(|node| node.text())
     }
 
     pub(super) fn peek(&mut self) -> Option<Self> {

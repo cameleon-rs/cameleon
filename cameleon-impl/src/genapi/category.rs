@@ -11,7 +11,7 @@ pub struct CategoryNode {
 }
 
 impl CategoryNode {
-    pub fn node_base<'a>(&'a self) -> NodeBase<'a> {
+    pub fn node_base(&self) -> NodeBase<'_> {
         NodeBase::new(&self.attr_base, &self.elem_base)
     }
 
