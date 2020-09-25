@@ -10,7 +10,7 @@ publish = false
 cameleon-impl-macros = { path = "macros" }
 thiserror = "1.0.20"
 byteorder = "1.3.4"
-roxmltree = "0.13.0"
+libxml = "0.2.14"
 regex = "1.3.9"
 lazy_static = "1.4.0"
 

@@ -1,13 +1,13 @@
-use super::{node_base::*, verifier::verify_node_name, xml, GenApiResult, Span};
+use super::{node_base::*, xml};
 
 pub struct CategoryNode {
     attr_base: NodeAttributeBase,
 
     elem_base: NodeElementBase,
 
-    p_invalidators: Vec<Span<String>>,
+    p_invalidators: Vec<String>,
 
-    p_features: Vec<Span<String>>,
+    p_features: Vec<String>,
 }
 
 impl CategoryNode {
@@ -15,38 +15,36 @@ impl CategoryNode {
         NodeBase::new(&self.attr_base, &self.elem_base)
     }
 
-    pub fn p_invalidators(&self) -> &[Span<String>] {
+    pub fn p_invalidators(&self) -> &[String] {
         &self.p_invalidators
     }
 
-    pub fn p_features(&self) -> &[Span<String>] {
+    pub fn p_features(&self) -> &[String] {
         &self.p_features
     }
 
-    pub(super) fn parse(mut node: Span<xml::Node>) -> GenApiResult<Self> {
+    pub(super) fn parse(mut node: xml::Node) -> Self {
         debug_assert!(node.tag_name() == "Category");
 
-        let attr_base = NodeAttributeBase::parse(&mut node)?;
-        let elem_base = NodeElementBase::parse(&mut node)?;
+        let attr_base = NodeAttributeBase::parse(&node);
+        let elem_base = NodeElementBase::parse(&mut node);
 
         let mut p_invalidators = vec![];
-        while let Some(text) = node.next_child_elem_text_if("pInvalidator")? {
-            verify_node_name(text)?;
-            p_invalidators.push(text.map(Into::into))
+        while let Some(text) = node.next_text_if("pInvalidator") {
+            p_invalidators.push(text)
         }
 
         let mut p_features = vec![];
-        while let Some(text) = node.next_child_elem_text_if("pFeature")? {
-            verify_node_name(text)?;
-            p_features.push(text.map(Into::into))
+        while let Some(text) = node.next_text_if("pFeature") {
+            p_features.push(text)
         }
 
-        Ok(Self {
+        Self {
             attr_base,
             elem_base,
             p_invalidators,
             p_features,
-        })
+        }
     }
 }
 
@@ -65,10 +63,11 @@ mod tests {
             </Category>
             "#;
 
-        let document = roxmltree::Document::parse(xml).unwrap();
+        let xml_parser = libxml::parser::Parser::default();
+        let document = xml_parser.parse_string(&xml).unwrap();
 
-        let node = xml::Node::from_xmltree_node(document.root_element());
-        let node = CategoryNode::parse(node).unwrap();
+        let node = xml::Node::from_xmltree_node(document.get_root_element().unwrap());
+        let node = CategoryNode::parse(node);
 
         let p_invalidators = node.p_invalidators();
         assert_eq!(p_invalidators.len(), 2);
@@ -88,10 +87,11 @@ mod tests {
             </Category>
             "#;
 
-        let document = roxmltree::Document::parse(xml).unwrap();
+        let xml_parser = libxml::parser::Parser::default();
+        let document = xml_parser.parse_string(&xml).unwrap();
 
-        let node = xml::Node::from_xmltree_node(document.root_element());
-        let node = CategoryNode::parse(node).unwrap();
+        let node = xml::Node::from_xmltree_node(document.get_root_element().unwrap());
+        let node = CategoryNode::parse(node);
 
         let p_invalidators = node.p_invalidators();
         assert!(p_invalidators.is_empty());
