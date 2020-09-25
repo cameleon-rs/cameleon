@@ -16,9 +16,7 @@ impl Node {
     pub fn p_invalidators(&self) -> &[Span<String>] {
         &self.p_invalidators
     }
-}
 
-impl Node {
     pub(super) fn parse(mut node: Span<xml::Node>) -> GenApiResult<Self> {
         debug_assert!(node.tag_name() == "Node");
 

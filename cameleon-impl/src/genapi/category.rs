@@ -22,9 +22,7 @@ impl CategoryNode {
     pub fn p_features(&self) -> &[Span<String>] {
         &self.p_features
     }
-}
 
-impl CategoryNode {
     pub(super) fn parse(mut node: Span<xml::Node>) -> GenApiResult<Self> {
         debug_assert!(node.tag_name() == "Category");
 

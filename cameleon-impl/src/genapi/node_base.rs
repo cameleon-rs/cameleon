@@ -1,3 +1,5 @@
+use std::convert::TryInto;
+
 use super::{elem_type::*, verifier::*, xml, GenApiError, GenApiResult, Span};
 
 pub struct NodeBase<'a> {
@@ -95,19 +97,19 @@ impl NodeAttributeBase {
 
         let name_space: Span<NameSpace> = node
             .next_attribute_if("NameSpace")
-            .map(|attr| convert_to_namespace(attr.value()))
+            .map(|attr| attr.value().try_into())
             .transpose()?
             .unwrap_or(node.span(Default::default()));
 
         let merge_priority: Span<MergePriority> = node
             .next_attribute_if("MergePriority")
-            .map(|attr| convert_to_merge_priority(attr.value()))
+            .map(|attr| attr.value().try_into())
             .transpose()?
             .unwrap_or(node.span(Default::default()));
 
         let expose_static = node
             .next_attribute_if("ExposeStatic")
-            .map(|attr| convert_to_bool(attr.value()))
+            .map(|attr| attr.value().try_into())
             .transpose()?;
 
         Ok(Self {
@@ -154,41 +156,98 @@ impl NodeElementBase {
     pub(super) fn parse(node: &mut Span<xml::Node>) -> GenApiResult<Self> {
         node.next_child_elem_if("Extension");
 
-        let tool_tip: Option<Span<String>> =
-            Self::next_text_with_verifier(node, "ToolTip", |_| Ok(()))?;
+        let tool_tip = node
+            .next_child_elem_text_if("ToolTip")?
+            .map(|text| text.map(Into::into));
 
-        let display_name: Option<Span<String>> =
-            Self::next_text_with_verifier(node, "DisplayName", |_| Ok(()))?;
+        let display_name = node
+            .next_child_elem_text_if("DisplayName")?
+            .map(|text| text.map(Into::into));
 
-        let visibility = Self::next_text_with_converter(node, "Visibility", convert_to_visibility)?
-            .unwrap_or(node.span(Default::default()));
+        let visibility = node.next_child_elem_text_if("Visibility")?.map_or_else(
+            || Ok(node.span(Visibility::default())),
+            |text| text.try_into(),
+        )?;
 
-        let docu_url = Self::next_text_with_verifier(node, "DocuURL", verify_url_string)?;
+        let docu_url = node
+            .next_child_elem_text_if("DocuURL")?
+            .map::<GenApiResult<_>, _>(|text| {
+                verify_url_string(text)?;
+                Ok(text.map(Into::into))
+            })
+            .transpose()?;
 
-        let is_deprecated = Self::next_text_with_converter(node, "IsDeprecated", convert_to_bool)?
-            .unwrap_or(node.span(false));
+        let is_deprecated = node
+            .next_child_elem_text_if("IsDeprecated")?
+            .map_or_else(|| Ok(node.span(false)), |text| text.try_into())?;
 
-        let event_id = Self::next_text_with_verifier(node, "EventID", verify_hex_string)?;
+        let event_id = node
+            .next_child_elem_text_if("EventID")?
+            .map::<GenApiResult<_>, _>(|text| {
+                verify_hex_string(text)?;
+                Ok(text.map(Into::into))
+            })
+            .transpose()?;
 
-        let p_is_implemented =
-            Self::next_text_with_verifier(node, "pIsImplemented", verify_node_name)?;
+        let p_is_implemented = node
+            .next_child_elem_text_if("pIsImplemented")?
+            .map::<GenApiResult<_>, _>(|text| {
+                verify_node_name(text)?;
+                Ok(text.map(Into::into))
+            })
+            .transpose()?;
 
-        let p_is_available = Self::next_text_with_verifier(node, "pIsAvailable", verify_node_name)?;
+        let p_is_available = node
+            .next_child_elem_text_if("pIsAvailable")?
+            .map::<GenApiResult<_>, _>(|text| {
+                verify_node_name(text)?;
+                Ok(text.map(Into::into))
+            })
+            .transpose()?;
 
-        let p_is_locked = Self::next_text_with_verifier(node, "pIsLocked", verify_node_name)?;
+        let p_is_locked = node
+            .next_child_elem_text_if("pIsLocked")?
+            .map::<GenApiResult<_>, _>(|text| {
+                verify_node_name(text)?;
+                Ok(text.map(Into::into))
+            })
+            .transpose()?;
 
-        let p_block_polling =
-            Self::next_text_with_verifier(node, "pBlockPolling", verify_node_name)?;
+        let p_block_polling = node
+            .next_child_elem_text_if("pBlockPolling")?
+            .map::<GenApiResult<_>, _>(|text| {
+                verify_node_name(text)?;
+                Ok(text.map(Into::into))
+            })
+            .transpose()?;
 
-        let imposed_access_mode =
-            Self::next_text_with_converter(node, "ImposedAccessMode", convert_to_access_mode)?
-                .unwrap_or(node.span(AccessMode::RW));
+        let imposed_access_mode = node
+            .next_child_elem_text_if("ImposedAccessMode")?
+            .map_or_else(|| Ok(node.span(AccessMode::RW)), |text| text.try_into())?;
 
-        let p_error = Self::next_text_with_verifier(node, "pError", verify_node_name)?;
+        let p_error = node
+            .next_child_elem_text_if("pError")?
+            .map::<GenApiResult<_>, _>(|text| {
+                verify_node_name(text)?;
+                Ok(text.map(Into::into))
+            })
+            .transpose()?;
 
-        let p_alias = Self::next_text_with_verifier(node, "pAlias", verify_node_name)?;
+        let p_alias = node
+            .next_child_elem_text_if("pAlias")?
+            .map::<GenApiResult<_>, _>(|text| {
+                verify_node_name(text)?;
+                Ok(text.map(Into::into))
+            })
+            .transpose()?;
 
-        let p_cast_alias = Self::next_text_with_verifier(node, "pCastAlias", verify_node_name)?;
+        let p_cast_alias = node
+            .next_child_elem_text_if("pCastAlias")?
+            .map::<GenApiResult<_>, _>(|text| {
+                verify_node_name(text)?;
+                Ok(text.map(Into::into))
+            })
+            .transpose()?;
 
         Ok(Self {
             tool_tip,
@@ -206,36 +265,5 @@ impl NodeElementBase {
             p_alias,
             p_cast_alias,
         })
-    }
-
-    fn next_text_with_verifier<F>(
-        node: &mut Span<xml::Node>,
-        tag_name: &str,
-        verifier: F,
-    ) -> GenApiResult<Option<Span<String>>>
-    where
-        F: FnOnce(Span<&str>) -> GenApiResult<()>,
-    {
-        if let Some(text) = node.next_child_elem_text_if(tag_name)? {
-            verifier(text)?;
-            Ok(Some(text.map(Into::into)))
-        } else {
-            Ok(None)
-        }
-    }
-
-    fn next_text_with_converter<U, F>(
-        node: &mut Span<xml::Node>,
-        tag_name: &str,
-        converter: F,
-    ) -> GenApiResult<Option<U>>
-    where
-        F: FnOnce(Span<&str>) -> GenApiResult<U>,
-    {
-        if let Some(text) = node.next_child_elem_text_if(tag_name)? {
-            Some(converter(text)).transpose()
-        } else {
-            Ok(None)
-        }
     }
 }
