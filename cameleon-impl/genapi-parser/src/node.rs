@@ -38,7 +38,7 @@ impl Node {
 
 #[cfg(test)]
 mod tests {
-    use crate::genapi::elem_type::*;
+    use crate::elem_type::*;
 
     use super::*;
 
