@@ -1,5 +1,6 @@
 use super::{node_base::*, xml};
 
+#[derive(Debug, Clone)]
 pub struct Node {
     attr_base: NodeAttributeBase,
 

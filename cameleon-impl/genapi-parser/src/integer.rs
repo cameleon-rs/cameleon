@@ -1,5 +1,6 @@
 use super::{elem_type::*, node_base::*, xml};
 
+#[derive(Debug, Clone)]
 pub struct IntegerNode {
     attr_base: NodeAttributeBase,
 
@@ -141,6 +142,7 @@ impl IntegerRepresentation {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum IntegerValueKind {
     Value(i64),
     PValue(IntegerPValue),
@@ -168,11 +170,13 @@ impl IntegerValueKind {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct IntegerPValue {
     pub p_value: String,
     pub p_value_copies: Vec<String>,
 }
 
+#[derive(Debug, Clone)]
 pub struct IntegerPIndex {
     pub p_index: String,
     pub value_indexed: Vec<ValueIndexed>,
@@ -198,6 +202,7 @@ impl IntegerPIndex {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct ValueIndexed {
     pub indexed: ImmOrPNode<i64>,
     pub index: i64,

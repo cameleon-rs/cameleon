@@ -1,5 +1,6 @@
 use super::{node_base::*, xml};
 
+#[derive(Debug, Clone)]
 pub struct CategoryNode {
     attr_base: NodeAttributeBase,
 

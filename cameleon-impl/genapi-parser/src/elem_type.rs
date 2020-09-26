@@ -159,6 +159,28 @@ impl From<&str> for IntegerRepresentation {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StandardNameSpace {
+    None,
+    IIDC,
+    GEV,
+    CL,
+    USB,
+}
+
+impl From<&str> for StandardNameSpace {
+    fn from(value: &str) -> Self {
+        match value {
+            "None" => StandardNameSpace::None,
+            "IIDC" => StandardNameSpace::IIDC,
+            "GEV" => StandardNameSpace::GEV,
+            "CL" => StandardNameSpace::CL,
+            "USB" => StandardNameSpace::USB,
+            _ => unreachable!(),
+        }
+    }
+}
+
 pub(super) fn convert_to_bool(value: &str) -> bool {
     match value {
         "Yes" => true,
