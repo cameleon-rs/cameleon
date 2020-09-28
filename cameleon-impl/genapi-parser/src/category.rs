@@ -32,12 +32,12 @@ impl CategoryNode {
 
         let mut p_invalidators = vec![];
         while let Some(text) = node.next_text_if("pInvalidator") {
-            p_invalidators.push(text)
+            p_invalidators.push(text.into())
         }
 
         let mut p_features = vec![];
         while let Some(text) = node.next_text_if("pFeature") {
-            p_features.push(text)
+            p_features.push(text.into())
         }
 
         Self {
@@ -53,6 +53,13 @@ impl CategoryNode {
 mod tests {
     use super::*;
 
+    fn category_node_from_str(xml: &str) -> CategoryNode {
+        let document = roxmltree::Document::parse(xml).unwrap();
+        let node = xml::Node::from_xmltree_node(document.root_element());
+
+        CategoryNode::parse(node)
+    }
+
     #[test]
     fn test_category_node_filled() {
         let xml = r#"
@@ -64,11 +71,7 @@ mod tests {
             </Category>
             "#;
 
-        let xml_parser = libxml::parser::Parser::default();
-        let document = xml_parser.parse_string(&xml).unwrap();
-
-        let node = xml::Node::from_xmltree_node(document.get_root_element().unwrap());
-        let node = CategoryNode::parse(node);
+        let node = category_node_from_str(&xml);
 
         let p_invalidators = node.p_invalidators();
         assert_eq!(p_invalidators.len(), 2);
@@ -88,11 +91,7 @@ mod tests {
             </Category>
             "#;
 
-        let xml_parser = libxml::parser::Parser::default();
-        let document = xml_parser.parse_string(&xml).unwrap();
-
-        let node = xml::Node::from_xmltree_node(document.get_root_element().unwrap());
-        let node = CategoryNode::parse(node);
+        let node = category_node_from_str(&xml);
 
         let p_invalidators = node.p_invalidators();
         assert!(p_invalidators.is_empty());

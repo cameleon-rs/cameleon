@@ -74,7 +74,7 @@ impl IntegerNode {
 
         let mut p_invalidators: Vec<String> = vec![];
         while let Some(text) = node.next_text_if("pInvalidator") {
-            p_invalidators.push(text);
+            p_invalidators.push(text.into());
         }
 
         let streamable = node
@@ -89,11 +89,11 @@ impl IntegerNode {
         let max = ImmOrPNode::parse(&mut node, "Max", "pMax");
 
         let inc = ImmOrPNode::parse(&mut node, "Inc", "pInc").unwrap_or_else(|| ImmOrPNode::Imm(1));
-        let unit = node.next_text_if("Unit");
+        let unit = node.next_text_if("Unit").map(Into::into);
 
         let representation = node
             .next_text_if("Representation")
-            .map(|text| text.as_str().into())
+            .map(|text| text.into())
             .unwrap_or_else(|| IntegerRepresentation::PureNumber);
 
         // Deduce min and max value based on representation if not specified.
@@ -102,7 +102,7 @@ impl IntegerNode {
 
         let mut p_selected: Vec<String> = vec![];
         while let Some(text) = node.next_text_if("pSelected") {
-            p_selected.push(text)
+            p_selected.push(text.into())
         }
 
         Self {
@@ -152,7 +152,7 @@ pub enum IntegerValueKind {
 impl IntegerValueKind {
     fn parse(node: &mut xml::Node) -> Self {
         let peek = node.peek().unwrap();
-        match peek.tag_name().as_str() {
+        match peek.tag_name() {
             "Value" => {
                 let data = node.next_text_if("Value").unwrap();
                 IntegerValueKind::Value(convert_to_int(&data))
@@ -185,7 +185,7 @@ pub struct IntegerPIndex {
 
 impl IntegerPIndex {
     fn parse(node: &mut xml::Node) -> Self {
-        let p_index = node.next_text_if("pIndex").unwrap();
+        let p_index = node.next_text_if("pIndex").unwrap().into();
 
         let mut value_indexed = vec![];
         while let Some(value_indexed_elem) = ValueIndexed::parse(node) {
@@ -215,7 +215,7 @@ impl ValueIndexed {
             let index = convert_to_int(&index.attribute_of("Index").unwrap());
             Some(Self { indexed, index })
         } else if let Some(p_index) = node.next_if("pValueIndexed") {
-            let indexed = ImmOrPNode::pnode(p_index.text());
+            let indexed = ImmOrPNode::pnode(p_index.text().into());
             let index = convert_to_int(&p_index.attribute_of("Index").unwrap());
             Some(Self { indexed, index })
         } else {
@@ -229,13 +229,13 @@ impl IntegerPValue {
         // NOTE: The pValue can be sandwiched between two pValueCopy sequence.
         let mut p_value_copies = vec![];
         while let Some(text) = node.next_text_if("pValueCopy") {
-            p_value_copies.push(text);
+            p_value_copies.push(text.into());
         }
 
-        let p_value = node.next_text_if("pValue").unwrap();
+        let p_value = node.next_text_if("pValue").unwrap().into();
 
         while let Some(text) = node.next_text_if("pValueCopy") {
-            p_value_copies.push(text);
+            p_value_copies.push(text.into());
         }
 
         Self {
@@ -250,10 +250,9 @@ mod tests {
     use super::*;
 
     fn integer_node_from_str(xml: &str) -> IntegerNode {
-        let xml_parser = libxml::parser::Parser::default();
-        let document = xml_parser.parse_string(xml).unwrap();
+        let document = roxmltree::Document::parse(xml).unwrap();
+        let node = xml::Node::from_xmltree_node(document.root_element());
 
-        let node = xml::Node::from_xmltree_node(document.get_root_element().unwrap());
         IntegerNode::parse(node)
     }
 
@@ -273,7 +272,7 @@ mod tests {
                 <pSelected>Selected0</pSelected>
                 <pSelected>Selected1</pSelected>
 
-            </Category>
+            </Integer>
             "#;
 
         let node = integer_node_from_str(xml);
@@ -308,7 +307,7 @@ mod tests {
                 <pMin>pMinNode</pMin>
                 <pMax>pMaxNode</pMax>
                 <pInc>pIncNode</pInc>
-            </Category>
+            </Integer>
             "#;
 
         let node = integer_node_from_str(xml);

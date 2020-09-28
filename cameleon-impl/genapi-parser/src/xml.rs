@@ -1,21 +1,20 @@
 use std::iter::Peekable;
-use std::vec::IntoIter;
 
-use libxml::tree::node::Node as XmlNode;
-
-#[derive(Debug)]
-pub(super) struct Node {
-    inner: XmlNode,
-    children: Peekable<IntoIter<XmlNode>>,
+pub(super) struct Node<'a, 'input> {
+    inner: roxmltree::Node<'a, 'input>,
+    children: Peekable<roxmltree::Children<'a, 'input>>,
+    attributes: Attributes<'a, 'input>,
 }
 
-impl Node {
-    pub(super) fn from_xmltree_node(node: XmlNode) -> Self {
-        let children = node.get_child_elements().into_iter().peekable();
+impl<'a, 'input> Node<'a, 'input> {
+    pub(super) fn from_xmltree_node(node: roxmltree::Node<'a, 'input>) -> Self {
+        let children = node.children().peekable();
+        let attributes = Attributes::from_xmltree_attrs(node.attributes());
 
         Self {
             inner: node,
             children,
+            attributes,
         }
     }
 
@@ -35,26 +34,52 @@ impl Node {
         }
     }
 
-    pub(super) fn next_text_if(&mut self, tag_name: &str) -> Option<String> {
-        self.next_if(tag_name).map(|node| node.text())
+    pub(super) fn next_text_if(&mut self, tag_name: &str) -> Option<&'a str> {
+        let next = self.next_if(tag_name)?;
+        Some(next.text())
     }
 
     pub(super) fn peek(&mut self) -> Option<Self> {
-        let node = self.children.peek()?;
-        let node = Self::from_xmltree_node(node.clone());
+        let mut inner;
+        loop {
+            inner = self.children.peek()?;
+            if inner.node_type() != roxmltree::NodeType::Element {
+                self.children.next();
+            } else {
+                break;
+            }
+        }
+        let node = Self::from_xmltree_node(*inner);
 
         Some(node)
     }
 
-    pub(super) fn tag_name(&self) -> String {
-        self.inner.get_name()
+    pub(super) fn tag_name(&self) -> &str {
+        self.inner.tag_name().name()
     }
 
-    pub(super) fn text(&self) -> String {
-        self.inner.get_content()
+    pub(super) fn attribute_of(&self, name: &str) -> Option<&str> {
+        self.attributes.attribute_of(name)
     }
 
-    pub(super) fn attribute_of(&self, name: &str) -> Option<String> {
-        self.inner.get_attribute(name)
+    pub(super) fn text(&self) -> &'a str {
+        self.inner.text().unwrap()
+    }
+}
+
+struct Attributes<'a, 'input> {
+    attrs: &'a [roxmltree::Attribute<'input>],
+}
+
+impl<'a, 'input> Attributes<'a, 'input> {
+    fn from_xmltree_attrs(attrs: &'a [roxmltree::Attribute<'input>]) -> Self {
+        Self { attrs }
+    }
+
+    fn attribute_of(&self, name: &str) -> Option<&str> {
+        self.attrs
+            .iter()
+            .find(|attr| attr.name() == name)
+            .map(|attr| attr.value())
     }
 }

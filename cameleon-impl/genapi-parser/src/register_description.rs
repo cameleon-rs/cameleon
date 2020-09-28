@@ -76,17 +76,13 @@ impl RegisterDescription {
     pub(super) fn parse(mut node: xml::Node) -> Self {
         debug_assert!(node.tag_name() == "RegisterDescription");
 
-        let model_name = node.attribute_of("ModelName").unwrap();
+        let model_name = node.attribute_of("ModelName").unwrap().into();
 
-        let vendor_name = node.attribute_of("VendorName").unwrap();
+        let vendor_name = node.attribute_of("VendorName").unwrap().into();
 
-        let tool_tip = node.attribute_of("ToolTip");
+        let tool_tip = node.attribute_of("ToolTip").map(Into::into);
 
-        let standard_name_space = node
-            .attribute_of("StandardNameSpace")
-            .unwrap()
-            .as_str()
-            .into();
+        let standard_name_space = node.attribute_of("StandardNameSpace").unwrap().into();
 
         let schema_major_version =
             convert_to_int(&node.attribute_of("SchemaMajorVersion").unwrap());
@@ -103,13 +99,13 @@ impl RegisterDescription {
 
         let subminor_version = convert_to_int(&node.attribute_of("SubMinorVersion").unwrap());
 
-        let product_guid = node.attribute_of("ProductGuid").unwrap();
+        let product_guid = node.attribute_of("ProductGuid").unwrap().into();
 
-        let version_guid = node.attribute_of("VersionGuid").unwrap();
+        let version_guid = node.attribute_of("VersionGuid").unwrap().into();
 
         let mut nodes = vec![];
         while let Some(child) = node.next() {
-            let node = match child.tag_name().as_str() {
+            let node = match child.tag_name() {
                 "Node" => NodeKind::Node(Node::parse(child)),
                 "Category" => NodeKind::Category(CategoryNode::parse(child)),
                 "Integer" => NodeKind::Integer(IntegerNode::parse(child)),
@@ -178,10 +174,9 @@ mod tests {
         </RegisterDescription>
         "#;
 
-        let xml_parser = libxml::parser::Parser::default();
-        let document = xml_parser.parse_string(xml).unwrap();
+        let document = roxmltree::Document::parse(xml).unwrap();
+        let node = xml::Node::from_xmltree_node(document.root_element());
 
-        let node = xml::Node::from_xmltree_node(document.get_root_element().unwrap());
         let reg_desc = RegisterDescription::parse(node);
 
         assert_eq!(reg_desc.model_name(), "CameleonModel");

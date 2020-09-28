@@ -26,7 +26,7 @@ impl Node {
 
         let mut p_invalidators = vec![];
         while let Some(text) = node.next_text_if("pInvalidator") {
-            p_invalidators.push(text)
+            p_invalidators.push(text.into())
         }
 
         Self {
@@ -42,6 +42,13 @@ mod tests {
     use crate::elem_type::*;
 
     use super::*;
+
+    fn node_from_str(xml: &str) -> Node {
+        let document = roxmltree::Document::parse(xml).unwrap();
+        let node = xml::Node::from_xmltree_node(document.root_element());
+
+        Node::parse(node)
+    }
 
     #[test]
     fn test_all_fields_filled() {
@@ -66,12 +73,7 @@ mod tests {
             </Node>
             "#;
 
-        let xml_parser = libxml::parser::Parser::default();
-        let document = xml_parser.parse_string(&xml).unwrap();
-
-        let node = xml::Node::from_xmltree_node(document.get_root_element().unwrap());
-        let node = Node::parse(node);
-
+        let node = node_from_str(&xml);
         let node_base = node.node_base();
         assert_eq!(node_base.name(), "TestNode");
         assert_eq!(node_base.name_space(), NameSpace::Standard);
@@ -106,12 +108,7 @@ mod tests {
             </Node>
             "#;
 
-        let parser = libxml::parser::Parser::default();
-        let document = parser.parse_string(&xml).unwrap();
-
-        let node = xml::Node::from_xmltree_node(document.get_root_element().unwrap());
-        let node = Node::parse(node);
-
+        let node = node_from_str(&xml);
         let node_base = node.node_base();
         assert_eq!(node_base.name(), "TestNode");
         assert_eq!(node_base.name_space(), NameSpace::Custom);

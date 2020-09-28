@@ -112,7 +112,7 @@ where
         if let Some(text) = node.next_text_if(imm_name) {
             Some(ImmOrPNode::imm(converter(&text)))
         } else if let Some(text) = node.next_text_if(pnode_name) {
-            Some(ImmOrPNode::pnode(text))
+            Some(ImmOrPNode::pnode(text.into()))
         } else {
             None
         }
