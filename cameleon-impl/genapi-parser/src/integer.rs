@@ -10,7 +10,7 @@ pub struct IntegerNode {
 
     streamable: bool,
 
-    value_kind: IntegerValueKind,
+    value_kind: ValueKind<i64>,
 
     min: ImmOrPNode<i64>,
 
@@ -38,7 +38,7 @@ impl IntegerNode {
         self.streamable
     }
 
-    pub fn value_kind(&self) -> &IntegerValueKind {
+    pub fn value_kind(&self) -> &ValueKind<i64> {
         &self.value_kind
     }
 
@@ -132,119 +132,6 @@ impl Parse for IntegerNode {
     }
 }
 
-impl IntegerRepresentation {
-    /// Deduce defalut value of min element.
-    fn deduce_min(&self) -> i64 {
-        use IntegerRepresentation::*;
-        match self {
-            Linear | Logarithmic | Boolean | PureNumber | HexNumber => i64::MIN,
-            IpV4Address | MacAddress => 0,
-        }
-    }
-
-    /// Deduce defalut value of max element.
-    fn deduce_max(&self) -> i64 {
-        use IntegerRepresentation::*;
-        match self {
-            Linear | Logarithmic | Boolean | PureNumber | HexNumber => i64::MAX,
-            IpV4Address => 0xffff_ffff,
-            MacAddress => 0xffff_ffff_ffff,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum IntegerValueKind {
-    Value(i64),
-    PValue(IntegerPValue),
-    PIndex(IntegerPIndex),
-}
-
-impl Parse for IntegerValueKind {
-    fn parse(node: &mut xml::Node) -> Self {
-        let peek = node.peek().unwrap();
-        match peek.tag_name() {
-            "Value" => IntegerValueKind::Value(node.parse()),
-            "pValueCopy" | "pValue" => {
-                let p_value = node.parse();
-                IntegerValueKind::PValue(p_value)
-            }
-            "pIndex" => {
-                let p_index = node.parse();
-                IntegerValueKind::PIndex(p_index)
-            }
-            _ => unreachable!(),
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct IntegerPValue {
-    pub p_value: String,
-    pub p_value_copies: Vec<String>,
-}
-
-#[derive(Debug, Clone)]
-pub struct IntegerPIndex {
-    pub p_index: String,
-    pub value_indexed: Vec<ValueIndexed>,
-    pub value_default: ImmOrPNode<i64>,
-}
-
-impl Parse for IntegerPIndex {
-    fn parse(node: &mut xml::Node) -> Self {
-        let p_index = node.parse();
-
-        let mut value_indexed = vec![];
-        while node.is_next_node_name("ValueIndexed") || node.is_next_node_name("pValueIndexed") {
-            value_indexed.push(node.parse());
-        }
-
-        let value_default = node.parse();
-
-        Self {
-            p_index,
-            value_indexed,
-            value_default,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ValueIndexed {
-    pub indexed: ImmOrPNode<i64>,
-    pub index: i64,
-}
-
-impl Parse for ValueIndexed {
-    fn parse(node: &mut xml::Node) -> Self {
-        let index = convert_to_int(node.peek().unwrap().attribute_of("Index").unwrap());
-        let indexed = node.parse();
-        Self { indexed, index }
-    }
-}
-
-impl Parse for IntegerPValue {
-    fn parse(node: &mut xml::Node) -> Self {
-        // NOTE: The pValue can be sandwiched between two pValueCopy sequence.
-        let mut p_value_copies = vec![];
-        while let Some(copy) = node.parse_if("pValueCopy") {
-            p_value_copies.push(copy);
-        }
-
-        let p_value = node.parse();
-
-        while let Some(copy) = node.parse_if("pValueCopy") {
-            p_value_copies.push(copy);
-        }
-
-        Self {
-            p_value,
-            p_value_copies,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -281,7 +168,7 @@ mod tests {
         assert_eq!(p_invalidators[1], "Invalidator1");
 
         assert!(node.streamable());
-        assert!(matches! {node.value_kind(), IntegerValueKind::Value(100)});
+        assert!(matches! {node.value_kind(), ValueKind::Value(100)});
         assert_eq!(node.min(), &ImmOrPNode::Imm(10));
         assert_eq!(node.max(), &ImmOrPNode::Imm(100));
         assert_eq!(node.inc(), &ImmOrPNode::Imm(5));
@@ -310,7 +197,7 @@ mod tests {
 
         let node = integer_node_from_str(xml);
         let p_value = match node.value_kind() {
-            IntegerValueKind::PValue(p_value) => p_value,
+            ValueKind::PValue(p_value) => p_value,
             _ => panic!(),
         };
         assert_eq!(p_value.p_value.as_str(), "pValue");
@@ -339,7 +226,7 @@ mod tests {
 
         let node = integer_node_from_str(xml);
         let p_index = match node.value_kind {
-            IntegerValueKind::PIndex(p_index) => p_index,
+            ValueKind::PIndex(p_index) => p_index,
             _ => panic!(),
         };
 

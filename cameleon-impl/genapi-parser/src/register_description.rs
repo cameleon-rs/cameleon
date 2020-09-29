@@ -111,6 +111,7 @@ impl Parse for RegisterDescription {
                 "Node" => NodeKind::Node(Box::new(child.parse())),
                 "Category" => NodeKind::Category(Box::new(child.parse())),
                 "Integer" => NodeKind::Integer(Box::new(child.parse())),
+                "Float" => NodeKind::Float(Box::new(child.parse())),
                 _ => todo!(),
             };
             nodes.push(node);
@@ -139,6 +140,7 @@ pub enum NodeKind {
     Node(Box<Node>),
     Category(Box<CategoryNode>),
     Integer(Box<IntegerNode>),
+    Float(Box<FloatNode>),
 }
 
 #[cfg(test)]
@@ -173,6 +175,10 @@ mod tests {
                 <Value>10</Value>
             </Integer>
 
+            <Float Name="MyFloat">
+                <Value>10.0</Value>
+            </Float>
+
         </RegisterDescription>
         "#;
 
@@ -196,6 +202,6 @@ mod tests {
             reg_desc.version_guid(),
             "76543210-3210-3210-3210-ba9876543210"
         );
-        assert_eq!(reg_desc.nodes().len(), 2);
+        assert_eq!(reg_desc.nodes().len(), 3);
     }
 }

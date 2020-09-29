@@ -120,13 +120,44 @@ pub enum ImmOrPNode<T: Clone + PartialEq> {
     PNode(String),
 }
 
-impl<T> Parse for ImmOrPNode<T>
+impl<T> ImmOrPNode<T>
 where
-    T: Clone + PartialEq + Parse,
+    T: Clone + PartialEq,
 {
+    pub fn imm(&self) -> Option<&T> {
+        match self {
+            ImmOrPNode::Imm(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    pub fn pnode(&self) -> Option<&str> {
+        match self {
+            ImmOrPNode::PNode(node) => Some(node),
+            _ => None,
+        }
+    }
+}
+
+impl Parse for ImmOrPNode<i64> {
     fn parse(node: &mut xml::Node) -> Self {
         let next_node = node.peek().unwrap();
         if next_node.text().chars().next().unwrap().is_alphabetic() {
+            ImmOrPNode::PNode(node.parse())
+        } else {
+            ImmOrPNode::Imm(node.parse())
+        }
+    }
+}
+
+impl Parse for ImmOrPNode<f64> {
+    fn parse(node: &mut xml::Node) -> Self {
+        let next_node = node.peek().unwrap();
+        let next_text = next_node.text();
+
+        if next_text == "INF" || next_text == "-INF" || next_text == "NaN" {
+            ImmOrPNode::Imm(node.parse())
+        } else if next_node.text().chars().next().unwrap().is_alphabetic() {
             ImmOrPNode::PNode(node.parse())
         } else {
             ImmOrPNode::Imm(node.parse())
@@ -145,6 +176,27 @@ pub enum IntegerRepresentation {
     MacAddress,
 }
 
+impl IntegerRepresentation {
+    /// Deduce defalut value of min element.
+    pub(super) fn deduce_min(&self) -> i64 {
+        use IntegerRepresentation::*;
+        match self {
+            Linear | Logarithmic | Boolean | PureNumber | HexNumber => i64::MIN,
+            IpV4Address | MacAddress => 0,
+        }
+    }
+
+    /// Deduce defalut value of max element.
+    pub(super) fn deduce_max(&self) -> i64 {
+        use IntegerRepresentation::*;
+        match self {
+            Linear | Logarithmic | Boolean | PureNumber | HexNumber => i64::MAX,
+            IpV4Address => 0xffff_ffff,
+            MacAddress => 0xffff_ffff_ffff,
+        }
+    }
+}
+
 impl Parse for IntegerRepresentation {
     fn parse(node: &mut xml::Node) -> Self {
         let value = node.next_text().unwrap();
@@ -156,6 +208,44 @@ impl Parse for IntegerRepresentation {
             "HexNumber" => IntegerRepresentation::HexNumber,
             "IPV4Address" => IntegerRepresentation::IpV4Address,
             "MACAddress" => IntegerRepresentation::MacAddress,
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FloatRepresentation {
+    Linear,
+    Logarithmic,
+    PureNumber,
+}
+
+impl Parse for FloatRepresentation {
+    fn parse(node: &mut xml::Node) -> Self {
+        let value = node.next_text().unwrap();
+        match value {
+            "Linear" => FloatRepresentation::Linear,
+            "Logarithmic" => FloatRepresentation::Logarithmic,
+            "PureNumber" => FloatRepresentation::PureNumber,
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DisplayNotation {
+    Automatic,
+    Fixed,
+    Scientific,
+}
+
+impl Parse for DisplayNotation {
+    fn parse(node: &mut xml::Node) -> Self {
+        let value = node.next_text().unwrap();
+        match value {
+            "Automatic" => DisplayNotation::Automatic,
+            "Fixed" => DisplayNotation::Fixed,
+            "Scientific" => DisplayNotation::Scientific,
             _ => unreachable!(),
         }
     }
@@ -180,6 +270,119 @@ impl From<&str> for StandardNameSpace {
             "USB" => StandardNameSpace::USB,
             _ => unreachable!(),
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum ValueKind<T>
+where
+    T: Clone + PartialEq,
+{
+    Value(T),
+    PValue(PValue),
+    PIndex(PIndex<T>),
+}
+
+impl<T> Parse for ValueKind<T>
+where
+    T: Clone + Parse + PartialEq,
+    ImmOrPNode<T>: Parse,
+{
+    fn parse(node: &mut xml::Node) -> Self {
+        let peek = node.peek().unwrap();
+        match peek.tag_name() {
+            "Value" => ValueKind::Value(node.parse()),
+            "pValueCopy" | "pValue" => {
+                let p_value = node.parse();
+                ValueKind::PValue(p_value)
+            }
+            "pIndex" => {
+                let p_index = node.parse();
+                ValueKind::PIndex(p_index)
+            }
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct PValue {
+    pub p_value: String,
+    pub p_value_copies: Vec<String>,
+}
+
+impl Parse for PValue {
+    fn parse(node: &mut xml::Node) -> Self {
+        // NOTE: The pValue can be sandwiched between two pValueCopy sequence.
+        let mut p_value_copies = vec![];
+        while let Some(copy) = node.parse_if("pValueCopy") {
+            p_value_copies.push(copy);
+        }
+
+        let p_value = node.parse();
+
+        while let Some(copy) = node.parse_if("pValueCopy") {
+            p_value_copies.push(copy);
+        }
+
+        Self {
+            p_value,
+            p_value_copies,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct PIndex<T>
+where
+    T: Clone + PartialEq,
+{
+    pub p_index: String,
+    pub value_indexed: Vec<ValueIndexed<T>>,
+    pub value_default: ImmOrPNode<T>,
+}
+
+impl<T> Parse for PIndex<T>
+where
+    T: Clone + PartialEq + Parse,
+    ImmOrPNode<T>: Parse,
+{
+    fn parse(node: &mut xml::Node) -> Self {
+        let p_index = node.parse();
+
+        let mut value_indexed = vec![];
+        while node.is_next_node_name("ValueIndexed") || node.is_next_node_name("pValueIndexed") {
+            value_indexed.push(node.parse());
+        }
+
+        let value_default = node.parse();
+
+        Self {
+            p_index,
+            value_indexed,
+            value_default,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ValueIndexed<T>
+where
+    T: Clone + PartialEq,
+{
+    pub indexed: ImmOrPNode<T>,
+    pub index: i64,
+}
+
+impl<T> Parse for ValueIndexed<T>
+where
+    T: Clone + PartialEq + Parse,
+    ImmOrPNode<T>: Parse,
+{
+    fn parse(node: &mut xml::Node) -> Self {
+        let index = convert_to_int(node.peek().unwrap().attribute_of("Index").unwrap());
+        let indexed = node.parse();
+        Self { indexed, index }
     }
 }
 
@@ -210,6 +413,19 @@ impl Parse for i64 {
     fn parse(node: &mut xml::Node) -> Self {
         let value = node.next_text().unwrap();
         convert_to_int(value)
+    }
+}
+
+impl Parse for f64 {
+    fn parse(node: &mut xml::Node) -> Self {
+        let value = node.next_text().unwrap();
+        if value == "INF" {
+            f64::INFINITY
+        } else if value == "-INF" {
+            f64::NEG_INFINITY
+        } else {
+            value.parse().unwrap()
+        }
     }
 }
 
