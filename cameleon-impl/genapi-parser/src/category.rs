@@ -54,8 +54,8 @@ mod tests {
     use super::*;
 
     fn category_node_from_str(xml: &str) -> CategoryNode {
-        let document = roxmltree::Document::parse(xml).unwrap();
-        let node = xml::Node::from_xmltree_node(document.root_element());
+        let document = xml::Document::from_str(xml).unwrap();
+        let node = document.root_node();
 
         CategoryNode::parse(node)
     }

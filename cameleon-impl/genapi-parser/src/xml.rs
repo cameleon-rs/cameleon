@@ -1,5 +1,27 @@
 use std::iter::Peekable;
 
+use super::ParseResult;
+
+pub(super) struct Document<'input> {
+    document: roxmltree::Document<'input>,
+}
+
+impl<'input> Document<'input> {
+    pub(super) fn from_str(s: &'input str) -> ParseResult<Self> {
+        let document = roxmltree::Document::parse(s)?;
+        Ok(Self { document })
+    }
+
+    pub(super) fn root_node<'a>(&'a self) -> Node<'a, 'input> {
+        let root = self.document.root_element();
+        Node::from_xmltree_node(root)
+    }
+
+    pub(super) fn inner_str(&self) -> &'input str {
+        self.document.input_text()
+    }
+}
+
 pub(super) struct Node<'a, 'input> {
     inner: roxmltree::Node<'a, 'input>,
     children: Peekable<roxmltree::Children<'a, 'input>>,

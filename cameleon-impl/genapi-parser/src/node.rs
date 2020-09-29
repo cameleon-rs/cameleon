@@ -44,8 +44,8 @@ mod tests {
     use super::*;
 
     fn node_from_str(xml: &str) -> Node {
-        let document = roxmltree::Document::parse(xml).unwrap();
-        let node = xml::Node::from_xmltree_node(document.root_element());
+        let document = xml::Document::from_str(xml).unwrap();
+        let node = document.root_node();
 
         Node::parse(node)
     }

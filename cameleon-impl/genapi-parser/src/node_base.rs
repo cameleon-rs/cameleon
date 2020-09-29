@@ -12,7 +12,7 @@ macro_rules! optional_string_elem_getter {
     ) => {
         $(#[$meta])*
         pub fn $name(&self) -> Option<&str> {
-            self.elem.$name.as_ref().map(|s| s.as_str())
+            self.elem.$name.as_deref()
         }
     };
 }

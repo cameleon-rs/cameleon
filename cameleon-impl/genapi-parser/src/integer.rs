@@ -55,7 +55,7 @@ impl IntegerNode {
     }
 
     pub fn unit(&self) -> Option<&str> {
-        self.unit.as_ref().map(|unit| unit.as_ref())
+        self.unit.as_deref()
     }
 
     pub fn representation(&self) -> IntegerRepresentation {
@@ -250,8 +250,8 @@ mod tests {
     use super::*;
 
     fn integer_node_from_str(xml: &str) -> IntegerNode {
-        let document = roxmltree::Document::parse(xml).unwrap();
-        let node = xml::Node::from_xmltree_node(document.root_element());
+        let document = xml::Document::from_str(xml).unwrap();
+        let node = document.root_node();
 
         IntegerNode::parse(node)
     }

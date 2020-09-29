@@ -30,7 +30,7 @@ impl RegisterDescription {
     }
 
     pub fn tool_tip(&self) -> Option<&str> {
-        self.tool_tip.as_ref().map(|s| s.as_str())
+        self.tool_tip.as_deref()
     }
 
     pub fn standard_name_space(&self) -> StandardNameSpace {
@@ -106,9 +106,9 @@ impl RegisterDescription {
         let mut nodes = vec![];
         while let Some(child) = node.next() {
             let node = match child.tag_name() {
-                "Node" => NodeKind::Node(Node::parse(child)),
-                "Category" => NodeKind::Category(CategoryNode::parse(child)),
-                "Integer" => NodeKind::Integer(IntegerNode::parse(child)),
+                "Node" => NodeKind::Node(Node::parse(child).into()),
+                "Category" => NodeKind::Category(CategoryNode::parse(child).into()),
+                "Integer" => NodeKind::Integer(IntegerNode::parse(child).into()),
                 _ => todo!(),
             };
             nodes.push(node);
@@ -134,9 +134,9 @@ impl RegisterDescription {
 
 #[derive(Debug, Clone)]
 pub enum NodeKind {
-    Node(Node),
-    Category(CategoryNode),
-    Integer(IntegerNode),
+    Node(Box<Node>),
+    Category(Box<CategoryNode>),
+    Integer(Box<IntegerNode>),
 }
 
 #[cfg(test)]
@@ -174,8 +174,8 @@ mod tests {
         </RegisterDescription>
         "#;
 
-        let document = roxmltree::Document::parse(xml).unwrap();
-        let node = xml::Node::from_xmltree_node(document.root_element());
+        let document = xml::Document::from_str(xml).unwrap();
+        let node = document.root_node();
 
         let reg_desc = RegisterDescription::parse(node);
 
