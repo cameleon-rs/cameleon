@@ -80,7 +80,7 @@ impl Parse for FloatNode {
         let attr_base = node.parse();
         let elem_base = node.parse();
 
-        let mut p_invalidators: Vec<String> = vec![];
+        let mut p_invalidators = vec![];
         while let Some(invalidator) = node.parse_if("pInvalidator") {
             p_invalidators.push(invalidator);
         }
@@ -109,9 +109,7 @@ impl Parse for FloatNode {
 
         let unit = node.parse_if("Unit");
 
-        let representation = node
-            .parse_if("Representation")
-            .unwrap_or_else(|| FloatRepresentation::PureNumber);
+        let representation = node.parse_if("Representation").unwrap_or_default();
 
         let display_notation = node
             .parse_if("DisplayNotation")

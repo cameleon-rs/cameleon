@@ -74,7 +74,7 @@ impl Parse for IntegerNode {
         let attr_base = node.parse();
         let elem_base = node.parse();
 
-        let mut p_invalidators: Vec<String> = vec![];
+        let mut p_invalidators = vec![];
         while let Some(invalidator) = node.parse_if("pInvalidator") {
             p_invalidators.push(invalidator);
         }
@@ -104,8 +104,8 @@ impl Parse for IntegerNode {
         let unit = node.parse_if("Unit");
 
         let representation = node
-            .parse_if("Representation")
-            .unwrap_or_else(|| IntegerRepresentation::PureNumber);
+            .parse_if::<IntegerRepresentation>("Representation")
+            .unwrap_or_default();
 
         // Deduce min and max value based on representation if not specified.
         let min = min.unwrap_or_else(|| ImmOrPNode::Imm(representation.deduce_min()));

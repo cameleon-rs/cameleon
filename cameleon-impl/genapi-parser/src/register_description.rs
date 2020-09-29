@@ -112,6 +112,7 @@ impl Parse for RegisterDescription {
                 "Category" => NodeKind::Category(Box::new(child.parse())),
                 "Integer" => NodeKind::Integer(Box::new(child.parse())),
                 "Float" => NodeKind::Float(Box::new(child.parse())),
+                "IntSwissKnife" => NodeKind::IntSwissKnife(Box::new(child.parse())),
                 _ => todo!(),
             };
             nodes.push(node);
@@ -141,6 +142,7 @@ pub enum NodeKind {
     Category(Box<CategoryNode>),
     Integer(Box<IntegerNode>),
     Float(Box<FloatNode>),
+    IntSwissKnife(Box<IntSwissKnifeNode>),
 }
 
 #[cfg(test)]
@@ -168,8 +170,13 @@ mod tests {
           xsi:schemaLocation="http://www.genicam.org/GenApi/Version_1_0 GenApiSchema.xsd">
 
             <Category Name="Root" NameSpace="Standard">
+                <pFeature>MyNode</pFeature>
                 <pFeature>MyInt</pFeature>
+                <pFeature>MyIntSwissKnife</pFeature>
+                <pFeature>MyFloat</pFeature>
             </Category>
+
+            <Node Name = "MyNode"></Node>
 
             <Integer Name="MyInt">
                 <Value>10</Value>
@@ -178,6 +185,16 @@ mod tests {
             <Float Name="MyFloat">
                 <Value>10.0</Value>
             </Float>
+
+
+            <IntSwissKnife Name="MyIntSwissKnife">
+                <pVariable Name="Var1">pValue1</pVariable>
+                <pVariable Name="Var2">pValue2</pVariable>
+                <Constant Name="Const">10</Constant>
+                <Expression Name="ConstBy2">2.0*Const</Expression>
+                <Formula>Var1+Var2+ConstBy2</Formula>
+             </IntSwissKnife>
+
 
         </RegisterDescription>
         "#;
@@ -202,6 +219,6 @@ mod tests {
             reg_desc.version_guid(),
             "76543210-3210-3210-3210-ba9876543210"
         );
-        assert_eq!(reg_desc.nodes().len(), 3);
+        assert_eq!(reg_desc.nodes().len(), 5);
     }
 }

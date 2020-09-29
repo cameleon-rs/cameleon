@@ -197,6 +197,12 @@ impl IntegerRepresentation {
     }
 }
 
+impl Default for IntegerRepresentation {
+    fn default() -> Self {
+        Self::PureNumber
+    }
+}
+
 impl Parse for IntegerRepresentation {
     fn parse(node: &mut xml::Node) -> Self {
         let value = node.next_text().unwrap();
@@ -229,6 +235,12 @@ impl Parse for FloatRepresentation {
             "PureNumber" => FloatRepresentation::PureNumber,
             _ => unreachable!(),
         }
+    }
+}
+
+impl Default for FloatRepresentation {
+    fn default() -> Self {
+        Self::PureNumber
     }
 }
 
@@ -370,8 +382,8 @@ pub struct ValueIndexed<T>
 where
     T: Clone + PartialEq,
 {
-    pub indexed: ImmOrPNode<T>,
     pub index: i64,
+    pub indexed: ImmOrPNode<T>,
 }
 
 impl<T> Parse for ValueIndexed<T>
@@ -382,7 +394,40 @@ where
     fn parse(node: &mut xml::Node) -> Self {
         let index = convert_to_int(node.peek().unwrap().attribute_of("Index").unwrap());
         let indexed = node.parse();
-        Self { indexed, index }
+        Self { index, indexed }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct NamedValue<T>
+where
+    T: Clone + PartialEq,
+{
+    name: String,
+    value: T,
+}
+
+impl<T> NamedValue<T>
+where
+    T: Clone + PartialEq,
+{
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn value(&self) -> &T {
+        &self.value
+    }
+}
+
+impl<T> Parse for NamedValue<T>
+where
+    T: Clone + PartialEq + Parse,
+{
+    fn parse(node: &mut xml::Node) -> Self {
+        let name = node.peek().unwrap().attribute_of("Name").unwrap().into();
+        let value = node.parse();
+        Self { name, value }
     }
 }
 
