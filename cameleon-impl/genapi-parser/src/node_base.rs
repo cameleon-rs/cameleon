@@ -1,4 +1,4 @@
-use super::{elem_type::*, xml};
+use super::{elem_type::*, xml, Parse};
 
 pub struct NodeBase<'a> {
     attr: &'a NodeAttributeBase,
@@ -81,8 +81,8 @@ pub(super) struct NodeAttributeBase {
     expose_static: Option<bool>,
 }
 
-impl NodeAttributeBase {
-    pub(super) fn parse(node: &xml::Node) -> Self {
+impl Parse for NodeAttributeBase {
+    fn parse(node: &mut xml::Node) -> Self {
         let name = node.attribute_of("Name").unwrap().into();
 
         let name_space = node
@@ -139,46 +139,37 @@ pub(super) struct NodeElementBase {
     p_cast_alias: Option<String>,
 }
 
-impl NodeElementBase {
-    pub(super) fn parse(node: &mut xml::Node) -> Self {
+impl Parse for NodeElementBase {
+    fn parse(node: &mut xml::Node) -> Self {
         node.next_if("Extension");
 
-        let tool_tip = node.next_text_if("ToolTip").map(Into::into);
+        let tool_tip = node.parse_if("ToolTip");
 
-        let display_name = node.next_text_if("DisplayName").map(Into::into);
+        let display_name = node.parse_if("DisplayName");
 
-        let visibility = node
-            .next_text_if("Visibility")
-            .map(|text| text.into())
-            .unwrap_or_default();
+        let visibility = node.parse_if("Visibility").unwrap_or_default();
 
-        let docu_url = node.next_text_if("DocuURL").map(Into::into);
+        let docu_url = node.parse_if("DocuURL");
 
-        let is_deprecated = node
-            .next_text_if("IsDeprecated")
-            .map(|text| convert_to_bool(&text))
-            .unwrap_or(false);
+        let is_deprecated = node.parse_if("IsDeprecated").unwrap_or_default();
 
-        let event_id = node.next_text_if("EventID").map(Into::into);
+        let event_id = node.parse_if("EventID");
 
-        let p_is_implemented = node.next_text_if("pIsImplemented").map(Into::into);
+        let p_is_implemented = node.parse_if("pIsImplemented");
 
-        let p_is_available = node.next_text_if("pIsAvailable").map(Into::into);
+        let p_is_available = node.parse_if("pIsAvailable");
 
-        let p_is_locked = node.next_text_if("pIsLocked").map(Into::into);
+        let p_is_locked = node.parse_if("pIsLocked");
 
-        let p_block_polling = node.next_text_if("pBlockPolling").map(Into::into);
+        let p_block_polling = node.parse_if("pBlockPolling");
 
-        let imposed_access_mode = node
-            .next_text_if("ImposedAccessMode")
-            .map(|text| text.into())
-            .unwrap_or(AccessMode::RW);
+        let imposed_access_mode = node.parse_if("ImposedAccessMode").unwrap_or(AccessMode::RW);
 
-        let p_error = node.next_text_if("pError").map(Into::into);
+        let p_error = node.parse_if("pError");
 
-        let p_alias = node.next_text_if("pAlias").map(Into::into);
+        let p_alias = node.parse_if("pAlias");
 
-        let p_cast_alias = node.next_text_if("pCastAlias").map(Into::into);
+        let p_cast_alias = node.parse_if("pCastAlias");
 
         Self {
             tool_tip,

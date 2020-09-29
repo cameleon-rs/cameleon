@@ -1,6 +1,6 @@
 use super::{
     elem_type::{convert_to_int, StandardNameSpace},
-    xml, CategoryNode, IntegerNode, Node,
+    *,
 };
 
 pub struct RegisterDescription {
@@ -72,8 +72,10 @@ impl RegisterDescription {
     pub fn nodes(&self) -> &[NodeKind] {
         &self.nodes
     }
+}
 
-    pub(super) fn parse(mut node: xml::Node) -> Self {
+impl Parse for RegisterDescription {
+    fn parse(node: &mut xml::Node) -> Self {
         debug_assert!(node.tag_name() == "RegisterDescription");
 
         let model_name = node.attribute_of("ModelName").unwrap().into();
@@ -104,11 +106,11 @@ impl RegisterDescription {
         let version_guid = node.attribute_of("VersionGuid").unwrap().into();
 
         let mut nodes = vec![];
-        while let Some(child) = node.next() {
+        while let Some(ref mut child) = node.next() {
             let node = match child.tag_name() {
-                "Node" => NodeKind::Node(Node::parse(child).into()),
-                "Category" => NodeKind::Category(CategoryNode::parse(child).into()),
-                "Integer" => NodeKind::Integer(IntegerNode::parse(child).into()),
+                "Node" => NodeKind::Node(Box::new(child.parse())),
+                "Category" => NodeKind::Category(Box::new(child.parse())),
+                "Integer" => NodeKind::Integer(Box::new(child.parse())),
                 _ => todo!(),
             };
             nodes.push(node);
@@ -175,9 +177,7 @@ mod tests {
         "#;
 
         let document = xml::Document::from_str(xml).unwrap();
-        let node = document.root_node();
-
-        let reg_desc = RegisterDescription::parse(node);
+        let reg_desc: RegisterDescription = document.root_node().parse();
 
         assert_eq!(reg_desc.model_name(), "CameleonModel");
         assert_eq!(reg_desc.vendor_name(), "CameleonVendor");

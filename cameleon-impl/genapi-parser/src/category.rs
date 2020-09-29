@@ -1,4 +1,4 @@
-use super::{node_base::*, xml};
+use super::{node_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct CategoryNode {
@@ -23,21 +23,23 @@ impl CategoryNode {
     pub fn p_features(&self) -> &[String] {
         &self.p_features
     }
+}
 
-    pub(super) fn parse(mut node: xml::Node) -> Self {
+impl Parse for CategoryNode {
+    fn parse(node: &mut xml::Node) -> Self {
         debug_assert!(node.tag_name() == "Category");
 
-        let attr_base = NodeAttributeBase::parse(&node);
-        let elem_base = NodeElementBase::parse(&mut node);
+        let attr_base = node.parse();
+        let elem_base = node.parse();
 
         let mut p_invalidators = vec![];
-        while let Some(text) = node.next_text_if("pInvalidator") {
-            p_invalidators.push(text.into())
+        while let Some(invalidator) = node.parse_if("pInvalidator") {
+            p_invalidators.push(invalidator)
         }
 
         let mut p_features = vec![];
-        while let Some(text) = node.next_text_if("pFeature") {
-            p_features.push(text.into())
+        while let Some(feature) = node.parse_if("pFeature") {
+            p_features.push(feature)
         }
 
         Self {
@@ -55,9 +57,7 @@ mod tests {
 
     fn category_node_from_str(xml: &str) -> CategoryNode {
         let document = xml::Document::from_str(xml).unwrap();
-        let node = document.root_node();
-
-        CategoryNode::parse(node)
+        document.root_node().parse()
     }
 
     #[test]

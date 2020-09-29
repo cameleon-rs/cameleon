@@ -1,4 +1,4 @@
-use super::{node_base::*, xml};
+use super::{node_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct Node {
@@ -17,16 +17,18 @@ impl Node {
     pub fn p_invalidators(&self) -> &[String] {
         &self.p_invalidators
     }
+}
 
-    pub(super) fn parse(mut node: xml::Node) -> Self {
+impl Parse for Node {
+    fn parse(node: &mut xml::Node) -> Self {
         debug_assert!(node.tag_name() == "Node");
 
-        let attr_base = NodeAttributeBase::parse(&node);
-        let elem_base = NodeElementBase::parse(&mut node);
+        let attr_base = NodeAttributeBase::parse(node);
+        let elem_base = NodeElementBase::parse(node);
 
         let mut p_invalidators = vec![];
-        while let Some(text) = node.next_text_if("pInvalidator") {
-            p_invalidators.push(text.into())
+        while let Some(invalidator) = node.parse_if("pInvalidator") {
+            p_invalidators.push(invalidator)
         }
 
         Self {
@@ -45,9 +47,7 @@ mod tests {
 
     fn node_from_str(xml: &str) -> Node {
         let document = xml::Document::from_str(xml).unwrap();
-        let node = document.root_node();
-
-        Node::parse(node)
+        document.root_node().parse()
     }
 
     #[test]

@@ -1,4 +1,4 @@
-use super::{elem_type::*, node_base::*, xml};
+use super::{elem_type::*, node_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct IntegerNode {
@@ -65,44 +65,55 @@ impl IntegerNode {
     pub fn p_selected(&self) -> &[String] {
         &self.p_selected
     }
+}
 
-    pub(super) fn parse(mut node: xml::Node) -> Self {
+impl Parse for IntegerNode {
+    fn parse(node: &mut xml::Node) -> Self {
         debug_assert!(node.tag_name() == "Integer");
 
-        let attr_base = NodeAttributeBase::parse(&node);
-        let elem_base = NodeElementBase::parse(&mut node);
+        let attr_base = node.parse();
+        let elem_base = node.parse();
 
         let mut p_invalidators: Vec<String> = vec![];
-        while let Some(text) = node.next_text_if("pInvalidator") {
-            p_invalidators.push(text.into());
+        while let Some(invalidator) = node.parse_if("pInvalidator") {
+            p_invalidators.push(invalidator);
         }
 
-        let streamable = node
-            .next_text_if("Streamable")
-            .map(|text| convert_to_bool(&text))
-            .unwrap_or_default();
+        let streamable = node.parse_if("Streamable").unwrap_or_default();
 
-        let value_kind = IntegerValueKind::parse(&mut node);
+        let value_kind = node.parse();
 
-        let min = ImmOrPNode::parse(&mut node, "Min", "pMin");
+        let min = if node.is_next_node_name("Min") || node.is_next_node_name("pMin") {
+            Some(node.parse())
+        } else {
+            None
+        };
 
-        let max = ImmOrPNode::parse(&mut node, "Max", "pMax");
+        let max = if node.is_next_node_name("Max") || node.is_next_node_name("pMax") {
+            Some(node.parse())
+        } else {
+            None
+        };
 
-        let inc = ImmOrPNode::parse(&mut node, "Inc", "pInc").unwrap_or_else(|| ImmOrPNode::Imm(1));
-        let unit = node.next_text_if("Unit").map(Into::into);
+        let inc = if node.is_next_node_name("Inc") || node.is_next_node_name("pInc") {
+            node.parse()
+        } else {
+            ImmOrPNode::Imm(1)
+        };
+
+        let unit = node.parse_if("Unit");
 
         let representation = node
-            .next_text_if("Representation")
-            .map(|text| text.into())
+            .parse_if("Representation")
             .unwrap_or_else(|| IntegerRepresentation::PureNumber);
 
         // Deduce min and max value based on representation if not specified.
-        let min = min.unwrap_or_else(|| ImmOrPNode::imm(representation.deduce_min()));
-        let max = max.unwrap_or_else(|| ImmOrPNode::imm(representation.deduce_max()));
+        let min = min.unwrap_or_else(|| ImmOrPNode::Imm(representation.deduce_min()));
+        let max = max.unwrap_or_else(|| ImmOrPNode::Imm(representation.deduce_max()));
 
         let mut p_selected: Vec<String> = vec![];
-        while let Some(text) = node.next_text_if("pSelected") {
-            p_selected.push(text.into())
+        while let Some(selected) = node.parse_if("pSelected") {
+            p_selected.push(selected)
         }
 
         Self {
@@ -149,20 +160,17 @@ pub enum IntegerValueKind {
     PIndex(IntegerPIndex),
 }
 
-impl IntegerValueKind {
+impl Parse for IntegerValueKind {
     fn parse(node: &mut xml::Node) -> Self {
         let peek = node.peek().unwrap();
         match peek.tag_name() {
-            "Value" => {
-                let data = node.next_text_if("Value").unwrap();
-                IntegerValueKind::Value(convert_to_int(&data))
-            }
+            "Value" => IntegerValueKind::Value(node.parse()),
             "pValueCopy" | "pValue" => {
-                let p_value = IntegerPValue::parse(node);
+                let p_value = node.parse();
                 IntegerValueKind::PValue(p_value)
             }
             "pIndex" => {
-                let p_index = IntegerPIndex::parse(node);
+                let p_index = node.parse();
                 IntegerValueKind::PIndex(p_index)
             }
             _ => unreachable!(),
@@ -183,16 +191,16 @@ pub struct IntegerPIndex {
     pub value_default: ImmOrPNode<i64>,
 }
 
-impl IntegerPIndex {
+impl Parse for IntegerPIndex {
     fn parse(node: &mut xml::Node) -> Self {
-        let p_index = node.next_text_if("pIndex").unwrap().into();
+        let p_index = node.parse();
 
         let mut value_indexed = vec![];
-        while let Some(value_indexed_elem) = ValueIndexed::parse(node) {
-            value_indexed.push(value_indexed_elem);
+        while node.is_next_node_name("ValueIndexed") || node.is_next_node_name("pValueIndexed") {
+            value_indexed.push(node.parse());
         }
 
-        let value_default = ImmOrPNode::parse(node, "ValueDefault", "pValueDefault").unwrap();
+        let value_default = node.parse();
 
         Self {
             p_index,
@@ -208,34 +216,26 @@ pub struct ValueIndexed {
     pub index: i64,
 }
 
-impl ValueIndexed {
-    fn parse(node: &mut xml::Node) -> Option<Self> {
-        if let Some(index) = node.next_if("ValueIndexed") {
-            let indexed = ImmOrPNode::imm(convert_to_int(&index.text()));
-            let index = convert_to_int(&index.attribute_of("Index").unwrap());
-            Some(Self { indexed, index })
-        } else if let Some(p_index) = node.next_if("pValueIndexed") {
-            let indexed = ImmOrPNode::pnode(p_index.text().into());
-            let index = convert_to_int(&p_index.attribute_of("Index").unwrap());
-            Some(Self { indexed, index })
-        } else {
-            None
-        }
+impl Parse for ValueIndexed {
+    fn parse(node: &mut xml::Node) -> Self {
+        let index = convert_to_int(node.peek().unwrap().attribute_of("Index").unwrap());
+        let indexed = node.parse();
+        Self { indexed, index }
     }
 }
 
-impl IntegerPValue {
+impl Parse for IntegerPValue {
     fn parse(node: &mut xml::Node) -> Self {
         // NOTE: The pValue can be sandwiched between two pValueCopy sequence.
         let mut p_value_copies = vec![];
-        while let Some(text) = node.next_text_if("pValueCopy") {
-            p_value_copies.push(text.into());
+        while let Some(copy) = node.parse_if("pValueCopy") {
+            p_value_copies.push(copy);
         }
 
-        let p_value = node.next_text_if("pValue").unwrap().into();
+        let p_value = node.parse();
 
-        while let Some(text) = node.next_text_if("pValueCopy") {
-            p_value_copies.push(text.into());
+        while let Some(copy) = node.parse_if("pValueCopy") {
+            p_value_copies.push(copy);
         }
 
         Self {
@@ -251,9 +251,7 @@ mod tests {
 
     fn integer_node_from_str(xml: &str) -> IntegerNode {
         let document = xml::Document::from_str(xml).unwrap();
-        let node = document.root_node();
-
-        IntegerNode::parse(node)
+        document.root_node().parse()
     }
 
     #[test]

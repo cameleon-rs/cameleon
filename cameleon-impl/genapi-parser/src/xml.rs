@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-use super::ParseResult;
+use super::{Parse, ParseResult};
 
 pub(super) struct Document<'input> {
     document: roxmltree::Document<'input>,
@@ -30,6 +30,7 @@ pub(super) struct Node<'a, 'input> {
 
 impl<'a, 'input> Node<'a, 'input> {
     pub(super) fn from_xmltree_node(node: roxmltree::Node<'a, 'input>) -> Self {
+        debug_assert!(node.node_type() == roxmltree::NodeType::Element);
         let children = node.children().peekable();
         let attributes = Attributes::from_xmltree_attrs(node.attributes());
 
@@ -37,6 +38,21 @@ impl<'a, 'input> Node<'a, 'input> {
             inner: node,
             children,
             attributes,
+        }
+    }
+
+    pub(super) fn parse<T>(&mut self) -> T
+    where
+        T: Parse,
+    {
+        T::parse(self)
+    }
+
+    pub(super) fn parse_if<T: Parse>(&mut self, tag_name: &str) -> Option<T> {
+        if self.is_next_node_name(tag_name) {
+            Some(self.parse())
+        } else {
+            None
         }
     }
 
@@ -56,9 +72,8 @@ impl<'a, 'input> Node<'a, 'input> {
         }
     }
 
-    pub(super) fn next_text_if(&mut self, tag_name: &str) -> Option<&'a str> {
-        let next = self.next_if(tag_name)?;
-        Some(next.text())
+    pub(super) fn next_text(&mut self) -> Option<&'a str> {
+        Some(self.next()?.text())
     }
 
     pub(super) fn peek(&mut self) -> Option<Self> {
@@ -86,6 +101,13 @@ impl<'a, 'input> Node<'a, 'input> {
 
     pub(super) fn text(&self) -> &'a str {
         self.inner.text().unwrap()
+    }
+
+    pub(super) fn is_next_node_name(&mut self, tag_name: &str) -> bool {
+        match self.peek() {
+            Some(node) => node.tag_name() == tag_name,
+            None => false,
+        }
     }
 }
 

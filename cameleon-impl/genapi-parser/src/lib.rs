@@ -45,13 +45,16 @@ impl<'a> Parser<'a> {
     pub fn parse(&self) -> ParseResult<RegisterDescription> {
         // TODO:
         // self.verify_xml()?;
-        let root_node = self.document.root_node();
-        Ok(RegisterDescription::parse(root_node))
+        Ok(self.document.root_node().parse())
     }
 
     pub fn inner_str(&self) -> &'a str {
         self.document.inner_str()
     }
+}
+
+trait Parse {
+    fn parse(node: &mut xml::Node) -> Self;
 }
 
 #[cfg(test)]

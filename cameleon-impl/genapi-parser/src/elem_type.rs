@@ -1,4 +1,4 @@
-use super::xml;
+use super::{xml, Parse};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NameSpace {
@@ -19,6 +19,12 @@ impl From<&str> for NameSpace {
             "Custom" => NameSpace::Custom,
             _ => unreachable!(),
         }
+    }
+}
+
+impl Parse for NameSpace {
+    fn parse(node: &mut xml::Node) -> Self {
+        node.next_text().unwrap().into()
     }
 }
 
@@ -48,6 +54,12 @@ impl From<&str> for Visibility {
     }
 }
 
+impl Parse for Visibility {
+    fn parse(node: &mut xml::Node) -> Self {
+        node.next_text().unwrap().into()
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MergePriority {
     High,
@@ -72,6 +84,12 @@ impl Default for MergePriority {
     }
 }
 
+impl Parse for MergePriority {
+    fn parse(node: &mut xml::Node) -> Self {
+        node.next_text().unwrap().into()
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AccessMode {
     RO,
@@ -90,46 +108,29 @@ impl From<&str> for AccessMode {
     }
 }
 
+impl Parse for AccessMode {
+    fn parse(node: &mut xml::Node) -> Self {
+        node.next_text().unwrap().into()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ImmOrPNode<T: Clone + PartialEq> {
     Imm(T),
     PNode(String),
 }
 
-impl<T> ImmOrPNode<T>
+impl<T> Parse for ImmOrPNode<T>
 where
-    T: Clone + PartialEq,
+    T: Clone + PartialEq + Parse,
 {
-    fn parse_impl<F>(
-        node: &mut xml::Node,
-        imm_name: &str,
-        pnode_name: &str,
-        converter: F,
-    ) -> Option<Self>
-    where
-        F: FnOnce(&str) -> T,
-    {
-        if let Some(text) = node.next_text_if(imm_name) {
-            Some(ImmOrPNode::imm(converter(&text)))
-        } else if let Some(text) = node.next_text_if(pnode_name) {
-            Some(ImmOrPNode::pnode(text.into()))
+    fn parse(node: &mut xml::Node) -> Self {
+        let next_node = node.peek().unwrap();
+        if next_node.text().chars().next().unwrap().is_alphabetic() {
+            ImmOrPNode::PNode(node.parse())
         } else {
-            None
+            ImmOrPNode::Imm(node.parse())
         }
-    }
-
-    pub(super) fn imm(value: T) -> Self {
-        Self::Imm(value)
-    }
-
-    pub(super) fn pnode(value: String) -> Self {
-        Self::PNode(value)
-    }
-}
-
-impl ImmOrPNode<i64> {
-    pub(super) fn parse(node: &mut xml::Node, imm_name: &str, pnode_name: &str) -> Option<Self> {
-        Self::parse_impl(node, imm_name, pnode_name, convert_to_int)
     }
 }
 
@@ -144,8 +145,9 @@ pub enum IntegerRepresentation {
     MacAddress,
 }
 
-impl From<&str> for IntegerRepresentation {
-    fn from(value: &str) -> Self {
+impl Parse for IntegerRepresentation {
+    fn parse(node: &mut xml::Node) -> Self {
+        let value = node.next_text().unwrap();
         match value {
             "Linear" => IntegerRepresentation::Linear,
             "Logarithmic" => IntegerRepresentation::Logarithmic,
@@ -189,10 +191,31 @@ pub(super) fn convert_to_bool(value: &str) -> bool {
     }
 }
 
+impl Parse for bool {
+    fn parse(node: &mut xml::Node) -> Self {
+        let text = node.next_text().unwrap();
+        convert_to_bool(text)
+    }
+}
+
 pub(super) fn convert_to_int(value: &str) -> i64 {
     if value.starts_with("0x") || value.starts_with("0X") {
         i64::from_str_radix(&value[2..], 16).unwrap()
     } else {
         i64::from_str_radix(value, 10).unwrap()
+    }
+}
+
+impl Parse for i64 {
+    fn parse(node: &mut xml::Node) -> Self {
+        let value = node.next_text().unwrap();
+        convert_to_int(value)
+    }
+}
+
+impl Parse for String {
+    fn parse(node: &mut xml::Node) -> Self {
+        let text = node.next_text().unwrap();
+        text.into()
     }
 }
