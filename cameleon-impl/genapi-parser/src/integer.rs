@@ -148,10 +148,10 @@ mod tests {
                 <pInvalidator>Invalidator0</pInvalidator>
                 <pInvalidator>Invalidator1</pInvalidator>
                 <Streamable>Yes</Streamable>
-                <Value>100</Value>
-                <Min>10</Min>
+                <Value>0X100</Value>
+                <Min>0x10</Min>
                 <Max>100</Max>
-                <Inc>5</Inc>
+                <Inc>0x5</Inc>
                 <Unit>dB</Unit>
                 <Representation>Logarithmic</Representation>
                 <pSelected>Selected0</pSelected>
@@ -168,10 +168,10 @@ mod tests {
         assert_eq!(p_invalidators[1], "Invalidator1");
 
         assert!(node.streamable());
-        assert!(matches! {node.value_kind(), ValueKind::Value(100)});
-        assert_eq!(node.min(), &ImmOrPNode::Imm(10));
+        assert!(matches! {node.value_kind(), ValueKind::Value(0x100)});
+        assert_eq!(node.min(), &ImmOrPNode::Imm(0x10));
         assert_eq!(node.max(), &ImmOrPNode::Imm(100));
-        assert_eq!(node.inc(), &ImmOrPNode::Imm(5));
+        assert_eq!(node.inc(), &ImmOrPNode::Imm(0x5));
         assert_eq!(node.unit(), Some("dB"));
         assert_eq!(node.representation(), IntegerRepresentation::Logarithmic);
 
