@@ -251,6 +251,12 @@ pub enum DisplayNotation {
     Scientific,
 }
 
+impl Default for DisplayNotation {
+    fn default() -> Self {
+        DisplayNotation::Automatic
+    }
+}
+
 impl Parse for DisplayNotation {
     fn parse(node: &mut xml::Node) -> Self {
         let value = node.next_text().unwrap();

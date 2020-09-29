@@ -111,9 +111,7 @@ impl Parse for FloatNode {
 
         let representation = node.parse_if("Representation").unwrap_or_default();
 
-        let display_notation = node
-            .parse_if("DisplayNotation")
-            .unwrap_or(DisplayNotation::Automatic);
+        let display_notation = node.parse_if("DisplayNotation").unwrap_or_default();
 
         let display_precision = node.parse_if("DisplayPrecision").unwrap_or(6);
 

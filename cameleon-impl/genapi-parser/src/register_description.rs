@@ -112,6 +112,7 @@ impl Parse for RegisterDescription {
                 "Category" => NodeKind::Category(Box::new(child.parse())),
                 "Integer" => NodeKind::Integer(Box::new(child.parse())),
                 "Float" => NodeKind::Float(Box::new(child.parse())),
+                "SwissKnife" => NodeKind::SwissKnife(Box::new(child.parse())),
                 "IntSwissKnife" => NodeKind::IntSwissKnife(Box::new(child.parse())),
                 _ => todo!(),
             };
@@ -142,6 +143,7 @@ pub enum NodeKind {
     Category(Box<CategoryNode>),
     Integer(Box<IntegerNode>),
     Float(Box<FloatNode>),
+    SwissKnife(Box<SwissKnifeNode>),
     IntSwissKnife(Box<IntSwissKnifeNode>),
 }
 
@@ -174,6 +176,7 @@ mod tests {
                 <pFeature>MyInt</pFeature>
                 <pFeature>MyIntSwissKnife</pFeature>
                 <pFeature>MyFloat</pFeature>
+                <pFeature>MySwissKnife</pFeature>
             </Category>
 
             <Node Name = "MyNode"></Node>
@@ -195,6 +198,13 @@ mod tests {
                 <Formula>Var1+Var2+ConstBy2</Formula>
              </IntSwissKnife>
 
+            <SwissKnife Name="MySwissKnife">
+                <pVariable Name="Var1">pValue1</pVariable>
+                <pVariable Name="Var2">pValue2</pVariable>
+                <Constant Name="Const">INF</Constant>
+                <Expression Name="ConstBy2">2.0*Const</Expression>
+                <Formula>Var1+Var2+ConstBy2</Formula>
+             </SwissKnife>
 
         </RegisterDescription>
         "#;
@@ -219,6 +229,6 @@ mod tests {
             reg_desc.version_guid(),
             "76543210-3210-3210-3210-ba9876543210"
         );
-        assert_eq!(reg_desc.nodes().len(), 5);
+        assert_eq!(reg_desc.nodes().len(), 6);
     }
 }
