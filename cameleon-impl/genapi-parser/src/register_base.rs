@@ -56,7 +56,7 @@ impl RegisterBase {
         &self.p_invalidators
     }
 
-    pub(super) fn node_base(&self) -> NodeBase<'_> {
+    pub(super) fn node_base(&self) -> NodeBase {
         NodeBase::new(&self.attr_base, &self.elem_base)
     }
 }
@@ -73,7 +73,7 @@ impl Parse for RegisterBase {
             .parse_if("Address")
             .or_else(|| node.parse_if("IntSwissKnife"))
             .or_else(|| node.parse_if("pAddress"))
-            .or_else(|| node.parse_if("pINdex"))
+            .or_else(|| node.parse_if("pIndex"))
         {
             address_kinds.push(addr_kind);
         }

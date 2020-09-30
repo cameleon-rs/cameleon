@@ -64,6 +64,7 @@ impl IntSwissKnifeNode {
 impl Parse for IntSwissKnifeNode {
     fn parse(node: &mut xml::Node) -> Self {
         debug_assert!(node.tag_name() == "IntSwissKnife");
+
         let attr_base = node.parse();
         let elem_base = node.parse();
 

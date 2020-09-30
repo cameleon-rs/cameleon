@@ -541,10 +541,10 @@ pub mod register_node_elem {
 
     impl Parse for AddressKind {
         fn parse(node: &mut xml::Node) -> Self {
-            let peeked_text = node.peek().unwrap().text();
-            match peeked_text {
+            let peeked_node = node.peek().unwrap();
+            match peeked_node.tag_name() {
                 "Address" | "pAddress" => Self::Address(node.parse()),
-                "IntSwissKnife" => Self::IntSwissKnife(node.parse()),
+                "IntSwissKnife" => Self::IntSwissKnife(node.next().unwrap().parse()),
                 "pIndex" => Self::PIndex(node.parse()),
                 _ => unreachable!(),
             }
@@ -553,13 +553,13 @@ pub mod register_node_elem {
 
     #[derive(Debug, Clone)]
     pub struct PIndex {
-        offset: ImmOrPNode<i64>,
+        offset: Option<ImmOrPNode<i64>>,
         p_index: String,
     }
 
     impl PIndex {
-        pub fn offset(&self) -> &ImmOrPNode<i64> {
-            &self.offset
+        pub fn offset(&self) -> Option<&ImmOrPNode<i64>> {
+            self.offset.as_ref()
         }
 
         pub fn p_index(&self) -> &str {
@@ -577,11 +577,55 @@ pub mod register_node_elem {
             let pnode_offset = next_node
                 .attribute_of("pOffset")
                 .map(|s| ImmOrPNode::PNode(s.into()));
-            let offset = imm_offset.xor(pnode_offset).unwrap();
+            let offset = imm_offset.xor(pnode_offset);
 
             let p_index = node.parse();
 
             Self { offset, p_index }
+        }
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub enum Endianness {
+        LE,
+        BE,
+    }
+
+    impl Default for Endianness {
+        fn default() -> Self {
+            Self::LE
+        }
+    }
+
+    impl Parse for Endianness {
+        fn parse(node: &mut xml::Node) -> Self {
+            match node.next_text().unwrap() {
+                "LittleEndian" => Self::LE,
+                "BigEndian" => Self::BE,
+                _ => unreachable!(),
+            }
+        }
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub enum Sign {
+        Signed,
+        Unsigned,
+    }
+
+    impl Default for Sign {
+        fn default() -> Self {
+            Self::Unsigned
+        }
+    }
+
+    impl Parse for Sign {
+        fn parse(node: &mut xml::Node) -> Self {
+            match node.next_text().unwrap() {
+                "Signed" => Self::Signed,
+                "Unsigned" => Self::Unsigned,
+                _ => unreachable!(),
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 mod category;
 mod elem_type;
 mod float;
+mod int_reg;
 mod int_swiss_knife;
 mod integer;
 mod node;
@@ -13,6 +14,7 @@ mod xml;
 pub use category::*;
 pub use elem_type::*;
 pub use float::*;
+pub use int_reg::*;
 pub use int_swiss_knife::*;
 pub use integer::*;
 pub use node::*;
