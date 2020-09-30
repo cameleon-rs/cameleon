@@ -119,6 +119,7 @@ impl Parse for RegisterDescription {
                 "Register" => NodeKind::Register(Box::new(child.parse())),
                 "SwissKnife" => NodeKind::SwissKnife(Box::new(child.parse())),
                 "IntSwissKnife" => NodeKind::IntSwissKnife(Box::new(child.parse())),
+                "StructReg" => NodeKind::StructReg(Box::new(child.parse())),
                 _ => todo!(),
             };
             nodes.push(node);
@@ -155,6 +156,7 @@ pub enum NodeKind {
     Register(Box<RegisterNode>),
     SwissKnife(Box<SwissKnifeNode>),
     IntSwissKnife(Box<IntSwissKnifeNode>),
+    StructReg(Box<StructRegNode>),
 }
 
 #[cfg(test)]
@@ -192,6 +194,7 @@ mod tests {
                 <pFeature>MyRegister</pFeature>
                 <pFeature>MySwissKnife</pFeature>
                 <pFeature>MyIntSwissKnife</pFeature>
+                <pFeature>MyStructEntry</pFeature>
             </Category>
 
             <Node Name = "MyNode"></Node>
@@ -252,6 +255,18 @@ mod tests {
                 <Formula>Var1+Var2+ConstBy2</Formula>
              </SwissKnife>
 
+            <StructReg Comment="Struct Entry Comment">
+                <Address>0x10000</Address>
+                <Length>4</Length>
+                <pPort>Device</pPort>
+                <Endianess>BigEndian</Endianess>
+
+                <StructEntry Name="MyStructEntry">
+                    <Bit>24</Bit>
+                </StructEntry>
+
+            </StructReg>
+
         </RegisterDescription>
         "#;
 
@@ -275,6 +290,6 @@ mod tests {
             reg_desc.version_guid(),
             "76543210-3210-3210-3210-ba9876543210"
         );
-        assert_eq!(reg_desc.nodes().len(), 11);
+        assert_eq!(reg_desc.nodes().len(), 12);
     }
 }
