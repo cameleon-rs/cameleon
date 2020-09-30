@@ -58,6 +58,7 @@ impl<'a> NodeBase<'a> {
         self.elem.imposed_access_mode
     }
 
+    optional_string_elem_getter! {description}
     optional_string_elem_getter! {tool_tip}
     optional_string_elem_getter! {docu_url}
     optional_string_elem_getter! {event_id}
@@ -112,6 +113,8 @@ impl Parse for NodeAttributeBase {
 pub(super) struct NodeElementBase {
     tool_tip: Option<String>,
 
+    description: Option<String>,
+
     display_name: Option<String>,
 
     visibility: Visibility,
@@ -146,6 +149,8 @@ impl Parse for NodeElementBase {
 
         let tool_tip = node.parse_if("ToolTip");
 
+        let description = node.parse_if("Description");
+
         let display_name = node.parse_if("DisplayName");
 
         let visibility = node.parse_if("Visibility").unwrap_or_default();
@@ -174,6 +179,7 @@ impl Parse for NodeElementBase {
 
         Self {
             tool_tip,
+            description,
             display_name,
             visibility,
             docu_url,

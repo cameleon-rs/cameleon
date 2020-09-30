@@ -55,6 +55,7 @@ mod tests {
         let xml = r#"
             <Node Name = "TestNode" NameSpace = "Standard" MergePriority = "1" ExposeStatic = "No">
                 <ToolTip>tooltip</ToolTip>
+                <Description>the description</Description>
                 <DisplayName>display name</DisplayName>
                 <Visibility>Guru</Visibility>
                 <DocuURL>http://FOO.com</DocuURL>
@@ -81,6 +82,7 @@ mod tests {
         assert_eq!(node_base.expose_static().unwrap(), false);
 
         assert_eq!(node_base.tool_tip().unwrap(), "tooltip");
+        assert_eq!(node_base.description().unwrap(), "the description");
         assert_eq!(node_base.display_name(), "display name");
         assert_eq!(node_base.visibility(), Visibility::Guru);
         assert_eq!(node_base.docu_url().unwrap(), "http://FOO.com");
