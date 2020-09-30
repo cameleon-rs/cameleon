@@ -114,6 +114,7 @@ impl Parse for RegisterDescription {
                 "IntReg" => NodeKind::IntReg(Box::new(child.parse())),
                 "Float" => NodeKind::Float(Box::new(child.parse())),
                 "FloatReg" => NodeKind::FloatReg(Box::new(child.parse())),
+                "StringReg" => NodeKind::StringReg(Box::new(child.parse())),
                 "Register" => NodeKind::Register(Box::new(child.parse())),
                 "SwissKnife" => NodeKind::SwissKnife(Box::new(child.parse())),
                 "IntSwissKnife" => NodeKind::IntSwissKnife(Box::new(child.parse())),
@@ -148,6 +149,7 @@ pub enum NodeKind {
     IntReg(Box<IntRegNode>),
     Float(Box<FloatNode>),
     FloatReg(Box<FloatRegNode>),
+    StringReg(Box<StringRegNode>),
     Register(Box<RegisterNode>),
     SwissKnife(Box<SwissKnifeNode>),
     IntSwissKnife(Box<IntSwissKnifeNode>),
@@ -183,6 +185,7 @@ mod tests {
                 <pFeature>MyIntReg</pFeature>
                 <pFeature>MyFloat</pFeature>
                 <pFeature>MyFloatReg</pFeature>
+                <pFeature>MyStringReg</pFeature>
                 <pFeature>MyRegister</pFeature>
                 <pFeature>MySwissKnife</pFeature>
                 <pFeature>MyIntSwissKnife</pFeature>
@@ -209,6 +212,12 @@ mod tests {
               <Length>4</Length>
               <pPort>Device</pPort>
             </FloatReg>
+
+            <StringReg Name="MyStringReg">
+              <Address>100000</Address>
+              <Length>128</Length>
+              <pPort>Device</pPort>
+            </StringReg>
 
             <Register Name="MyRegister">
               <Address>0x10000</Address>
@@ -255,6 +264,6 @@ mod tests {
             reg_desc.version_guid(),
             "76543210-3210-3210-3210-ba9876543210"
         );
-        assert_eq!(reg_desc.nodes().len(), 9);
+        assert_eq!(reg_desc.nodes().len(), 10);
     }
 }
