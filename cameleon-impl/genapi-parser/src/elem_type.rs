@@ -628,4 +628,22 @@ pub mod register_node_elem {
             }
         }
     }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub enum BitMask {
+        SingleBit(i64),
+        Range { lsb: i64, msb: i64 },
+    }
+
+    impl Parse for BitMask {
+        fn parse(node: &mut xml::Node) -> Self {
+            if let Some(single_bit) = node.parse_if("Bit") {
+                Self::SingleBit(single_bit)
+            } else {
+                let lsb = node.parse();
+                let msb = node.parse();
+                Self::Range { lsb, msb }
+            }
+        }
+    }
 }

@@ -112,6 +112,7 @@ impl Parse for RegisterDescription {
                 "Category" => NodeKind::Category(Box::new(child.parse())),
                 "Integer" => NodeKind::Integer(Box::new(child.parse())),
                 "IntReg" => NodeKind::IntReg(Box::new(child.parse())),
+                "MaskedIntReg" => NodeKind::MaskedIntReg(Box::new(child.parse())),
                 "Float" => NodeKind::Float(Box::new(child.parse())),
                 "FloatReg" => NodeKind::FloatReg(Box::new(child.parse())),
                 "StringReg" => NodeKind::StringReg(Box::new(child.parse())),
@@ -147,6 +148,7 @@ pub enum NodeKind {
     Category(Box<CategoryNode>),
     Integer(Box<IntegerNode>),
     IntReg(Box<IntRegNode>),
+    MaskedIntReg(Box<MaskedIntRegNode>),
     Float(Box<FloatNode>),
     FloatReg(Box<FloatRegNode>),
     StringReg(Box<StringRegNode>),
@@ -183,6 +185,7 @@ mod tests {
                 <pFeature>MyNode</pFeature>
                 <pFeature>MyInt</pFeature>
                 <pFeature>MyIntReg</pFeature>
+                <pFeature>MyMaskedIntReg</pFeature>
                 <pFeature>MyFloat</pFeature>
                 <pFeature>MyFloatReg</pFeature>
                 <pFeature>MyStringReg</pFeature>
@@ -202,6 +205,14 @@ mod tests {
               <pLength>LengthNode</pLength>
               <pPort>Device</pPort>
             </IntReg>
+
+            <MaskedIntReg Name="MyMaskedIntReg">
+              <Address>0x10000</Address>
+              <Length>4</Length>
+              <pPort>Device</pPort>
+              <LSB>3</LSB>
+              <MSB>7</MSB>
+            </MaskedIntReg>
 
             <Float Name="MyFloat">
                 <Value>10.0</Value>
@@ -264,6 +275,6 @@ mod tests {
             reg_desc.version_guid(),
             "76543210-3210-3210-3210-ba9876543210"
         );
-        assert_eq!(reg_desc.nodes().len(), 10);
+        assert_eq!(reg_desc.nodes().len(), 11);
     }
 }
