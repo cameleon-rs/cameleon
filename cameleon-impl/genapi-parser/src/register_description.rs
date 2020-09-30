@@ -113,6 +113,7 @@ impl Parse for RegisterDescription {
                 "Integer" => NodeKind::Integer(Box::new(child.parse())),
                 "IntReg" => NodeKind::IntReg(Box::new(child.parse())),
                 "Float" => NodeKind::Float(Box::new(child.parse())),
+                "FloatReg" => NodeKind::FloatReg(Box::new(child.parse())),
                 "Register" => NodeKind::Register(Box::new(child.parse())),
                 "SwissKnife" => NodeKind::SwissKnife(Box::new(child.parse())),
                 "IntSwissKnife" => NodeKind::IntSwissKnife(Box::new(child.parse())),
@@ -146,6 +147,7 @@ pub enum NodeKind {
     Integer(Box<IntegerNode>),
     IntReg(Box<IntRegNode>),
     Float(Box<FloatNode>),
+    FloatReg(Box<FloatRegNode>),
     Register(Box<RegisterNode>),
     SwissKnife(Box<SwissKnifeNode>),
     IntSwissKnife(Box<IntSwissKnifeNode>),
@@ -178,11 +180,12 @@ mod tests {
             <Category Name="Root" NameSpace="Standard">
                 <pFeature>MyNode</pFeature>
                 <pFeature>MyInt</pFeature>
-                <pFeature>MyIntSwissKnife</pFeature>
+                <pFeature>MyIntReg</pFeature>
                 <pFeature>MyFloat</pFeature>
+                <pFeature>MyFloatReg</pFeature>
                 <pFeature>MyRegister</pFeature>
                 <pFeature>MySwissKnife</pFeature>
-                <pFeature>MyIntReg</pFeature>
+                <pFeature>MyIntSwissKnife</pFeature>
             </Category>
 
             <Node Name = "MyNode"></Node>
@@ -200,6 +203,12 @@ mod tests {
             <Float Name="MyFloat">
                 <Value>10.0</Value>
             </Float>
+
+            <FloatReg Name="MyFloatReg">
+              <Address>0x10000</Address>
+              <Length>4</Length>
+              <pPort>Device</pPort>
+            </FloatReg>
 
             <Register Name="MyRegister">
               <Address>0x10000</Address>
@@ -246,6 +255,6 @@ mod tests {
             reg_desc.version_guid(),
             "76543210-3210-3210-3210-ba9876543210"
         );
-        assert_eq!(reg_desc.nodes().len(), 8);
+        assert_eq!(reg_desc.nodes().len(), 9);
     }
 }

@@ -535,7 +535,7 @@ pub mod register_node_elem {
     #[derive(Debug, Clone)]
     pub enum AddressKind {
         Address(ImmOrPNode<i64>),
-        IntSwissKnife(IntSwissKnifeNode),
+        IntSwissKnife(Box<IntSwissKnifeNode>),
         PIndex(PIndex),
     }
 
@@ -544,7 +544,7 @@ pub mod register_node_elem {
             let peeked_node = node.peek().unwrap();
             match peeked_node.tag_name() {
                 "Address" | "pAddress" => Self::Address(node.parse()),
-                "IntSwissKnife" => Self::IntSwissKnife(node.next().unwrap().parse()),
+                "IntSwissKnife" => Self::IntSwissKnife(Box::new(node.next().unwrap().parse())),
                 "pIndex" => Self::PIndex(node.parse()),
                 _ => unreachable!(),
             }
