@@ -10,7 +10,7 @@ pub struct IntegerNode {
 
     streamable: bool,
 
-    value_kind: ValueKind<i64>,
+    value_kind: numeric_node_elem::ValueKind<i64>,
 
     min: ImmOrPNode<i64>,
 
@@ -38,7 +38,7 @@ impl IntegerNode {
         self.streamable
     }
 
-    pub fn value_kind(&self) -> &ValueKind<i64> {
+    pub fn value_kind(&self) -> &numeric_node_elem::ValueKind<i64> {
         &self.value_kind
     }
 
@@ -83,23 +83,14 @@ impl Parse for IntegerNode {
 
         let value_kind = node.parse();
 
-        let min = if node.is_next_node_name("Min") || node.is_next_node_name("pMin") {
-            Some(node.parse())
-        } else {
-            None
-        };
+        let min = node.parse_if("Min").or_else(|| node.parse_if("pMin"));
 
-        let max = if node.is_next_node_name("Max") || node.is_next_node_name("pMax") {
-            Some(node.parse())
-        } else {
-            None
-        };
+        let max = node.parse_if("Max").or_else(|| node.parse_if("pMax"));
 
-        let inc = if node.is_next_node_name("Inc") || node.is_next_node_name("pInc") {
-            node.parse()
-        } else {
-            ImmOrPNode::Imm(1)
-        };
+        let inc = node
+            .parse_if("Inc")
+            .or_else(|| node.parse_if("pInc"))
+            .unwrap_or(ImmOrPNode::Imm(10));
 
         let unit = node.parse_if("Unit");
 
@@ -168,7 +159,7 @@ mod tests {
         assert_eq!(p_invalidators[1], "Invalidator1");
 
         assert!(node.streamable());
-        assert!(matches! {node.value_kind(), ValueKind::Value(0x100)});
+        assert!(matches! {node.value_kind(), numeric_node_elem::ValueKind::Value(0x100)});
         assert_eq!(node.min(), &ImmOrPNode::Imm(0x10));
         assert_eq!(node.max(), &ImmOrPNode::Imm(100));
         assert_eq!(node.inc(), &ImmOrPNode::Imm(0x5));
@@ -197,7 +188,7 @@ mod tests {
 
         let node = integer_node_from_str(xml);
         let p_value = match node.value_kind() {
-            ValueKind::PValue(p_value) => p_value,
+            numeric_node_elem::ValueKind::PValue(p_value) => p_value,
             _ => panic!(),
         };
         assert_eq!(p_value.p_value.as_str(), "pValue");
@@ -226,7 +217,7 @@ mod tests {
 
         let node = integer_node_from_str(xml);
         let p_index = match node.value_kind {
-            ValueKind::PIndex(p_index) => p_index,
+            numeric_node_elem::ValueKind::PIndex(p_index) => p_index,
             _ => panic!(),
         };
 

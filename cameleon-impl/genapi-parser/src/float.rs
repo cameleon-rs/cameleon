@@ -10,7 +10,7 @@ pub struct FloatNode {
 
     streamable: bool,
 
-    value_kind: ValueKind<f64>,
+    value_kind: numeric_node_elem::ValueKind<f64>,
 
     min: ImmOrPNode<f64>,
 
@@ -40,7 +40,7 @@ impl FloatNode {
         self.streamable
     }
 
-    pub fn value_kind(&self) -> &ValueKind<f64> {
+    pub fn value_kind(&self) -> &numeric_node_elem::ValueKind<f64> {
         &self.value_kind
     }
 
@@ -89,23 +89,17 @@ impl Parse for FloatNode {
 
         let value_kind = node.parse();
 
-        let min = if node.is_next_node_name("Min") || node.is_next_node_name("pMin") {
-            node.parse()
-        } else {
-            ImmOrPNode::Imm(f64::MIN)
-        };
+        let min = node
+            .parse_if("Min")
+            .or_else(|| node.parse_if("pMin"))
+            .unwrap_or(ImmOrPNode::Imm(f64::MIN));
 
-        let max = if node.is_next_node_name("Max") || node.is_next_node_name("pMax") {
-            node.parse()
-        } else {
-            ImmOrPNode::Imm(f64::MAX)
-        };
+        let max = node
+            .parse_if("Max")
+            .or_else(|| node.parse_if("pMax"))
+            .unwrap_or(ImmOrPNode::Imm(f64::MAX));
 
-        let inc = if node.is_next_node_name("Inc") || node.is_next_node_name("pInc") {
-            Some(node.parse())
-        } else {
-            None
-        };
+        let inc = node.parse_if("Inc").or_else(|| node.parse_if("pInc"));
 
         let unit = node.parse_if("Unit");
 
@@ -162,7 +156,7 @@ mod test {
         assert_eq!(p_invalidators[1], "Invalidator1");
 
         assert!(node.streamable());
-        assert!(matches! {node.value_kind(), ValueKind::Value(_)});
+        assert!(matches! {node.value_kind(), numeric_node_elem::ValueKind::Value(_)});
         assert_eq!(node.min(), &ImmOrPNode::Imm(f64::NEG_INFINITY));
         assert_eq!(node.max(), &ImmOrPNode::Imm(f64::INFINITY));
         assert!(node.inc().unwrap().imm().unwrap().is_nan());

@@ -16,6 +16,7 @@ pub use int_swiss_knife::*;
 pub use integer::*;
 pub use node::*;
 pub use node_base::*;
+pub use register_base::*;
 pub use register_description::*;
 pub use swiss_knife::*;
 

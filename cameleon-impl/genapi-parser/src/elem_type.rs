@@ -141,8 +141,8 @@ where
 
 impl Parse for ImmOrPNode<i64> {
     fn parse(node: &mut xml::Node) -> Self {
-        let next_node = node.peek().unwrap();
-        if next_node.text().chars().next().unwrap().is_alphabetic() {
+        let peeked_text = node.peek().unwrap().text();
+        if peeked_text.chars().next().unwrap().is_alphabetic() {
             ImmOrPNode::PNode(node.parse())
         } else {
             ImmOrPNode::Imm(node.parse())
@@ -152,12 +152,11 @@ impl Parse for ImmOrPNode<i64> {
 
 impl Parse for ImmOrPNode<f64> {
     fn parse(node: &mut xml::Node) -> Self {
-        let next_node = node.peek().unwrap();
-        let next_text = next_node.text();
+        let peeked_text = node.peek().unwrap().text();
 
-        if next_text == "INF" || next_text == "-INF" || next_text == "NaN" {
+        if peeked_text == "INF" || peeked_text == "-INF" || peeked_text == "NaN" {
             ImmOrPNode::Imm(node.parse())
-        } else if next_node.text().chars().next().unwrap().is_alphabetic() {
+        } else if peeked_text.chars().next().unwrap().is_alphabetic() {
             ImmOrPNode::PNode(node.parse())
         } else {
             ImmOrPNode::Imm(node.parse())
@@ -291,116 +290,37 @@ impl From<&str> for StandardNameSpace {
     }
 }
 
-#[derive(Debug, Clone)]
-pub enum ValueKind<T>
-where
-    T: Clone + PartialEq,
-{
-    Value(T),
-    PValue(PValue),
-    PIndex(PIndex<T>),
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CachingMode {
+    /// Allow to caching on write.
+    WriteThrough,
+    /// Allow to caching on read.
+    WriteAround,
+    /// Caching is not allowed.
+    NoCache,
 }
 
-impl<T> Parse for ValueKind<T>
-where
-    T: Clone + Parse + PartialEq,
-    ImmOrPNode<T>: Parse,
-{
-    fn parse(node: &mut xml::Node) -> Self {
-        let peek = node.peek().unwrap();
-        match peek.tag_name() {
-            "Value" => ValueKind::Value(node.parse()),
-            "pValueCopy" | "pValue" => {
-                let p_value = node.parse();
-                ValueKind::PValue(p_value)
-            }
-            "pIndex" => {
-                let p_index = node.parse();
-                ValueKind::PIndex(p_index)
-            }
+impl Default for CachingMode {
+    fn default() -> Self {
+        Self::WriteThrough
+    }
+}
+
+impl From<&str> for CachingMode {
+    fn from(value: &str) -> Self {
+        match value {
+            "WriteThrough" => CachingMode::WriteThrough,
+            "WriteAround" => CachingMode::WriteAround,
+            "NoCache" => CachingMode::NoCache,
             _ => unreachable!(),
         }
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct PValue {
-    pub p_value: String,
-    pub p_value_copies: Vec<String>,
-}
-
-impl Parse for PValue {
+impl Parse for CachingMode {
     fn parse(node: &mut xml::Node) -> Self {
-        // NOTE: The pValue can be sandwiched between two pValueCopy sequence.
-        let mut p_value_copies = vec![];
-        while let Some(copy) = node.parse_if("pValueCopy") {
-            p_value_copies.push(copy);
-        }
-
-        let p_value = node.parse();
-
-        while let Some(copy) = node.parse_if("pValueCopy") {
-            p_value_copies.push(copy);
-        }
-
-        Self {
-            p_value,
-            p_value_copies,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct PIndex<T>
-where
-    T: Clone + PartialEq,
-{
-    pub p_index: String,
-    pub value_indexed: Vec<ValueIndexed<T>>,
-    pub value_default: ImmOrPNode<T>,
-}
-
-impl<T> Parse for PIndex<T>
-where
-    T: Clone + PartialEq + Parse,
-    ImmOrPNode<T>: Parse,
-{
-    fn parse(node: &mut xml::Node) -> Self {
-        let p_index = node.parse();
-
-        let mut value_indexed = vec![];
-        while node.is_next_node_name("ValueIndexed") || node.is_next_node_name("pValueIndexed") {
-            value_indexed.push(node.parse());
-        }
-
-        let value_default = node.parse();
-
-        Self {
-            p_index,
-            value_indexed,
-            value_default,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ValueIndexed<T>
-where
-    T: Clone + PartialEq,
-{
-    pub index: i64,
-    pub indexed: ImmOrPNode<T>,
-}
-
-impl<T> Parse for ValueIndexed<T>
-where
-    T: Clone + PartialEq + Parse,
-    ImmOrPNode<T>: Parse,
-{
-    fn parse(node: &mut xml::Node) -> Self {
-        let index = convert_to_int(node.peek().unwrap().attribute_of("Index").unwrap());
-        let indexed = node.parse();
-        Self { index, indexed }
+        let text = node.next_text().unwrap();
+        text.into()
     }
 }
 
@@ -484,5 +404,184 @@ impl Parse for String {
     fn parse(node: &mut xml::Node) -> Self {
         let text = node.next_text().unwrap();
         text.into()
+    }
+}
+
+pub mod numeric_node_elem {
+    use super::*;
+
+    #[derive(Debug, Clone)]
+    pub enum ValueKind<T>
+    where
+        T: Clone + PartialEq,
+    {
+        Value(T),
+        PValue(PValue),
+        PIndex(PIndex<T>),
+    }
+
+    impl<T> Parse for ValueKind<T>
+    where
+        T: Clone + Parse + PartialEq,
+        ImmOrPNode<T>: Parse,
+    {
+        fn parse(node: &mut xml::Node) -> Self {
+            let peek = node.peek().unwrap();
+            match peek.tag_name() {
+                "Value" => ValueKind::Value(node.parse()),
+                "pValueCopy" | "pValue" => {
+                    let p_value = node.parse();
+                    ValueKind::PValue(p_value)
+                }
+                "pIndex" => {
+                    let p_index = node.parse();
+                    ValueKind::PIndex(p_index)
+                }
+                _ => unreachable!(),
+            }
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct PValue {
+        pub p_value: String,
+        pub p_value_copies: Vec<String>,
+    }
+
+    impl Parse for PValue {
+        fn parse(node: &mut xml::Node) -> Self {
+            // NOTE: The pValue can be sandwiched between two pValueCopy sequence.
+            let mut p_value_copies = vec![];
+            while let Some(copy) = node.parse_if("pValueCopy") {
+                p_value_copies.push(copy);
+            }
+
+            let p_value = node.parse();
+
+            while let Some(copy) = node.parse_if("pValueCopy") {
+                p_value_copies.push(copy);
+            }
+
+            Self {
+                p_value,
+                p_value_copies,
+            }
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct PIndex<T>
+    where
+        T: Clone + PartialEq,
+    {
+        pub p_index: String,
+        pub value_indexed: Vec<ValueIndexed<T>>,
+        pub value_default: ImmOrPNode<T>,
+    }
+
+    impl<T> Parse for PIndex<T>
+    where
+        T: Clone + PartialEq + Parse,
+        ImmOrPNode<T>: Parse,
+    {
+        fn parse(node: &mut xml::Node) -> Self {
+            let p_index = node.parse();
+
+            let mut value_indexed = vec![];
+            while let Some(indexed) = node
+                .parse_if("ValueIndexed")
+                .or_else(|| node.parse_if("pValueIndexed"))
+            {
+                value_indexed.push(indexed);
+            }
+
+            let value_default = node.parse();
+
+            Self {
+                p_index,
+                value_indexed,
+                value_default,
+            }
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct ValueIndexed<T>
+    where
+        T: Clone + PartialEq,
+    {
+        pub index: i64,
+        pub indexed: ImmOrPNode<T>,
+    }
+
+    impl<T> Parse for ValueIndexed<T>
+    where
+        T: Clone + PartialEq + Parse,
+        ImmOrPNode<T>: Parse,
+    {
+        fn parse(node: &mut xml::Node) -> Self {
+            let index = convert_to_int(node.peek().unwrap().attribute_of("Index").unwrap());
+            let indexed = node.parse();
+            Self { index, indexed }
+        }
+    }
+}
+
+pub mod register_node_elem {
+    use crate::IntSwissKnifeNode;
+
+    use super::*;
+
+    #[derive(Debug, Clone)]
+    pub enum AddressKind {
+        Address(ImmOrPNode<i64>),
+        IntSwissKnife(IntSwissKnifeNode),
+        PIndex(PIndex),
+    }
+
+    impl Parse for AddressKind {
+        fn parse(node: &mut xml::Node) -> Self {
+            let peeked_text = node.peek().unwrap().text();
+            match peeked_text {
+                "Address" | "pAddress" => Self::Address(node.parse()),
+                "IntSwissKnife" => Self::IntSwissKnife(node.parse()),
+                "pIndex" => Self::PIndex(node.parse()),
+                _ => unreachable!(),
+            }
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct PIndex {
+        offset: ImmOrPNode<i64>,
+        p_index: String,
+    }
+
+    impl PIndex {
+        pub fn offset(&self) -> &ImmOrPNode<i64> {
+            &self.offset
+        }
+
+        pub fn p_index(&self) -> &str {
+            &self.p_index
+        }
+    }
+
+    impl Parse for PIndex {
+        fn parse(node: &mut xml::Node) -> Self {
+            let next_node = node.peek().unwrap();
+
+            let imm_offset = next_node
+                .attribute_of("Offset")
+                .map(|s| ImmOrPNode::Imm(convert_to_int(s)));
+            let pnode_offset = next_node
+                .attribute_of("pOffset")
+                .map(|s| ImmOrPNode::PNode(s.into()));
+            let offset = imm_offset.xor(pnode_offset).unwrap();
+
+            let p_index = node.parse();
+
+            Self { offset, p_index }
+        }
     }
 }

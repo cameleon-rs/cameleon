@@ -49,7 +49,7 @@ impl<'a, 'input> Node<'a, 'input> {
     }
 
     pub(super) fn parse_if<T: Parse>(&mut self, tag_name: &str) -> Option<T> {
-        if self.is_next_node_name(tag_name) {
+        if self.peek()?.tag_name() == tag_name {
             Some(self.parse())
         } else {
             None
@@ -61,15 +61,6 @@ impl<'a, 'input> Node<'a, 'input> {
         self.children.next();
 
         Some(node)
-    }
-
-    pub(super) fn next_if(&mut self, tag_name: &str) -> Option<Self> {
-        let next_node = self.peek()?;
-        if next_node.tag_name() == tag_name {
-            self.next()
-        } else {
-            None
-        }
     }
 
     pub(super) fn next_text(&mut self) -> Option<&'a str> {
@@ -101,13 +92,6 @@ impl<'a, 'input> Node<'a, 'input> {
 
     pub(super) fn text(&self) -> &'a str {
         self.inner.text().unwrap()
-    }
-
-    pub(super) fn is_next_node_name(&mut self, tag_name: &str) -> bool {
-        match self.peek() {
-            Some(node) => node.tag_name() == tag_name,
-            None => false,
-        }
     }
 }
 

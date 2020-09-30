@@ -141,7 +141,8 @@ pub(super) struct NodeElementBase {
 
 impl Parse for NodeElementBase {
     fn parse(node: &mut xml::Node) -> Self {
-        node.next_if("Extension");
+        // Ignore Extension element.
+        node.parse_if::<String>("Extension");
 
         let tool_tip = node.parse_if("ToolTip");
 
