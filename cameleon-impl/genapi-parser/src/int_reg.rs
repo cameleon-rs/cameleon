@@ -77,29 +77,17 @@ impl Parse for IntRegNode {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::register_node_elem::*;
+
+    use super::*;
 
     #[test]
     fn test_int_reg() {
         let xml = r#"
         <IntReg Name="TestNode">
-          <Streamable>No</Streamable>
           <Address>0x10000</Address>
-          <IntSwissKnife Name="Testnode">
-              <pVariable Name="Var1">pValue1</pVariable>
-              <pVariable Name="Var2">pValue2</pVariable>
-              <Constant Name="Const">10</Constant>
-              <Expression Name="ConstBy2">2.0*Const</Expression>
-              <Formula>Var1+Var2+ConstBy2</Formula>
-          </IntSwissKnife>
-          <pAddress>pAddress</pAddress>
-          <pIndex Offset="10">IndexNode</pIndex>
           <Length>4</Length>
-          <AccessMode>RW</AccessMode>
           <pPort>Device</pPort>
-          <Cachable>WriteAround</Cachable>
-          <pInvalidator>ExposureTimeMode</pInvalidator>
           <Sign>Signed</Sign>
           <Endianess>BigEndian</Endianess>
           <Unit>Hz</Unit>
@@ -110,32 +98,10 @@ mod tests {
 
         let node: IntRegNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
 
-        let reg_base = node.register_base();
-        assert!(!reg_base.streamable());
-
-        let address_kinds = reg_base.address_kinds();
-        assert_eq!(address_kinds.len(), 4);
-        assert!(matches!(
-            address_kinds[0],
-            AddressKind::Address(ImmOrPNode::Imm(0x10000))
-        ));
-        assert!(matches!(address_kinds[1], AddressKind::IntSwissKnife(_)));
-        assert!(matches!(
-            address_kinds[2],
-            AddressKind::Address(ImmOrPNode::PNode(_))
-        ));
-        match &address_kinds[3] {
-            AddressKind::PIndex(p_index) => {
-                assert!(matches!(p_index.offset().unwrap(), ImmOrPNode::Imm(10)));
-                assert_eq!(p_index.p_index(), "IndexNode");
-            }
-            _ => panic!(),
-        }
-        assert_eq!(reg_base.p_port(), "Device");
-        assert_eq!(reg_base.cacheable(), CachingMode::WriteAround);
-
         assert_eq!(node.sign(), Sign::Signed);
         assert_eq!(node.endianness(), Endianness::BE);
+        assert_eq!(node.unit().unwrap(), "Hz");
+        assert_eq!(node.representation(), IntegerRepresentation::Logarithmic);
         assert_eq!(node.p_selected().len(), 1);
     }
 }
