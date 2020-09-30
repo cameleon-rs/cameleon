@@ -58,6 +58,10 @@ impl<'a> NodeBase<'a> {
         self.elem.imposed_access_mode
     }
 
+    pub fn p_errors(&self) -> &[String] {
+        &self.elem.p_errors
+    }
+
     optional_string_elem_getter! {description}
     optional_string_elem_getter! {tool_tip}
     optional_string_elem_getter! {docu_url}
@@ -66,7 +70,6 @@ impl<'a> NodeBase<'a> {
     optional_string_elem_getter! {p_is_available}
     optional_string_elem_getter! {p_is_locked}
     optional_string_elem_getter! {p_block_polling}
-    optional_string_elem_getter! {p_error}
     optional_string_elem_getter! {p_alias}
     optional_string_elem_getter! {p_cast_alias}
 }
@@ -135,7 +138,7 @@ pub(super) struct NodeElementBase {
 
     imposed_access_mode: AccessMode,
 
-    p_error: Option<String>,
+    p_errors: Vec<String>,
 
     p_alias: Option<String>,
 
@@ -171,7 +174,10 @@ impl Parse for NodeElementBase {
 
         let imposed_access_mode = node.parse_if("ImposedAccessMode").unwrap_or(AccessMode::RW);
 
-        let p_error = node.parse_if("pError");
+        let mut p_errors = vec![];
+        while let Some(p_err) = node.parse_if("pError") {
+            p_errors.push(p_err);
+        }
 
         let p_alias = node.parse_if("pAlias");
 
@@ -190,7 +196,7 @@ impl Parse for NodeElementBase {
             p_is_locked,
             p_block_polling,
             imposed_access_mode,
-            p_error,
+            p_errors,
             p_alias,
             p_cast_alias,
         }

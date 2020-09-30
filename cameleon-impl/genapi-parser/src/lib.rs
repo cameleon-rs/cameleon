@@ -12,6 +12,7 @@ mod register;
 mod register_base;
 mod register_description;
 mod string_reg;
+mod struct_reg;
 mod swiss_knife;
 mod xml;
 
@@ -29,6 +30,7 @@ pub use register::*;
 pub use register_base::*;
 pub use register_description::*;
 pub use string_reg::*;
+pub use struct_reg::*;
 pub use swiss_knife::*;
 
 use thiserror::Error;

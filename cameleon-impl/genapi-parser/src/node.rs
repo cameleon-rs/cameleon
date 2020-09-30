@@ -66,7 +66,8 @@ mod tests {
                 <pIsLocked>AnotherNode2</pIsLocked>
                 <pBlockPolling>AnotherNode3</pBlockPolling>
                 <ImposedAccessMode>RO</ImposedAccessMode>
-                <pError>AnotherNode4</pError>
+                <pError>AnotherErr0</pError>
+                <pError>AnotherErr1</pError>
                 <pAlias>AnotherNode5</pAlias>
                 <pCastAlias>AnotherNode6</pCastAlias>
                 <pInvalidator>Invalidator0</pInvalidator>
@@ -93,7 +94,9 @@ mod tests {
         assert_eq!(node_base.p_is_locked().unwrap(), "AnotherNode2");
         assert_eq!(node_base.p_block_polling().unwrap(), "AnotherNode3");
         assert_eq!(node_base.imposed_access_mode(), AccessMode::RO);
-        assert_eq!(node_base.p_error().unwrap(), "AnotherNode4");
+        assert_eq!(node_base.p_errors().len(), 2);
+        assert_eq!(node_base.p_errors()[0], "AnotherErr0");
+        assert_eq!(node_base.p_errors()[1], "AnotherErr1");
         assert_eq!(node_base.p_alias().unwrap(), "AnotherNode5");
         assert_eq!(node_base.p_cast_alias().unwrap(), "AnotherNode6");
 
@@ -128,7 +131,7 @@ mod tests {
         assert!(node_base.p_is_locked().is_none());
         assert!(node_base.p_block_polling().is_none());
         assert_eq!(node_base.imposed_access_mode(), AccessMode::RW);
-        assert!(node_base.p_error().is_none());
+        assert_eq!(node_base.p_errors().len(), 0);
         assert!(node_base.p_alias().is_none());
         assert!(node_base.p_cast_alias().is_none());
 
