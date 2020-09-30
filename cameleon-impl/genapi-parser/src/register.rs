@@ -2,12 +2,15 @@ use super::{node_base::*, register_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct RegisterNode {
+    attr_base: NodeAttributeBase,
+
     register_base: RegisterBase,
 }
 
 impl RegisterNode {
     pub fn node_base(&self) -> NodeBase {
-        self.register_base.node_base()
+        let elem_base = self.register_base.elem_base();
+        NodeBase::new(&self.attr_base, elem_base)
     }
 
     pub fn register_base(&self) -> &RegisterBase {
@@ -18,10 +21,13 @@ impl RegisterNode {
 impl Parse for RegisterNode {
     fn parse(node: &mut xml::Node) -> Self {
         debug_assert!(node.tag_name() == "Register");
-
+        let attr_base = node.parse();
         let register_base = node.parse();
 
-        Self { register_base }
+        Self {
+            attr_base,
+            register_base,
+        }
     }
 }
 

@@ -2,8 +2,6 @@ use super::{elem_type::*, node_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct RegisterBase {
-    attr_base: NodeAttributeBase,
-
     elem_base: NodeElementBase,
 
     streamable: bool,
@@ -56,14 +54,13 @@ impl RegisterBase {
         &self.p_invalidators
     }
 
-    pub(super) fn node_base(&self) -> NodeBase {
-        NodeBase::new(&self.attr_base, &self.elem_base)
+    pub(super) fn elem_base(&self) -> &NodeElementBase {
+        &self.elem_base
     }
 }
 
 impl Parse for RegisterBase {
     fn parse(node: &mut xml::Node) -> Self {
-        let attr_base = node.parse();
         let elem_base = node.parse();
 
         let streamable = node.parse_if("Streamable").unwrap_or_default();
@@ -94,7 +91,6 @@ impl Parse for RegisterBase {
         }
 
         Self {
-            attr_base,
             elem_base,
             streamable,
             address_kinds,

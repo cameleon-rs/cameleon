@@ -2,6 +2,8 @@ use super::{elem_type::*, node_base::*, register_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct FloatRegNode {
+    attr_base: NodeAttributeBase,
+
     register_base: RegisterBase,
 
     endianness: register_node_elem::Endianness,
@@ -17,7 +19,8 @@ pub struct FloatRegNode {
 
 impl FloatRegNode {
     pub fn node_base(&self) -> NodeBase {
-        self.register_base.node_base()
+        let elem_base = self.register_base.elem_base();
+        NodeBase::new(&self.attr_base, elem_base)
     }
 
     pub fn register_base(&self) -> &RegisterBase {
@@ -48,19 +51,18 @@ impl FloatRegNode {
 impl Parse for FloatRegNode {
     fn parse(node: &mut xml::Node) -> Self {
         debug_assert!(node.tag_name() == "FloatReg");
+
+        let attr_base = node.parse();
         let register_base = node.parse();
 
         let endianness = node.parse_if("Endianess").unwrap_or_default();
-
         let unit = node.parse_if("Unit");
-
         let representation = node.parse_if("Representation").unwrap_or_default();
-
         let display_notation = node.parse_if("DisplayNotation").unwrap_or_default();
-
         let display_precision = node.parse_if("DisplayPrecision").unwrap_or(6);
 
         Self {
+            attr_base,
             register_base,
             endianness,
             unit,

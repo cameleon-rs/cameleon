@@ -2,6 +2,8 @@ use super::{elem_type::*, node_base::*, register_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct MaskedIntRegNode {
+    attr_base: NodeAttributeBase,
+
     register_base: RegisterBase,
 
     bit_mask: register_node_elem::BitMask,
@@ -19,7 +21,8 @@ pub struct MaskedIntRegNode {
 
 impl MaskedIntRegNode {
     pub fn node_base(&self) -> NodeBase {
-        self.register_base.node_base()
+        let elem_base = self.register_base.elem_base();
+        NodeBase::new(&self.attr_base, elem_base)
     }
 
     pub fn register_base(&self) -> &RegisterBase {
@@ -54,6 +57,8 @@ impl MaskedIntRegNode {
 impl Parse for MaskedIntRegNode {
     fn parse(node: &mut xml::Node) -> Self {
         debug_assert!(node.tag_name() == "MaskedIntReg");
+        let attr_base = node.parse();
+
         let register_base = node.parse();
 
         let bit_mask = node.parse();
@@ -72,6 +77,7 @@ impl Parse for MaskedIntRegNode {
         }
 
         Self {
+            attr_base,
             register_base,
             bit_mask,
             sign,
