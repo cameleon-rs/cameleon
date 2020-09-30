@@ -5,6 +5,7 @@ mod int_swiss_knife;
 mod integer;
 mod node;
 mod node_base;
+mod register_base;
 mod register_description;
 mod swiss_knife;
 mod xml;
