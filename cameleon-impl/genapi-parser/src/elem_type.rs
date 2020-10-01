@@ -154,12 +154,14 @@ impl Parse for ImmOrPNode<f64> {
     fn parse(node: &mut xml::Node) -> Self {
         let peeked_text = node.peek().unwrap().text();
 
-        if peeked_text == "INF" || peeked_text == "-INF" || peeked_text == "NaN" {
+        if peeked_text == "INF"
+            || peeked_text == "-INF"
+            || peeked_text == "NaN"
+            || !peeked_text.chars().next().unwrap().is_alphabetic()
+        {
             ImmOrPNode::Imm(node.parse())
-        } else if peeked_text.chars().next().unwrap().is_alphabetic() {
-            ImmOrPNode::PNode(node.parse())
         } else {
-            ImmOrPNode::Imm(node.parse())
+            ImmOrPNode::PNode(node.parse())
         }
     }
 }
@@ -376,7 +378,15 @@ pub(super) fn convert_to_int(value: &str) -> i64 {
     if value.starts_with("0x") || value.starts_with("0X") {
         i64::from_str_radix(&value[2..], 16).unwrap()
     } else {
-        i64::from_str_radix(value, 10).unwrap()
+        value.parse().unwrap()
+    }
+}
+
+pub(super) fn convert_to_uint(value: &str) -> u64 {
+    if value.starts_with("0x") || value.starts_with("0X") {
+        u64::from_str_radix(&value[2..], 16).unwrap()
+    } else {
+        value.parse().unwrap()
     }
 }
 
@@ -384,6 +394,13 @@ impl Parse for i64 {
     fn parse(node: &mut xml::Node) -> Self {
         let value = node.next_text().unwrap();
         convert_to_int(value)
+    }
+}
+
+impl Parse for u64 {
+    fn parse(node: &mut xml::Node) -> Self {
+        let value = node.next_text().unwrap();
+        convert_to_uint(value)
     }
 }
 
@@ -631,8 +648,8 @@ pub mod register_node_elem {
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub enum BitMask {
-        SingleBit(i64),
-        Range { lsb: i64, msb: i64 },
+        SingleBit(u64),
+        Range { lsb: u64, msb: u64 },
     }
 
     impl Parse for BitMask {

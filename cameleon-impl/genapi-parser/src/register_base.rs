@@ -9,7 +9,7 @@ pub struct RegisterBase {
     pub(super) access_mode: AccessMode,
     pub(super) p_port: String,
     pub(super) cacheable: CachingMode,
-    pub(super) polling_time: Option<i64>,
+    pub(super) polling_time: Option<u64>,
     pub(super) p_invalidators: Vec<String>,
 }
 
@@ -38,7 +38,7 @@ impl RegisterBase {
         self.cacheable
     }
 
-    pub fn polling_time(&self) -> Option<i64> {
+    pub fn polling_time(&self) -> Option<u64> {
         self.polling_time
     }
 

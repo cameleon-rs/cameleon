@@ -1,19 +1,16 @@
-use super::{
-    elem_type::{convert_to_int, StandardNameSpace},
-    *,
-};
+use super::{elem_type::StandardNameSpace, *};
 
 pub struct RegisterDescription {
     model_name: String,
     vendor_name: String,
     tool_tip: Option<String>,
     standard_name_space: StandardNameSpace,
-    schema_major_version: i64,
-    schema_minor_version: i64,
-    schema_subminor_version: i64,
-    major_version: i64,
-    minor_version: i64,
-    subminor_version: i64,
+    schema_major_version: u64,
+    schema_minor_version: u64,
+    schema_subminor_version: u64,
+    major_version: u64,
+    minor_version: u64,
+    subminor_version: u64,
     product_guid: String,
     version_guid: String,
 
@@ -37,27 +34,27 @@ impl RegisterDescription {
         self.standard_name_space
     }
 
-    pub fn schema_major_version(&self) -> i64 {
+    pub fn schema_major_version(&self) -> u64 {
         self.schema_major_version
     }
 
-    pub fn schema_subminor_version(&self) -> i64 {
+    pub fn schema_subminor_version(&self) -> u64 {
         self.schema_subminor_version
     }
 
-    pub fn schema_minor_version(&self) -> i64 {
+    pub fn schema_minor_version(&self) -> u64 {
         self.schema_minor_version
     }
 
-    pub fn major_version(&self) -> i64 {
+    pub fn major_version(&self) -> u64 {
         self.major_version
     }
 
-    pub fn minor_version(&self) -> i64 {
+    pub fn minor_version(&self) -> u64 {
         self.minor_version
     }
 
-    pub fn subminor_version(&self) -> i64 {
+    pub fn subminor_version(&self) -> u64 {
         self.subminor_version
     }
 
@@ -87,19 +84,19 @@ impl Parse for RegisterDescription {
         let standard_name_space = node.attribute_of("StandardNameSpace").unwrap().into();
 
         let schema_major_version =
-            convert_to_int(&node.attribute_of("SchemaMajorVersion").unwrap());
+            convert_to_uint(&node.attribute_of("SchemaMajorVersion").unwrap());
 
         let schema_minor_version =
-            convert_to_int(&node.attribute_of("SchemaMinorVersion").unwrap());
+            convert_to_uint(&node.attribute_of("SchemaMinorVersion").unwrap());
 
         let schema_subminor_version =
-            convert_to_int(&node.attribute_of("SchemaSubMinorVersion").unwrap());
+            convert_to_uint(&node.attribute_of("SchemaSubMinorVersion").unwrap());
 
-        let major_version = convert_to_int(&node.attribute_of("MajorVersion").unwrap());
+        let major_version = convert_to_uint(&node.attribute_of("MajorVersion").unwrap());
 
-        let minor_version = convert_to_int(&node.attribute_of("MinorVersion").unwrap());
+        let minor_version = convert_to_uint(&node.attribute_of("MinorVersion").unwrap());
 
-        let subminor_version = convert_to_int(&node.attribute_of("SubMinorVersion").unwrap());
+        let subminor_version = convert_to_uint(&node.attribute_of("SubMinorVersion").unwrap());
 
         let product_guid = node.attribute_of("ProductGuid").unwrap().into();
 

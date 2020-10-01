@@ -75,7 +75,7 @@ pub struct StructEntry {
 
     cacheable: CachingMode,
 
-    polling_time: Option<i64>,
+    polling_time: Option<u64>,
 
     streamable: bool,
 
@@ -127,7 +127,7 @@ impl StructEntry {
         self.cacheable
     }
 
-    pub fn polling_time(&self) -> Option<i64> {
+    pub fn polling_time(&self) -> Option<u64> {
         self.polling_time
     }
 
