@@ -2,23 +2,15 @@ use super::{elem_type::*, node_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct RegisterBase {
-    elem_base: NodeElementBase,
-
-    streamable: bool,
-
-    address_kinds: Vec<register_node_elem::AddressKind>,
-
-    length: ImmOrPNode<i64>,
-
-    access_mode: AccessMode,
-
-    p_port: String,
-
-    cacheable: CachingMode,
-
-    polling_time: Option<i64>,
-
-    p_invalidators: Vec<String>,
+    pub(super) elem_base: NodeElementBase,
+    pub(super) streamable: bool,
+    pub(super) address_kinds: Vec<register_node_elem::AddressKind>,
+    pub(super) length: ImmOrPNode<i64>,
+    pub(super) access_mode: AccessMode,
+    pub(super) p_port: String,
+    pub(super) cacheable: CachingMode,
+    pub(super) polling_time: Option<i64>,
+    pub(super) p_invalidators: Vec<String>,
 }
 
 impl RegisterBase {
@@ -52,10 +44,6 @@ impl RegisterBase {
 
     pub fn p_invalidators(&self) -> &[String] {
         &self.p_invalidators
-    }
-
-    pub(super) fn elem_base(&self) -> &NodeElementBase {
-        &self.elem_base
     }
 }
 

@@ -2,26 +2,26 @@ use super::{elem_type::*, node_base::*, register_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct MaskedIntRegNode {
-    attr_base: NodeAttributeBase,
+    pub(super) attr_base: NodeAttributeBase,
 
-    register_base: RegisterBase,
+    pub(super) register_base: RegisterBase,
 
-    bit_mask: register_node_elem::BitMask,
+    pub(super) bit_mask: register_node_elem::BitMask,
 
-    sign: register_node_elem::Sign,
+    pub(super) sign: register_node_elem::Sign,
 
-    endianness: register_node_elem::Endianness,
+    pub(super) endianness: register_node_elem::Endianness,
 
-    unit: Option<String>,
+    pub(super) unit: Option<String>,
 
-    representation: IntegerRepresentation,
+    pub(super) representation: IntegerRepresentation,
 
-    p_selected: Vec<String>,
+    pub(super) p_selected: Vec<String>,
 }
 
 impl MaskedIntRegNode {
     pub fn node_base(&self) -> NodeBase {
-        let elem_base = self.register_base.elem_base();
+        let elem_base = &self.register_base.elem_base;
         NodeBase::new(&self.attr_base, elem_base)
     }
 

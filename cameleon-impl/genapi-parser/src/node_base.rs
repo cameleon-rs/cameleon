@@ -114,35 +114,21 @@ impl Parse for NodeAttributeBase {
 
 #[derive(Debug, Clone)]
 pub(super) struct NodeElementBase {
-    tool_tip: Option<String>,
-
-    description: Option<String>,
-
-    display_name: Option<String>,
-
-    visibility: Visibility,
-
-    docu_url: Option<String>,
-
-    is_deprecated: bool,
-
-    event_id: Option<String>,
-
-    p_is_implemented: Option<String>,
-
-    p_is_available: Option<String>,
-
-    p_is_locked: Option<String>,
-
-    p_block_polling: Option<String>,
-
-    imposed_access_mode: AccessMode,
-
-    p_errors: Vec<String>,
-
-    p_alias: Option<String>,
-
-    p_cast_alias: Option<String>,
+    pub(super) tool_tip: Option<String>,
+    pub(super) description: Option<String>,
+    pub(super) display_name: Option<String>,
+    pub(super) visibility: Visibility,
+    pub(super) docu_url: Option<String>,
+    pub(super) is_deprecated: bool,
+    pub(super) event_id: Option<String>,
+    pub(super) p_is_implemented: Option<String>,
+    pub(super) p_is_available: Option<String>,
+    pub(super) p_is_locked: Option<String>,
+    pub(super) p_block_polling: Option<String>,
+    pub(super) imposed_access_mode: AccessMode,
+    pub(super) p_errors: Vec<String>,
+    pub(super) p_alias: Option<String>,
+    pub(super) p_cast_alias: Option<String>,
 }
 
 impl Parse for NodeElementBase {

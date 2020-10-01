@@ -9,7 +9,7 @@ pub struct RegisterNode {
 
 impl RegisterNode {
     pub fn node_base(&self) -> NodeBase {
-        let elem_base = self.register_base.elem_base();
+        let elem_base = &self.register_base.elem_base;
         NodeBase::new(&self.attr_base, elem_base)
     }
 

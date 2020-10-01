@@ -1,4 +1,4 @@
-use super::{elem_type::*, node_base::*, register_base::*, xml, Parse};
+use super::{elem_type::*, node_base::*, register_base::*, xml, MaskedIntRegNode, Parse};
 
 #[derive(Debug, Clone)]
 pub struct StructRegNode {
@@ -26,6 +26,16 @@ impl StructRegNode {
 
     pub fn entries(&self) -> &[StructEntry] {
         &self.entries
+    }
+
+    pub fn to_masked_int_regs<T>(&self) -> T
+    where
+        T: std::iter::FromIterator<MaskedIntRegNode>,
+    {
+        self.entries
+            .iter()
+            .map(|ent| ent.to_masked_int_reg(&self))
+            .collect()
     }
 }
 
@@ -80,6 +90,26 @@ pub struct StructEntry {
     p_selected: Vec<String>,
 }
 
+macro_rules! merge_impl {
+    ($lhs:ident, $rhs:ident, $name:ident) => {
+        if $rhs.$name.is_some() {
+            $lhs.$name = $rhs.$name;
+        }
+    };
+
+    ($lhs:ident, $rhs:ident, $name:ident, default) => {
+        if $rhs.$name != Default::default() {
+            $rhs.$name = $rhs.$name;
+        }
+    };
+
+    ($lhs:ident, $rhs:ident, $name:ident, vec) => {
+        if $rhs.$name.is_empty() {
+            $rhs.$name = $rhs.$name;
+        }
+    };
+}
+
 impl StructEntry {
     pub fn node_base(&self) -> NodeBase {
         NodeBase::new(&self.attr_base, &self.elem_base)
@@ -123,6 +153,62 @@ impl StructEntry {
 
     pub fn p_selected(&self) -> &[String] {
         &self.p_selected
+    }
+
+    fn to_masked_int_reg(&self, struct_reg: &StructRegNode) -> MaskedIntRegNode {
+        self.clone().into_masked_int_reg(struct_reg)
+    }
+
+    fn into_masked_int_reg(mut self, struct_reg: &StructRegNode) -> MaskedIntRegNode {
+        let attr_base = self.attr_base;
+
+        let mut register_base = struct_reg.register_base().clone();
+        let elem_base = &mut register_base.elem_base;
+        elem_base.merge(self.elem_base);
+
+        merge_impl!(register_base, self, streamable, default);
+        // `AccessMode::RO` is the default value of AccessMode.
+        if self.access_mode != AccessMode::RO {
+            register_base.access_mode = self.access_mode;
+        }
+        merge_impl!(register_base, self, cacheable, default);
+        merge_impl!(register_base, self, polling_time);
+        merge_impl!(register_base, self, p_invalidators, vec);
+
+        MaskedIntRegNode {
+            attr_base,
+            register_base,
+            bit_mask: self.bit_mask,
+            sign: self.sign,
+            endianness: struct_reg.endianness,
+            unit: self.unit,
+            representation: self.representation,
+            p_selected: self.p_selected,
+        }
+    }
+}
+
+impl NodeElementBase {
+    fn merge(&mut self, mut rhs: Self) {
+        merge_impl!(self, rhs, tool_tip);
+        merge_impl!(self, rhs, description);
+        merge_impl!(self, rhs, display_name);
+        merge_impl!(self, rhs, visibility, default);
+        merge_impl!(self, rhs, docu_url);
+        merge_impl!(self, rhs, is_deprecated, default);
+        merge_impl!(self, rhs, event_id);
+        merge_impl!(self, rhs, p_is_implemented);
+        merge_impl!(self, rhs, p_is_available);
+        merge_impl!(self, rhs, p_is_locked);
+        merge_impl!(self, rhs, p_block_polling);
+        // `AccessMode::RW` is the default value of ImposedAccessMode.
+        if rhs.imposed_access_mode != AccessMode::RW {
+            self.imposed_access_mode = rhs.imposed_access_mode;
+        }
+
+        merge_impl!(self, rhs, p_errors, vec);
+        merge_impl!(self, rhs, p_alias);
+        merge_impl!(self, rhs, p_cast_alias);
     }
 }
 
@@ -184,7 +270,7 @@ mod tests {
     #[test]
     fn test_struct_reg() {
         let xml = r#"
-            <StructReg Comment="Struct Entry Comment">
+            <StructReg Comment="Struct Reg Comment">
                 <Address>0x10000</Address>
                 <Length>4</Length>
                 <pPort>Device</pPort>
@@ -215,7 +301,7 @@ mod tests {
 
         let node: StructRegNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
 
-        assert_eq!(node.comment(), "Struct Entry Comment");
+        assert_eq!(node.comment(), "Struct Reg Comment");
         assert_eq!(node.endianness(), Endianness::BE);
 
         let entries = node.entries();
@@ -240,5 +326,75 @@ mod tests {
         let second_ent = &entries[1];
         assert_eq!(second_ent.node_base().name(), "StructEntry1");
         assert_eq!(second_ent.bit_mask(), BitMask::SingleBit(24));
+    }
+
+    #[test]
+    fn test_to_masked_int_regs() {
+        let xml = r#"
+            <StructReg Comment="Struct Reg Comment">
+                <ToolTip>Struct Reg ToolTip</ToolTip>
+                <Address>0x10000</Address>
+                <Length>4</Length>
+                <pPort>Device</pPort>
+                <Endianess>BigEndian</Endianess>
+
+                <StructEntry Name="StructEntry0">
+                    <ToolTip>StructEntry0 ToolTip</ToolTip>
+                    <ImposedAccessMode>RO</ImposedAccessMode>
+                    <pInvalidator>Invalidator0</pInvalidator>
+                    <pInvalidator>Invalidator1</pInvalidator>
+                    <AccessMode>RW</AccessMode>
+                    <Cachable>WriteAround</Cachable>
+                    <PollingTime>1000</PollingTime>
+                    <Streamable>Yes</Streamable>
+                    <LSB>10</LSB>
+                    <MSB>1</MSB>
+                    <Sign>Signed</Sign>
+                    <Unit>Hz</Unit>
+                    <Representation>Logarithmic</Representation>
+                    <pSelected>Selected0</pSelected>
+                    <pSelected>Selected1</pSelected>
+                </StructEntry>
+
+                <StructEntry Name="StructEntry1">
+                    <Bit>24</Bit>
+                </StructEntry>
+
+            </StructReg>
+            "#;
+        let node: StructRegNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
+        let masked_int_regs: Vec<_> = node.to_masked_int_regs();
+
+        assert_eq!(masked_int_regs.len(), 2);
+
+        let masked_int_reg0 = &masked_int_regs[0];
+        assert_eq!(masked_int_reg0.node_base().name(), "StructEntry0");
+        assert_eq!(
+            masked_int_reg0.node_base().imposed_access_mode(),
+            AccessMode::RO
+        );
+        assert_eq!(
+            masked_int_reg0.node_base().tool_tip().unwrap(),
+            "StructEntry0 ToolTip"
+        );
+        assert_eq!(
+            masked_int_reg0.register_base().access_mode(),
+            AccessMode::RW,
+        );
+
+        let masked_int_reg1 = &masked_int_regs[1];
+        assert_eq!(masked_int_reg1.node_base().name(), "StructEntry1");
+        assert_eq!(
+            masked_int_reg1.node_base().imposed_access_mode(),
+            AccessMode::RW
+        );
+        assert_eq!(
+            masked_int_reg1.node_base().tool_tip().unwrap(),
+            "Struct Reg ToolTip"
+        );
+        assert_eq!(
+            masked_int_reg1.register_base().access_mode(),
+            AccessMode::RO,
+        );
     }
 }
