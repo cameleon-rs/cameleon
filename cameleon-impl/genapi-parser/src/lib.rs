@@ -1,3 +1,4 @@
+mod boolean;
 mod category;
 mod elem_type;
 mod float;
@@ -16,6 +17,7 @@ mod struct_reg;
 mod swiss_knife;
 mod xml;
 
+pub use boolean::*;
 pub use category::*;
 pub use elem_type::*;
 pub use float::*;

@@ -139,6 +139,21 @@ where
     }
 }
 
+impl Parse for ImmOrPNode<bool> {
+    fn parse(node: &mut xml::Node) -> Self {
+        let peeked_text = node.peek().unwrap().text();
+        if peeked_text == "Yes"
+            || peeked_text == "No"
+            || peeked_text == "true"
+            || peeked_text == "false"
+        {
+            ImmOrPNode::Imm(node.parse())
+        } else {
+            ImmOrPNode::PNode(node.parse())
+        }
+    }
+}
+
 impl Parse for ImmOrPNode<i64> {
     fn parse(node: &mut xml::Node) -> Self {
         let peeked_text = node.peek().unwrap().text();
@@ -361,8 +376,8 @@ where
 
 pub(super) fn convert_to_bool(value: &str) -> bool {
     match value {
-        "Yes" => true,
-        "No" => false,
+        "Yes" | "true" => true,
+        "No" | "false" => false,
         _ => unreachable!(),
     }
 }
