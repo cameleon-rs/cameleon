@@ -9,6 +9,7 @@ pub(super) const ENUMERATION: &str = "Enumeration";
 pub(super) const ENUM_ENTRY: &str = "EnumEntry";
 pub(super) const FLOAT: &str = "Float";
 pub(super) const FLOAT_REG: &str = "FloatReg";
+pub(super) const STRING: &str = "String";
 pub(super) const STRING_REG: &str = "StringReg";
 pub(super) const REGISTER: &str = "Register";
 pub(super) const SWISS_KNIFE: &str = "SwissKnife";

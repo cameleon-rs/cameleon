@@ -104,6 +104,7 @@ impl Parse for RegisterDescription {
                 ENUMERATION => NodeKind::Enumeration(Box::new(child.parse())),
                 FLOAT => NodeKind::Float(Box::new(child.parse())),
                 FLOAT_REG => NodeKind::FloatReg(Box::new(child.parse())),
+                STRING => NodeKind::String(Box::new(child.parse())),
                 STRING_REG => NodeKind::StringReg(Box::new(child.parse())),
                 REGISTER => NodeKind::Register(Box::new(child.parse())),
                 SWISS_KNIFE => NodeKind::SwissKnife(Box::new(child.parse())),
@@ -144,6 +145,7 @@ pub enum NodeKind {
     Enumeration(Box<EnumerationNode>),
     Float(Box<FloatNode>),
     FloatReg(Box<FloatRegNode>),
+    String(Box<StringNode>),
     StringReg(Box<StringRegNode>),
     Register(Box<RegisterNode>),
     SwissKnife(Box<SwissKnifeNode>),
@@ -185,6 +187,7 @@ mod tests {
                 <pFeature>MyEnumeration</pFeature>
                 <pFeature>MyFloat</pFeature>
                 <pFeature>MyFloatReg</pFeature>
+                <pFeature>MyString</pFeature>
                 <pFeature>MyStringReg</pFeature>
                 <pFeature>MyRegister</pFeature>
                 <pFeature>MySwissKnife</pFeature>
@@ -246,6 +249,11 @@ mod tests {
               <Length>4</Length>
               <pPort>Device</pPort>
             </FloatReg>
+
+            <String Name="MyString">
+                <Streamable>Yes</Streamable>
+                <Value>Immediate String</Value>
+            </String>
 
             <StringReg Name="MyStringReg">
               <Address>100000</Address>
@@ -310,6 +318,6 @@ mod tests {
             reg_desc.version_guid(),
             "76543210-3210-3210-3210-ba9876543210"
         );
-        assert_eq!(reg_desc.nodes().len(), 15);
+        assert_eq!(reg_desc.nodes().len(), 16);
     }
 }
