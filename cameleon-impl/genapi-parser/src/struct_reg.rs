@@ -8,7 +8,7 @@ pub struct StructRegNode {
 
     endianness: register_node_elem::Endianness,
 
-    entries: Vec<StructEntry>,
+    entries: Vec<StructEntryNode>,
 }
 
 impl StructRegNode {
@@ -24,7 +24,7 @@ impl StructRegNode {
         self.endianness
     }
 
-    pub fn entries(&self) -> &[StructEntry] {
+    pub fn entries(&self) -> &[StructEntryNode] {
         &self.entries
     }
 
@@ -65,7 +65,7 @@ impl Parse for StructRegNode {
 }
 
 #[derive(Debug, Clone)]
-pub struct StructEntry {
+pub struct StructEntryNode {
     attr_base: NodeAttributeBase,
     elem_base: NodeElementBase,
 
@@ -110,7 +110,7 @@ macro_rules! merge_impl {
     };
 }
 
-impl StructEntry {
+impl StructEntryNode {
     pub fn node_base(&self) -> NodeBase {
         NodeBase::new(&self.attr_base, &self.elem_base)
     }
@@ -212,7 +212,7 @@ impl NodeElementBase {
     }
 }
 
-impl Parse for StructEntry {
+impl Parse for StructEntryNode {
     fn parse(node: &mut xml::Node) -> Self {
         debug_assert_eq!(node.tag_name(), "StructEntry");
         let attr_base = node.parse();
