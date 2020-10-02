@@ -111,6 +111,7 @@ impl Parse for RegisterDescription {
                 INT_CONVERTER => NodeKind::IntConverter(Box::new(child.parse())),
                 SWISS_KNIFE => NodeKind::SwissKnife(Box::new(child.parse())),
                 INT_SWISS_KNIFE => NodeKind::IntSwissKnife(Box::new(child.parse())),
+                PORT => NodeKind::Port(Box::new(child.parse())),
                 STRUCT_REG => NodeKind::StructReg(Box::new(child.parse())),
                 _ => todo!(),
             };
@@ -154,6 +155,7 @@ pub enum NodeKind {
     IntConverter(Box<IntConverterNode>),
     SwissKnife(Box<SwissKnifeNode>),
     IntSwissKnife(Box<IntSwissKnifeNode>),
+    Port(Box<PortNode>),
     StructReg(Box<StructRegNode>),
 }
 
@@ -198,6 +200,7 @@ mod tests {
                 <pFeature>MyIntConverter</pFeature>
                 <pFeature>MySwissKnife</pFeature>
                 <pFeature>MyIntSwissKnife</pFeature>
+                <pFeature>MyPort</pFeature>
                 <pFeature>MyStructEntry</pFeature>
             </Category>
 
@@ -303,6 +306,11 @@ mod tests {
                 <Formula>Var1+Var2+ConstBy2</Formula>
              </SwissKnife>
 
+            <Port Name="MyPort">
+                <ChunkID>Fd3219</ChunkID>
+                <SwapEndianess>Yes</SwapEndianess>
+            </Port>
+
             <StructReg Comment="Struct Entry Comment">
                 <Address>0x10000</Address>
                 <Length>4</Length>
@@ -338,6 +346,6 @@ mod tests {
             reg_desc.version_guid(),
             "76543210-3210-3210-3210-ba9876543210"
         );
-        assert_eq!(reg_desc.nodes().len(), 18);
+        assert_eq!(reg_desc.nodes().len(), 19);
     }
 }

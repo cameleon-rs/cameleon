@@ -16,6 +16,7 @@ pub(super) const CONVERTER: &str = "Converter";
 pub(super) const INT_CONVERTER: &str = "IntConverter";
 pub(super) const SWISS_KNIFE: &str = "SwissKnife";
 pub(super) const INT_SWISS_KNIFE: &str = "IntSwissKnife";
+pub(super) const PORT: &str = "Port";
 pub(super) const STRUCT_REG: &str = "StructReg";
 pub(super) const STRUCT_ENTRY: &str = "StructEntry";
 
@@ -74,6 +75,10 @@ pub(super) const P_VALUE_INDEXED: &str = "pValueIndexed";
 pub(super) const BIT: &str = "Bit";
 pub(super) const SLOPE: &str = "Slope";
 pub(super) const IS_LINEAR: &str = "IsLinear";
+pub(super) const CHUNK_ID: &str = "ChunkID";
+pub(super) const P_CHUNK_ID: &str = "pChunkID";
+pub(super) const SWAP_ENDIANNESS: &str = "SwapEndianess"; // Schema typos "Endianness" to "Endianess".
+pub(super) const CACHE_CHUNK_DATA: &str = "CacheChunkData";
 
 pub(super) const NAME: &str = "Name";
 pub(super) const NAME_SPACE: &str = "NameSpace";
