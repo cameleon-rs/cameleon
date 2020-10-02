@@ -126,7 +126,7 @@ mod tests {
         let constants = node.constants();
         assert_eq!(constants.len(), 1);
         assert_eq!(constants[0].name(), "Const");
-        assert_eq!(*constants[0].value(), f64::INFINITY);
+        assert!(constants[0].value().is_infinite());
 
         let expressions = node.expressions();
         assert_eq!(expressions.len(), 1);

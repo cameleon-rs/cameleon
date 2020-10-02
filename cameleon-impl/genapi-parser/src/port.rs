@@ -79,7 +79,7 @@ mod tests {
 
         let node: PortNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
 
-        assert_eq!(node.chunk_id().unwrap(), &ImmOrPNode::Imm(0xFd3219));
+        assert_eq!(node.chunk_id().unwrap(), &ImmOrPNode::Imm(0xFD3219));
         assert_eq!(node.swap_endianness(), true);
     }
 

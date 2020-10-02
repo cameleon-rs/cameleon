@@ -172,7 +172,8 @@ mod tests {
 
         let entry0 = &entries[0];
         assert_eq!(entry0.value(), 0);
-        assert_eq!(entry0.numeric_values(), &[1.0, 10.0]);
+        assert!(entry0.numeric_values()[0] - 1.0 < f64::EPSILON);
+        assert!(entry0.numeric_values()[1] - 10.0 < f64::EPSILON);
         assert_eq!(entry0.is_self_clearing(), true);
 
         let entry1 = &entries[1];
