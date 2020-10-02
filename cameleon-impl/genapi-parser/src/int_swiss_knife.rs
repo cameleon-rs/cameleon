@@ -1,25 +1,17 @@
-use super::{elem_type::*, node_base::*, xml, Parse};
+use super::{elem_name::*, elem_type::*, node_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct IntSwissKnifeNode {
     attr_base: NodeAttributeBase,
-
     elem_base: NodeElementBase,
 
     p_invalidators: Vec<String>,
-
     streamable: bool,
-
     p_variables: Vec<NamedValue<String>>,
-
     constants: Vec<NamedValue<i64>>,
-
     expressions: Vec<NamedValue<String>>,
-
     formula: String,
-
     unit: Option<String>,
-
     representation: IntegerRepresentation,
 }
 
@@ -63,26 +55,19 @@ impl IntSwissKnifeNode {
 
 impl Parse for IntSwissKnifeNode {
     fn parse(node: &mut xml::Node) -> Self {
-        debug_assert!(node.tag_name() == "IntSwissKnife");
+        debug_assert_eq!(node.tag_name(), INT_SWISS_KNIFE);
 
         let attr_base = node.parse();
         let elem_base = node.parse();
 
-        let p_invalidators = node.parse_while("pInvalidator");
-
-        let streamable = node.parse_if("Streamable").unwrap_or_default();
-
-        let p_variables = node.parse_while("pVariable");
-
-        let constants = node.parse_while("Constant");
-
-        let expressions = node.parse_while("Expression");
-
+        let p_invalidators = node.parse_while(P_INVALIDATOR);
+        let streamable = node.parse_if(STREAMABLE).unwrap_or_default();
+        let p_variables = node.parse_while(P_VARIABLE);
+        let constants = node.parse_while(CONSTANT);
+        let expressions = node.parse_while(EXPRESSION);
         let formula = node.parse();
-
-        let unit = node.parse_if("Unit");
-
-        let representation = node.parse_if("Representation").unwrap_or_default();
+        let unit = node.parse_if(UNIT);
+        let representation = node.parse_if(REPRESENTATION).unwrap_or_default();
 
         Self {
             attr_base,

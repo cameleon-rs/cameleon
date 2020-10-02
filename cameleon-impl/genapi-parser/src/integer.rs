@@ -1,27 +1,18 @@
-use super::{elem_type::*, node_base::*, xml, Parse};
+use super::{elem_name::*, elem_type::*, node_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct IntegerNode {
     attr_base: NodeAttributeBase,
-
     elem_base: NodeElementBase,
 
     p_invalidators: Vec<String>,
-
     streamable: bool,
-
     value_kind: numeric_node_elem::ValueKind<i64>,
-
     min: ImmOrPNode<i64>,
-
     max: ImmOrPNode<i64>,
-
     inc: ImmOrPNode<i64>,
-
     unit: Option<String>,
-
     representation: IntegerRepresentation,
-
     p_selected: Vec<String>,
 }
 
@@ -69,37 +60,29 @@ impl IntegerNode {
 
 impl Parse for IntegerNode {
     fn parse(node: &mut xml::Node) -> Self {
-        debug_assert!(node.tag_name() == "Integer");
+        debug_assert_eq!(node.tag_name(), INTEGER);
 
         let attr_base = node.parse();
         let elem_base = node.parse();
 
-        let p_invalidators = node.parse_while("pInvalidator");
-
-        let streamable = node.parse_if("Streamable").unwrap_or_default();
-
+        let p_invalidators = node.parse_while(P_INVALIDATOR);
+        let streamable = node.parse_if(STREAMABLE).unwrap_or_default();
         let value_kind = node.parse();
-
-        let min = node.parse_if("Min").or_else(|| node.parse_if("pMin"));
-
-        let max = node.parse_if("Max").or_else(|| node.parse_if("pMax"));
-
+        let min = node.parse_if(MIN).or_else(|| node.parse_if(P_MIN));
+        let max = node.parse_if(MAX).or_else(|| node.parse_if(P_MAX));
         let inc = node
-            .parse_if("Inc")
-            .or_else(|| node.parse_if("pInc"))
+            .parse_if(INC)
+            .or_else(|| node.parse_if(P_INC))
             .unwrap_or(ImmOrPNode::Imm(10));
-
-        let unit = node.parse_if("Unit");
-
+        let unit = node.parse_if(UNIT);
         let representation = node
-            .parse_if::<IntegerRepresentation>("Representation")
+            .parse_if::<IntegerRepresentation>(REPRESENTATION)
             .unwrap_or_default();
+        let p_selected: Vec<String> = node.parse_while(P_SELECTED);
 
         // Deduce min and max value based on representation if not specified.
         let min = min.unwrap_or_else(|| ImmOrPNode::Imm(representation.deduce_min()));
         let max = max.unwrap_or_else(|| ImmOrPNode::Imm(representation.deduce_max()));
-
-        let p_selected: Vec<String> = node.parse_while("pSelected");
 
         Self {
             attr_base,

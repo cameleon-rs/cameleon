@@ -1,8 +1,9 @@
-use super::{elem_type::*, node_base::*, xml, Parse};
+use super::{elem_name::*, elem_type::*, node_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct RegisterBase {
     pub(super) elem_base: NodeElementBase,
+
     pub(super) streamable: bool,
     pub(super) address_kinds: Vec<register_node_elem::AddressKind>,
     pub(super) length: ImmOrPNode<i64>,
@@ -51,29 +52,22 @@ impl Parse for RegisterBase {
     fn parse(node: &mut xml::Node) -> Self {
         let elem_base = node.parse();
 
-        let streamable = node.parse_if("Streamable").unwrap_or_default();
-
+        let streamable = node.parse_if(STREAMABLE).unwrap_or_default();
         let mut address_kinds = vec![];
         while let Some(addr_kind) = node
-            .parse_if("Address")
-            .or_else(|| node.parse_if("IntSwissKnife"))
-            .or_else(|| node.parse_if("pAddress"))
-            .or_else(|| node.parse_if("pIndex"))
+            .parse_if(ADDRESS)
+            .or_else(|| node.parse_if(INT_SWISS_KNIFE))
+            .or_else(|| node.parse_if(P_ADDRESS))
+            .or_else(|| node.parse_if(P_INDEX))
         {
             address_kinds.push(addr_kind);
         }
-
         let length = node.parse();
-
-        let access_mode = node.parse_if("AccessMode").unwrap_or(AccessMode::RO);
-
+        let access_mode = node.parse_if(ACCESS_MODE).unwrap_or(AccessMode::RO);
         let p_port = node.parse();
-
-        let cacheable = node.parse_if("Cachable").unwrap_or_default();
-
-        let polling_time = node.parse_if("PollingTime");
-
-        let p_invalidators = node.parse_while("pInvalidator");
+        let cacheable = node.parse_if(CACHEABLE).unwrap_or_default();
+        let polling_time = node.parse_if(POLLING_TIME);
+        let p_invalidators = node.parse_while(P_INVALIDATOR);
 
         Self {
             elem_base,

@@ -1,21 +1,15 @@
-use super::{elem_type::*, node_base::*, xml, Parse};
+use super::{elem_name::*, elem_type::*, node_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct EnumerationNode {
     attr_base: NodeAttributeBase,
-
     elem_base: NodeElementBase,
 
     p_invalidators: Vec<String>,
-
     streamable: bool,
-
     entries: Vec<EnumEntryNode>,
-
     value: ImmOrPNode<i64>,
-
     p_selected: Vec<String>,
-
     polling_time: Option<u64>,
 }
 
@@ -51,24 +45,20 @@ impl EnumerationNode {
 
 impl Parse for EnumerationNode {
     fn parse(node: &mut xml::Node) -> Self {
-        debug_assert_eq!(node.tag_name(), "Enumeration");
+        debug_assert_eq!(node.tag_name(), ENUMERATION);
+
         let attr_base = node.parse();
         let elem_base = node.parse();
 
-        let p_invalidators = node.parse_while("pInvalidator");
-
-        let streamable = node.parse_if("Streamable").unwrap_or_default();
-
+        let p_invalidators = node.parse_while(P_INVALIDATOR);
+        let streamable = node.parse_if(STREAMABLE).unwrap_or_default();
         let mut entries = vec![];
-        while let Some(mut ent_node) = node.next_if("EnumEntry") {
+        while let Some(mut ent_node) = node.next_if(ENUM_ENTRY) {
             entries.push(ent_node.parse());
         }
-
         let value = node.parse();
-
-        let p_selected = node.parse_while("pSelected");
-
-        let polling_time = node.parse_if("PollingTime");
+        let p_selected = node.parse_while(P_SELECTED);
+        let polling_time = node.parse_if(POLLING_TIME);
 
         Self {
             attr_base,
@@ -89,13 +79,9 @@ pub struct EnumEntryNode {
     elem_base: NodeElementBase,
 
     p_invalidators: Vec<String>,
-
     value: i64,
-
     numeric_values: Vec<f64>,
-
     symbolic: Option<String>,
-
     is_self_clearing: bool,
 }
 
@@ -131,19 +117,16 @@ impl EnumEntryNode {
 
 impl Parse for EnumEntryNode {
     fn parse(node: &mut xml::Node) -> Self {
-        debug_assert_eq!(node.tag_name(), "EnumEntry");
+        debug_assert_eq!(node.tag_name(), ENUM_ENTRY);
+
         let attr_base = node.parse();
         let elem_base = node.parse();
 
-        let p_invalidators = node.parse_while("pInvalidator");
-
+        let p_invalidators = node.parse_while(P_INVALIDATOR);
         let value = node.parse();
-
-        let numeric_values = node.parse_while("NumericValue");
-
-        let symbolic = node.parse_if("Symbolic");
-
-        let is_self_clearing = node.parse_if("IsSelfClearing").unwrap_or_default();
+        let numeric_values = node.parse_while(NUMERIC_VALUE);
+        let symbolic = node.parse_if(SYMBOLIC);
+        let is_self_clearing = node.parse_if(IS_SELF_CLEARING).unwrap_or_default();
 
         Self {
             attr_base,

@@ -1,4 +1,4 @@
-use super::{xml, Parse};
+use super::{elem_name::*, xml, Parse};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NameSpace {
@@ -460,12 +460,12 @@ pub mod numeric_node_elem {
         fn parse(node: &mut xml::Node) -> Self {
             let peek = node.peek().unwrap();
             match peek.tag_name() {
-                "Value" => ValueKind::Value(node.parse()),
-                "pValueCopy" | "pValue" => {
+                VALUE => ValueKind::Value(node.parse()),
+                P_VALUE_COPY | P_VALUE => {
                     let p_value = node.parse();
                     ValueKind::PValue(p_value)
                 }
-                "pIndex" => {
+                P_INDEX => {
                     let p_index = node.parse();
                     ValueKind::PIndex(p_index)
                 }
@@ -483,11 +483,11 @@ pub mod numeric_node_elem {
     impl Parse for PValue {
         fn parse(node: &mut xml::Node) -> Self {
             // NOTE: The pValue can be sandwiched between two pValueCopy sequence.
-            let mut p_value_copies = node.parse_while("pValueCopy");
+            let mut p_value_copies = node.parse_while(P_VALUE_COPY);
 
             let p_value = node.parse();
 
-            p_value_copies.extend(node.parse_while("pValueCopy"));
+            p_value_copies.extend(node.parse_while(P_VALUE_COPY));
 
             Self {
                 p_value,
@@ -516,8 +516,8 @@ pub mod numeric_node_elem {
 
             let mut value_indexed = vec![];
             while let Some(indexed) = node
-                .parse_if("ValueIndexed")
-                .or_else(|| node.parse_if("pValueIndexed"))
+                .parse_if(VALUE_INDEXED)
+                .or_else(|| node.parse_if(P_VALUE_INDEXED))
             {
                 value_indexed.push(indexed);
             }
@@ -547,7 +547,7 @@ pub mod numeric_node_elem {
         ImmOrPNode<T>: Parse,
     {
         fn parse(node: &mut xml::Node) -> Self {
-            let index = convert_to_int(node.peek().unwrap().attribute_of("Index").unwrap());
+            let index = convert_to_int(node.peek().unwrap().attribute_of(INDEX).unwrap());
             let indexed = node.parse();
             Self { index, indexed }
         }
@@ -570,9 +570,9 @@ pub mod register_node_elem {
         fn parse(node: &mut xml::Node) -> Self {
             let peeked_node = node.peek().unwrap();
             match peeked_node.tag_name() {
-                "Address" | "pAddress" => Self::Address(node.parse()),
-                "IntSwissKnife" => Self::IntSwissKnife(Box::new(node.next().unwrap().parse())),
-                "pIndex" => Self::PIndex(node.parse()),
+                ADDRESS | P_ADDRESS => Self::Address(node.parse()),
+                INT_SWISS_KNIFE => Self::IntSwissKnife(Box::new(node.next().unwrap().parse())),
+                P_INDEX => Self::PIndex(node.parse()),
                 _ => unreachable!(),
             }
         }
@@ -599,10 +599,10 @@ pub mod register_node_elem {
             let next_node = node.peek().unwrap();
 
             let imm_offset = next_node
-                .attribute_of("Offset")
+                .attribute_of(OFFSET)
                 .map(|s| ImmOrPNode::Imm(convert_to_int(s)));
             let pnode_offset = next_node
-                .attribute_of("pOffset")
+                .attribute_of(P_OFFSET)
                 .map(|s| ImmOrPNode::PNode(s.into()));
             let offset = imm_offset.xor(pnode_offset);
 
@@ -664,7 +664,7 @@ pub mod register_node_elem {
 
     impl Parse for BitMask {
         fn parse(node: &mut xml::Node) -> Self {
-            if let Some(single_bit) = node.parse_if("Bit") {
+            if let Some(single_bit) = node.parse_if(BIT) {
                 Self::SingleBit(single_bit)
             } else {
                 let lsb = node.parse();

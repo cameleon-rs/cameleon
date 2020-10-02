@@ -1,13 +1,11 @@
-use super::{node_base::*, xml, Parse};
+use super::{elem_name::*, node_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct CategoryNode {
     attr_base: NodeAttributeBase,
-
     elem_base: NodeElementBase,
 
     p_invalidators: Vec<String>,
-
     p_features: Vec<String>,
 }
 
@@ -27,14 +25,13 @@ impl CategoryNode {
 
 impl Parse for CategoryNode {
     fn parse(node: &mut xml::Node) -> Self {
-        debug_assert!(node.tag_name() == "Category");
+        debug_assert_eq!(node.tag_name(), CATEGORY);
 
         let attr_base = node.parse();
         let elem_base = node.parse();
 
-        let p_invalidators = node.parse_while("pInvalidator");
-
-        let p_features = node.parse_while("pFeature");
+        let p_invalidators = node.parse_while(P_INVALIDATOR);
+        let p_features = node.parse_while(P_FEATURE);
 
         Self {
             attr_base,

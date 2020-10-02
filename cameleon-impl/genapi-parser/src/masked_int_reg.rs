@@ -1,21 +1,15 @@
-use super::{elem_type::*, node_base::*, register_base::*, xml, Parse};
+use super::{elem_name::*, elem_type::*, node_base::*, register_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct MaskedIntRegNode {
     pub(super) attr_base: NodeAttributeBase,
-
     pub(super) register_base: RegisterBase,
 
     pub(super) bit_mask: register_node_elem::BitMask,
-
     pub(super) sign: register_node_elem::Sign,
-
     pub(super) endianness: register_node_elem::Endianness,
-
     pub(super) unit: Option<String>,
-
     pub(super) representation: IntegerRepresentation,
-
     pub(super) p_selected: Vec<String>,
 }
 
@@ -56,22 +50,16 @@ impl MaskedIntRegNode {
 
 impl Parse for MaskedIntRegNode {
     fn parse(node: &mut xml::Node) -> Self {
-        debug_assert!(node.tag_name() == "MaskedIntReg");
+        debug_assert_eq!(node.tag_name(), MASKED_INT_REG);
         let attr_base = node.parse();
 
         let register_base = node.parse();
-
         let bit_mask = node.parse();
-
-        let sign = node.parse_if("Sign").unwrap_or_default();
-
-        let endianness = node.parse_if("Endianess").unwrap_or_default();
-
-        let unit = node.parse_if("Unit");
-
-        let representation = node.parse_if("Representation").unwrap_or_default();
-
-        let p_selected = node.parse_while("pSelected");
+        let sign = node.parse_if(SIGN).unwrap_or_default();
+        let endianness = node.parse_if(ENDIANNESS).unwrap_or_default();
+        let unit = node.parse_if(UNIT);
+        let representation = node.parse_if(REPRESENTATION).unwrap_or_default();
+        let p_selected = node.parse_while(P_SELECTED);
 
         Self {
             attr_base,

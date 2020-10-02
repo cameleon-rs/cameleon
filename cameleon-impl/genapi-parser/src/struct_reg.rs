@@ -1,13 +1,13 @@
-use super::{elem_type::*, node_base::*, register_base::*, xml, MaskedIntRegNode, Parse};
+use super::{
+    elem_name::*, elem_type::*, node_base::*, register_base::*, xml, MaskedIntRegNode, Parse,
+};
 
 #[derive(Debug, Clone)]
 pub struct StructRegNode {
     comment: String,
-
     register_base: RegisterBase,
 
     endianness: register_node_elem::Endianness,
-
     entries: Vec<StructEntryNode>,
 }
 
@@ -41,14 +41,12 @@ impl StructRegNode {
 
 impl Parse for StructRegNode {
     fn parse(node: &mut xml::Node) -> Self {
-        debug_assert_eq!(node.tag_name(), "StructReg");
+        debug_assert_eq!(node.tag_name(), STRUCT_REG);
 
-        let comment = node.attribute_of("Comment").unwrap().into();
-
+        let comment = node.attribute_of(COMMENT).unwrap().into();
         let register_base = node.parse();
 
-        let endianness = node.parse_if("Endianess").unwrap_or_default();
-
+        let endianness = node.parse_if(ENDIANNESS).unwrap_or_default();
         let mut entries = vec![];
         while let Some(mut entry_node) = node.next() {
             let entry = entry_node.parse();
@@ -70,23 +68,14 @@ pub struct StructEntryNode {
     elem_base: NodeElementBase,
 
     p_invalidators: Vec<String>,
-
     access_mode: AccessMode,
-
     cacheable: CachingMode,
-
     polling_time: Option<u64>,
-
     streamable: bool,
-
     bit_mask: register_node_elem::BitMask,
-
     sign: register_node_elem::Sign,
-
     unit: Option<String>,
-
     representation: IntegerRepresentation,
-
     p_selected: Vec<String>,
 }
 
@@ -214,29 +203,21 @@ impl NodeElementBase {
 
 impl Parse for StructEntryNode {
     fn parse(node: &mut xml::Node) -> Self {
-        debug_assert_eq!(node.tag_name(), "StructEntry");
+        debug_assert_eq!(node.tag_name(), STRUCT_ENTRY);
+
         let attr_base = node.parse();
         let elem_base = node.parse();
 
-        let p_invalidators = node.parse_while("pInvalidator");
-
-        let access_mode = node.parse_if("AccessMode").unwrap_or(AccessMode::RO);
-
-        let cacheable = node.parse_if("Cachable").unwrap_or_default();
-
-        let polling_time = node.parse_if("PollingTime");
-
-        let streamable = node.parse_if("Streamable").unwrap_or_default();
-
+        let p_invalidators = node.parse_while(P_INVALIDATOR);
+        let access_mode = node.parse_if(ACCESS_MODE).unwrap_or(AccessMode::RO);
+        let cacheable = node.parse_if(CACHEABLE).unwrap_or_default();
+        let polling_time = node.parse_if(POLLING_TIME);
+        let streamable = node.parse_if(STREAMABLE).unwrap_or_default();
         let bit_mask = node.parse();
-
-        let sign = node.parse_if("Sign").unwrap_or_default();
-
-        let unit = node.parse_if("Unit");
-
-        let representation = node.parse_if("Representation").unwrap_or_default();
-
-        let p_selected = node.parse_while("pSelected");
+        let sign = node.parse_if(SIGN).unwrap_or_default();
+        let unit = node.parse_if(UNIT);
+        let representation = node.parse_if(REPRESENTATION).unwrap_or_default();
+        let p_selected = node.parse_while(P_SELECTED);
 
         Self {
             attr_base,

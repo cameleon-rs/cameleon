@@ -1,19 +1,14 @@
-use super::{elem_type::*, node_base::*, register_base::*, xml, Parse};
+use super::{elem_name::*, elem_type::*, node_base::*, register_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct FloatRegNode {
     attr_base: NodeAttributeBase,
-
     register_base: RegisterBase,
 
     endianness: register_node_elem::Endianness,
-
     unit: Option<String>,
-
     representation: FloatRepresentation,
-
     display_notation: DisplayNotation,
-
     display_precision: i64,
 }
 
@@ -50,16 +45,16 @@ impl FloatRegNode {
 
 impl Parse for FloatRegNode {
     fn parse(node: &mut xml::Node) -> Self {
-        debug_assert!(node.tag_name() == "FloatReg");
+        debug_assert_eq!(node.tag_name(), FLOAT_REG);
 
         let attr_base = node.parse();
         let register_base = node.parse();
 
-        let endianness = node.parse_if("Endianess").unwrap_or_default();
-        let unit = node.parse_if("Unit");
-        let representation = node.parse_if("Representation").unwrap_or_default();
-        let display_notation = node.parse_if("DisplayNotation").unwrap_or_default();
-        let display_precision = node.parse_if("DisplayPrecision").unwrap_or(6);
+        let endianness = node.parse_if(ENDIANNESS).unwrap_or_default();
+        let unit = node.parse_if(UNIT);
+        let representation = node.parse_if(REPRESENTATION).unwrap_or_default();
+        let display_notation = node.parse_if(DISPLAY_NOTATION).unwrap_or_default();
+        let display_precision = node.parse_if(DISPLAY_PRECISION).unwrap_or(6);
 
         Self {
             attr_base,

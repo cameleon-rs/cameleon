@@ -1,21 +1,15 @@
-use super::{elem_type::*, node_base::*, xml, Parse};
+use super::{elem_name::*, elem_type::*, node_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct BooleanNode {
     attr_base: NodeAttributeBase,
-
     elem_base: NodeElementBase,
 
     p_invalidators: Vec<String>,
-
     streamable: bool,
-
     value: ImmOrPNode<bool>,
-
     on_value: Option<i64>,
-
     off_value: Option<i64>,
-
     p_selected: Vec<String>,
 }
 
@@ -51,16 +45,17 @@ impl BooleanNode {
 
 impl Parse for BooleanNode {
     fn parse(node: &mut xml::Node) -> Self {
-        debug_assert_eq!(node.tag_name(), "Boolean");
+        debug_assert_eq!(node.tag_name(), BOOLEAN);
+
         let attr_base = node.parse();
         let elem_base = node.parse();
 
-        let p_invalidators = node.parse_while("pInvalidator");
-        let streamable = node.parse_if("Streamable").unwrap_or_default();
+        let p_invalidators = node.parse_while(P_INVALIDATOR);
+        let streamable = node.parse_if(STREAMABLE).unwrap_or_default();
         let value = node.parse();
-        let on_value = node.parse_if("OnValue");
-        let off_value = node.parse_if("OffValue");
-        let p_selected = node.parse_while("pSelected");
+        let on_value = node.parse_if(ON_VALUE);
+        let off_value = node.parse_if(OFF_VALUE);
+        let p_selected = node.parse_while(P_SELECTED);
 
         Self {
             attr_base,

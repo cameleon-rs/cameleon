@@ -1,4 +1,4 @@
-use super::{elem_type::*, xml, Parse};
+use super::{elem_name::*, elem_type::*, xml, Parse};
 
 pub struct NodeBase<'a> {
     attr: &'a NodeAttributeBase,
@@ -77,30 +77,24 @@ impl<'a> NodeBase<'a> {
 #[derive(Debug, Clone)]
 pub(super) struct NodeAttributeBase {
     name: String,
-
     name_space: NameSpace,
-
     merge_priority: MergePriority,
-
     expose_static: Option<bool>,
 }
 
 impl Parse for NodeAttributeBase {
     fn parse(node: &mut xml::Node) -> Self {
-        let name = node.attribute_of("Name").unwrap().into();
-
+        let name = node.attribute_of(NAME).unwrap().into();
         let name_space = node
-            .attribute_of("NameSpace")
+            .attribute_of(NAME_SPACE)
             .map(|text| text.into())
             .unwrap_or_default();
-
         let merge_priority = node
-            .attribute_of("MergePriority")
+            .attribute_of(MERGE_PRIORITY)
             .map(|text| text.into())
             .unwrap_or_default();
-
         let expose_static = node
-            .attribute_of("ExposeStatic")
+            .attribute_of(EXPOSE_STATIC)
             .map(|text| convert_to_bool(&text));
 
         Self {
@@ -134,37 +128,23 @@ pub(super) struct NodeElementBase {
 impl Parse for NodeElementBase {
     fn parse(node: &mut xml::Node) -> Self {
         // Ignore Extension element.
-        node.parse_if::<String>("Extension");
+        node.parse_if::<String>(EXTENSION);
 
-        let tool_tip = node.parse_if("ToolTip");
-
-        let description = node.parse_if("Description");
-
-        let display_name = node.parse_if("DisplayName");
-
-        let visibility = node.parse_if("Visibility").unwrap_or_default();
-
-        let docu_url = node.parse_if("DocuURL");
-
-        let is_deprecated = node.parse_if("IsDeprecated").unwrap_or_default();
-
-        let event_id = node.parse_if("EventID");
-
-        let p_is_implemented = node.parse_if("pIsImplemented");
-
-        let p_is_available = node.parse_if("pIsAvailable");
-
-        let p_is_locked = node.parse_if("pIsLocked");
-
-        let p_block_polling = node.parse_if("pBlockPolling");
-
-        let imposed_access_mode = node.parse_if("ImposedAccessMode").unwrap_or(AccessMode::RW);
-
-        let p_errors = node.parse_while("pError");
-
-        let p_alias = node.parse_if("pAlias");
-
-        let p_cast_alias = node.parse_if("pCastAlias");
+        let tool_tip = node.parse_if(TOOL_TIP);
+        let description = node.parse_if(DESCRIPTION);
+        let display_name = node.parse_if(DISPLAY_NAME);
+        let visibility = node.parse_if(VISIBILITY).unwrap_or_default();
+        let docu_url = node.parse_if(DOCU_URL);
+        let is_deprecated = node.parse_if(IS_DEPRECATED).unwrap_or_default();
+        let event_id = node.parse_if(EVENT_ID);
+        let p_is_implemented = node.parse_if(P_IS_IMPLEMENTED);
+        let p_is_available = node.parse_if(P_IS_AVAILABLE);
+        let p_is_locked = node.parse_if(P_IS_LOCKED);
+        let p_block_polling = node.parse_if(P_BLOCK_POLLING);
+        let imposed_access_mode = node.parse_if(IMPOSED_ACCESS_MODE).unwrap_or(AccessMode::RW);
+        let p_errors = node.parse_while(P_ERROR);
+        let p_alias = node.parse_if(P_ALIAS);
+        let p_cast_alias = node.parse_if(P_CAST_ALIAS);
 
         Self {
             tool_tip,

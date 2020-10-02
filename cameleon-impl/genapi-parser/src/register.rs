@@ -1,9 +1,8 @@
-use super::{node_base::*, register_base::*, xml, Parse};
+use super::{elem_name::*, node_base::*, register_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct RegisterNode {
     attr_base: NodeAttributeBase,
-
     register_base: RegisterBase,
 }
 
@@ -20,7 +19,8 @@ impl RegisterNode {
 
 impl Parse for RegisterNode {
     fn parse(node: &mut xml::Node) -> Self {
-        debug_assert!(node.tag_name() == "Register");
+        debug_assert_eq!(node.tag_name(), REGISTER);
+
         let attr_base = node.parse();
         let register_base = node.parse();
 

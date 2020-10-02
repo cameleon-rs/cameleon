@@ -1,29 +1,19 @@
-use super::{elem_type::*, node_base::*, xml, Parse};
+use super::{elem_name::*, elem_type::*, node_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct FloatNode {
     attr_base: NodeAttributeBase,
-
     elem_base: NodeElementBase,
 
     p_invalidators: Vec<String>,
-
     streamable: bool,
-
     value_kind: numeric_node_elem::ValueKind<f64>,
-
     min: ImmOrPNode<f64>,
-
     max: ImmOrPNode<f64>,
-
     inc: Option<ImmOrPNode<f64>>,
-
     unit: Option<String>,
-
     representation: FloatRepresentation,
-
     display_notation: DisplayNotation,
-
     display_precision: i64,
 }
 
@@ -75,36 +65,27 @@ impl FloatNode {
 
 impl Parse for FloatNode {
     fn parse(node: &mut xml::Node) -> Self {
-        debug_assert!(node.tag_name() == "Float");
+        debug_assert_eq!(node.tag_name(), FLOAT);
 
         let attr_base = node.parse();
         let elem_base = node.parse();
 
-        let p_invalidators = node.parse_while("pInvalidator");
-
-        let streamable = node.parse_if("Streamable").unwrap_or_default();
-
+        let p_invalidators = node.parse_while(P_INVALIDATOR);
+        let streamable = node.parse_if(STREAMABLE).unwrap_or_default();
         let value_kind = node.parse();
-
         let min = node
-            .parse_if("Min")
-            .or_else(|| node.parse_if("pMin"))
+            .parse_if(MIN)
+            .or_else(|| node.parse_if(P_MIN))
             .unwrap_or(ImmOrPNode::Imm(f64::MIN));
-
         let max = node
-            .parse_if("Max")
-            .or_else(|| node.parse_if("pMax"))
+            .parse_if(MAX)
+            .or_else(|| node.parse_if(P_MAX))
             .unwrap_or(ImmOrPNode::Imm(f64::MAX));
-
-        let inc = node.parse_if("Inc").or_else(|| node.parse_if("pInc"));
-
-        let unit = node.parse_if("Unit");
-
-        let representation = node.parse_if("Representation").unwrap_or_default();
-
-        let display_notation = node.parse_if("DisplayNotation").unwrap_or_default();
-
-        let display_precision = node.parse_if("DisplayPrecision").unwrap_or(6);
+        let inc = node.parse_if(INC).or_else(|| node.parse_if(P_INC));
+        let unit = node.parse_if(UNIT);
+        let representation = node.parse_if(REPRESENTATION).unwrap_or_default();
+        let display_notation = node.parse_if(DISPLAY_NOTATION).unwrap_or_default();
+        let display_precision = node.parse_if(DISPLAY_PRECISION).unwrap_or(6);
 
         Self {
             attr_base,

@@ -1,4 +1,4 @@
-use super::{elem_type::StandardNameSpace, *};
+use super::{elem_name::*, elem_type::StandardNameSpace, *};
 
 pub struct RegisterDescription {
     model_name: String,
@@ -73,53 +73,42 @@ impl RegisterDescription {
 
 impl Parse for RegisterDescription {
     fn parse(node: &mut xml::Node) -> Self {
-        debug_assert!(node.tag_name() == "RegisterDescription");
+        debug_assert_eq!(node.tag_name(), REGISTER_DESCRIPTION);
 
-        let model_name = node.attribute_of("ModelName").unwrap().into();
-
-        let vendor_name = node.attribute_of("VendorName").unwrap().into();
-
-        let tool_tip = node.attribute_of("ToolTip").map(Into::into);
-
-        let standard_name_space = node.attribute_of("StandardNameSpace").unwrap().into();
-
+        let model_name = node.attribute_of(MODEL_NAME).unwrap().into();
+        let vendor_name = node.attribute_of(VENDOR_NAME).unwrap().into();
+        let tool_tip = node.attribute_of(TOOL_TIP).map(Into::into);
+        let standard_name_space = node.attribute_of(STANDARD_NAME_SPCACE).unwrap().into();
         let schema_major_version =
-            convert_to_uint(&node.attribute_of("SchemaMajorVersion").unwrap());
-
+            convert_to_uint(&node.attribute_of(SCHEMA_MAJOR_VERSION).unwrap());
         let schema_minor_version =
-            convert_to_uint(&node.attribute_of("SchemaMinorVersion").unwrap());
-
+            convert_to_uint(&node.attribute_of(SCHEMA_MINOR_VERSION).unwrap());
         let schema_subminor_version =
-            convert_to_uint(&node.attribute_of("SchemaSubMinorVersion").unwrap());
-
-        let major_version = convert_to_uint(&node.attribute_of("MajorVersion").unwrap());
-
-        let minor_version = convert_to_uint(&node.attribute_of("MinorVersion").unwrap());
-
-        let subminor_version = convert_to_uint(&node.attribute_of("SubMinorVersion").unwrap());
-
-        let product_guid = node.attribute_of("ProductGuid").unwrap().into();
-
-        let version_guid = node.attribute_of("VersionGuid").unwrap().into();
+            convert_to_uint(&node.attribute_of(SCHEMA_SUB_MINOR_VERSION).unwrap());
+        let major_version = convert_to_uint(&node.attribute_of(MAJOR_VERSION).unwrap());
+        let minor_version = convert_to_uint(&node.attribute_of(MINOR_VERSION).unwrap());
+        let subminor_version = convert_to_uint(&node.attribute_of(SUB_MINOR_VERSION).unwrap());
+        let product_guid = node.attribute_of(PRODUCT_GUID).unwrap().into();
+        let version_guid = node.attribute_of(VERSION_GUID).unwrap().into();
 
         let mut nodes = vec![];
         while let Some(ref mut child) = node.next() {
             let node = match child.tag_name() {
-                "Node" => NodeKind::Node(Box::new(child.parse())),
-                "Category" => NodeKind::Category(Box::new(child.parse())),
-                "Integer" => NodeKind::Integer(Box::new(child.parse())),
-                "IntReg" => NodeKind::IntReg(Box::new(child.parse())),
-                "MaskedIntReg" => NodeKind::MaskedIntReg(Box::new(child.parse())),
-                "Boolean" => NodeKind::Boolean(Box::new(child.parse())),
-                "Command" => NodeKind::Command(Box::new(child.parse())),
-                "Enumeration" => NodeKind::Enumeration(Box::new(child.parse())),
-                "Float" => NodeKind::Float(Box::new(child.parse())),
-                "FloatReg" => NodeKind::FloatReg(Box::new(child.parse())),
-                "StringReg" => NodeKind::StringReg(Box::new(child.parse())),
-                "Register" => NodeKind::Register(Box::new(child.parse())),
-                "SwissKnife" => NodeKind::SwissKnife(Box::new(child.parse())),
-                "IntSwissKnife" => NodeKind::IntSwissKnife(Box::new(child.parse())),
-                "StructReg" => NodeKind::StructReg(Box::new(child.parse())),
+                NODE => NodeKind::Node(Box::new(child.parse())),
+                CATEGORY => NodeKind::Category(Box::new(child.parse())),
+                INTEGER => NodeKind::Integer(Box::new(child.parse())),
+                INT_REG => NodeKind::IntReg(Box::new(child.parse())),
+                MASKED_INT_REG => NodeKind::MaskedIntReg(Box::new(child.parse())),
+                BOOLEAN => NodeKind::Boolean(Box::new(child.parse())),
+                COMMAND => NodeKind::Command(Box::new(child.parse())),
+                ENUMERATION => NodeKind::Enumeration(Box::new(child.parse())),
+                FLOAT => NodeKind::Float(Box::new(child.parse())),
+                FLOAT_REG => NodeKind::FloatReg(Box::new(child.parse())),
+                STRING_REG => NodeKind::StringReg(Box::new(child.parse())),
+                REGISTER => NodeKind::Register(Box::new(child.parse())),
+                SWISS_KNIFE => NodeKind::SwissKnife(Box::new(child.parse())),
+                INT_SWISS_KNIFE => NodeKind::IntSwissKnife(Box::new(child.parse())),
+                STRUCT_REG => NodeKind::StructReg(Box::new(child.parse())),
                 _ => todo!(),
             };
             nodes.push(node);

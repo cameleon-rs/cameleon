@@ -1,9 +1,8 @@
-use super::{node_base::*, xml, Parse};
+use super::{elem_name::*, node_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct Node {
     attr_base: NodeAttributeBase,
-
     elem_base: NodeElementBase,
 
     p_invalidators: Vec<String>,
@@ -21,12 +20,12 @@ impl Node {
 
 impl Parse for Node {
     fn parse(node: &mut xml::Node) -> Self {
-        debug_assert!(node.tag_name() == "Node");
+        debug_assert_eq!(node.tag_name(), NODE);
 
         let attr_base = NodeAttributeBase::parse(node);
         let elem_base = NodeElementBase::parse(node);
 
-        let p_invalidators = node.parse_while("pInvalidator");
+        let p_invalidators = node.parse_while(P_INVALIDATOR);
 
         Self {
             attr_base,

@@ -1,17 +1,13 @@
-use super::{elem_type::*, node_base::*, xml, Parse};
+use super::{elem_name::*, elem_type::*, node_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct CommandNode {
     attr_base: NodeAttributeBase,
-
     elem_base: NodeElementBase,
 
     p_invalidators: Vec<String>,
-
     value: ImmOrPNode<i64>,
-
     command_value: ImmOrPNode<i64>,
-
     polling_time: Option<u64>,
 }
 
@@ -39,17 +35,15 @@ impl CommandNode {
 
 impl Parse for CommandNode {
     fn parse(node: &mut xml::Node) -> Self {
-        debug_assert_eq!(node.tag_name(), "Command");
+        debug_assert_eq!(node.tag_name(), COMMAND);
+
         let attr_base = node.parse();
         let elem_base = node.parse();
 
-        let p_invalidators = node.parse_while("pInvalidator");
-
+        let p_invalidators = node.parse_while(P_INVALIDATOR);
         let value = node.parse();
-
         let command_value = node.parse();
-
-        let polling_time = node.parse_if("PollingTime");
+        let polling_time = node.parse_if(POLLING_TIME);
 
         Self {
             attr_base,

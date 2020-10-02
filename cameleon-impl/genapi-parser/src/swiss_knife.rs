@@ -1,29 +1,19 @@
-use super::{elem_type::*, node_base::*, xml, Parse};
+use super::{elem_name::*, elem_type::*, node_base::*, xml, Parse};
 
 #[derive(Debug, Clone)]
 pub struct SwissKnifeNode {
     attr_base: NodeAttributeBase,
-
     elem_base: NodeElementBase,
 
     p_invalidators: Vec<String>,
-
     streamable: bool,
-
     p_variables: Vec<NamedValue<String>>,
-
     constants: Vec<NamedValue<f64>>,
-
     expressions: Vec<NamedValue<String>>,
-
     formula: String,
-
     unit: Option<String>,
-
     representation: FloatRepresentation,
-
     display_notation: DisplayNotation,
-
     display_precision: i64,
 }
 
@@ -75,29 +65,21 @@ impl SwissKnifeNode {
 
 impl Parse for SwissKnifeNode {
     fn parse(node: &mut xml::Node) -> Self {
-        debug_assert!(node.tag_name() == "SwissKnife");
+        debug_assert_eq!(node.tag_name(), SWISS_KNIFE);
+
         let attr_base = node.parse();
         let elem_base = node.parse();
 
-        let p_invalidators = node.parse_while("pInvalidator");
-
-        let streamable = node.parse_if("Streamable").unwrap_or_default();
-
-        let p_variables = node.parse_while("pVariable");
-
-        let constants = node.parse_while("Constant");
-
-        let expressions = node.parse_while("Expression");
-
+        let p_invalidators = node.parse_while(P_INVALIDATOR);
+        let streamable = node.parse_if(STREAMABLE).unwrap_or_default();
+        let p_variables = node.parse_while(P_VARIABLE);
+        let constants = node.parse_while(CONSTANT);
+        let expressions = node.parse_while(EXPRESSION);
         let formula = node.parse();
-
-        let unit = node.parse_if("Unit");
-
-        let representation = node.parse_if("Representation").unwrap_or_default();
-
-        let display_notation = node.parse_if("DisplayNotation").unwrap_or_default();
-
-        let display_precision = node.parse_if("DisplayPrecision").unwrap_or(6);
+        let unit = node.parse_if(UNIT);
+        let representation = node.parse_if(REPRESENTATION).unwrap_or_default();
+        let display_notation = node.parse_if(DISPLAY_NOTATION).unwrap_or_default();
+        let display_precision = node.parse_if(DISPLAY_PRECISION).unwrap_or(6);
 
         Self {
             attr_base,

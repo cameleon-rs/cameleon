@@ -1,6 +1,7 @@
 mod boolean;
 mod category;
 mod command;
+mod elem_name;
 mod elem_type;
 mod enumeration;
 mod float;
