@@ -63,6 +63,14 @@ impl<'a, 'input> Node<'a, 'input> {
         Some(node)
     }
 
+    pub(super) fn next_if(&mut self, tag_name: &str) -> Option<Self> {
+        if self.peek()?.tag_name() == tag_name {
+            self.next()
+        } else {
+            None
+        }
+    }
+
     pub(super) fn next_text(&mut self) -> Option<&'a str> {
         Some(self.next()?.text())
     }

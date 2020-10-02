@@ -112,6 +112,7 @@ impl Parse for RegisterDescription {
                 "MaskedIntReg" => NodeKind::MaskedIntReg(Box::new(child.parse())),
                 "Boolean" => NodeKind::Boolean(Box::new(child.parse())),
                 "Command" => NodeKind::Command(Box::new(child.parse())),
+                "Enumeration" => NodeKind::Enumeration(Box::new(child.parse())),
                 "Float" => NodeKind::Float(Box::new(child.parse())),
                 "FloatReg" => NodeKind::FloatReg(Box::new(child.parse())),
                 "StringReg" => NodeKind::StringReg(Box::new(child.parse())),
@@ -151,6 +152,7 @@ pub enum NodeKind {
     MaskedIntReg(Box<MaskedIntRegNode>),
     Boolean(Box<BooleanNode>),
     Command(Box<CommandNode>),
+    Enumeration(Box<EnumerationNode>),
     Float(Box<FloatNode>),
     FloatReg(Box<FloatRegNode>),
     StringReg(Box<StringRegNode>),
@@ -191,6 +193,7 @@ mod tests {
                 <pFeature>MyMaskedIntReg</pFeature>
                 <pFeature>MyBoolean</pFeature>
                 <pFeature>MyCommand</pFeature>
+                <pFeature>MyEnumeration</pFeature>
                 <pFeature>MyFloat</pFeature>
                 <pFeature>MyFloatReg</pFeature>
                 <pFeature>MyStringReg</pFeature>
@@ -230,6 +233,20 @@ mod tests {
                 <pValue>Node</pValue>
                 <CommandValue>10</CommandValue>
             </Command>
+
+            <Enumeration Name="MyEnumeration">
+                <EnumEntry Name="Entry0">
+                    <Value>0</Value>
+                    <NumericValue>1.0</NumericValue>
+                    <NumericValue>10.0</NumericValue>
+                    <IsSelfClearing>Yes</IsSelfClearing>
+                </EnumEntry>
+                <EnumEntry Name="Entry1">
+                    <Value>1</Value>
+                </EnumEntry>
+                <pValue>MyNode</pValue>
+            <PollingTime>10</PollingTime>
+            </Enumeration>
 
             <Float Name="MyFloat">
                 <Value>10.0</Value>
@@ -304,6 +321,6 @@ mod tests {
             reg_desc.version_guid(),
             "76543210-3210-3210-3210-ba9876543210"
         );
-        assert_eq!(reg_desc.nodes().len(), 14);
+        assert_eq!(reg_desc.nodes().len(), 15);
     }
 }
