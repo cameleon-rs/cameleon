@@ -17,9 +17,14 @@ pub(super) const INT_CONVERTER: &str = "IntConverter";
 pub(super) const SWISS_KNIFE: &str = "SwissKnife";
 pub(super) const INT_SWISS_KNIFE: &str = "IntSwissKnife";
 pub(super) const PORT: &str = "Port";
-pub(super) const GROUP: &str = "Group";
+pub(super) const CONF_ROM: &str = "ConfRom";
+pub(super) const TEXT_DESC: &str = "TextDesc";
+pub(super) const INT_KEY: &str = "IntKey";
+pub(super) const ADV_FEATURE_LOCK: &str = "AdvFeatureLock";
+pub(super) const SMART_FEATURE: &str = "SmartFeature";
 pub(super) const STRUCT_REG: &str = "StructReg";
 pub(super) const STRUCT_ENTRY: &str = "StructEntry";
+pub(super) const GROUP: &str = "Group";
 
 pub(super) const P_INVALIDATOR: &str = "pInvalidator";
 pub(super) const P_SELECTED: &str = "pSelected";

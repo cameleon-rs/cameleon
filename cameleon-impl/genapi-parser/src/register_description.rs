@@ -136,6 +136,13 @@ pub enum NodeKind {
     Port(Box<PortNode>),
     StructReg(Box<StructRegNode>),
     Group(Box<GroupNode>),
+
+    // TODO: Implement DCAM specific ndoes.
+    ConfRom(()),
+    TextDesc(()),
+    IntKey(()),
+    AdvFeatureLock(()),
+    SmartFeature(()),
 }
 
 impl Parse for NodeKind {
@@ -161,7 +168,10 @@ impl Parse for NodeKind {
             PORT => NodeKind::Port(Box::new(node.parse())),
             STRUCT_REG => NodeKind::StructReg(Box::new(node.parse())),
             GROUP => NodeKind::Group(Box::new(node.parse())),
-            _ => todo!(),
+
+            // TODO: Implement DCAM specific ndoes.
+            CONF_ROM | TEXT_DESC | INT_KEY | ADV_FEATURE_LOCK | SMART_FEATURE => todo!(),
+            _ => unreachable!(),
         }
     }
 }
