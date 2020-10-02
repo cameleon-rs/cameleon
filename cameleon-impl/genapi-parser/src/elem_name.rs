@@ -12,6 +12,7 @@ pub(super) const FLOAT_REG: &str = "FloatReg";
 pub(super) const STRING: &str = "String";
 pub(super) const STRING_REG: &str = "StringReg";
 pub(super) const REGISTER: &str = "Register";
+pub(super) const CONVERTER: &str = "Converter";
 pub(super) const SWISS_KNIFE: &str = "SwissKnife";
 pub(super) const INT_SWISS_KNIFE: &str = "IntSwissKnife";
 pub(super) const STRUCT_REG: &str = "StructReg";
@@ -70,6 +71,8 @@ pub(super) const P_VALUE_COPY: &str = "pValueCopy";
 pub(super) const VALUE_INDEXED: &str = "ValueIndexed";
 pub(super) const P_VALUE_INDEXED: &str = "pValueIndexed";
 pub(super) const BIT: &str = "Bit";
+pub(super) const SLOPE: &str = "Slope";
+pub(super) const IS_LINEAR: &str = "IsLinear";
 
 pub(super) const NAME: &str = "Name";
 pub(super) const NAME_SPACE: &str = "NameSpace";

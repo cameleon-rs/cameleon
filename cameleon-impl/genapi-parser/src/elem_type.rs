@@ -15,8 +15,8 @@ impl Default for NameSpace {
 impl From<&str> for NameSpace {
     fn from(value: &str) -> Self {
         match value {
-            "Standard" => NameSpace::Standard,
-            "Custom" => NameSpace::Custom,
+            "Standard" => Self::Standard,
+            "Custom" => Self::Custom,
             _ => unreachable!(),
         }
     }
@@ -45,10 +45,10 @@ impl Default for Visibility {
 impl From<&str> for Visibility {
     fn from(value: &str) -> Self {
         match value {
-            "Beginner" => Visibility::Beginner,
-            "Expert" => Visibility::Expert,
-            "Guru" => Visibility::Guru,
-            "Invisible" => Visibility::Invisible,
+            "Beginner" => Self::Beginner,
+            "Expert" => Self::Expert,
+            "Guru" => Self::Guru,
+            "Invisible" => Self::Invisible,
             _ => unreachable!(),
         }
     }
@@ -70,9 +70,9 @@ pub enum MergePriority {
 impl From<&str> for MergePriority {
     fn from(value: &str) -> Self {
         match value {
-            "1" => MergePriority::High,
-            "0" => MergePriority::Mid,
-            "-1" => MergePriority::Low,
+            "1" => Self::High,
+            "0" => Self::Mid,
+            "-1" => Self::Low,
             _ => unreachable!(),
         }
     }
@@ -80,7 +80,7 @@ impl From<&str> for MergePriority {
 
 impl Default for MergePriority {
     fn default() -> Self {
-        MergePriority::Mid
+        Self::Mid
     }
 }
 
@@ -100,9 +100,9 @@ pub enum AccessMode {
 impl From<&str> for AccessMode {
     fn from(value: &str) -> Self {
         match value {
-            "RO" => AccessMode::RO,
-            "WO" => AccessMode::WO,
-            "RW" => AccessMode::RW,
+            "RO" => Self::RO,
+            "WO" => Self::WO,
+            "RW" => Self::RW,
             _ => unreachable!(),
         }
     }
@@ -126,14 +126,14 @@ where
 {
     pub fn imm(&self) -> Option<&T> {
         match self {
-            ImmOrPNode::Imm(value) => Some(value),
+            Self::Imm(value) => Some(value),
             _ => None,
         }
     }
 
     pub fn pnode(&self) -> Option<&str> {
         match self {
-            ImmOrPNode::PNode(node) => Some(node),
+            Self::PNode(node) => Some(node),
             _ => None,
         }
     }
@@ -147,9 +147,9 @@ impl Parse for ImmOrPNode<bool> {
             || peeked_text == "true"
             || peeked_text == "false"
         {
-            ImmOrPNode::Imm(node.parse())
+            Self::Imm(node.parse())
         } else {
-            ImmOrPNode::PNode(node.parse())
+            Self::PNode(node.parse())
         }
     }
 }
@@ -158,9 +158,9 @@ impl Parse for ImmOrPNode<i64> {
     fn parse(node: &mut xml::Node) -> Self {
         let peeked_text = node.peek().unwrap().text();
         if peeked_text.chars().next().unwrap().is_alphabetic() {
-            ImmOrPNode::PNode(node.parse())
+            Self::PNode(node.parse())
         } else {
-            ImmOrPNode::Imm(node.parse())
+            Self::Imm(node.parse())
         }
     }
 }
@@ -174,9 +174,9 @@ impl Parse for ImmOrPNode<f64> {
             || peeked_text == "NaN"
             || !peeked_text.chars().next().unwrap().is_alphabetic()
         {
-            ImmOrPNode::Imm(node.parse())
+            Self::Imm(node.parse())
         } else {
-            ImmOrPNode::PNode(node.parse())
+            Self::PNode(node.parse())
         }
     }
 }
@@ -221,15 +221,17 @@ impl Default for IntegerRepresentation {
 
 impl Parse for IntegerRepresentation {
     fn parse(node: &mut xml::Node) -> Self {
+        use IntegerRepresentation::*;
+
         let value = node.next_text().unwrap();
         match value {
-            "Linear" => IntegerRepresentation::Linear,
-            "Logarithmic" => IntegerRepresentation::Logarithmic,
-            "Boolean" => IntegerRepresentation::Boolean,
-            "PureNumber" => IntegerRepresentation::PureNumber,
-            "HexNumber" => IntegerRepresentation::HexNumber,
-            "IPV4Address" => IntegerRepresentation::IpV4Address,
-            "MACAddress" => IntegerRepresentation::MacAddress,
+            "Linear" => Linear,
+            "Logarithmic" => Logarithmic,
+            "Boolean" => Boolean,
+            "PureNumber" => PureNumber,
+            "HexNumber" => HexNumber,
+            "IPV4Address" => IpV4Address,
+            "MACAddress" => MacAddress,
             _ => unreachable!(),
         }
     }
@@ -246,9 +248,9 @@ impl Parse for FloatRepresentation {
     fn parse(node: &mut xml::Node) -> Self {
         let value = node.next_text().unwrap();
         match value {
-            "Linear" => FloatRepresentation::Linear,
-            "Logarithmic" => FloatRepresentation::Logarithmic,
-            "PureNumber" => FloatRepresentation::PureNumber,
+            "Linear" => Self::Linear,
+            "Logarithmic" => Self::Logarithmic,
+            "PureNumber" => Self::PureNumber,
             _ => unreachable!(),
         }
     }
@@ -261,6 +263,33 @@ impl Default for FloatRepresentation {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Slope {
+    Increasing,
+    Decreasing,
+    Varying,
+    Automatic,
+}
+
+impl Parse for Slope {
+    fn parse(node: &mut xml::Node) -> Self {
+        let value = node.next_text().unwrap();
+        match value {
+            "Increasing" => Self::Increasing,
+            "Decreasing" => Self::Decreasing,
+            "Varying" => Self::Varying,
+            "Automatic" => Self::Automatic,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl Default for Slope {
+    fn default() -> Self {
+        Self::Automatic
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DisplayNotation {
     Automatic,
     Fixed,
@@ -269,7 +298,7 @@ pub enum DisplayNotation {
 
 impl Default for DisplayNotation {
     fn default() -> Self {
-        DisplayNotation::Automatic
+        Self::Automatic
     }
 }
 
@@ -277,9 +306,9 @@ impl Parse for DisplayNotation {
     fn parse(node: &mut xml::Node) -> Self {
         let value = node.next_text().unwrap();
         match value {
-            "Automatic" => DisplayNotation::Automatic,
-            "Fixed" => DisplayNotation::Fixed,
-            "Scientific" => DisplayNotation::Scientific,
+            "Automatic" => Self::Automatic,
+            "Fixed" => Self::Fixed,
+            "Scientific" => Self::Scientific,
             _ => unreachable!(),
         }
     }
@@ -297,11 +326,11 @@ pub enum StandardNameSpace {
 impl From<&str> for StandardNameSpace {
     fn from(value: &str) -> Self {
         match value {
-            "None" => StandardNameSpace::None,
-            "IIDC" => StandardNameSpace::IIDC,
-            "GEV" => StandardNameSpace::GEV,
-            "CL" => StandardNameSpace::CL,
-            "USB" => StandardNameSpace::USB,
+            "None" => Self::None,
+            "IIDC" => Self::IIDC,
+            "GEV" => Self::GEV,
+            "CL" => Self::CL,
+            "USB" => Self::USB,
             _ => unreachable!(),
         }
     }
@@ -326,9 +355,9 @@ impl Default for CachingMode {
 impl From<&str> for CachingMode {
     fn from(value: &str) -> Self {
         match value {
-            "WriteThrough" => CachingMode::WriteThrough,
-            "WriteAround" => CachingMode::WriteAround,
-            "NoCache" => CachingMode::NoCache,
+            "WriteThrough" => Self::WriteThrough,
+            "WriteAround" => Self::WriteAround,
+            "NoCache" => Self::NoCache,
             _ => unreachable!(),
         }
     }
@@ -368,7 +397,7 @@ where
     T: Clone + PartialEq + Parse,
 {
     fn parse(node: &mut xml::Node) -> Self {
-        let name = node.peek().unwrap().attribute_of("Name").unwrap().into();
+        let name = node.peek().unwrap().attribute_of(NAME).unwrap().into();
         let value = node.parse();
         Self { name, value }
     }

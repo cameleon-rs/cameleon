@@ -1,6 +1,7 @@
 mod boolean;
 mod category;
 mod command;
+mod converter;
 mod elem_name;
 mod elem_type;
 mod enumeration;
@@ -24,6 +25,7 @@ mod xml;
 pub use boolean::*;
 pub use category::*;
 pub use command::*;
+pub use converter::*;
 pub use elem_type::*;
 pub use enumeration::*;
 pub use float::*;

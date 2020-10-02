@@ -107,6 +107,7 @@ impl Parse for RegisterDescription {
                 STRING => NodeKind::String(Box::new(child.parse())),
                 STRING_REG => NodeKind::StringReg(Box::new(child.parse())),
                 REGISTER => NodeKind::Register(Box::new(child.parse())),
+                CONVERTER => NodeKind::Converter(Box::new(child.parse())),
                 SWISS_KNIFE => NodeKind::SwissKnife(Box::new(child.parse())),
                 INT_SWISS_KNIFE => NodeKind::IntSwissKnife(Box::new(child.parse())),
                 STRUCT_REG => NodeKind::StructReg(Box::new(child.parse())),
@@ -148,6 +149,7 @@ pub enum NodeKind {
     String(Box<StringNode>),
     StringReg(Box<StringRegNode>),
     Register(Box<RegisterNode>),
+    Converter(Box<ConverterNode>),
     SwissKnife(Box<SwissKnifeNode>),
     IntSwissKnife(Box<IntSwissKnifeNode>),
     StructReg(Box<StructRegNode>),
@@ -190,6 +192,7 @@ mod tests {
                 <pFeature>MyString</pFeature>
                 <pFeature>MyStringReg</pFeature>
                 <pFeature>MyRegister</pFeature>
+                <pFeature>MyConverter</pFeature>
                 <pFeature>MySwissKnife</pFeature>
                 <pFeature>MyIntSwissKnife</pFeature>
                 <pFeature>MyStructEntry</pFeature>
@@ -267,6 +270,14 @@ mod tests {
               <pPort>Device</pPort>
             </Register>
 
+            <Converter Name="MyConverter">
+                <pVariable Name="Var1">pValue1</pVariable>
+                <pVariable Name="Var2">pValue2</pVariable>
+                <FormulaTo>FROM*Var1/Var2</FormulaTo>
+                <FormulaFrom>TO/Var1*Var2</FormulaFrom>
+                <pValue>Target</pValue>
+             </Converter>
+
             <IntSwissKnife Name="MyIntSwissKnife">
                 <pVariable Name="Var1">pValue1</pVariable>
                 <pVariable Name="Var2">pValue2</pVariable>
@@ -318,6 +329,6 @@ mod tests {
             reg_desc.version_guid(),
             "76543210-3210-3210-3210-ba9876543210"
         );
-        assert_eq!(reg_desc.nodes().len(), 16);
+        assert_eq!(reg_desc.nodes().len(), 17);
     }
 }
