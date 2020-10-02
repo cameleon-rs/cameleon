@@ -108,6 +108,7 @@ impl Parse for RegisterDescription {
                 STRING_REG => NodeKind::StringReg(Box::new(child.parse())),
                 REGISTER => NodeKind::Register(Box::new(child.parse())),
                 CONVERTER => NodeKind::Converter(Box::new(child.parse())),
+                INT_CONVERTER => NodeKind::IntConverter(Box::new(child.parse())),
                 SWISS_KNIFE => NodeKind::SwissKnife(Box::new(child.parse())),
                 INT_SWISS_KNIFE => NodeKind::IntSwissKnife(Box::new(child.parse())),
                 STRUCT_REG => NodeKind::StructReg(Box::new(child.parse())),
@@ -150,6 +151,7 @@ pub enum NodeKind {
     StringReg(Box<StringRegNode>),
     Register(Box<RegisterNode>),
     Converter(Box<ConverterNode>),
+    IntConverter(Box<IntConverterNode>),
     SwissKnife(Box<SwissKnifeNode>),
     IntSwissKnife(Box<IntSwissKnifeNode>),
     StructReg(Box<StructRegNode>),
@@ -193,6 +195,7 @@ mod tests {
                 <pFeature>MyStringReg</pFeature>
                 <pFeature>MyRegister</pFeature>
                 <pFeature>MyConverter</pFeature>
+                <pFeature>MyIntConverter</pFeature>
                 <pFeature>MySwissKnife</pFeature>
                 <pFeature>MyIntSwissKnife</pFeature>
                 <pFeature>MyStructEntry</pFeature>
@@ -278,6 +281,12 @@ mod tests {
                 <pValue>Target</pValue>
              </Converter>
 
+            <IntConverter Name="MyIntConverter">
+                <FormulaTo>FROM</FormulaTo>
+                <FormulaFrom>TO</FormulaFrom>
+                <pValue>Target</pValue>
+             </IntConverter>
+
             <IntSwissKnife Name="MyIntSwissKnife">
                 <pVariable Name="Var1">pValue1</pVariable>
                 <pVariable Name="Var2">pValue2</pVariable>
@@ -329,6 +338,6 @@ mod tests {
             reg_desc.version_guid(),
             "76543210-3210-3210-3210-ba9876543210"
         );
-        assert_eq!(reg_desc.nodes().len(), 17);
+        assert_eq!(reg_desc.nodes().len(), 18);
     }
 }

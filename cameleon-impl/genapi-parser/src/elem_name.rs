@@ -13,6 +13,7 @@ pub(super) const STRING: &str = "String";
 pub(super) const STRING_REG: &str = "StringReg";
 pub(super) const REGISTER: &str = "Register";
 pub(super) const CONVERTER: &str = "Converter";
+pub(super) const INT_CONVERTER: &str = "IntConverter";
 pub(super) const SWISS_KNIFE: &str = "SwissKnife";
 pub(super) const INT_SWISS_KNIFE: &str = "IntSwissKnife";
 pub(super) const STRUCT_REG: &str = "StructReg";
