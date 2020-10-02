@@ -73,10 +73,7 @@ impl Parse for RegisterBase {
 
         let polling_time = node.parse_if("PollingTime");
 
-        let mut p_invalidators = vec![];
-        while let Some(invalidator) = node.parse_if("pInvalidator") {
-            p_invalidators.push(invalidator);
-        }
+        let p_invalidators = node.parse_while("pInvalidator");
 
         Self {
             elem_base,

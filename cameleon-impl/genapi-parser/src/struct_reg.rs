@@ -218,10 +218,7 @@ impl Parse for StructEntryNode {
         let attr_base = node.parse();
         let elem_base = node.parse();
 
-        let mut p_invalidators = vec![];
-        while let Some(invalidator) = node.parse_if("pInvalidator") {
-            p_invalidators.push(invalidator);
-        }
+        let p_invalidators = node.parse_while("pInvalidator");
 
         let access_mode = node.parse_if("AccessMode").unwrap_or(AccessMode::RO);
 
@@ -239,10 +236,7 @@ impl Parse for StructEntryNode {
 
         let representation = node.parse_if("Representation").unwrap_or_default();
 
-        let mut p_selected = vec![];
-        while let Some(selected) = node.parse_if("pSelected") {
-            p_selected.push(selected);
-        }
+        let p_selected = node.parse_while("pSelected");
 
         Self {
             attr_base,

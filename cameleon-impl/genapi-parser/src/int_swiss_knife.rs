@@ -68,27 +68,15 @@ impl Parse for IntSwissKnifeNode {
         let attr_base = node.parse();
         let elem_base = node.parse();
 
-        let mut p_invalidators = vec![];
-        while let Some(invalidator) = node.parse_if("pInvalidator") {
-            p_invalidators.push(invalidator);
-        }
+        let p_invalidators = node.parse_while("pInvalidator");
 
         let streamable = node.parse_if("Streamable").unwrap_or_default();
 
-        let mut p_variables = vec![];
-        while let Some(p_variable) = node.parse_if("pVariable") {
-            p_variables.push(p_variable);
-        }
+        let p_variables = node.parse_while("pVariable");
 
-        let mut constants = vec![];
-        while let Some(constant) = node.parse_if("Constant") {
-            constants.push(constant);
-        }
+        let constants = node.parse_while("Constant");
 
-        let mut expressions = vec![];
-        while let Some(expr) = node.parse_if("Expression") {
-            expressions.push(expr);
-        }
+        let expressions = node.parse_while("Expression");
 
         let formula = node.parse();
 

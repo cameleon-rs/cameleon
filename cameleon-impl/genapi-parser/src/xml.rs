@@ -56,6 +56,14 @@ impl<'a, 'input> Node<'a, 'input> {
         }
     }
 
+    pub(super) fn parse_while<T: Parse>(&mut self, tag_name: &str) -> Vec<T> {
+        let mut res = vec![];
+        while let Some(parsed) = self.parse_if(tag_name) {
+            res.push(parsed);
+        }
+        res
+    }
+
     pub(super) fn next(&mut self) -> Option<Self> {
         let node = self.peek()?;
         self.children.next();

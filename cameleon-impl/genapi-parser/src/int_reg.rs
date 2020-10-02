@@ -63,10 +63,7 @@ impl Parse for IntRegNode {
 
         let representation = node.parse_if("Representation").unwrap_or_default();
 
-        let mut p_selected = vec![];
-        while let Some(selected) = node.parse_if("pSelected") {
-            p_selected.push(selected);
-        }
+        let p_selected = node.parse_while("pSelected");
 
         Self {
             attr_base,

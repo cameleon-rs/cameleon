@@ -55,18 +55,12 @@ impl Parse for BooleanNode {
         let attr_base = node.parse();
         let elem_base = node.parse();
 
-        let mut p_invalidators = vec![];
-        while let Some(invalidator) = node.parse_if("pInvalidator") {
-            p_invalidators.push(invalidator);
-        }
+        let p_invalidators = node.parse_while("pInvalidator");
         let streamable = node.parse_if("Streamable").unwrap_or_default();
         let value = node.parse();
         let on_value = node.parse_if("OnValue");
         let off_value = node.parse_if("OffValue");
-        let mut p_selected = vec![];
-        while let Some(selected) = node.parse_if("pSelected") {
-            p_selected.push(selected);
-        }
+        let p_selected = node.parse_while("pSelected");
 
         Self {
             attr_base,

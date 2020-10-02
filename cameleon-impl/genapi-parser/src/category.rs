@@ -32,15 +32,9 @@ impl Parse for CategoryNode {
         let attr_base = node.parse();
         let elem_base = node.parse();
 
-        let mut p_invalidators = vec![];
-        while let Some(invalidator) = node.parse_if("pInvalidator") {
-            p_invalidators.push(invalidator)
-        }
+        let p_invalidators = node.parse_while("pInvalidator");
 
-        let mut p_features = vec![];
-        while let Some(feature) = node.parse_if("pFeature") {
-            p_features.push(feature)
-        }
+        let p_features = node.parse_while("pFeature");
 
         Self {
             attr_base,

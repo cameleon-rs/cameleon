@@ -483,16 +483,11 @@ pub mod numeric_node_elem {
     impl Parse for PValue {
         fn parse(node: &mut xml::Node) -> Self {
             // NOTE: The pValue can be sandwiched between two pValueCopy sequence.
-            let mut p_value_copies = vec![];
-            while let Some(copy) = node.parse_if("pValueCopy") {
-                p_value_copies.push(copy);
-            }
+            let mut p_value_copies = node.parse_while("pValueCopy");
 
             let p_value = node.parse();
 
-            while let Some(copy) = node.parse_if("pValueCopy") {
-                p_value_copies.push(copy);
-            }
+            p_value_copies.extend(node.parse_while("pValueCopy"));
 
             Self {
                 p_value,

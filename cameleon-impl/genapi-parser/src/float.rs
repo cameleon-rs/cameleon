@@ -80,10 +80,7 @@ impl Parse for FloatNode {
         let attr_base = node.parse();
         let elem_base = node.parse();
 
-        let mut p_invalidators = vec![];
-        while let Some(invalidator) = node.parse_if("pInvalidator") {
-            p_invalidators.push(invalidator);
-        }
+        let p_invalidators = node.parse_while("pInvalidator");
 
         let streamable = node.parse_if("Streamable").unwrap_or_default();
 

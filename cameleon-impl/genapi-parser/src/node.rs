@@ -26,10 +26,7 @@ impl Parse for Node {
         let attr_base = NodeAttributeBase::parse(node);
         let elem_base = NodeElementBase::parse(node);
 
-        let mut p_invalidators = vec![];
-        while let Some(invalidator) = node.parse_if("pInvalidator") {
-            p_invalidators.push(invalidator)
-        }
+        let p_invalidators = node.parse_while("pInvalidator");
 
         Self {
             attr_base,

@@ -160,10 +160,7 @@ impl Parse for NodeElementBase {
 
         let imposed_access_mode = node.parse_if("ImposedAccessMode").unwrap_or(AccessMode::RW);
 
-        let mut p_errors = vec![];
-        while let Some(p_err) = node.parse_if("pError") {
-            p_errors.push(p_err);
-        }
+        let p_errors = node.parse_while("pError");
 
         let p_alias = node.parse_if("pAlias");
 

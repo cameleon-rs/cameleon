@@ -74,10 +74,7 @@ impl Parse for IntegerNode {
         let attr_base = node.parse();
         let elem_base = node.parse();
 
-        let mut p_invalidators = vec![];
-        while let Some(invalidator) = node.parse_if("pInvalidator") {
-            p_invalidators.push(invalidator);
-        }
+        let p_invalidators = node.parse_while("pInvalidator");
 
         let streamable = node.parse_if("Streamable").unwrap_or_default();
 
@@ -102,10 +99,7 @@ impl Parse for IntegerNode {
         let min = min.unwrap_or_else(|| ImmOrPNode::Imm(representation.deduce_min()));
         let max = max.unwrap_or_else(|| ImmOrPNode::Imm(representation.deduce_max()));
 
-        let mut p_selected: Vec<String> = vec![];
-        while let Some(selected) = node.parse_if("pSelected") {
-            p_selected.push(selected)
-        }
+        let p_selected: Vec<String> = node.parse_while("pSelected");
 
         Self {
             attr_base,

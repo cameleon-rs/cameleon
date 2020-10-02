@@ -55,10 +55,7 @@ impl Parse for EnumerationNode {
         let attr_base = node.parse();
         let elem_base = node.parse();
 
-        let mut p_invalidators = vec![];
-        while let Some(invalidator) = node.parse_if("pInvalidator") {
-            p_invalidators.push(invalidator);
-        }
+        let p_invalidators = node.parse_while("pInvalidator");
 
         let streamable = node.parse_if("Streamable").unwrap_or_default();
 
@@ -69,10 +66,7 @@ impl Parse for EnumerationNode {
 
         let value = node.parse();
 
-        let mut p_selected = vec![];
-        while let Some(selected) = node.parse_if("pSelected") {
-            p_selected.push(selected);
-        }
+        let p_selected = node.parse_while("pSelected");
 
         let polling_time = node.parse_if("PollingTime");
 
@@ -141,17 +135,11 @@ impl Parse for EnumEntryNode {
         let attr_base = node.parse();
         let elem_base = node.parse();
 
-        let mut p_invalidators = vec![];
-        while let Some(invalidator) = node.parse_if("pInvalidator") {
-            p_invalidators.push(invalidator);
-        }
+        let p_invalidators = node.parse_while("pInvalidator");
 
         let value = node.parse();
 
-        let mut numeric_values = vec![];
-        while let Some(numeric_value) = node.parse_if("NumericValue") {
-            numeric_values.push(numeric_value);
-        }
+        let numeric_values = node.parse_while("NumericValue");
 
         let symbolic = node.parse_if("Symbolic");
 
