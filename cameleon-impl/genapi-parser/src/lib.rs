@@ -1,5 +1,6 @@
 mod boolean;
 mod category;
+mod command;
 mod elem_type;
 mod float;
 mod float_reg;
@@ -19,6 +20,7 @@ mod xml;
 
 pub use boolean::*;
 pub use category::*;
+pub use command::*;
 pub use elem_type::*;
 pub use float::*;
 pub use float_reg::*;

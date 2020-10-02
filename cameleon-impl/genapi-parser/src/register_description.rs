@@ -111,6 +111,7 @@ impl Parse for RegisterDescription {
                 "IntReg" => NodeKind::IntReg(Box::new(child.parse())),
                 "MaskedIntReg" => NodeKind::MaskedIntReg(Box::new(child.parse())),
                 "Boolean" => NodeKind::Boolean(Box::new(child.parse())),
+                "Command" => NodeKind::Command(Box::new(child.parse())),
                 "Float" => NodeKind::Float(Box::new(child.parse())),
                 "FloatReg" => NodeKind::FloatReg(Box::new(child.parse())),
                 "StringReg" => NodeKind::StringReg(Box::new(child.parse())),
@@ -149,6 +150,7 @@ pub enum NodeKind {
     IntReg(Box<IntRegNode>),
     MaskedIntReg(Box<MaskedIntRegNode>),
     Boolean(Box<BooleanNode>),
+    Command(Box<CommandNode>),
     Float(Box<FloatNode>),
     FloatReg(Box<FloatRegNode>),
     StringReg(Box<StringRegNode>),
@@ -188,6 +190,7 @@ mod tests {
                 <pFeature>MyIntReg</pFeature>
                 <pFeature>MyMaskedIntReg</pFeature>
                 <pFeature>MyBoolean</pFeature>
+                <pFeature>MyCommand</pFeature>
                 <pFeature>MyFloat</pFeature>
                 <pFeature>MyFloatReg</pFeature>
                 <pFeature>MyStringReg</pFeature>
@@ -222,6 +225,11 @@ mod tests {
                 <OnValue>1</OnValue>
                 <OffValue>0</OffValue>
             </Boolean>
+
+            <Command Name="MyCommand">
+                <pValue>Node</pValue>
+                <CommandValue>10</CommandValue>
+            </Command>
 
             <Float Name="MyFloat">
                 <Value>10.0</Value>
@@ -296,6 +304,6 @@ mod tests {
             reg_desc.version_guid(),
             "76543210-3210-3210-3210-ba9876543210"
         );
-        assert_eq!(reg_desc.nodes().len(), 13);
+        assert_eq!(reg_desc.nodes().len(), 14);
     }
 }
