@@ -62,10 +62,13 @@ impl<'a> NodeBase<'a> {
         &self.elem.p_errors
     }
 
+    pub fn event_id(&self) -> Option<u64> {
+        self.elem.event_id
+    }
+
     optional_string_elem_getter! {description}
     optional_string_elem_getter! {tool_tip}
     optional_string_elem_getter! {docu_url}
-    optional_string_elem_getter! {event_id}
     optional_string_elem_getter! {p_is_implemented}
     optional_string_elem_getter! {p_is_available}
     optional_string_elem_getter! {p_is_locked}
@@ -114,7 +117,7 @@ pub(super) struct NodeElementBase {
     pub(super) visibility: Visibility,
     pub(super) docu_url: Option<String>,
     pub(super) is_deprecated: bool,
-    pub(super) event_id: Option<String>,
+    pub(super) event_id: Option<u64>,
     pub(super) p_is_implemented: Option<String>,
     pub(super) p_is_available: Option<String>,
     pub(super) p_is_locked: Option<String>,
@@ -136,7 +139,9 @@ impl Parse for NodeElementBase {
         let visibility = node.parse_if(VISIBILITY).unwrap_or_default();
         let docu_url = node.parse_if(DOCU_URL);
         let is_deprecated = node.parse_if(IS_DEPRECATED).unwrap_or_default();
-        let event_id = node.parse_if(EVENT_ID);
+        let event_id = node
+            .next_if(EVENT_ID)
+            .map(|n| u64::from_str_radix(n.text(), 16).unwrap());
         let p_is_implemented = node.parse_if(P_IS_IMPLEMENTED);
         let p_is_available = node.parse_if(P_IS_AVAILABLE);
         let p_is_locked = node.parse_if(P_IS_LOCKED);

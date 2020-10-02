@@ -84,7 +84,7 @@ mod tests {
         assert_eq!(node_base.visibility(), Visibility::Guru);
         assert_eq!(node_base.docu_url().unwrap(), "http://FOO.com");
         assert_eq!(node_base.is_deprecated(), true);
-        assert_eq!(node_base.event_id().unwrap(), "F1");
+        assert_eq!(node_base.event_id(), Some(0xF1));
         assert_eq!(node_base.p_is_implemented().unwrap(), "AnotherNode0");
         assert_eq!(node_base.p_is_available().unwrap(), "AnotherNode1");
         assert_eq!(node_base.p_is_locked().unwrap(), "AnotherNode2");
