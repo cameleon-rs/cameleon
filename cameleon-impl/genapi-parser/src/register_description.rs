@@ -93,29 +93,7 @@ impl Parse for RegisterDescription {
 
         let mut nodes = vec![];
         while let Some(ref mut child) = node.next() {
-            let node = match child.tag_name() {
-                NODE => NodeKind::Node(Box::new(child.parse())),
-                CATEGORY => NodeKind::Category(Box::new(child.parse())),
-                INTEGER => NodeKind::Integer(Box::new(child.parse())),
-                INT_REG => NodeKind::IntReg(Box::new(child.parse())),
-                MASKED_INT_REG => NodeKind::MaskedIntReg(Box::new(child.parse())),
-                BOOLEAN => NodeKind::Boolean(Box::new(child.parse())),
-                COMMAND => NodeKind::Command(Box::new(child.parse())),
-                ENUMERATION => NodeKind::Enumeration(Box::new(child.parse())),
-                FLOAT => NodeKind::Float(Box::new(child.parse())),
-                FLOAT_REG => NodeKind::FloatReg(Box::new(child.parse())),
-                STRING => NodeKind::String(Box::new(child.parse())),
-                STRING_REG => NodeKind::StringReg(Box::new(child.parse())),
-                REGISTER => NodeKind::Register(Box::new(child.parse())),
-                CONVERTER => NodeKind::Converter(Box::new(child.parse())),
-                INT_CONVERTER => NodeKind::IntConverter(Box::new(child.parse())),
-                SWISS_KNIFE => NodeKind::SwissKnife(Box::new(child.parse())),
-                INT_SWISS_KNIFE => NodeKind::IntSwissKnife(Box::new(child.parse())),
-                PORT => NodeKind::Port(Box::new(child.parse())),
-                STRUCT_REG => NodeKind::StructReg(Box::new(child.parse())),
-                _ => todo!(),
-            };
-            nodes.push(node);
+            nodes.push(child.parse());
         }
 
         Self {
@@ -157,6 +135,35 @@ pub enum NodeKind {
     IntSwissKnife(Box<IntSwissKnifeNode>),
     Port(Box<PortNode>),
     StructReg(Box<StructRegNode>),
+    Group(Box<GroupNode>),
+}
+
+impl Parse for NodeKind {
+    fn parse(node: &mut xml::Node) -> Self {
+        match node.tag_name() {
+            NODE => NodeKind::Node(Box::new(node.parse())),
+            CATEGORY => NodeKind::Category(Box::new(node.parse())),
+            INTEGER => NodeKind::Integer(Box::new(node.parse())),
+            INT_REG => NodeKind::IntReg(Box::new(node.parse())),
+            MASKED_INT_REG => NodeKind::MaskedIntReg(Box::new(node.parse())),
+            BOOLEAN => NodeKind::Boolean(Box::new(node.parse())),
+            COMMAND => NodeKind::Command(Box::new(node.parse())),
+            ENUMERATION => NodeKind::Enumeration(Box::new(node.parse())),
+            FLOAT => NodeKind::Float(Box::new(node.parse())),
+            FLOAT_REG => NodeKind::FloatReg(Box::new(node.parse())),
+            STRING => NodeKind::String(Box::new(node.parse())),
+            STRING_REG => NodeKind::StringReg(Box::new(node.parse())),
+            REGISTER => NodeKind::Register(Box::new(node.parse())),
+            CONVERTER => NodeKind::Converter(Box::new(node.parse())),
+            INT_CONVERTER => NodeKind::IntConverter(Box::new(node.parse())),
+            SWISS_KNIFE => NodeKind::SwissKnife(Box::new(node.parse())),
+            INT_SWISS_KNIFE => NodeKind::IntSwissKnife(Box::new(node.parse())),
+            PORT => NodeKind::Port(Box::new(node.parse())),
+            STRUCT_REG => NodeKind::StructReg(Box::new(node.parse())),
+            GROUP => NodeKind::Group(Box::new(node.parse())),
+            _ => todo!(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -320,8 +327,16 @@ mod tests {
                 <StructEntry Name="MyStructEntry">
                     <Bit>24</Bit>
                 </StructEntry>
-
             </StructReg>
+
+            <Group Comment="Nothing to say">
+                <IntReg Name="RegImpl">
+                  <Address>0x10000</Address>
+                  <pLength>LengthNode</pLength>
+                  <pPort>Device</pPort>
+                </IntReg>
+            </Group>
+
 
         </RegisterDescription>
         "#;
@@ -346,6 +361,6 @@ mod tests {
             reg_desc.version_guid(),
             "76543210-3210-3210-3210-ba9876543210"
         );
-        assert_eq!(reg_desc.nodes().len(), 19);
+        assert_eq!(reg_desc.nodes().len(), 20);
     }
 }

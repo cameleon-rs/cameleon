@@ -17,6 +17,7 @@ pub(super) const INT_CONVERTER: &str = "IntConverter";
 pub(super) const SWISS_KNIFE: &str = "SwissKnife";
 pub(super) const INT_SWISS_KNIFE: &str = "IntSwissKnife";
 pub(super) const PORT: &str = "Port";
+pub(super) const GROUP: &str = "Group";
 pub(super) const STRUCT_REG: &str = "StructReg";
 pub(super) const STRUCT_ENTRY: &str = "StructEntry";
 
