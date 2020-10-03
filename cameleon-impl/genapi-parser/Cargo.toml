@@ -1,0 +1,12 @@
+[package]
+name = "cameleon-impl-genapi-parser"
+version = "0.1.0"
+authors = ["Cameleon Project Developers"]
+edition = "2018"
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+roxmltree = "0.13.0"
+thiserror = "1.0.20"
