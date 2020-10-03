@@ -29,18 +29,6 @@ pub(super) struct Node<'a, 'input> {
 }
 
 impl<'a, 'input> Node<'a, 'input> {
-    pub(super) fn from_xmltree_node(node: roxmltree::Node<'a, 'input>) -> Self {
-        debug_assert!(node.node_type() == roxmltree::NodeType::Element);
-        let children = node.children().peekable();
-        let attributes = Attributes::from_xmltree_attrs(node.attributes());
-
-        Self {
-            inner: node,
-            children,
-            attributes,
-        }
-    }
-
     pub(super) fn parse<T>(&mut self) -> T
     where
         T: Parse,
@@ -108,6 +96,18 @@ impl<'a, 'input> Node<'a, 'input> {
 
     pub(super) fn text(&self) -> &'a str {
         self.inner.text().unwrap()
+    }
+
+    fn from_xmltree_node(node: roxmltree::Node<'a, 'input>) -> Self {
+        debug_assert!(node.node_type() == roxmltree::NodeType::Element);
+        let children = node.children().peekable();
+        let attributes = Attributes::from_xmltree_attrs(node.attributes());
+
+        Self {
+            inner: node,
+            children,
+            attributes,
+        }
     }
 }
 
