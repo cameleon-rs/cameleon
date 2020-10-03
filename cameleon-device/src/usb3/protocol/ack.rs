@@ -366,8 +366,7 @@ impl<'a> ParseScd<'a> for WriteMemStacked {
             let reserved = cursor.read_u16::<LE>()?;
             if reserved != 0 {
                 return Err(Error::InvalidPacket(
-                    "the first two bytes of each WriteMemStackedAck scd entry must be set to zero"
-                        .into(),
+                    "the first two bytes of each WriteMemStackedAck SCD must be set to zero".into(),
                 ));
             }
             let length = cursor.read_u16::<LE>()?;

@@ -129,10 +129,8 @@ impl ReadMemStacked {
         CommandPacket::new(self, request_id)
     }
 
-    fn len(entries: &[ReadMem]) -> Result<u16> {
-        let len = entries
-            .iter()
-            .fold(0, |acc, ent| acc + ent.scd_len() as usize);
+    fn len(regs: &[ReadMem]) -> Result<u16> {
+        let len = regs.iter().fold(0, |acc, reg| acc + reg.scd_len() as usize);
         into_scd_len(len)
     }
 
@@ -173,7 +171,7 @@ impl<'a> WriteMemStacked<'a> {
     fn len(entries: &[WriteMem<'a>]) -> Result<u16> {
         let len = entries
             .iter()
-            .fold(0, |acc, ent| acc + 12 + ent.data_len as usize);
+            .fold(0, |acc, cmd| acc + 12 + cmd.data_len as usize);
         into_scd_len(len)
     }
 }
@@ -366,7 +364,7 @@ impl<'a> CommandScd for WriteMemStacked<'a> {
     }
 
     fn scd_len(&self) -> u16 {
-        // Each entry is composed of [address(8bytes), reserved(2bytes), data_len(2bytes), data(len bytes)]
+        // Each register is composed of [address(8bytes), reserved(2bytes), data_len(2bytes), data(len bytes)]
         self.len
     }
 

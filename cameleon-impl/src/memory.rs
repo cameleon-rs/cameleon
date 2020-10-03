@@ -1,4 +1,4 @@
-pub use cameleon_impl_macros::{memory, register};
+pub use cameleon_impl_macros::{memory, register_map};
 
 pub type MemoryResult<T> = std::result::Result<T, MemoryError>;
 
@@ -15,8 +15,8 @@ pub enum MemoryError {
     #[error("attempt to access non-existent memory location")]
     InvalidAddress,
 
-    #[error("invalid entry data: {}", 0)]
-    InvalidEntryData(std::borrow::Cow<'static, str>),
+    #[error("invalid register data: {}", 0)]
+    InvalidRegisterData(std::borrow::Cow<'static, str>),
 }
 
 pub mod prelude {
@@ -24,27 +24,27 @@ pub mod prelude {
 }
 
 pub trait MemoryRead {
-    fn read(&self, range: std::ops::Range<usize>) -> MemoryResult<&[u8]>;
+    fn read_raw(&self, range: std::ops::Range<usize>) -> MemoryResult<&[u8]>;
 
-    fn access_right<T: RegisterEntry>(&self) -> AccessRight;
+    fn access_right<T: Register>(&self) -> AccessRight;
 
-    /// Read data from the entry.
-    /// Since the host side know nothing about `RegisterEntry`, this method can be called only from the machine side so access rights are temporarily set to `RW`.
-    fn read_entry<T: RegisterEntry>(&self) -> MemoryResult<T::Ty>;
+    /// Read data from the register.
+    /// Since the host side know nothing about `Register`, this method can be called only from the machine side so access rights are temporarily set to `RW`.
+    fn read<T: Register>(&self) -> MemoryResult<T::Ty>;
 }
 
 pub trait MemoryWrite {
-    fn write(&mut self, addr: usize, buf: &[u8]) -> MemoryResult<()>;
+    fn write_raw(&mut self, addr: usize, buf: &[u8]) -> MemoryResult<()>;
 
-    /// Write data to the entry.
-    /// Since the host side know nothing about `RegisterEntry`, this method can be called only from the machine side so access rights are temporarily set to `RW`.
-    fn write_entry<T: RegisterEntry>(&mut self, data: T::Ty) -> MemoryResult<()>;
+    /// Write data to the register.
+    /// Since the host side know nothing about `Register`, this method can be called only from the machine side so access rights are temporarily set to `RW`.
+    fn write<T: Register>(&mut self, data: T::Ty) -> MemoryResult<()>;
 
-    fn set_access_right<T: RegisterEntry>(&mut self, access_right: AccessRight);
+    fn set_access_right<T: Register>(&mut self, access_right: AccessRight);
 
     fn register_observer<T, U>(&mut self, observer: U)
     where
-        T: RegisterEntry,
+        T: Register,
         U: MemoryObserver + 'static;
 }
 
@@ -201,25 +201,25 @@ impl MemoryProtection {
 }
 
 #[doc(hidden)]
-pub trait RegisterEntry {
+pub trait Register {
     type Ty;
 
     fn parse(data: &[u8]) -> MemoryResult<Self::Ty>;
     fn serialize(data: Self::Ty) -> MemoryResult<Vec<u8>>;
-    fn raw_entry() -> RawEntry;
+    fn raw() -> RawRegister;
 }
 
-/// Represents each register entry address and length.
+/// Represents each register address and length.
 #[derive(Debug, Clone, Copy)]
 #[doc(hidden)]
-pub struct RawEntry {
-    /// Offset of the entry.
+pub struct RawRegister {
+    /// Offset of the register.
     pub offset: usize,
-    /// Length of the entry.
+    /// Length of the register.
     pub len: usize,
 }
 
-impl RawEntry {
+impl RawRegister {
     pub fn new(offset: usize, len: usize) -> Self {
         Self { offset, len }
     }

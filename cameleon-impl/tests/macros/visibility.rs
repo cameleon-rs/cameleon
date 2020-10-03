@@ -12,35 +12,35 @@ pub struct Memory {
 }
 
 mod register {
-    use cameleon_impl::memory::register;
+    use cameleon_impl::memory::register_map;
 
-    #[register(base = 0, endianness = LE)]
+    #[register_map(base = 0, endianness = LE)]
     pub(super) enum ABRM {
-        #[entry(len = 2, access = RO, ty = u16)]
+        #[register(len = 2, access = RO, ty = u16)]
         GenCpVersionMinor = 321,
 
-        #[entry(len = 2, access = RO, ty = u16)]
+        #[register(len = 2, access = RO, ty = u16)]
         GenCpVersionMajor,
 
-        #[entry(len = 64, access = RW, ty = String)]
+        #[register(len = 64, access = RW, ty = String)]
         ManufacturerName = "Cameleon\0",
 
-        #[entry(len = 8, access = RO, ty = u64)]
+        #[register(len = 8, access = RO, ty = u64)]
         SBRMAddress = super::SBRM_ADDRESS,
     }
 
-    #[register(base = super::SBRM_ADDRESS, endianness = BE)]
+    #[register_map(base = super::SBRM_ADDRESS, endianness = BE)]
     pub(super) enum SBRM {
-        #[entry(len = 8, access = RO, ty = u64)]
+        #[register(len = 8, access = RO, ty = u64)]
         SIRMAddress = super::SIRM_ADDRESS,
 
-        #[entry(len = 4, access = RO, ty = u32)]
+        #[register(len = 4, access = RO, ty = u32)]
         SIRMLength = 0x20,
 
-        #[entry(len = 8, access = RO, ty = u64)]
+        #[register(len = 8, access = RO, ty = u64)]
         EIRMAddress = super::EIRM_ADDRESS,
 
-        #[entry(len = 4, access = RO, ty = u32)]
+        #[register(len = 4, access = RO, ty = u32)]
         EIRMLength = 0x20,
     }
 }

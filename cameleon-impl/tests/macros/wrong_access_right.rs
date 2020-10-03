@@ -1,11 +1,11 @@
-use cameleon_impl::memory::register;
+use cameleon_impl::memory::register_map;
 
-#[register(base = 0, endianness = LE)]
+#[register_map(base = 0, endianness = LE)]
 pub enum ABRM {
-    #[entry(len = 2, access = Ro, ty = u16)]
+    #[register(len = 2, access = Ro, ty = u16)]
     GenCpVersionMinor = 321,
 
-    #[entry(len = 8, access = RO, ty = u64)]
+    #[register(len = 8, access = RO, ty = u64)]
     SBRMAddress = SBRM_ADDRESS,
 }
 

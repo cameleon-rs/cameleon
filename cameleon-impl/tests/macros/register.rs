@@ -2,33 +2,33 @@ use cameleon_impl::memory::*;
 
 const SBRM_ADDRESS: u64 = 0x1000;
 
-#[register(base = 0, endianness = LE)]
+#[register_map(base = 0, endianness = LE)]
 pub enum ABRM {
-    #[entry(len = 2, access = RO, ty = u16)]
+    #[register(len = 2, access = RO, ty = u16)]
     GenCpVersionMinor = 321,
 
-    #[entry(len = 2, access = RO, ty = u16)]
+    #[register(len = 2, access = RO, ty = u16)]
     GenCpVersionMajor,
 
-    #[entry(len = 64, access = RW, ty = String)]
+    #[register(len = 64, access = RW, ty = String)]
     ManufacturerName = "Cameleon\0",
 
-    #[entry(len = 8, access = RO, ty = u64)]
+    #[register(len = 8, access = RO, ty = u64)]
     SBRMAddress = SBRM_ADDRESS,
 }
 
-#[register(base = SBRM_ADDRESS, endianness = LE)]
+#[register_map(base = SBRM_ADDRESS, endianness = LE)]
 pub enum SBRM {
-    #[entry(len = 64, access = RW, ty = String)]
+    #[register(len = 64, access = RW, ty = String)]
     ManufacturerName = "Cameleon\0",
 }
 
 fn main() {
     assert_eq!(ABRM::SIZE, 76);
 
-    let raw_entry = ABRM::GenCpVersionMajor::raw_entry();
-    assert_eq!(raw_entry.offset, 2);
-    assert_eq!(raw_entry.len, 2);
+    let raw_reg = ABRM::GenCpVersionMajor::raw();
+    assert_eq!(raw_reg.offset, 2);
+    assert_eq!(raw_reg.len, 2);
 
     let protection = ABRM::memory_protection();
     assert_eq!(protection.access_right_with_range(0..2), AccessRight::RO);
@@ -37,7 +37,7 @@ fn main() {
         AccessRight::RW
     );
 
-    let raw_entry = SBRM::ManufacturerName::raw_entry();
-    assert_eq!(raw_entry.offset, SBRM_ADDRESS as usize);
-    assert_eq!(raw_entry.len, 64);
+    let raw_reg = SBRM::ManufacturerName::raw();
+    assert_eq!(raw_reg.offset, SBRM_ADDRESS as usize);
+    assert_eq!(raw_reg.len, 64);
 }

@@ -1,4 +1,4 @@
-/// (Address, Length, Access Right) of all entries in Technology Agnostic Boot Register Map (ABRM).
+/// (Address, Length, Access Right) of registers in Technology Agnostic Boot Register Map (ABRM).
 pub mod abrm {
     pub const GENCP_VERSION: (u64, u16) = (0x0000, 4);
     pub const MANUFACTURER_NAME: (u64, u16) = (0x0004, 64);
@@ -24,7 +24,7 @@ pub mod abrm {
     pub const DEVICE_SOFTWARE_INTERFACE_VERSION: (u64, u16) = (0x0210, 64);
 }
 
-/// (Offset, Length, Access Right) of entries in Technology Specific Boot Register Map (SBRM).
+/// (Offset, Length, Access Right) of registers in Technology Specific Boot Register Map (SBRM).
 /// SBRM base address can be obtained by reading `abrm::SBRM_ADDRESS`.
 pub mod sbrm {
     pub const U3V_VERSION: (u64, u16) = (0x0000, 4);
@@ -41,7 +41,7 @@ pub mod sbrm {
     pub const CURRENT_SPEED: (u64, u16) = (0x040, 4);
 }
 
-/// (Offset, Length, Access Right) of all entries in Event Interface Register Map (EIRM).
+/// (Offset, Length, Access Right) of registers in Event Interface Register Map (EIRM).
 /// SIRM base address can be obtained by
 /// sbrm::EIRM_ADDRESS.
 pub mod eirm {
@@ -50,7 +50,7 @@ pub mod eirm {
     pub const EVENT_TEST_CONTROL: (u64, u16) = (0x0008, 4);
 }
 
-/// (Offset, Length) of all entries in Streaming Interface Register Map (SIRM).
+/// (Offset, Length) of registers in Streaming Interface Register Map (SIRM).
 /// SIRM base address can be obtained by
 /// `sbrm::SIRM_ADDRESS`.
 pub mod sirm {

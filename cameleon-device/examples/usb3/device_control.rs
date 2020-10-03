@@ -32,7 +32,7 @@ fn main() {
     // Open the channel to allow communication with the device.
     control_channel.open().unwrap();
 
-    // Get address and length of serial number entry in ABRM.
+    // Get address and length of serial number register in ABRM.
     let (addr, len) = register_map::abrm::SERIAL_NUMBER;
 
     // Create ReadMem Command with request id.
