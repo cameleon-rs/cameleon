@@ -252,21 +252,18 @@ impl Register {
                     Ok(data.into())
                 },
 
-                RegisterType::U8 => quote! {
-                    data.read_u8().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
-                },
-
-                RegisterType::U16 => quote! {
-                    data.read_u16::<#endianness>().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
-                },
-
-                RegisterType::U32 => quote! {
-                    data.read_u32::<#endianness>().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
-                },
-
-                RegisterType::U64 => quote! {
-                    data.read_u64::<#endianness>().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
-                },
+                _ => {
+                    let read_integral = format_ident!("read_{}", ty.as_str());
+                    if ty.integral_bits() == 8 {
+                        quote! {
+                            data.#read_integral().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
+                        }
+                    } else {
+                        quote! {
+                            data.#read_integral::<#endianness>().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
+                        }
+                    }
+                }
             };
             quote! {
                 fn parse(mut data: &[u8]) -> MemoryResult<Self::Ty> {
@@ -300,29 +297,24 @@ impl Register {
                 RegisterType::Bytes => quote! {
                     let result = data;
                     if result.len() != #len {
-                        return Err(MemoryError::InvalidRegisterData("data length is larget than the reg length".into()));
+                        return Err(MemoryError::InvalidRegisterData("data length is larger than the reg length".into()));
                     }
                 },
 
-                RegisterType::U8 => quote! {
-                    let mut result = std::vec::Vec::with_capacity(#len);
-                    result.write_u8(data).unwrap();
-                },
-
-                RegisterType::U16 => quote! {
-                    let mut result = std::vec::Vec::with_capacity(#len);
-                    result.write_u16::<#endianness>(data).unwrap();
-                },
-
-                RegisterType::U32 => quote! {
-                    let mut result = std::vec::Vec::with_capacity(#len);
-                    result.write_u32::<#endianness>(data).unwrap();
-                },
-
-                RegisterType::U64 => quote! {
-                    let mut result = std::vec::Vec::with_capacity(#len);
-                    result.write_u64::<#endianness>(data).unwrap();
-                },
+                _ => {
+                    let write_integral = format_ident!("write_{}", ty.as_str());
+                    if ty.integral_bits() == 8 {
+                        quote! {
+                            let mut result = std::vec::Vec::with_capacity(#len);
+                            result.#write_integral(data).unwrap();
+                        }
+                    } else {
+                        quote! {
+                            let mut result = std::vec::Vec::with_capacity(#len);
+                            result.#write_integral::<#endianness>(data).unwrap();
+                        }
+                    }
+                }
             };
 
             quote! {
@@ -532,66 +524,74 @@ enum RegisterType {
     U16,
     U32,
     U64,
+    I8,
+    I16,
+    I32,
+    I64,
 }
 
 impl RegisterType {
     fn from_ident(ident: syn::Ident) -> Result<Self> {
         use RegisterType::*;
-        if ident == "String" {
-            Ok(Str)
-        } else if ident == "Bytes" {
-            Ok(Bytes)
-        } else if ident == "u8" {
-            Ok(U8)
-        } else if ident == "u16" {
-            Ok(U16)
-        } else if ident == "u32" {
-            Ok(U32)
-        } else if ident == "u64" {
-            Ok(U64)
-        } else {
-            Err(Error::new_spanned(
+        match ident {
+            _ if ident == "String" => Ok(Str),
+            _ if ident == "Bytes" => Ok(Bytes),
+            _ if ident == "u8" => Ok(U8),
+            _ if ident == "u16" => Ok(U16),
+            _ if ident == "u32" => Ok(U32),
+            _ if ident == "u64" => Ok(U64),
+            _ if ident == "i8" => Ok(I8),
+            _ if ident == "i16" => Ok(I16),
+            _ if ident == "i32" => Ok(I32),
+            _ if ident == "i64" => Ok(I64),
+            _ => Err(Error::new_spanned(
                 ident,
-                "expected String, u8, u16, u32, u64, or Bytes",
-            ))
+                "expected String, Bytes, or primitive integral types",
+            )),
         }
     }
 
     fn is_integral(&self) -> bool {
         use RegisterType::*;
         match self {
-            U8 | U16 | U32 | U64 => true,
             Str | Bytes => false,
+            _ => true,
         }
     }
 
     fn integral_bits(&self) -> usize {
         use RegisterType::*;
         match self {
-            U8 => 8,
-            U16 => 16,
-            U32 => 32,
-            U64 => 64,
-            Str | Bytes => panic!(),
+            U8 | I8 => 8,
+            U16 | I16 => 16,
+            U32 | I32 => 32,
+            U64 | I64 => 64,
+            _ => panic!(),
+        }
+    }
+
+    fn as_str(&self) -> &str {
+        use RegisterType::*;
+        match self {
+            Str => "std::string::String",
+            Bytes => "Vec<u8>",
+            U8 => "u8",
+            U16 => "u16",
+            U32 => "u32",
+            U64 => "u64",
+            I8 => "i8",
+            I16 => "i16",
+            I32 => "i32",
+            I64 => "i64",
         }
     }
 }
 
 impl quote::ToTokens for RegisterType {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        use RegisterType::*;
-        match self {
-            Str => syn::parse_str::<syn::Path>("std::string::String")
-                .unwrap()
-                .to_tokens(tokens),
-            U8 => format_ident!("u8").to_tokens(tokens),
-            U16 => format_ident!("u16").to_tokens(tokens),
-            U32 => format_ident!("u32").to_tokens(tokens),
-            U64 => format_ident!("u64").to_tokens(tokens),
-            Bytes => syn::parse_str::<syn::Path>("Vec<u8>")
-                .unwrap()
-                .to_tokens(tokens),
-        }
+        syn::parse_str::<syn::Path>(self.as_str())
+            .unwrap()
+            .to_tokens(tokens);
     }
 }
 

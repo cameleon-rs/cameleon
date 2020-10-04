@@ -48,6 +48,18 @@ enum SBRM {
 
     #[register(len = 4, access = RO, ty = u32)]
     EIRMLength = 0x20,
+
+    #[register(len = 1, access = RO, ty = i8)]
+    TestI8 = i8::MIN,
+
+    #[register(len = 2, access = RO, ty = i16)]
+    TestI16 = i16::MIN,
+
+    #[register(len = 4, access = RO, ty = i32)]
+    TestI32 = i32::MIN,
+
+    #[register(len = 8, access = RO, ty = i64)]
+    TestI64 = i64::MIN,
 }
 
 fn main() {
@@ -72,7 +84,15 @@ fn main() {
     let protocol_endianness = memory.read::<ABRM::ProtocolEndianness>().unwrap();
     assert_eq!(protocol_endianness.as_slice(), &[0x11, 0x22, 0x33, 0x44]);
 
+    assert_eq!(memory.read::<SBRM::TestI8>().unwrap(), i8::MIN);
+    assert_eq!(memory.read::<SBRM::TestI16>().unwrap(), i16::MIN);
+    assert_eq!(memory.read::<SBRM::TestI32>().unwrap(), i32::MIN);
+    assert_eq!(memory.read::<SBRM::TestI64>().unwrap(), i64::MIN);
+
     // Test write.
+    memory.write::<SBRM::TestI32>(101).unwrap();
+    assert_eq!(memory.read::<SBRM::TestI32>().unwrap(), 101);
+
     memory
         .write::<ABRM::ManufacturerName>("New name".into())
         .unwrap();
