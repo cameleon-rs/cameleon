@@ -200,9 +200,18 @@ impl Register {
     fn parse(mut variant: syn::Variant, offset: &mut usize) -> Result<Self> {
         let reg_attr = Self::parse_reg_attr(&mut variant)?;
         let ident = variant.ident;
-        let reg_offset = *offset;
 
-        *offset += reg_attr.len();
+        let reg_offset = match reg_attr.specified_offset() {
+            Some(specified_offset) => {
+                *offset = specified_offset + reg_attr.len();
+                specified_offset
+            }
+            None => {
+                let reg_offset = *offset;
+                *offset += reg_attr.len();
+                reg_offset
+            }
+        };
 
         let init = if let Some((_, expr)) = variant.discriminant {
             Some(InitValue::from_expr(expr)?)
@@ -383,11 +392,19 @@ struct RegisterAttr {
     len: syn::LitInt,
     access: AccessRight,
     ty: RegisterType,
+    offset: Option<syn::LitInt>,
 }
 
 impl RegisterAttr {
     fn len(&self) -> usize {
         self.len.base10_parse().unwrap()
+    }
+
+    fn specified_offset(&self) -> Option<usize> {
+        match &self.offset {
+            Some(offset) => Some(offset.base10_parse().unwrap()),
+            _ => None,
+        }
     }
 }
 
@@ -428,7 +445,24 @@ impl syn::parse::Parse for RegisterAttr {
             ));
         }
 
-        Ok(Self { len, access, ty })
+        let offset = if ts.parse::<syn::token::Comma>().is_ok() {
+            match ts.parse::<syn::Ident>()? {
+                offset if offset == "offset" => {}
+                other => return Err(Error::new_spanned(other, "expected offset")),
+            }
+            ts.parse::<syn::Token![=]>()?;
+            let offset = ts.parse::<syn::LitInt>()?;
+            Some(offset)
+        } else {
+            None
+        };
+
+        Ok(Self {
+            len,
+            access,
+            ty,
+            offset,
+        })
     }
 }
 
