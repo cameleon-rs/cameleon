@@ -60,10 +60,7 @@ impl MemoryStruct {
     }
 
     fn define_struct(&self) -> TokenStream {
-        let last_fragment = self.fragments.last().unwrap();
-        let last_fragment_size = last_fragment.size();
-        let last_fragment_base = last_fragment.base();
-        let memory_size = quote! {#last_fragment_size + #last_fragment_base};
+        let memory_size = self.memory_size();
 
         let ident = &self.ident;
         let vis = &self.vis;
@@ -82,10 +79,13 @@ impl MemoryStruct {
     fn impl_methods(&self) -> TokenStream {
         let ident = &self.ident;
         let new = self.impl_new();
+        let fragments_len = self.fragments.len();
 
         quote! {
             impl #ident {
                 #new
+
+                #[doc(hidden)]
                 fn notify_all(&self, written_range: std::ops::Range<usize>) {
 
                     for (raw_reg, observer) in &self.observers {
@@ -96,6 +96,20 @@ impl MemoryStruct {
                         }
                         observer.update();
                     }
+                }
+
+                #[doc(hidden)]
+                const fn calculate_memory_size(end_addresses: &[usize; #fragments_len]) -> usize {
+                    let mut max = end_addresses[0];
+                    let mut i = 0;
+                    while i < #fragments_len {
+                        if max < end_addresses[i] {
+                            max = end_addresses[i];
+                        }
+                        i += 1;
+                    }
+                    max
+
                 }
             }
         }
@@ -171,10 +185,7 @@ impl MemoryStruct {
 
     fn impl_new(&self) -> TokenStream {
         let vis = &self.vis;
-        let last_fragment = self.fragments.last().unwrap();
-        let last_fragment_size = last_fragment.size();
-        let last_fragment_offset = last_fragment.base();
-        let memory_size = quote! {#last_fragment_size + #last_fragment_offset};
+        let memory_size = self.memory_size();
 
         let init_memory = self.fragments.iter().map(|f| {
             let ty = &f.ty;
@@ -195,6 +206,18 @@ impl MemoryStruct {
                     observers: std::vec::Vec::new(),
                 }
             }
+        }
+    }
+
+    fn memory_size(&self) -> TokenStream {
+        let end_addresses = self.fragments.iter().map(|f| {
+            let size = f.size();
+            let base = f.base();
+            quote! {#size + #base}
+        });
+
+        quote! {
+            Self::calculate_memory_size(&[#(#end_addresses),*])
         }
     }
 }

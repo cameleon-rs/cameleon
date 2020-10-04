@@ -9,9 +9,8 @@ const DEVICE_CAPABILITY: &[u8] = &[
 
 #[memory]
 pub struct Memory {
-    abrm: ABRM,
-
     sbrm: SBRM,
+    abrm: ABRM,
 }
 
 #[register_map(base = 0, endianness = LE)]
