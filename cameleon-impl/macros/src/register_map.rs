@@ -74,8 +74,8 @@ impl RegisterMap {
             }
         });
 
-        let raw = self.impl_raw();
-        let memory_protection = self.impl_memory_protection();
+        let init_raw_memory = self.impl_init_raw_memory();
+        let init_memory_protection = self.impl_init_memory_protection();
         let base = self.const_base();
         let size = self.const_size();
         let impl_register = self.impl_register();
@@ -85,11 +85,17 @@ impl RegisterMap {
             #[allow(non_snake_case)]
             #[allow(clippy::string_lit_as_bytes)]
             #vis mod #mod_name {
+                use std::convert::TryInto;
+
+                use cameleon_impl::memory::*;
+
                 use super::*;
+
+
                 #base
                 #size
-                #raw
-                #memory_protection
+                #init_raw_memory
+                #init_memory_protection
                 #impl_register
                 #(#structs)*
             }
@@ -107,44 +113,35 @@ impl RegisterMap {
         }
     }
 
-    fn impl_memory_protection(&self) -> TokenStream {
+    fn impl_init_memory_protection(&self) -> TokenStream {
         let set_access_right = self.regs.iter().map(|reg| {
-            let start = reg.offset;
-            let end = start + reg.reg_attr.len();
+            let ident = &reg.ident;
             let access_right = &reg.reg_attr.access;
             quote! {
-                memory_protection.set_access_right_with_range(#start..#end, cameleon_impl::memory::AccessRight::#access_right);
-            }});
+                let range = #ident::raw().range();
+                memory_protection.set_access_right_with_range(range, AccessRight::#access_right);
+            }
+        });
 
-        let size = self.size();
         let vis = self.modify_visibility();
         quote! {
-            #vis fn memory_protection() -> cameleon_impl::memory::MemoryProtection {
-                let mut memory_protection = cameleon_impl::memory::MemoryProtection::new(#size);
+            #vis fn init_memory_protection(memory_protection: &mut MemoryProtection) {
                 #(#set_access_right)*
-                memory_protection
             }
         }
     }
 
-    fn impl_raw(&self) -> TokenStream {
-        let fragment = format_ident!("fragment");
+    fn impl_init_raw_memory(&self) -> TokenStream {
+        let memory_ident = format_ident!("memory");
         let mut writes = vec![];
         for reg in &self.regs {
-            writes.push(reg.init_reg(fragment.clone(), self.args.endianness));
+            writes.push(reg.init_reg(&memory_ident));
         }
 
-        let endianness = self.args.endianness;
-        let size = self.size();
         let vis = self.modify_visibility();
         quote! {
-            #vis fn raw() -> Vec<u8> {
-                use cameleon_impl::byteorder::{#endianness, WriteBytesExt};
-                use std::io::Write;
-                let mut fragment_vec = vec![0; #size];
-                let mut #fragment = std::io::Cursor::new(fragment_vec.as_mut_slice());
+            #vis fn init_raw_memory(#memory_ident: &mut [u8]) {
                 #(#writes)*
-                fragment_vec
             }
         }
     }
@@ -222,65 +219,15 @@ impl Register {
         })
     }
 
-    fn init_reg(&self, fragment: syn::Ident, endianness: Endianness) -> TokenStream {
+    fn init_reg(&self, memory_ident: &syn::Ident) -> TokenStream {
         if self.init.is_none() {
             return quote! {};
         }
 
         let init = self.init.as_ref().unwrap();
-        let start = self.offset as u64;
-        let endianness = endianness;
-
-        let set_position_expand = quote! {#fragment.set_position(#start);};
-
-        let len = self.reg_attr.len();
-        let write_expand = match self.reg_attr.ty {
-            RegisterType::Str => {
-                quote! {
-                    if #len < #init.as_bytes().len() {
-                        panic!("string length overruns reg length");
-                    }
-                    #fragment.write_all(#init.as_bytes()).unwrap();
-                }
-            }
-
-            RegisterType::Bytes => {
-                quote! {
-                    if #len < #init.len() {
-                        panic!("bytes length doesn't fit with reg length");
-                    }
-                    #fragment.write_all(&#init).unwrap();
-                }
-            }
-
-            RegisterType::U8 => {
-                quote! {
-                    #fragment.write_u8(#init).unwrap();
-                }
-            }
-
-            RegisterType::U16 => {
-                quote! {
-                    #fragment.write_u16::<#endianness>(#init).unwrap();
-                }
-            }
-
-            RegisterType::U32 => {
-                quote! {
-                    #fragment.write_u32::<#endianness>(#init).unwrap();
-                }
-            }
-
-            RegisterType::U64 => {
-                quote! {
-                    #fragment.write_u64::<#endianness>(#init).unwrap();
-                }
-            }
-        };
-
+        let ident = &self.ident;
         quote! {
-            #set_position_expand
-            #write_expand
+            #ident::write(#init.try_into().unwrap(), #memory_ident).unwrap();
         }
     }
 
@@ -292,10 +239,10 @@ impl Register {
             let main = match ty {
                 RegisterType::Str => quote! {
                     let str_end = data.iter().position(|c| *c == 0)
-                        .ok_or_else(|| cameleon_impl::memory::MemoryError::InvalidRegisterData("string reg must be null terminated".into()))?;
-                    let result = std::str::from_utf8(&data[..str_end]).map_err(|e| cameleon_impl::memory::MemoryError::InvalidRegisterData(format! {"{}", e}.into()))?;
+                        .ok_or_else(|| MemoryError::InvalidRegisterData("string reg must be null terminated".into()))?;
+                    let result = std::str::from_utf8(&data[..str_end]).map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))?;
                     if !result.is_ascii() {
-                        return Err(cameleon_impl::memory::MemoryError::InvalidRegisterData("string reg must be ASCII".into()));
+                        return Err(MemoryError::InvalidRegisterData("string reg must be ASCII".into()));
                     }
 
                     Ok(result.to_string())
@@ -306,23 +253,23 @@ impl Register {
                 },
 
                 RegisterType::U8 => quote! {
-                    data.read_u8().map_err(|e| cameleon_impl::memory::MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
+                    data.read_u8().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
                 },
 
                 RegisterType::U16 => quote! {
-                    data.read_u16::<#endianness>().map_err(|e| cameleon_impl::memory::MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
+                    data.read_u16::<#endianness>().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
                 },
 
                 RegisterType::U32 => quote! {
-                    data.read_u32::<#endianness>().map_err(|e| cameleon_impl::memory::MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
+                    data.read_u32::<#endianness>().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
                 },
 
                 RegisterType::U64 => quote! {
-                    data.read_u64::<#endianness>().map_err(|e| cameleon_impl::memory::MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
+                    data.read_u64::<#endianness>().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
                 },
             };
             quote! {
-                fn parse(mut data: &[u8]) -> cameleon_impl::memory::MemoryResult<Self::Ty> {
+                fn parse(mut data: &[u8]) -> MemoryResult<Self::Ty> {
                     use cameleon_impl::byteorder::{#endianness, ReadBytesExt};
                     #main
                 }
@@ -333,7 +280,7 @@ impl Register {
             let main = match ty {
                 RegisterType::Str => quote! {
                     if !data.is_ascii() {
-                        return Err(cameleon_impl::memory::MemoryError::InvalidRegisterData("string must be ASCII string".into()))
+                        return Err(MemoryError::InvalidRegisterData("string must be ASCII string".into()))
                     }
 
                     let mut result = data.into_bytes();
@@ -346,14 +293,14 @@ impl Register {
                     if result.len() < #len {
                         result.resize(#len, 0);
                     } else if result.len() > #len {
-                        return Err(cameleon_impl::memory::MemoryError::InvalidRegisterData("data length is larger than the reg length".into()))
+                        return Err(MemoryError::InvalidRegisterData("data length is larger than the reg length".into()))
                     }
                 },
 
                 RegisterType::Bytes => quote! {
                     let result = data;
                     if result.len() != #len {
-                        return Err(cameleon_impl::memory::MemoryError::InvalidRegisterData("data length is larget than the reg length".into()));
+                        return Err(MemoryError::InvalidRegisterData("data length is larget than the reg length".into()));
                     }
                 },
 
@@ -379,7 +326,7 @@ impl Register {
             };
 
             quote! {
-                fn serialize(data: Self::Ty) -> cameleon_impl::memory::MemoryResult<Vec<u8>>
+                fn serialize(data: Self::Ty) -> MemoryResult<Vec<u8>>
                 {
                     use cameleon_impl::byteorder::{#endianness, WriteBytesExt};
 
@@ -392,14 +339,14 @@ impl Register {
 
         let offset = self.offset;
         let raw = quote! {
-            fn raw() -> cameleon_impl::memory::RawRegister {
-                cameleon_impl::memory::RawRegister::new(#base as usize + #offset, #len)
+            fn raw() -> RawRegister {
+                RawRegister::new(#base as usize + #offset, #len)
             }
         };
 
         let ident = &self.ident;
         quote! {
-            impl cameleon_impl::memory::Register for #ident {
+            impl Register for #ident {
                 type Ty = #ty;
 
                 #parse

@@ -177,14 +177,10 @@ impl MemoryStruct {
         let memory_size = quote! {#last_fragment_size + #last_fragment_offset};
 
         let init_memory = self.fragments.iter().map(|f| {
-            let base = f.base();
-            let size = f.size();
             let ty = &f.ty;
             quote! {
-                let fragment = #ty::raw();
-                let fragment_protection = #ty::memory_protection();
-                raw[#base..#base+#size].copy_from_slice(&fragment);
-                protection.copy_from(&fragment_protection, #base);
+                #ty::init_memory_protection(&mut protection);
+                #ty::init_raw_memory(&mut raw);
             }
         });
 

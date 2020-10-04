@@ -30,7 +30,8 @@ fn main() {
     assert_eq!(raw_reg.offset, 2);
     assert_eq!(raw_reg.len, 2);
 
-    let protection = ABRM::memory_protection();
+    let mut protection = MemoryProtection::new(ABRM::SIZE);
+    ABRM::init_memory_protection(&mut protection);
     assert_eq!(protection.access_right_with_range(0..2), AccessRight::RO);
     assert_eq!(
         protection.access_right_with_range(4..4 + 64),
