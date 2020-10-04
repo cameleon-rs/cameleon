@@ -74,7 +74,7 @@ impl MemoryStruct {
             #vis struct #ident {
                 raw: [u8; #memory_size],
                 protection: cameleon_impl::memory::MemoryProtection,
-                observers: std::vec::Vec<(cameleon_impl::memory::RawEntry, std::boxed::Box<dyn cameleon_impl::memory::MemoryObserver>)>,
+                observers: std::vec::Vec<(cameleon_impl::memory::RawRegister, std::boxed::Box<dyn cameleon_impl::memory::MemoryObserver>)>,
             }
         }
     }
@@ -88,10 +88,10 @@ impl MemoryStruct {
                 #new
                 fn notify_all(&self, written_range: std::ops::Range<usize>) {
 
-                    for (raw_entry, observer) in &self.observers {
+                    for (raw_reg, observer) in &self.observers {
 
-                        let entry_range = raw_entry.range();
-                        if written_range.start >= entry_range.end || written_range.end <= entry_range.start {
+                        let reg_range = raw_reg.range();
+                        if written_range.start >= reg_range.end || written_range.end <= reg_range.start {
                             continue;
                         }
                         observer.update();
@@ -106,7 +106,7 @@ impl MemoryStruct {
 
         quote! {
             impl cameleon_impl::memory::prelude::MemoryRead for #ident {
-                fn read(&self, range: std::ops::Range<usize>) -> cameleon_impl::memory::MemoryResult<&[u8]> {
+                fn read_raw(&self, range: std::ops::Range<usize>) -> cameleon_impl::memory::MemoryResult<&[u8]> {
                     self.protection.verify_address_with_range(range.clone())?;
                     let access_right = self.protection.access_right_with_range(range.clone());
                     if !access_right.is_readable() {
@@ -116,20 +116,20 @@ impl MemoryStruct {
                     Ok(&self.raw[range])
                 }
 
-                fn read_entry<T: cameleon_impl::memory::RegisterEntry>(&self) -> cameleon_impl::memory::MemoryResult<T::Ty> {
-                    let range = T::raw_entry().range();
+                fn read<T: cameleon_impl::memory::Register>(&self) -> cameleon_impl::memory::MemoryResult<T::Ty> {
+                    let range = T::raw().range();
                     debug_assert!(self.protection.verify_address_with_range(range.clone()).is_ok());
 
                     T::parse(&self.raw[range])
                 }
 
-                fn access_right<T: cameleon_impl::memory::RegisterEntry>(&self) -> cameleon_impl::memory::AccessRight {
-                    self.protection.access_right_with_range(T::raw_entry().range())
+                fn access_right<T: cameleon_impl::memory::Register>(&self) -> cameleon_impl::memory::AccessRight {
+                    self.protection.access_right_with_range(T::raw().range())
                 }
             }
 
             impl cameleon_impl::memory::prelude::MemoryWrite for #ident {
-                fn write(&mut self, addr: usize, buf: &[u8]) -> cameleon_impl::memory::MemoryResult<()> {
+                fn write_raw(&mut self, addr: usize, buf: &[u8]) -> cameleon_impl::memory::MemoryResult<()> {
                     let (start, end) = (addr, addr + buf.len());
                     let range = start..end;
                     self.protection.verify_address_with_range(range.clone())?;
@@ -145,17 +145,17 @@ impl MemoryStruct {
                     Ok(())
                 }
 
-                fn set_access_right<T: cameleon_impl::memory::RegisterEntry>(&mut self, access_right: cameleon_impl::memory::AccessRight) {
-                    self.protection.set_access_right_with_range(T::raw_entry().range(), access_right);
+                fn set_access_right<T: cameleon_impl::memory::Register>(&mut self, access_right: cameleon_impl::memory::AccessRight) {
+                    self.protection.set_access_right_with_range(T::raw().range(), access_right);
                 }
 
 
-                fn write_entry<T: cameleon_impl::memory::RegisterEntry>(&mut self, data: T::Ty) -> cameleon_impl::memory::MemoryResult<()>{
-                    let entry = T::raw_entry();
+                fn write<T: cameleon_impl::memory::Register>(&mut self, data: T::Ty) -> cameleon_impl::memory::MemoryResult<()>{
+                    let raw_reg = T::raw();
                     let data = T::serialize(data)?;
-                    let range = entry.range();
+                    let range = raw_reg.range();
 
-                    debug_assert!(entry.len == data.len());
+                    debug_assert!(raw_reg.len == data.len());
                     debug_assert!(self.protection.verify_address_with_range(range.clone()).is_ok());
 
                     self.raw[range.clone()].copy_from_slice(data.as_slice());
@@ -169,12 +169,12 @@ impl MemoryStruct {
                     &mut self,
                     observer: U
                 )
-                    where T: cameleon_impl::memory::RegisterEntry,
+                    where T: cameleon_impl::memory::Register,
                           U: cameleon_impl::memory::MemoryObserver + 'static
                 {
-                    let entry = T::raw_entry();
+                    let raw_reg = T::raw();
 
-                    self.observers.push((entry, Box::new(observer)));
+                    self.observers.push((raw_reg, Box::new(observer)));
                 }
 
             }

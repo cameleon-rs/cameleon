@@ -1,4 +1,4 @@
-use cameleon_impl::memory::{memory, register};
+use cameleon_impl::memory::{memory, register_map};
 
 const SBRM_ADDRESS: u64 = 0xffff;
 
@@ -26,74 +26,74 @@ pub(super) struct Memory {
     abrm: ABRM,
 }
 
-#[register(base = 0, endianness = LE)]
+#[register_map(base = 0, endianness = LE)]
 pub(super) enum ABRM {
-    #[entry(len = 2, access = RO, ty = u16)]
+    #[register(len = 2, access = RO, ty = u16)]
     GenCpVersionMinor = 1,
 
-    #[entry(len = 2, access = RO, ty = u16)]
+    #[register(len = 2, access = RO, ty = u16)]
     GenCpVersionMajor = 1,
 
-    #[entry(len = 64, access = RO, ty = String)]
+    #[register(len = 64, access = RO, ty = String)]
     ManufacturerName = "cameleon",
 
-    #[entry(len = 64, access = RO, ty = String)]
+    #[register(len = 64, access = RO, ty = String)]
     ModelName = "cameleon model",
 
-    #[entry(len = 64, access = RO, ty = String)]
+    #[register(len = 64, access = RO, ty = String)]
     FamilyName = "cameleon family",
 
-    #[entry(len = 64, access = RO, ty = String)]
+    #[register(len = 64, access = RO, ty = String)]
     DeviceVersion = "none",
 
-    #[entry(len = 64, access = RO, ty = String)]
+    #[register(len = 64, access = RO, ty = String)]
     ManufacturerInfo = "none",
 
-    #[entry(len = 64, access = RO, ty = String)]
+    #[register(len = 64, access = RO, ty = String)]
     SerialNumber,
 
-    #[entry(len = 64, access = RW, ty = String)]
+    #[register(len = 64, access = RW, ty = String)]
     UserDefinedName,
 
-    #[entry(len = 8, access = RO, ty = Bytes)]
+    #[register(len = 8, access = RO, ty = Bytes)]
     DeviceCapability = DEVICE_CAPABILITY,
 
-    #[entry(len = 4, access = RO, ty = u32)]
+    #[register(len = 4, access = RO, ty = u32)]
     MaximumDeviceResponseTime = 100,
 
-    #[entry(len = 8, access = RO, ty = u64)]
+    #[register(len = 8, access = RO, ty = u64)]
     ManifestTableAddress, // TODO: Define manifest table address,
 
-    #[entry(len = 8, access = RO, ty = u64)]
+    #[register(len = 8, access = RO, ty = u64)]
     SBRMAddress = SBRM_ADDRESS,
 
-    #[entry(len = 8, access = RO, ty = u64)]
+    #[register(len = 8, access = RO, ty = u64)]
     DeviceConfiguration,
 
-    #[entry(len = 4, access = NA, ty = u32)]
+    #[register(len = 4, access = NA, ty = u32)]
     HeartbeatTimeout,
 
-    #[entry(len = 4, access = NA, ty = u32)]
+    #[register(len = 4, access = NA, ty = u32)]
     MessageChannelId,
 
-    #[entry(len = 8, access = RO, ty = u64)]
+    #[register(len = 8, access = RO, ty = u64)]
     Timestamp,
 
-    #[entry(len = 4, access = WO, ty = u32)]
+    #[register(len = 4, access = WO, ty = u32)]
     TimestampLatch,
 
-    #[entry(len = 8, access = RO, ty = u64)]
+    #[register(len = 8, access = RO, ty = u64)]
     TimestampIncrement = 1000, // Dummy value indicating device clock runs at 1MHZ.
 
-    #[entry(len = 4, access = NA, ty = Bytes)]
+    #[register(len = 4, access = NA, ty = Bytes)]
     AccessPrivilege,
 
-    #[entry(len = 4, access = RO, ty = Bytes)]
+    #[register(len = 4, access = RO, ty = Bytes)]
     ProtocolEndianness = &[0xFF, 0xFF, 0xFF, 0xFF], // Little endian.
 
-    #[entry(len = 4, access = NA, ty = Bytes)]
+    #[register(len = 4, access = NA, ty = Bytes)]
     ImplementationEndianness,
 
-    #[entry(len = 64, access = RO, ty = String)]
+    #[register(len = 64, access = RO, ty = String)]
     DeviceSoftwareInterfaceVersion = "1.0.0",
 }

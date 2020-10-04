@@ -270,7 +270,7 @@ impl Worker {
         let address = scd.address as usize;
         let read_length = scd.read_length as usize;
 
-        match memory.read(address..address + read_length) {
+        match memory.read_raw(address..address + read_length) {
             Ok(data) => {
                 let ack = ack::ReadMem::new(data).finalize(req_id);
                 self.enqueue_or_halt(ack);
@@ -288,7 +288,7 @@ impl Worker {
                 self.enqueue_or_halt(ack);
             }
 
-            Err(MemoryError::AddressNotWritable) | Err(MemoryError::InvalidEntryData(..)) => {
+            Err(MemoryError::AddressNotWritable) | Err(MemoryError::InvalidRegisterData(..)) => {
                 unreachable!()
             }
         };
@@ -304,7 +304,7 @@ impl Worker {
         let scd_kind = ccd.scd_kind();
 
         let mut memory = self.memory.lock().await;
-        match memory.write(scd.address as usize, scd.data) {
+        match memory.write_raw(scd.address as usize, scd.data) {
             Ok(()) => {
                 // Explicitly drop memory to avoid race condition.
                 drop(memory);
@@ -326,7 +326,7 @@ impl Worker {
                 self.enqueue_or_halt(ack);
             }
 
-            Err(MemoryError::AddressNotReadable) | Err(MemoryError::InvalidEntryData(..)) => {
+            Err(MemoryError::AddressNotReadable) | Err(MemoryError::InvalidRegisterData(..)) => {
                 unreachable!()
             }
         };
@@ -423,7 +423,7 @@ impl MemoryEventHandler {
 
     async fn handle_timestamp_latch(&self, worker: &Worker) {
         let mut memory = worker.memory.lock().await;
-        match memory.read_entry::<ABRM::TimestampLatch>() {
+        match memory.read::<ABRM::TimestampLatch>() {
             Ok(value) => {
                 if value != 1 {
                     return;
@@ -438,8 +438,8 @@ impl MemoryEventHandler {
         let timestamp_ns = worker.timestamp.as_nanos().await;
         let signal = InterfaceSignal::ToEvent(EventSignal::UpdateTimestamp(timestamp_ns));
         worker.try_send_signal(signal);
-        if let Err(e) = memory.write_entry::<ABRM::Timestamp>(timestamp_ns) {
-            log::warn!("failed to write to ABRM::Timestamp entry {}", e)
+        if let Err(e) = memory.write::<ABRM::Timestamp>(timestamp_ns) {
+            log::warn!("failed to write to ABRM::Timestamp register {}", e)
         }
     }
 }
@@ -608,7 +608,7 @@ mod cmd {
     impl<'a> ParseScd<'a> for WriteMemStacked<'a> {
         fn parse(buf: &'a [u8], ccd: &CommandCcd) -> ProtocolResult<Self> {
             let mut cursor = Cursor::new(buf);
-            let mut entries = vec![];
+            let mut regs = vec![];
             let mut len = ccd.scd_len();
 
             while len > 0 {
@@ -621,7 +621,7 @@ mod cmd {
                 }
                 let data_length = cursor.read_u16::<LE>()?;
                 let data = parse_util::read_bytes(&mut cursor, data_length)?;
-                entries.push(
+                regs.push(
                     WriteMem::new(address, data)
                         .map_err(|err| ProtocolError::InvalidPacket(err.to_string().into()))?,
                 );
@@ -629,7 +629,7 @@ mod cmd {
                 len -= 12 + data_length;
             }
 
-            Self::new(entries).map_err(|err| ProtocolError::InvalidPacket(err.to_string().into()))
+            Self::new(regs).map_err(|err| ProtocolError::InvalidPacket(err.to_string().into()))
         }
     }
 
@@ -674,8 +674,8 @@ mod cmd {
 
         #[test]
         fn test_read_mem_stacked() {
-            let entries = vec![ReadMem::new(0x0f, 4), ReadMem::new(0xf0, 8)];
-            let cmd = ReadMemStacked::new(entries).unwrap().finalize(1);
+            let regs = vec![ReadMem::new(0x0f, 4), ReadMem::new(0xf0, 8)];
+            let cmd = ReadMemStacked::new(regs).unwrap().finalize(1);
             let mut buf = vec![];
             cmd.serialize(&mut buf).unwrap();
 
@@ -694,11 +694,11 @@ mod cmd {
         fn test_write_mem_stacked() {
             let data0 = &[0, 1, 2, 3];
             let data1 = &[1, 2, 3, 4, 5, 6, 7];
-            let entries = vec![
+            let regs = vec![
                 WriteMem::new(0x0f, data0).unwrap(),
                 WriteMem::new(0xf0, data1).unwrap(),
             ];
-            let cmd = WriteMemStacked::new(entries).unwrap().finalize(1);
+            let cmd = WriteMemStacked::new(regs).unwrap().finalize(1);
             let mut buf = vec![];
             cmd.serialize(&mut buf).unwrap();
 

@@ -63,9 +63,7 @@ impl EmulatorBuilder {
         let serial_number: String = (0..8)
             .map(|_| serial_base.choose(&mut rang).unwrap())
             .collect();
-        memory
-            .write_entry::<ABRM::SerialNumber>(serial_number)
-            .unwrap();
+        memory.write::<ABRM::SerialNumber>(serial_number).unwrap();
 
         Self { memory }
     }
@@ -119,7 +117,7 @@ impl EmulatorBuilder {
     /// ```
     pub fn model_name(mut self, name: &str) -> BuilderResult<Self> {
         self.memory
-            .write_entry::<ABRM::UserDefinedName>(name.into())
+            .write::<ABRM::UserDefinedName>(name.into())
             .map_err(|e| BuilderError::InvalidString(format! {"{}", e}))?;
         Ok(self)
     }
@@ -145,7 +143,7 @@ impl EmulatorBuilder {
     /// ```
     pub fn family_name(mut self, name: &str) -> BuilderResult<Self> {
         self.memory
-            .write_entry::<ABRM::UserDefinedName>(name.into())
+            .write::<ABRM::UserDefinedName>(name.into())
             .map_err(|e| BuilderError::InvalidString(format! {"{}", e}))?;
         Ok(self)
     }
@@ -171,7 +169,7 @@ impl EmulatorBuilder {
     /// ```
     pub fn serial_number(mut self, serial: &str) -> BuilderResult<Self> {
         self.memory
-            .write_entry::<ABRM::UserDefinedName>(serial.into())
+            .write::<ABRM::UserDefinedName>(serial.into())
             .map_err(|e| BuilderError::InvalidString(format! {"{}", e}))?;
         Ok(self)
     }
@@ -197,25 +195,25 @@ impl EmulatorBuilder {
     /// ```
     pub fn user_defined_name(mut self, name: &str) -> BuilderResult<Self> {
         self.memory
-            .write_entry::<ABRM::UserDefinedName>(name.into())
+            .write::<ABRM::UserDefinedName>(name.into())
             .map_err(|e| BuilderError::InvalidString(format! {"{}", e}))?;
         Ok(self)
     }
 
     fn build_device_info(&self) -> DeviceInfo {
         use ABRM::*;
-        let gencp_version_major = self.memory.read_entry::<GenCpVersionMajor>().unwrap();
-        let gencp_version_minor = self.memory.read_entry::<GenCpVersionMinor>().unwrap();
+        let gencp_version_major = self.memory.read::<GenCpVersionMajor>().unwrap();
+        let gencp_version_minor = self.memory.read::<GenCpVersionMinor>().unwrap();
         let gencp_version = Version::new(gencp_version_major as u64, gencp_version_minor as u64, 0);
 
-        let vendor_name = self.memory.read_entry::<ManufacturerName>().unwrap();
-        let model_name = self.memory.read_entry::<ModelName>().unwrap();
-        let family_name = Some(self.memory.read_entry::<FamilyName>().unwrap());
-        let device_version = self.memory.read_entry::<DeviceVersion>().unwrap();
-        let manufacturer_info = self.memory.read_entry::<ManufacturerInfo>().unwrap();
-        let user_defined_name = Some(self.memory.read_entry::<UserDefinedName>().unwrap());
+        let vendor_name = self.memory.read::<ManufacturerName>().unwrap();
+        let model_name = self.memory.read::<ModelName>().unwrap();
+        let family_name = Some(self.memory.read::<FamilyName>().unwrap());
+        let device_version = self.memory.read::<DeviceVersion>().unwrap();
+        let manufacturer_info = self.memory.read::<ManufacturerInfo>().unwrap();
+        let user_defined_name = Some(self.memory.read::<UserDefinedName>().unwrap());
         let supported_speed = SupportedSpeed::SuperSpeed;
-        let serial_number = self.memory.read_entry::<SerialNumber>().unwrap();
+        let serial_number = self.memory.read::<SerialNumber>().unwrap();
 
         // TODO: Read from SBRM.
         let u3v_version = Version::new(1, 0, 0);

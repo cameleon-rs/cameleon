@@ -32,8 +32,8 @@ fn test_normal_scenario() {
 
     let mut req_id = 0;
 
-    // Send WriteMem command to time stamp latch entry of the device.
-    // The command will dispatch a internal event which cause write to time stamp entry of the
+    // Send WriteMem command to time stamp latch register of the device.
+    // The command will dispatch a internal event which cause write to time stamp register of the
     // device.
     let (tsl_addr, _) = register_map::abrm::TIMESTAMP_LATCH;
     let cmd_data = u32_as_le_bytes(1);
@@ -53,7 +53,7 @@ fn test_normal_scenario() {
     // Increment req_id for next command.
     req_id += 1;
 
-    // Send ReadMem command to time stamp entry.
+    // Send ReadMem command to time stamp register.
     let (ts_addr, ts_len) = register_map::abrm::TIMESTAMP;
     let (cmd, ack_len) = read_cmd(ts_addr, ts_len, req_id);
     assert!(control_channel.send(&cmd, TIME_OUT).is_ok());
@@ -75,7 +75,7 @@ fn test_normal_scenario() {
     // Increment req_id for next command.
     req_id += 1;
 
-    // Send ReadMem command to time stamp entry.
+    // Send ReadMem command to time stamp register.
     let (ts_addr, ts_len) = register_map::abrm::TIMESTAMP;
     let (cmd, _) = read_cmd(ts_addr, ts_len, req_id);
     assert!(control_channel.send(&cmd, TIME_OUT).is_ok());

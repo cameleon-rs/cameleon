@@ -1,8 +1,8 @@
-use cameleon_impl::memory::register;
+use cameleon_impl::memory::register_map;
 
-#[register(base = 0, endianness = LE)]
+#[register_map(base = 0, endianness = LE)]
 enum ABRM {
-    #[entry(len = 4, access = RO, ty = Bytes)]
+    #[register(len = 4, access = RO, ty = Bytes)]
     ProtocolEndianness = &[0xFF, 1000, 0xFF, 0xFF],
 }
 
