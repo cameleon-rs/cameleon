@@ -42,6 +42,7 @@ impl RegisterMap {
         let mut regs = vec![];
         for variant in input_enum.variants.into_iter() {
             let reg = Register::parse(variant, &mut offset)?;
+            reg.verify(args.endianness)?;
             regs.push(reg);
         }
 
@@ -85,9 +86,9 @@ impl RegisterMap {
             #[allow(non_snake_case)]
             #[allow(clippy::string_lit_as_bytes)]
             #vis mod #mod_name {
-                use std::convert::TryInto;
+                use std::{convert::TryInto, ops::{Index, IndexMut}};
 
-                use cameleon_impl::memory::*;
+                use cameleon_impl::{memory::*, byteorder::{LE, BE, WriteBytesExt, ReadBytesExt}};
 
                 use super::*;
 
@@ -228,6 +229,13 @@ impl Register {
         })
     }
 
+    fn verify(&self, endianness: Endianness) -> Result<()> {
+        match &self.reg_attr.ty {
+            RegisterType::BitField(ref bf) => bf.verify(endianness),
+            _ => Ok(()),
+        }
+    }
+
     fn init_reg(&self, memory_ident: &syn::Ident) -> TokenStream {
         if self.init.is_none() {
             return quote! {};
@@ -235,8 +243,17 @@ impl Register {
 
         let init = self.init.as_ref().unwrap();
         let ident = &self.ident;
-        quote! {
-            #ident::write(#init.try_into().unwrap(), #memory_ident).unwrap();
+        match init {
+            InitValue::Expr(_) => {
+                quote! {
+                    #ident::write(#init, #memory_ident).unwrap();
+                }
+            }
+            _ => {
+                quote! {
+                    #ident::write(#init.try_into().unwrap(), #memory_ident).unwrap();
+                }
+            }
         }
     }
 
@@ -244,99 +261,9 @@ impl Register {
         let ty = &self.reg_attr.ty;
         let len = self.reg_attr.len();
 
-        let parse = {
-            let main = match ty {
-                RegisterType::Str => quote! {
-                    let str_end = data.iter().position(|c| *c == 0)
-                        .ok_or_else(|| MemoryError::InvalidRegisterData("string reg must be null terminated".into()))?;
-                    let result = std::str::from_utf8(&data[..str_end]).map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))?;
-                    if !result.is_ascii() {
-                        return Err(MemoryError::InvalidRegisterData("string reg must be ASCII".into()));
-                    }
-
-                    Ok(result.to_string())
-                },
-
-                RegisterType::Bytes => quote! {
-                    Ok(data.into())
-                },
-
-                _ => {
-                    let read_integral = format_ident!("read_{}", ty.as_str());
-                    if ty.integral_bits() == 8 {
-                        quote! {
-                            data.#read_integral().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
-                        }
-                    } else {
-                        quote! {
-                            data.#read_integral::<#endianness>().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
-                        }
-                    }
-                }
-            };
-            quote! {
-                fn parse(mut data: &[u8]) -> MemoryResult<Self::Ty> {
-                    use cameleon_impl::byteorder::{#endianness, ReadBytesExt};
-                    #main
-                }
-            }
-        };
-
-        let serialize = {
-            let main = match ty {
-                RegisterType::Str => quote! {
-                    if !data.is_ascii() {
-                        return Err(MemoryError::InvalidRegisterData("string must be ASCII string".into()))
-                    }
-
-                    let mut result = data.into_bytes();
-                    // Zero teminate.
-                    match result.last() {
-                        Some(0) => {}
-                        _ => {result.push(0)}
-                    }
-
-                    if result.len() < #len {
-                        result.resize(#len, 0);
-                    } else if result.len() > #len {
-                        return Err(MemoryError::InvalidRegisterData("data length is larger than the reg length".into()))
-                    }
-                },
-
-                RegisterType::Bytes => quote! {
-                    let result = data;
-                    if result.len() != #len {
-                        return Err(MemoryError::InvalidRegisterData("data length is larger than the reg length".into()));
-                    }
-                },
-
-                _ => {
-                    let write_integral = format_ident!("write_{}", ty.as_str());
-                    if ty.integral_bits() == 8 {
-                        quote! {
-                            let mut result = std::vec::Vec::with_capacity(#len);
-                            result.#write_integral(data).unwrap();
-                        }
-                    } else {
-                        quote! {
-                            let mut result = std::vec::Vec::with_capacity(#len);
-                            result.#write_integral::<#endianness>(data).unwrap();
-                        }
-                    }
-                }
-            };
-
-            quote! {
-                fn serialize(data: Self::Ty) -> MemoryResult<Vec<u8>>
-                {
-                    use cameleon_impl::byteorder::{#endianness, WriteBytesExt};
-
-                    #main
-
-                    Ok(result)
-                }
-            }
-        };
+        let parse = self.impl_parse(endianness);
+        let serialize = self.impl_serialize(endianness);
+        let write = self.impl_write(endianness);
 
         let offset = self.offset;
         let raw = quote! {
@@ -345,15 +272,214 @@ impl Register {
             }
         };
 
+        let helper_methods = self.impl_helper_methods(endianness);
+
         let ident = &self.ident;
         quote! {
+            impl #ident {
+                #helper_methods
+            }
+
             impl Register for #ident {
                 type Ty = #ty;
 
                 #parse
                 #serialize
                 #raw
+                #write
             }
+        }
+    }
+
+    fn impl_helper_methods(&self, endianness: Endianness) -> TokenStream {
+        match &self.reg_attr.ty {
+            RegisterType::BitField(bf) => bf.impl_helper_methods(endianness),
+            _ => quote! {},
+        }
+    }
+
+    fn impl_parse(&self, endianness: Endianness) -> TokenStream {
+        let ty = &self.reg_attr.ty;
+        let main = match ty {
+            RegisterType::Str => quote! {
+                let str_end = data.iter().position(|c| *c == 0)
+                    .ok_or_else(|| MemoryError::InvalidRegisterData("string reg must be null terminated".into()))?;
+                let result = std::str::from_utf8(&data[..str_end]).map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))?;
+                if !result.is_ascii() {
+                    return Err(MemoryError::InvalidRegisterData("string reg must be ASCII".into()));
+                }
+
+                Ok(result.to_string())
+            },
+
+            RegisterType::Bytes => quote! {
+                Ok(data.into())
+            },
+
+            RegisterType::BitField(bf) => {
+                let read_integral = format_ident!("read_{}", bf.ty.associated_ty());
+                let value = if bf.ty.integral_bits() == 8 {
+                    quote! {
+                        data.#read_integral().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))?
+                    }
+                } else {
+                    quote! {
+                        data.#read_integral::<#endianness>().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))?
+                    }
+                };
+                let lsb = bf.lsb(endianness);
+                let msb = bf.msb(endianness);
+                let bits_len = msb - lsb;
+
+                if bf.ty.is_signed() {
+                    quote! {
+                        let mut value = #value;
+                        value &= Self::mask();
+                        value >>= #lsb;
+                        if ((1 << #bits_len) & value) != 0 {
+                            // Sext.
+                            let ext = -1 ^ (Self::mask() >> #lsb);
+                            value |= ext;
+                        }
+                        Ok(value)
+                    }
+                } else {
+                    quote! {
+                        let mut value = #value;
+                        value &= Self::mask();
+                        value >>= #lsb;
+                        Ok(value)
+                    }
+                }
+            }
+
+            _ => {
+                let read_integral = format_ident!("read_{}", ty.associated_ty());
+                if ty.integral_bits() == 8 {
+                    quote! {
+                        data.#read_integral().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
+                    }
+                } else {
+                    quote! {
+                        data.#read_integral::<#endianness>().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
+                    }
+                }
+            }
+        };
+        quote! {
+            fn parse(mut data: &[u8]) -> MemoryResult<Self::Ty> {
+                #main
+            }
+        }
+    }
+
+    fn impl_serialize(&self, endianness: Endianness) -> TokenStream {
+        let ty = &self.reg_attr.ty;
+        let len = self.reg_attr.len();
+        let main = match ty {
+            RegisterType::Str => quote! {
+                if !data.is_ascii() {
+                    return Err(MemoryError::InvalidRegisterData("string must be ASCII string".into()))
+                }
+
+                let mut result = data.into_bytes();
+                // Zero teminate.
+                match result.last() {
+                    Some(0) => {}
+                    _ => {result.push(0)}
+                }
+
+                if result.len() < #len {
+                    result.resize(#len, 0);
+                } else if result.len() > #len {
+                    return Err(MemoryError::InvalidRegisterData("data length is larger than the reg length".into()))
+                }
+            },
+
+            RegisterType::Bytes => quote! {
+                let result = data;
+                if result.len() != #len {
+                    return Err(MemoryError::InvalidRegisterData("data length is larger than the reg length".into()));
+                }
+            },
+
+            RegisterType::BitField(ref bf) => {
+                let write_integral = format_ident!("write_{}", ty.associated_ty());
+                let serialize_to_bytes = if bf.ty.integral_bits() == 8 {
+                    quote! {
+                        let mut result = std::vec::Vec::with_capacity(#len);
+                        result.#write_integral(data).unwrap();
+                    }
+                } else {
+                    quote! {
+                        let mut result = std::vec::Vec::with_capacity(#len);
+                        result.#write_integral::<#endianness>(data).unwrap();
+                    }
+                };
+
+                quote! {
+                   let data = Self::masked_int(data)?;
+                   #serialize_to_bytes
+                }
+            }
+
+            _ => {
+                let write_integral = format_ident!("write_{}", ty.associated_ty());
+                if ty.integral_bits() == 8 {
+                    quote! {
+                        let mut result = std::vec::Vec::with_capacity(#len);
+                        result.#write_integral(data).unwrap();
+                    }
+                } else {
+                    quote! {
+                        let mut result = std::vec::Vec::with_capacity(#len);
+                        result.#write_integral::<#endianness>(data).unwrap();
+                    }
+                }
+            }
+        };
+
+        quote! {
+            fn serialize(data: Self::Ty) -> MemoryResult<Vec<u8>>
+            {
+                #main
+
+                Ok(result)
+            }
+        }
+    }
+
+    fn impl_write(&self, endianness: Endianness) -> TokenStream {
+        match &self.reg_attr.ty {
+            RegisterType::BitField(ref bf) => {
+                let read_integral = format_ident!("read_{}", bf.ty.associated_ty());
+                let write_integral = format_ident!("write_{}", bf.ty.associated_ty());
+                if bf.ty.integral_bits() == 8 {
+                    quote! {
+                        fn write(data: Self::Ty, memory: &mut[u8]) -> MemoryResult<()> {
+                            let range = Self::raw().range();
+                            let data = Self::masked_int(data)?;
+                            let original_data = memory.index(range.clone()).#read_integral().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))?;
+                            let new_data = (original_data & !Self::mask()) | data;
+                            memory.index_mut(range).#write_integral(new_data).unwrap();
+                            Ok(())
+                        }
+                    }
+                } else {
+                    quote! {
+                        fn write(data: Self::Ty, memory: &mut[u8]) -> MemoryResult<()> {
+                            let range = Self::raw().range();
+                            let data = Self::masked_int(data)?;
+                            let original_data = memory.index(range.clone()).#read_integral::<#endianness>().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))?;
+                            let new_data = (original_data & !Self::mask()) | data;
+                            memory.index_mut(range).#write_integral::<#endianness>(new_data).unwrap();
+                            Ok(())
+                        }
+                    }
+                }
+            }
+
+            _ => quote! {},
         }
     }
 
@@ -436,9 +562,10 @@ impl syn::parse::Parse for RegisterAttr {
             other => return Err(Error::new_spanned(other, "expected ty")),
         };
         ts.parse::<syn::Token![=]>()?;
-        let ty = RegisterType::from_ident(ts.parse::<syn::Ident>()?)?;
+        let ty = ts.parse::<RegisterType>()?;
 
-        if ty.is_integral() && ty.integral_bits() / 8 != len.base10_parse().unwrap() {
+        let base_ty = ty.base_ty();
+        if base_ty.is_integral() && base_ty.integral_bits() / 8 != len.base10_parse().unwrap() {
             return Err(Error::new_spanned(
                 len,
                 "specified len doesn't fit with specified ty",
@@ -506,6 +633,7 @@ enum InitValue {
     LitInt(syn::LitInt),
     Array(syn::ExprArray),
     Var(syn::Path),
+    Expr(Box<syn::Expr>),
 }
 
 impl InitValue {
@@ -531,7 +659,7 @@ impl InitValue {
                 }
             }
 
-            other => Err(Error::new_spanned(other, error_msg)),
+            other => Ok(InitValue::Expr(other.into())),
         }
     }
 }
@@ -542,6 +670,7 @@ impl quote::ToTokens for InitValue {
             InitValue::LitStr(string) => string.to_tokens(tokens),
             InitValue::LitInt(int) => int.to_tokens(tokens),
             InitValue::Array(arr) => arr.to_tokens(tokens),
+            InitValue::Expr(expr) => expr.to_tokens(tokens),
             InitValue::Var(path) => {
                 let path = prepend_super_if_needed(path);
                 path.to_tokens(tokens)
@@ -550,10 +679,11 @@ impl quote::ToTokens for InitValue {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone)]
 enum RegisterType {
     Str,
     Bytes,
+    BitField(BitField),
     U8,
     U16,
     U32,
@@ -565,31 +695,20 @@ enum RegisterType {
 }
 
 impl RegisterType {
-    fn from_ident(ident: syn::Ident) -> Result<Self> {
-        use RegisterType::*;
-        match ident {
-            _ if ident == "String" => Ok(Str),
-            _ if ident == "Bytes" => Ok(Bytes),
-            _ if ident == "u8" => Ok(U8),
-            _ if ident == "u16" => Ok(U16),
-            _ if ident == "u32" => Ok(U32),
-            _ if ident == "u64" => Ok(U64),
-            _ if ident == "i8" => Ok(I8),
-            _ if ident == "i16" => Ok(I16),
-            _ if ident == "i32" => Ok(I32),
-            _ if ident == "i64" => Ok(I64),
-            _ => Err(Error::new_spanned(
-                ident,
-                "expected String, Bytes, or primitive integral types",
-            )),
-        }
-    }
-
     fn is_integral(&self) -> bool {
         use RegisterType::*;
         match self {
-            Str | Bytes => false,
+            Str | Bytes | BitField(..) => false,
             _ => true,
+        }
+    }
+
+    fn is_signed(&self) -> bool {
+        use RegisterType::*;
+        match self {
+            I8 | I16 | I32 | I64 => true,
+            U8 | U16 | U32 | U64 => false,
+            _ => panic!(),
         }
     }
 
@@ -604,11 +723,12 @@ impl RegisterType {
         }
     }
 
-    fn as_str(&self) -> &str {
+    fn associated_ty(&self) -> &str {
         use RegisterType::*;
         match self {
             Str => "std::string::String",
             Bytes => "Vec<u8>",
+            BitField(bf) => bf.ty.associated_ty(),
             U8 => "u8",
             U16 => "u16",
             U32 => "u32",
@@ -619,11 +739,215 @@ impl RegisterType {
             I64 => "i64",
         }
     }
+
+    fn base_ty(&self) -> Self {
+        match self {
+            RegisterType::BitField(bf) => *bf.ty.clone(),
+            _ => self.clone(),
+        }
+    }
+}
+
+impl syn::parse::Parse for RegisterType {
+    fn parse(input: syn::parse::ParseStream) -> Result<Self> {
+        use RegisterType::*;
+
+        let ident = input.parse::<syn::Ident>()?;
+        let err_msg =
+            "expected String, Bytes, BitField<ty, LSB = .., MSB = ..>, or primitive integral types";
+
+        match ident {
+            _ if ident == "String" => Ok(Str),
+            _ if ident == "Bytes" => Ok(Bytes),
+            _ if ident == "u8" => Ok(U8),
+            _ if ident == "u16" => Ok(U16),
+            _ if ident == "u32" => Ok(U32),
+            _ if ident == "u64" => Ok(U64),
+            _ if ident == "i8" => Ok(I8),
+            _ if ident == "i16" => Ok(I16),
+            _ if ident == "i32" => Ok(I32),
+            _ if ident == "i64" => Ok(I64),
+            _ if ident == "BitField" => Ok(BitField(input.parse()?)),
+            _ => Err(Error::new_spanned(ident, err_msg)),
+        }
+    }
+}
+
+#[derive(Clone)]
+struct BitField {
+    ty: Box<RegisterType>,
+    lsb: syn::LitInt,
+    msb: syn::LitInt,
+}
+
+impl BitField {
+    fn lsb(&self, endianness: Endianness) -> usize {
+        let len = self.ty.integral_bits();
+        match endianness {
+            Endianness::LE => self.lsb.base10_parse().unwrap(),
+            Endianness::BE => (len - self.lsb.base10_parse::<usize>().unwrap() - 1),
+        }
+    }
+
+    fn msb(&self, endianness: Endianness) -> usize {
+        let len = self.ty.integral_bits();
+        match endianness {
+            Endianness::LE => self.msb.base10_parse().unwrap(),
+            Endianness::BE => (len - self.msb.base10_parse::<usize>().unwrap() - 1),
+        }
+    }
+
+    fn min(&self, endianness: Endianness) -> i64 {
+        if self.ty.is_signed() {
+            let lsb = self.lsb(endianness);
+            let msb = self.msb(endianness);
+            let value = 1 << (msb - lsb) as i64;
+            -value
+        } else {
+            0
+        }
+    }
+
+    fn max(&self, endianness: Endianness) -> i64 {
+        let lsb = self.lsb(endianness);
+        let msb = self.msb(endianness);
+        if self.ty.is_signed() {
+            (1 << (msb - lsb)) - 1
+        } else {
+            (1 << (msb - lsb + 1)) - 1
+        }
+    }
+
+    fn impl_helper_methods(&self, endianness: Endianness) -> TokenStream {
+        let lsb = self.lsb(endianness);
+        let msb = self.msb(endianness);
+        let ty = &self.ty;
+        let min = self.min(endianness);
+        let max = self.max(endianness);
+        let ty_bits = ty.integral_bits();
+
+        let mask = if ty.is_signed() {
+            quote! {
+                fn mask() -> #ty {
+                    let mask1 = if #ty_bits - 1 == #msb {
+                        -1
+                    } else if #ty_bits - 2 == #msb {
+                        #ty::MAX
+                    } else {
+                        (1 << #msb + 1) - 1
+                    };
+
+                    let mask2 = if #ty_bits -1 == #lsb {
+                        #ty::MAX
+                    } else {
+                        !((1 << #lsb ) - 1)
+                    };
+
+                    mask1 & mask2
+                }
+            }
+        } else {
+            quote! {
+                const fn mask() -> #ty {
+                    let mask1 = if #ty_bits - 1 == #msb {
+                        #ty::MAX
+                    } else {
+                        (1 << #msb + 1) - 1
+                    };
+                    let mask2 = !((1 << #lsb) - 1);
+                    mask1 & mask2
+                }
+            }
+        };
+
+        quote! {
+            #mask
+
+            const fn min() -> #ty {
+                #min as #ty
+            }
+
+            const fn max() -> #ty {
+                #max as #ty
+            }
+
+            fn masked_int(data: #ty) -> MemoryResult<#ty> {
+                let min = Self::min();
+                let max = Self::max();
+                if data < min  || data > max {
+                    let err_msg = format!("data doesn't fit within ({}..={})", min, max);
+                    return Err(MemoryError::InvalidRegisterData(err_msg.into()));
+                }
+
+                let mut data = data << #lsb;
+                data &= Self::mask();
+                Ok(data)
+            }
+        }
+    }
+
+    fn verify(&self, endianness: Endianness) -> Result<()> {
+        if self.lsb(endianness) > self.msb(endianness) {
+            return Err(syn::Error::new_spanned(
+                &self.lsb,
+                "expectd LSB < MSB if endianness = LE, else MSB > LSB if endianness = BE",
+            ));
+        }
+
+        let len = self.ty.integral_bits();
+        if self.msb(endianness) >= len {
+            return Err(syn::Error::new_spanned(
+                &self.msb,
+                "msb exceeds register length",
+            ));
+        }
+
+        Ok(())
+    }
+}
+
+impl syn::parse::Parse for BitField {
+    fn parse(input: syn::parse::ParseStream) -> Result<Self> {
+        input.parse::<syn::token::Lt>()?;
+
+        let ty_cursor = input.cursor();
+        let ty: RegisterType = input.parse()?;
+        if !ty.is_integral() {
+            return Err(syn::Error::new(
+                ty_cursor.span(),
+                "expected integral primitive",
+            ));
+        }
+
+        input.parse::<syn::token::Comma>()?;
+        let ident = input.parse::<syn::Ident>()?;
+        if ident != "LSB" {
+            return Err(syn::Error::new_spanned(ident, "expected LSB"));
+        }
+        input.parse::<syn::Token![=]>()?;
+        let lsb = input.parse::<syn::LitInt>()?;
+
+        input.parse::<syn::token::Comma>()?;
+        let ident = input.parse::<syn::Ident>()?;
+        if ident != "MSB" {
+            return Err(syn::Error::new_spanned(ident, "expected MSB"));
+        }
+        input.parse::<syn::Token![=]>()?;
+        let msb = input.parse::<syn::LitInt>()?;
+
+        input.parse::<syn::token::Gt>()?;
+
+        Ok(BitField {
+            ty: ty.into(),
+            lsb,
+            msb,
+        })
+    }
 }
 
 impl quote::ToTokens for RegisterType {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        syn::parse_str::<syn::Path>(self.as_str())
+        syn::parse_str::<syn::Path>(self.associated_ty())
             .unwrap()
             .to_tokens(tokens);
     }
