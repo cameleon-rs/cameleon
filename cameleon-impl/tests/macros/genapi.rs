@@ -1,6 +1,6 @@
 use cameleon_impl::memory::{genapi, *};
 
-#[genapi(xml_base = 0x10000, endianness = LE)]
+#[genapi(xml_base = 10000, endianness = LE)]
 pub enum GenApi {
     XML = r#"
 <RegisterDescription
@@ -62,6 +62,9 @@ pub enum GenApi {
 }
 
 fn main() {
+    let raw_reg = GenApi::XML::raw();
+    assert_eq!(raw_reg.offset, 10000);
+
     let raw_reg = GenApi::MyIntReg::raw();
     assert_eq!(raw_reg.offset, 20000);
     assert_eq!(raw_reg.len, 8);

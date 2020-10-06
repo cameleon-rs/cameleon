@@ -355,7 +355,7 @@ impl Register {
 
             _ => {
                 let read_integral = format_ident!("read_{}", ty.associated_ty());
-                if ty.integral_bits() == 8 {
+                if ty.numerical_bits() == 8 {
                     quote! {
                         data.#read_integral().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
                     }
@@ -425,7 +425,7 @@ impl Register {
 
             _ => {
                 let write_integral = format_ident!("write_{}", ty.associated_ty());
-                if ty.integral_bits() == 8 {
+                if ty.numerical_bits() == 8 {
                     quote! {
                         let mut result = std::vec::Vec::with_capacity(#len);
                         result.#write_integral(data).unwrap();
@@ -565,7 +565,7 @@ impl syn::parse::Parse for RegisterAttr {
         let ty = ts.parse::<RegisterType>()?;
 
         let base_ty = ty.base_ty();
-        if base_ty.is_integral() && base_ty.integral_bits() / 8 != len.base10_parse().unwrap() {
+        if base_ty.is_numerical() && base_ty.numerical_bits() / 8 != len.base10_parse().unwrap() {
             return Err(Error::new_spanned(
                 len,
                 "specified len doesn't fit with specified ty",
@@ -631,6 +631,7 @@ impl quote::ToTokens for AccessRight {
 enum InitValue {
     LitStr(syn::LitStr),
     LitInt(syn::LitInt),
+    LitFloat(syn::LitFloat),
     Array(syn::ExprArray),
     Var(syn::Path),
     Expr(Box<syn::Expr>),
@@ -643,6 +644,7 @@ impl InitValue {
             syn::Expr::Lit(lit) => match lit.lit {
                 syn::Lit::Str(lit_str) => Ok(InitValue::LitStr(lit_str)),
                 syn::Lit::Int(lit_int) => Ok(InitValue::LitInt(lit_int)),
+                syn::Lit::Float(lit_float) => Ok(InitValue::LitFloat(lit_float)),
                 other => Err(Error::new_spanned(other, error_msg)),
             },
 
@@ -669,6 +671,7 @@ impl quote::ToTokens for InitValue {
         match self {
             InitValue::LitStr(string) => string.to_tokens(tokens),
             InitValue::LitInt(int) => int.to_tokens(tokens),
+            InitValue::LitFloat(float) => float.to_tokens(tokens),
             InitValue::Array(arr) => arr.to_tokens(tokens),
             InitValue::Expr(expr) => expr.to_tokens(tokens),
             InitValue::Var(path) => {
@@ -692,10 +695,20 @@ enum RegisterType {
     I16,
     I32,
     I64,
+    F32,
+    F64,
 }
 
 impl RegisterType {
     fn is_integral(&self) -> bool {
+        use RegisterType::*;
+        match self {
+            Str | Bytes | BitField(..) | F32 | F64 => false,
+            _ => true,
+        }
+    }
+
+    fn is_numerical(&self) -> bool {
         use RegisterType::*;
         match self {
             Str | Bytes | BitField(..) => false,
@@ -723,6 +736,17 @@ impl RegisterType {
         }
     }
 
+    fn numerical_bits(&self) -> usize {
+        use RegisterType::*;
+        match self {
+            U8 | I8 => 8,
+            U16 | I16 => 16,
+            U32 | I32 | F32 => 32,
+            U64 | I64 | F64 => 64,
+            _ => panic!(),
+        }
+    }
+
     fn associated_ty(&self) -> &str {
         use RegisterType::*;
         match self {
@@ -737,6 +761,8 @@ impl RegisterType {
             I16 => "i16",
             I32 => "i32",
             I64 => "i64",
+            F32 => "f32",
+            F64 => "f64",
         }
     }
 
@@ -754,7 +780,7 @@ impl syn::parse::Parse for RegisterType {
 
         let ident = input.parse::<syn::Ident>()?;
         let err_msg =
-            "expected String, Bytes, BitField<ty, LSB = .., MSB = ..>, or primitive integral types";
+            "expected String, Bytes, BitField<ty, LSB = .., MSB = ..>, or primitive numerical types";
 
         match ident {
             _ if ident == "String" => Ok(Str),
@@ -767,6 +793,8 @@ impl syn::parse::Parse for RegisterType {
             _ if ident == "i16" => Ok(I16),
             _ if ident == "i32" => Ok(I32),
             _ if ident == "i64" => Ok(I64),
+            _ if ident == "f32" => Ok(F32),
+            _ if ident == "f64" => Ok(F64),
             _ if ident == "BitField" => Ok(BitField(input.parse()?)),
             _ => Err(Error::new_spanned(ident, err_msg)),
         }
