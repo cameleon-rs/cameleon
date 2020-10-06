@@ -60,10 +60,7 @@ impl MemoryStruct {
     }
 
     fn define_struct(&self) -> TokenStream {
-        let last_fragment = self.fragments.last().unwrap();
-        let last_fragment_size = last_fragment.size();
-        let last_fragment_base = last_fragment.base();
-        let memory_size = quote! {#last_fragment_size + #last_fragment_base};
+        let memory_size = self.memory_size();
 
         let ident = &self.ident;
         let vis = &self.vis;
@@ -82,10 +79,13 @@ impl MemoryStruct {
     fn impl_methods(&self) -> TokenStream {
         let ident = &self.ident;
         let new = self.impl_new();
+        let fragments_len = self.fragments.len();
 
         quote! {
             impl #ident {
                 #new
+
+                #[doc(hidden)]
                 fn notify_all(&self, written_range: std::ops::Range<usize>) {
 
                     for (raw_reg, observer) in &self.observers {
@@ -96,6 +96,20 @@ impl MemoryStruct {
                         }
                         observer.update();
                     }
+                }
+
+                #[doc(hidden)]
+                const fn calculate_memory_size(end_addresses: &[usize; #fragments_len]) -> usize {
+                    let mut max = end_addresses[0];
+                    let mut i = 0;
+                    while i < #fragments_len {
+                        if max < end_addresses[i] {
+                            max = end_addresses[i];
+                        }
+                        i += 1;
+                    }
+                    max
+
                 }
             }
         }
@@ -117,10 +131,7 @@ impl MemoryStruct {
                 }
 
                 fn read<T: cameleon_impl::memory::Register>(&self) -> cameleon_impl::memory::MemoryResult<T::Ty> {
-                    let range = T::raw().range();
-                    debug_assert!(self.protection.verify_address_with_range(range.clone()).is_ok());
-
-                    T::parse(&self.raw[range])
+                    T::read(&self.raw)
                 }
 
                 fn access_right<T: cameleon_impl::memory::Register>(&self) -> cameleon_impl::memory::AccessRight {
@@ -139,7 +150,6 @@ impl MemoryStruct {
                     }
 
                     self.raw[range].copy_from_slice(buf);
-
                     self.notify_all(start..end);
 
                     Ok(())
@@ -151,16 +161,8 @@ impl MemoryStruct {
 
 
                 fn write<T: cameleon_impl::memory::Register>(&mut self, data: T::Ty) -> cameleon_impl::memory::MemoryResult<()>{
-                    let raw_reg = T::raw();
-                    let data = T::serialize(data)?;
-                    let range = raw_reg.range();
-
-                    debug_assert!(raw_reg.len == data.len());
-                    debug_assert!(self.protection.verify_address_with_range(range.clone()).is_ok());
-
-                    self.raw[range.clone()].copy_from_slice(data.as_slice());
-
-                    self.notify_all(range);
+                    T::write(data, &mut self.raw)?;
+                    self.notify_all(T::raw().range());
 
                     Ok(())
                 }
@@ -183,20 +185,13 @@ impl MemoryStruct {
 
     fn impl_new(&self) -> TokenStream {
         let vis = &self.vis;
-        let last_fragment = self.fragments.last().unwrap();
-        let last_fragment_size = last_fragment.size();
-        let last_fragment_offset = last_fragment.base();
-        let memory_size = quote! {#last_fragment_size + #last_fragment_offset};
+        let memory_size = self.memory_size();
 
         let init_memory = self.fragments.iter().map(|f| {
-            let base = f.base();
-            let size = f.size();
             let ty = &f.ty;
             quote! {
-                let fragment = #ty::raw();
-                let fragment_protection = #ty::memory_protection();
-                raw[#base..#base+#size].copy_from_slice(&fragment);
-                protection.copy_from(&fragment_protection, #base);
+                #ty::init_memory_protection(&mut protection);
+                #ty::init_raw_memory(&mut raw);
             }
         });
 
@@ -211,6 +206,18 @@ impl MemoryStruct {
                     observers: std::vec::Vec::new(),
                 }
             }
+        }
+    }
+
+    fn memory_size(&self) -> TokenStream {
+        let end_addresses = self.fragments.iter().map(|f| {
+            let size = f.size();
+            let base = f.base();
+            quote! {#size + #base}
+        });
+
+        quote! {
+            Self::calculate_memory_size(&[#(#end_addresses),*])
         }
     }
 }

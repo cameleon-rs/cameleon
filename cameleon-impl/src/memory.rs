@@ -1,8 +1,8 @@
 pub use cameleon_impl_macros::{memory, register_map};
 
-pub type MemoryResult<T> = std::result::Result<T, MemoryError>;
-
 use thiserror::Error;
+
+pub type MemoryResult<T> = std::result::Result<T, MemoryError>;
 
 #[derive(Debug, Error)]
 pub enum MemoryError {
@@ -189,15 +189,6 @@ impl MemoryProtection {
         }
         Ok(())
     }
-
-    pub fn copy_from(&mut self, rhs: &Self, offset: usize) {
-        // Really slow operation.
-        // TODO: use bitwise operation to copy.
-        for i in 0..rhs.memory_size {
-            let access_right = rhs.access_right(i);
-            self.set_access_right(offset + i, access_right);
-        }
-    }
 }
 
 #[doc(hidden)]
@@ -207,6 +198,18 @@ pub trait Register {
     fn parse(data: &[u8]) -> MemoryResult<Self::Ty>;
     fn serialize(data: Self::Ty) -> MemoryResult<Vec<u8>>;
     fn raw() -> RawRegister;
+
+    fn write(data: Self::Ty, memory: &mut [u8]) -> MemoryResult<()> {
+        let data = Self::serialize(data)?;
+        let range = Self::raw().range();
+        memory[range].copy_from_slice(data.as_slice());
+        Ok(())
+    }
+
+    fn read(memory: &[u8]) -> MemoryResult<Self::Ty> {
+        let range = Self::raw().range();
+        Self::parse(&memory[range])
+    }
 }
 
 /// Represents each register address and length.
