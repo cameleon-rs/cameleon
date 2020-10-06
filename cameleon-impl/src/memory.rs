@@ -1,4 +1,4 @@
-pub use cameleon_impl_macros::{memory, register_map};
+pub use cameleon_impl_macros::{genapi, memory, register_map};
 
 use thiserror::Error;
 
