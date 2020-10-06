@@ -80,7 +80,6 @@ impl XML {
                         regs.push(self.expand_masked_int_reg(node)?);
                     }
                 }
-                FloatReg(node) => todo!(),
                 _ => {}
             };
         }

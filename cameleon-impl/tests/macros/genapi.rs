@@ -20,6 +20,15 @@ pub enum GenApi {
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:schemaLocation="http://www.genicam.org/GenApi/Version_1_0 GenApiSchema.xsd">
 
+            <Category Name="Root" NameSpace="Standard">
+                <pFeature>MyIntReg</pFeature>
+                <pFeature>MyMaskedIntReg</pFeature>
+                <pFeature>MyFloatReg</pFeature>
+                <pFeature>MyStringReg</pFeature>
+                <pFeature>MyStructEntry1</pFeature>
+                <pFeature>MyStructEntry2</pFeature>
+            </Category>
+
             <IntReg Name="MyIntReg">
               <Address>20000</Address>
               <Length>8</Length>
@@ -33,6 +42,12 @@ pub enum GenApi {
               <LSB>3</LSB>
               <MSB>7</MSB>
             </MaskedIntReg>
+
+            <FloatReg Name="MyFloatReg">
+              <Address>1000000</Address>
+              <Length>4</Length>
+              <pPort>Device</pPort>
+            </FloatReg>
 
             <StringReg Name="MyStringReg">
               <Address>20016</Address>
@@ -71,6 +86,10 @@ fn main() {
 
     let raw_reg = GenApi::MyMaskedIntReg::raw();
     assert_eq!(raw_reg.offset, 20008);
+    assert_eq!(raw_reg.len, 4);
+
+    let raw_reg = GenApi::MyFloatReg::raw();
+    assert_eq!(raw_reg.offset, 1000000);
     assert_eq!(raw_reg.len, 4);
 
     let raw_reg = GenApi::MyStringReg::raw();
