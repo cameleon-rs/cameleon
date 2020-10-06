@@ -25,6 +25,7 @@ pub enum GenApi {
                 <pFeature>MyMaskedIntReg</pFeature>
                 <pFeature>MyFloatReg</pFeature>
                 <pFeature>MyStringReg</pFeature>
+                <pFeature>MyRegister</pFeature>
                 <pFeature>MyStructEntry1</pFeature>
                 <pFeature>MyStructEntry2</pFeature>
             </Category>
@@ -54,6 +55,12 @@ pub enum GenApi {
               <Length>128</Length>
               <pPort>Device</pPort>
             </StringReg>
+
+            <Register Name="MyRegister">
+              <Address>21000</Address>
+              <Length>64</Length>
+              <pPort>Device</pPort>
+            </Register>
 
             <StructReg Comment="Struct Entry Comment">
                 <Address>30000</Address>
@@ -95,6 +102,10 @@ fn main() {
     let raw_reg = GenApi::MyStringReg::raw();
     assert_eq!(raw_reg.offset, 20016);
     assert_eq!(raw_reg.len, 128);
+
+    let raw_reg = GenApi::MyRegister::raw();
+    assert_eq!(raw_reg.offset, 21000);
+    assert_eq!(raw_reg.len, 64);
 
     let raw_reg = GenApi::MyStructEntry1::raw();
     assert_eq!(raw_reg.offset, 30000);

@@ -74,6 +74,7 @@ impl XML {
                 MaskedIntReg(node) => regs.push(self.expand_masked_int_reg(node)?),
                 FloatReg(node) => regs.push(self.expand_float_reg(node)?),
                 StringReg(node) => regs.push(self.expand_string_reg(node)?),
+                Register(node) => regs.push(self.expand_reg(node)?),
                 StructReg(node) => {
                     let masked_int_regs: Vec<_> = node.to_masked_int_regs();
                     for node in &masked_int_regs {
@@ -148,6 +149,18 @@ impl XML {
     }
 
     fn expand_string_reg(&self, node: &genapi_parser::StringRegNode) -> Result<TokenStream> {
+        let node_base = node.node_base();
+        let name = node_base.name();
+        let (addr, len, access) = self.register_attr(name, node.register_base())?;
+
+        let name = format_ident!("{}", name);
+        Ok(quote! {
+            #[register(len = #len, access = #access, ty = Bytes, offset = #addr)]
+            #name
+        })
+    }
+
+    fn expand_reg(&self, node: &genapi_parser::RegisterNode) -> Result<TokenStream> {
         let node_base = node.node_base();
         let name = node_base.name();
         let (addr, len, access) = self.register_attr(name, node.register_base())?;
