@@ -64,8 +64,8 @@ jobs:
           - windows-latest
         rust:
           - stable
-          - beta
-          - nightly
+          #- beta
+          #- nightly
 
     steps:
       - uses: actions/checkout@v2
@@ -94,8 +94,8 @@ jobs:
           - windows-latest
         rust:
           - stable
-          - beta
-          - nightly
+          # - beta
+          # - nightly
 
     steps:
       - uses: actions/checkout@v2
