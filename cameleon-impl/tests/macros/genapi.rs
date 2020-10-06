@@ -34,6 +34,12 @@ pub enum GenApi {
               <MSB>7</MSB>
             </MaskedIntReg>
 
+            <StringReg Name="MyStringReg">
+              <Address>20016</Address>
+              <Length>128</Length>
+              <pPort>Device</pPort>
+            </StringReg>
+
 
  </RegisterDescription>
 "#,
@@ -47,4 +53,8 @@ fn main() {
     let raw_reg = GenApi::MyMaskedIntReg::raw();
     assert_eq!(raw_reg.offset, 20008);
     assert_eq!(raw_reg.len, 4);
+
+    let raw_reg = GenApi::MyStringReg::raw();
+    assert_eq!(raw_reg.offset, 20016);
+    assert_eq!(raw_reg.len, 128);
 }
