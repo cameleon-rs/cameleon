@@ -164,8 +164,12 @@ impl RegisterMap {
     }
 
     fn size(&self) -> usize {
-        let last_field = self.regs.last().unwrap();
-        last_field.offset + last_field.reg_attr.len()
+        let mut max_size = 0;
+        for reg in &self.regs {
+            let size = reg.offset + reg.reg_attr.len();
+            max_size = std::cmp::max(max_size, size);
+        }
+        max_size
     }
 
     fn modify_visibility(&self) -> syn::Visibility {
