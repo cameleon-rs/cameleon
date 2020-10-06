@@ -74,6 +74,12 @@ impl XML {
                 MaskedIntReg(node) => regs.push(self.expand_masked_int_reg(node)?),
                 FloatReg(node) => regs.push(self.expand_float_reg(node)?),
                 StringReg(node) => regs.push(self.expand_string_reg(node)?),
+                StructReg(node) => {
+                    let masked_int_regs: Vec<_> = node.to_masked_int_regs();
+                    for node in &masked_int_regs {
+                        regs.push(self.expand_masked_int_reg(node)?);
+                    }
+                }
                 _ => todo!(),
             };
         }

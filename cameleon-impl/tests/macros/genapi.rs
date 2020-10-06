@@ -40,6 +40,22 @@ pub enum GenApi {
               <pPort>Device</pPort>
             </StringReg>
 
+            <StructReg Comment="Struct Entry Comment">
+                <Address>30000</Address>
+                <Length>4</Length>
+                <pPort>Device</pPort>
+                <Endianess>BigEndian</Endianess>
+
+                <StructEntry Name="MyStructEntry1">
+                    <Bit>24</Bit>
+                </StructEntry>
+
+                <StructEntry Name="MyStructEntry2">
+                    <LSB>4</LSB>
+                    <MSB>4</MSB>
+                </StructEntry>
+            </StructReg>
+
 
  </RegisterDescription>
 "#,
@@ -57,4 +73,12 @@ fn main() {
     let raw_reg = GenApi::MyStringReg::raw();
     assert_eq!(raw_reg.offset, 20016);
     assert_eq!(raw_reg.len, 128);
+
+    let raw_reg = GenApi::MyStructEntry1::raw();
+    assert_eq!(raw_reg.offset, 30000);
+    assert_eq!(raw_reg.len, 4);
+
+    let raw_reg = GenApi::MyStructEntry2::raw();
+    assert_eq!(raw_reg.offset, 30000);
+    assert_eq!(raw_reg.len, 4);
 }
