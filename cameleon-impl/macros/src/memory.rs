@@ -60,8 +60,6 @@ impl MemoryStruct {
     }
 
     fn define_struct(&self) -> TokenStream {
-        let memory_size = self.memory_size();
-
         let ident = &self.ident;
         let vis = &self.vis;
         let attrs = &self.attrs;
@@ -69,7 +67,7 @@ impl MemoryStruct {
         quote! {
             #(#attrs)*
             #vis struct #ident {
-                raw: [u8; #memory_size],
+                raw: Vec<u8>,
                 protection: cameleon_impl::memory::MemoryProtection,
                 observers: std::vec::Vec<(cameleon_impl::memory::RawRegister, std::boxed::Box<dyn cameleon_impl::memory::MemoryObserver>)>,
             }
@@ -197,7 +195,7 @@ impl MemoryStruct {
 
         quote! {
             #vis fn new() -> Self {
-                let mut raw = [0; #memory_size];
+                let mut raw = vec![0; #memory_size];
                 let mut protection = cameleon_impl::memory::MemoryProtection::new(#memory_size);
                 #(#init_memory)*
                 Self {

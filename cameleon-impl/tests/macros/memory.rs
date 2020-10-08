@@ -59,6 +59,12 @@ enum SBRM {
 
     #[register(len = 8, access = RO, ty = i64)]
     TestI64 = i64::MIN,
+
+    #[register(len = 4, access = RO, ty = f32)]
+    TestF32 = 0.291,
+
+    #[register(len = 8, access = RO, ty = f64)]
+    TestF64 = 0.27,
 }
 
 fn main() {
@@ -87,10 +93,15 @@ fn main() {
     assert_eq!(memory.read::<SBRM::TestI16>().unwrap(), i16::MIN);
     assert_eq!(memory.read::<SBRM::TestI32>().unwrap(), i32::MIN);
     assert_eq!(memory.read::<SBRM::TestI64>().unwrap(), i64::MIN);
+    assert!((memory.read::<SBRM::TestF32>().unwrap() - 0.291).abs() < f32::EPSILON);
+    assert!((memory.read::<SBRM::TestF64>().unwrap() - 0.27).abs() < f64::EPSILON);
 
     // Test write.
     memory.write::<SBRM::TestI32>(101).unwrap();
     assert_eq!(memory.read::<SBRM::TestI32>().unwrap(), 101);
+
+    memory.write::<SBRM::TestF64>(0.1323).unwrap();
+    assert!((memory.read::<SBRM::TestF64>().unwrap() - 0.1323).abs() < f64::EPSILON);
 
     memory
         .write::<ABRM::ManufacturerName>("New name".into())
