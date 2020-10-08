@@ -155,7 +155,7 @@ impl XML {
 
         let name = format_ident!("{}", name);
         Ok(quote! {
-            #[register(len = #len, access = #access, ty = Bytes, offset = #addr)]
+            #[register(len = #len, access = #access, ty = String, offset = #addr)]
             #name
         })
     }
