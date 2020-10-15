@@ -66,6 +66,16 @@ impl GenApiDefinition {
         let xml_length = self.xml.xml_str.value().as_bytes().len();
         let xml_address = self.xml.xml_base_address()?;
 
+        let schema_major = self.xml.reg_desc.schema_major_version();
+        let schema_minor = self.xml.reg_desc.schema_minor_version();
+        let schema_subminor = self.xml.reg_desc.schema_subminor_version();
+
+        let genapi_major = self.xml.reg_desc.major_version();
+        let genapi_minor = self.xml.reg_desc.minor_version();
+        let genapi_subminor = self.xml.reg_desc.subminor_version();
+
+        let vendor_name = self.xml.reg_desc.vendor_name();
+
         Ok(quote! {
             #vis_inside_mod const fn xml_address() -> u64 {
                 #xml_address as u64
@@ -73,6 +83,18 @@ impl GenApiDefinition {
 
             #vis_inside_mod const fn xml_length() -> usize {
                 #xml_length as usize
+            }
+
+            #vis_inside_mod const fn vendor_name() -> &'static str {
+                &#vendor_name
+            }
+
+            #vis_inside_mod fn schema_version() -> cameleon_impl::semver::Version {
+                cameleon_impl::semver::Version::new(#schema_major, #schema_minor, #schema_subminor)
+            }
+
+            #vis_inside_mod fn genapi_version() -> cameleon_impl::semver::Version {
+                cameleon_impl::semver::Version::new(#genapi_major, #genapi_minor, #genapi_subminor)
             }
         })
     }
@@ -83,7 +105,6 @@ struct XML {
     vis: syn::Visibility,
     xml_tag: syn::Ident,
     xml_str: syn::LitStr,
-    #[allow(unused)]
     reg_desc: genapi_parser::RegisterDescription,
 }
 

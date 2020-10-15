@@ -7,7 +7,7 @@ pub struct Memory {
 
 #[genapi(endianness = LE)]
 pub enum GenApi {
-    XML = r#"
+    Xml = r#"
 <RegisterDescription
     ModelName="CameleonModel"
     VendorName="CameleonVendor"
@@ -176,6 +176,15 @@ fn main() {
 
     let xml_length = GenApi::xml_length();
     assert_eq!(xml_length, xml_str.len());
+
+    let genapi_version = GenApi::genapi_version();
+    assert_eq!(genapi_version, semver::Version::new(1, 2, 3));
+
+    let schema_version = GenApi::schema_version();
+    assert_eq!(schema_version, semver::Version::new(1, 1, 0));
+
+    let vendor_name = GenApi::vendor_name();
+    assert_eq!(vendor_name, "CameleonVendor");
 
     let raw_reg = GenApi::MyIntReg::raw();
     assert_eq!(raw_reg.offset, 20000);
