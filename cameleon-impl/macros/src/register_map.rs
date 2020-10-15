@@ -2,13 +2,15 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{spanned::Spanned, Error, Result};
 
+use super::util::modify_visibility;
+
 pub(super) fn expand(
     args: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> Result<proc_macro::TokenStream> {
     let register_enum = RegisterMap::parse(args, input)?;
 
-    let expanded_module = register_enum.define_module();
+    let expanded_module = register_enum.define_module()?;
 
     Ok(proc_macro::TokenStream::from(quote! {
             #expanded_module
@@ -59,12 +61,12 @@ impl RegisterMap {
         })
     }
 
-    fn define_module(&self) -> TokenStream {
+    fn define_module(&self) -> Result<TokenStream> {
         let mod_name = &self.ident;
         let vis = &self.vis;
         let attrs = &self.attrs;
 
-        let vis_inside_mod = self.modify_visibility();
+        let vis_inside_mod = modify_visibility(vis)?;
 
         let structs = self.regs.iter().map(|reg| {
             let ident = &reg.ident;
@@ -75,31 +77,39 @@ impl RegisterMap {
             }
         });
 
-        let init_raw_memory = self.impl_init_raw_memory();
-        let init_memory_protection = self.impl_init_memory_protection();
-        let base = self.const_base();
-        let size = self.const_size();
+        let init_raw_memory = self.impl_init_raw_memory()?;
+        let init_memory_protection = self.impl_init_memory_protection()?;
+        let base = self.const_base()?;
+        let size = self.const_size()?;
         let impl_register = self.impl_register();
 
-        quote! {
-            #(#attrs)*
-            #[allow(non_snake_case)]
-            #[allow(clippy::string_lit_as_bytes)]
-            #vis mod #mod_name {
-                use std::{convert::TryInto, ops::{Index, IndexMut}};
+        let impls = quote! {
+            use std::{convert::TryInto, ops::{Index, IndexMut}};
 
-                use cameleon_impl::{memory::*, byteorder::{LE, BE, WriteBytesExt, ReadBytesExt}};
+            use cameleon_impl::{memory::*, byteorder::{LE, BE, WriteBytesExt, ReadBytesExt}};
 
-                use super::*;
+            use super::*;
 
 
-                #base
-                #size
-                #init_raw_memory
-                #init_memory_protection
-                #impl_register
-                #(#structs)*
-            }
+            #base
+            #size
+            #init_raw_memory
+            #init_memory_protection
+            #impl_register
+            #(#structs)*
+        };
+
+        if self.args.from_genapi_expansion {
+            Ok(impls)
+        } else {
+            Ok(quote! {
+                #(#attrs)*
+                #[allow(non_snake_case)]
+                #[allow(clippy::string_lit_as_bytes)]
+                #vis mod #mod_name {
+                    #impls
+                }
+            })
         }
     }
 
@@ -114,7 +124,7 @@ impl RegisterMap {
         }
     }
 
-    fn impl_init_memory_protection(&self) -> TokenStream {
+    fn impl_init_memory_protection(&self) -> Result<TokenStream> {
         let set_access_right = self.regs.iter().map(|reg| {
             let ident = &reg.ident;
             let access_right = &reg.reg_attr.access;
@@ -124,47 +134,47 @@ impl RegisterMap {
             }
         });
 
-        let vis = self.modify_visibility();
-        quote! {
+        let vis = modify_visibility(&self.vis)?;
+        Ok(quote! {
             #vis fn init_memory_protection(memory_protection: &mut MemoryProtection) {
                 #(#set_access_right)*
             }
-        }
+        })
     }
 
-    fn impl_init_raw_memory(&self) -> TokenStream {
+    fn impl_init_raw_memory(&self) -> Result<TokenStream> {
         let memory_ident = format_ident!("memory");
         let mut writes = vec![];
         for reg in &self.regs {
             writes.push(reg.init_reg(&memory_ident));
         }
 
-        let vis = self.modify_visibility();
-        quote! {
+        let vis = modify_visibility(&self.vis)?;
+        Ok(quote! {
             #vis fn init_raw_memory(#memory_ident: &mut [u8]) {
                 #(#writes)*
             }
-        }
+        })
     }
 
-    fn const_base(&self) -> TokenStream {
+    fn const_base(&self) -> Result<TokenStream> {
         let base = &self.args.base;
-        let vis = self.modify_visibility();
-        quote! {
+        let vis = modify_visibility(&self.vis)?;
+        Ok(quote! {
             #vis const fn base() -> usize {
                 #base as usize
             }
-        }
+        })
     }
 
-    fn const_size(&self) -> TokenStream {
+    fn const_size(&self) -> Result<TokenStream> {
         let size = self.size();
-        let vis = self.modify_visibility();
-        quote! {
+        let vis = modify_visibility(&self.vis)?;
+        Ok(quote! {
             #vis const fn size() -> usize {
                 #size
             }
-        }
+        })
     }
 
     fn size(&self) -> usize {
@@ -174,26 +184,6 @@ impl RegisterMap {
             max_size = std::cmp::max(max_size, size);
         }
         max_size
-    }
-
-    fn modify_visibility(&self) -> syn::Visibility {
-        use syn::Visibility::*;
-        match &self.vis {
-            Public(_) | Crate(_) => self.vis.clone(),
-            Inherited => syn::parse_str("pub(super)").unwrap(),
-            Restricted(restricted) => {
-                let original = restricted.path.get_ident().unwrap();
-                if original == "crate" {
-                    syn::parse_str("pub(crate)").unwrap()
-                } else if original == "super" {
-                    syn::parse_str("pub(in super::super)").unwrap()
-                } else if original == "self" {
-                    syn::parse_str("pub(super)").unwrap()
-                } else {
-                    unreachable!();
-                }
-            }
-        }
     }
 }
 
@@ -981,6 +971,7 @@ impl quote::ToTokens for RegisterType {
 struct Args {
     base: Base,
     endianness: Endianness,
+    from_genapi_expansion: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -1068,7 +1059,20 @@ impl syn::parse::Parse for Args {
             ));
         };
 
-        Ok(Self { base, endianness })
+        let from_genapi_expansion = if input.peek(syn::Token![,]) {
+            input.parse::<syn::Token![,]>().unwrap();
+            let ident = input.parse::<syn::Ident>()?;
+            assert_eq!(ident, "genapi");
+            true
+        } else {
+            false
+        };
+
+        Ok(Self {
+            base,
+            endianness,
+            from_genapi_expansion,
+        })
     }
 }
 

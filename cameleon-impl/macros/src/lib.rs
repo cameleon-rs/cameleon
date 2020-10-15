@@ -1,6 +1,7 @@
 mod genapi;
 mod memory;
 mod register_map;
+mod util;
 
 #[proc_macro_attribute]
 pub fn register_map(

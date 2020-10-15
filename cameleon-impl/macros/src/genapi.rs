@@ -1,9 +1,11 @@
-use cameleon_impl_genapi_parser as genapi_parser;
-use genapi_parser::register_node_elem;
-
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{Error, Result};
+
+use cameleon_impl_genapi_parser as genapi_parser;
+use genapi_parser::register_node_elem;
+
+use super::util::modify_visibility;
 
 pub(super) fn expand(
     args: proc_macro::TokenStream,
@@ -30,16 +32,47 @@ impl GenApiDefinition {
     }
 
     fn expand(&self) -> Result<TokenStream> {
+        let vis = &self.xml.vis;
+        let ident = &self.xml.ident;
+        let register = self.expand_register()?;
+        let genapi_util = self.expand_genapi_util()?;
+
+        Ok(quote! {
+            #[allow(non_snake_case)]
+            #[allow(clippy::string_lit_as_bytes)]
+            #vis mod #ident {
+                #register
+                #genapi_util
+            }
+        })
+    }
+
+    fn expand_register(&self) -> Result<TokenStream> {
         let ident = &self.xml.ident;
         let vis = &self.xml.vis;
         let endianness = &self.args.endianness;
-
-        let regs = self.xml.expand_registers(&self.args)?;
+        let regs = self.xml.expand_registers()?;
 
         Ok(quote! {
-            #[cameleon_impl::memory::register_map(base = 0, endianness = #endianness)]
+            #[cameleon_impl::memory::register_map(base = 0, endianness = #endianness, genapi)]
             #vis enum #ident {
                 #(#regs,)*
+            }
+        })
+    }
+
+    fn expand_genapi_util(&self) -> Result<TokenStream> {
+        let vis_inside_mod = modify_visibility(&self.xml.vis)?;
+        let xml_length = self.xml.xml_str.value().as_bytes().len();
+        let xml_address = self.xml.xml_base_address()?;
+
+        Ok(quote! {
+            #vis_inside_mod const fn xml_address() -> u64 {
+                #xml_address as u64
+            }
+
+            #vis_inside_mod const fn xml_length() -> usize {
+                #xml_length as usize
             }
         })
     }
@@ -55,9 +88,9 @@ struct XML {
 }
 
 impl XML {
-    fn expand_registers(&self, args: &Args) -> Result<Vec<TokenStream>> {
+    fn expand_registers(&self) -> Result<Vec<TokenStream>> {
         let mut registers = self.expand_reg_desc()?;
-        registers.push(self.expand_xml(args));
+        registers.push(self.expand_xml()?);
 
         Ok(registers)
     }
@@ -88,16 +121,16 @@ impl XML {
         Ok(regs)
     }
 
-    fn expand_xml(&self, args: &Args) -> TokenStream {
+    fn expand_xml(&self) -> Result<TokenStream> {
         let xml_tag = &self.xml_tag;
         let xml_str = &self.xml_str;
         let xml_str_len = self.xml_str.value().as_bytes().len();
-        let xml_base = &args.xml_base;
+        let xml_base = self.xml_base_address()?;
 
-        quote! {
+        Ok(quote! {
             #[register(len = #xml_str_len, access = RO, ty = Bytes, offset = #xml_base)]
-            #xml_tag = #xml_str.as_bytes().into()
-        }
+             #xml_tag = #xml_str.as_bytes().into()
+        })
     }
 
     fn expand_int_reg(&self, node: &genapi_parser::IntRegNode) -> Result<TokenStream> {
@@ -247,6 +280,41 @@ impl XML {
         }
     }
 
+    fn xml_base_address(&self) -> Result<i64> {
+        use genapi_parser::NodeKind::*;
+
+        let mut xml_base = 0;
+        macro_rules! maximum_xml_base {
+            ($xml_base: ident, $node: ident) => {{
+                let node_base = $node.node_base();
+                let name = node_base.name();
+                let (addr, len, _) = self.register_attr(name, $node.register_base())?;
+                if addr + len > $xml_base {
+                    $xml_base = addr + len;
+                }
+            }};
+        }
+
+        for node in self.reg_desc.nodes() {
+            match node {
+                IntReg(node) => maximum_xml_base!(xml_base, node),
+                MaskedIntReg(node) => maximum_xml_base!(xml_base, node),
+                FloatReg(node) => maximum_xml_base!(xml_base, node),
+                StringReg(node) => maximum_xml_base!(xml_base, node),
+                Register(node) => maximum_xml_base!(xml_base, node),
+                StructReg(node) => {
+                    let masked_int_regs: Vec<_> = node.to_masked_int_regs();
+                    for node in &masked_int_regs {
+                        maximum_xml_base!(xml_base, node)
+                    }
+                }
+                _ => {}
+            };
+        }
+
+        Ok(xml_base)
+    }
+
     fn xml_err(&self, name: &str, msg: &str) -> Error {
         Error::new_spanned(&self.xml_str, format! {"{}: {}", name, msg})
     }
@@ -284,21 +352,13 @@ impl syn::parse::Parse for XML {
 }
 
 struct Args {
-    xml_base: syn::LitInt,
     endianness: syn::Ident,
 }
 
 impl syn::parse::Parse for Args {
     fn parse(input: syn::parse::ParseStream) -> Result<Self> {
-        let err_msg = "expected `#[register_map(xml_base = .., endianness = ..)]`";
-        let ident = input.parse::<syn::Ident>()?;
-        if ident != "xml_base" {
-            return Err(Error::new_spanned(ident, err_msg));
-        }
-        input.parse::<syn::Token![=]>()?;
-        let xml_base = input.parse()?;
+        let err_msg = "expected `#[register_map(endianness = ..)]`";
 
-        input.parse::<syn::Token![,]>()?;
         let ident = input.parse::<syn::Ident>()?;
         if ident != "endianness" {
             return Err(Error::new_spanned(ident, err_msg));
@@ -306,9 +366,6 @@ impl syn::parse::Parse for Args {
         input.parse::<syn::Token![=]>()?;
         let endianness = input.parse()?;
 
-        Ok(Self {
-            xml_base,
-            endianness,
-        })
+        Ok(Self { endianness })
     }
 }

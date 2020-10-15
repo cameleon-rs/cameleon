@@ -5,7 +5,7 @@ pub struct Memory {
     gen_api: GenApi,
 }
 
-#[genapi(xml_base = 10000, endianness = LE)]
+#[genapi(endianness = LE)]
 pub enum GenApi {
     XML = r#"
 <RegisterDescription
@@ -89,42 +89,7 @@ pub enum GenApi {
 }
 
 fn main() {
-    let raw_reg = GenApi::XML::raw();
-    assert_eq!(raw_reg.offset, 10000);
-
-    let raw_reg = GenApi::MyIntReg::raw();
-    assert_eq!(raw_reg.offset, 20000);
-    assert_eq!(raw_reg.len, 8);
-
-    let raw_reg = GenApi::MyMaskedIntReg::raw();
-    assert_eq!(raw_reg.offset, 20008);
-    assert_eq!(raw_reg.len, 4);
-
-    let raw_reg = GenApi::MyFloatReg::raw();
-    assert_eq!(raw_reg.offset, 1000000);
-    assert_eq!(raw_reg.len, 4);
-
-    let raw_reg = GenApi::MyStringReg::raw();
-    assert_eq!(raw_reg.offset, 20016);
-    assert_eq!(raw_reg.len, 128);
-
-    let raw_reg = GenApi::MyRegister::raw();
-    assert_eq!(raw_reg.offset, 21000);
-    assert_eq!(raw_reg.len, 64);
-
-    let raw_reg = GenApi::MyStructEntry1::raw();
-    assert_eq!(raw_reg.offset, 30000);
-    assert_eq!(raw_reg.len, 4);
-
-    let raw_reg = GenApi::MyStructEntry2::raw();
-    assert_eq!(raw_reg.offset, 30000);
-    assert_eq!(raw_reg.len, 4);
-
-    let memory = Memory::new();
-
-    assert_eq!(
-        memory.read::<GenApi::XML>().unwrap(),
-        r#"
+    let xml_str = r#"
 <RegisterDescription
     ModelName="CameleonModel"
     VendorName="CameleonVendor"
@@ -203,7 +168,44 @@ fn main() {
 
 </RegisterDescription>
 "#
-        .as_bytes()
-        .to_owned()
-    );
+    .as_bytes()
+    .to_owned();
+
+    let xml_address = GenApi::xml_address();
+    assert_eq!(xml_address, 1000004);
+
+    let xml_length = GenApi::xml_length();
+    assert_eq!(xml_length, xml_str.len());
+
+    let raw_reg = GenApi::MyIntReg::raw();
+    assert_eq!(raw_reg.offset, 20000);
+    assert_eq!(raw_reg.len, 8);
+
+    let raw_reg = GenApi::MyMaskedIntReg::raw();
+    assert_eq!(raw_reg.offset, 20008);
+    assert_eq!(raw_reg.len, 4);
+
+    let raw_reg = GenApi::MyFloatReg::raw();
+    assert_eq!(raw_reg.offset, 1000000);
+    assert_eq!(raw_reg.len, 4);
+
+    let raw_reg = GenApi::MyStringReg::raw();
+    assert_eq!(raw_reg.offset, 20016);
+    assert_eq!(raw_reg.len, 128);
+
+    let raw_reg = GenApi::MyRegister::raw();
+    assert_eq!(raw_reg.offset, 21000);
+    assert_eq!(raw_reg.len, 64);
+
+    let raw_reg = GenApi::MyStructEntry1::raw();
+    assert_eq!(raw_reg.offset, 30000);
+    assert_eq!(raw_reg.len, 4);
+
+    let raw_reg = GenApi::MyStructEntry2::raw();
+    assert_eq!(raw_reg.offset, 30000);
+    assert_eq!(raw_reg.len, 4);
+
+    let memory = Memory::new();
+
+    assert_eq!(&memory.read::<GenApi::XML>().unwrap(), &xml_str);
 }
