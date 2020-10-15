@@ -2,11 +2,11 @@ use cameleon_impl::memory::{genapi, memory};
 
 #[memory]
 pub(super) struct Memory {
-    genapi: GenAPI,
+    genapi: GenApi,
 }
 
-#[genapi(xml_base = 1184, endianness = LE)]
-pub(super) enum GenAPI {
+#[genapi(endianness = LE)]
+pub(super) enum GenApi {
     XML = r#"<RegisterDescription
     ModelName="CameleonGenTLSystemModule"
     VendorName="CameleonProjectDevelopers"

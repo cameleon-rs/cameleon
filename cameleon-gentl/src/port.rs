@@ -48,13 +48,13 @@ pub trait Port {
     /// Writes a number of bytes at the given address to the Port. This is the global
     /// GenICam GenApi write access function for all ports implemented in the GenTL
     /// implementation.
-    fn write(&self, address: u64, data: &[u8]) -> PortResult<usize>;
+    fn write(&mut self, address: u64, data: &[u8]) -> PortResult<()>;
 
     /// Get detailed port information.
-    fn port_info(&self) -> PortResult<PortInfo>;
+    fn port_info(&self) -> &PortInfo;
 
     /// Get available xml infos of the port.
-    fn xml_infos(&self) -> PortResult<Vec<XmlInfo>>;
+    fn xml_infos(&self) -> &[XmlInfo];
 }
 
 pub struct PortInfo {
