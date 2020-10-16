@@ -15,7 +15,7 @@ impl SystemModule {
         let port_info = PortInfo {
             id: "Cameleon System Module".into(),
             vendor: memory::GenApi::vendor_name().into(),
-            tl_type: TLType::Mixed,
+            tl_type: TlType::Mixed,
             module_type: ModuleType::System,
             endianness: Endianness::LE,
             access: PortAccess::RW,

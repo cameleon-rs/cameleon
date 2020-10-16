@@ -31,7 +31,7 @@ pub struct PortInfo {
     pub vendor: String,
 
     /// Transport layer technology that is supported in the module.
-    pub tl_type: TLType,
+    pub tl_type: TlType,
 
     /// GenTL Module the port refers to.
     pub module_type: ModuleType,
@@ -50,33 +50,21 @@ pub struct PortInfo {
     pub port_name: String,
 }
 
-pub enum TLType {
-    /// GigE Vision.
-    GEV,
-
+pub enum TlType {
     /// Camera Link.
-    CL,
+    CameraLink,
 
-    /// IIDC 1394.
-    IIDC,
-
-    /// USB video class.
-    UVC,
+    /// Camera Link High Speed.
+    CameraLinkHS,
 
     /// CoaXPress.
-    CXP,
+    CoaXPress,
 
-    /// Camera Link HS.
-    CLHS,
+    /// GigE Vision.
+    GigEVision,
 
-    /// USB3 Vision Standard.
-    U3V,
-
-    /// Generic Ethernet.
-    Ethernet,
-
-    /// PCI/PCIe
-    PCI,
+    /// USB3 Vision.
+    USB3Vision,
 
     /// This type is only valid for the System module in case the different Interface modules with a single system are of different types.
     /// All other modules must be of a defined type.
