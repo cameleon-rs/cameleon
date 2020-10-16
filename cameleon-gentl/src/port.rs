@@ -1,54 +1,17 @@
-use cameleon_impl::memory::MemoryError;
 use semver::Version;
 
-use thiserror::Error;
-
-#[derive(Error, Debug)]
-pub enum PortError {
-    /// The handle isn't opend.
-    #[error("the handle isn't opend")]
-    NotOpend,
-
-    /// The access to the requested register address is denied because the register is not writable
-    /// or because the Port module is opened in a way that it does not allow write access.
-    #[error("the access to the requested register addresss is denied")]
-    AccessDenied,
-
-    /// There is no register with the provided address.
-    #[error("there is no register with the provided address")]
-    InvalidAddress,
-
-    /// An invalid value has been written.
-    #[error("An invalid value has been written: {}", 0)]
-    InvalidValue(std::borrow::Cow<'static, str>),
-
-    /// Communication error or connection lost.
-    #[error("Communication error or connection lost: {}", 0)]
-    IoError(Box<dyn std::error::Error>),
-}
-
-impl From<MemoryError> for PortError {
-    fn from(err: MemoryError) -> Self {
-        match err {
-            MemoryError::AddressNotReadable | MemoryError::AddressNotWritable => Self::AccessDenied,
-            MemoryError::InvalidAddress => Self::InvalidAddress,
-            MemoryError::InvalidRegisterData(cause) => Self::InvalidValue(cause),
-        }
-    }
-}
-
-pub type PortResult<T> = std::result::Result<T, PortError>;
+use super::GenTlResult;
 
 pub trait Port {
     /// Reads a number of bytes from a given address from the Port. This is the global
     /// GenICam GenApi read access function for all ports implemented in the GenTL
     /// implementation.
-    fn read(&self, address: u64, size: usize) -> PortResult<Vec<u8>>;
+    fn read(&self, address: u64, size: usize) -> GenTlResult<Vec<u8>>;
 
     /// Writes a number of bytes at the given address to the Port. This is the global
     /// GenICam GenApi write access function for all ports implemented in the GenTL
     /// implementation.
-    fn write(&mut self, address: u64, data: &[u8]) -> PortResult<()>;
+    fn write(&mut self, address: u64, data: &[u8]) -> GenTlResult<()>;
 
     /// Get detailed port information.
     fn port_info(&self) -> &PortInfo;

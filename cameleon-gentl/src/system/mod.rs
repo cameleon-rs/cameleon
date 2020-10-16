@@ -1,6 +1,6 @@
 use cameleon_impl::memory::prelude::*;
 
-use super::port::*;
+use super::{port::*, GenTlResult};
 
 mod memory;
 
@@ -41,7 +41,7 @@ impl SystemModule {
 }
 
 impl Port for SystemModule {
-    fn read(&self, address: u64, size: usize) -> PortResult<Vec<u8>> {
+    fn read(&self, address: u64, size: usize) -> GenTlResult<Vec<u8>> {
         let address = address as usize;
         Ok(self
             .vm
@@ -49,7 +49,7 @@ impl Port for SystemModule {
             .map(|v| v.to_owned())?)
     }
 
-    fn write(&mut self, address: u64, data: &[u8]) -> PortResult<()> {
+    fn write(&mut self, address: u64, data: &[u8]) -> GenTlResult<()> {
         Ok(self
             .vm
             .write_raw(address as usize, &data)
