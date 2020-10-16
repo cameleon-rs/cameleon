@@ -36,6 +36,7 @@ impl GenApiDefinition {
         let ident = &self.xml.ident;
         let register = self.expand_register()?;
         let genapi_util = self.expand_genapi_util()?;
+        let imms = self.xml.expand_imms()?;
 
         Ok(quote! {
             #[allow(non_snake_case)]
@@ -43,6 +44,7 @@ impl GenApiDefinition {
             #vis mod #ident {
                 #register
                 #genapi_util
+                #(#imms)*
             }
         })
     }
@@ -116,7 +118,6 @@ impl XML {
         Ok(registers)
     }
 
-    #[allow(unused)]
     fn expand_reg_desc(&self) -> Result<Vec<TokenStream>> {
         use genapi_parser::NodeKind::*;
 
@@ -142,6 +143,50 @@ impl XML {
         Ok(regs)
     }
 
+    fn expand_imms(&self) -> Result<Vec<TokenStream>> {
+        use genapi_parser::{numeric_node_elem::ValueKind, ImmOrPNode, NodeKind::*};
+        let mut imms = vec![];
+        let vis_inside_mod = modify_visibility(&self.vis)?;
+
+        macro_rules! expand_imm {
+            ($node: ident, $ty:ty, value_kind) => {{
+                let name = format_ident!("{}", $node.node_base().name());
+                let value = match $node.value_kind() {
+                    ValueKind::Value(v) => v,
+                    _ => continue,
+                };
+
+                imms.push(quote! {
+                    #vis_inside_mod const #name: $ty = #value;
+                });
+            }};
+
+            ($node: ident, $ty:ty) => {{
+                let name = format_ident!("{}", $node.node_base().name());
+                let value = match $node.value() {
+                    ImmOrPNode::Imm(v) => v,
+                    _ => continue,
+                };
+
+                imms.push(quote! {
+                    #vis_inside_mod const #name: $ty = #value;
+                });
+            }};
+        }
+
+        for node in self.reg_desc.nodes() {
+            match node {
+                Integer(node) => expand_imm!(node, i64, value_kind),
+                Float(node) => expand_imm!(node, f64, value_kind),
+                Boolean(node) => expand_imm!(node, bool),
+                String(node) => expand_imm!(node, &'static str),
+                _ => {}
+            }
+        }
+
+        Ok(imms)
+    }
+
     fn expand_xml(&self) -> Result<TokenStream> {
         let xml_tag = &self.xml_tag;
         let xml_str = &self.xml_str;
@@ -155,8 +200,7 @@ impl XML {
     }
 
     fn expand_int_reg(&self, node: &genapi_parser::IntRegNode) -> Result<TokenStream> {
-        let node_base = node.node_base();
-        let name = node_base.name();
+        let name = node.node_base().name();
         let (addr, len, access) = self.register_attr(name, node.register_base())?;
         let sign = node.sign();
         let ty = self.int_ty_from(name, len, sign)?;
@@ -171,8 +215,7 @@ impl XML {
     fn expand_masked_int_reg(&self, node: &genapi_parser::MaskedIntRegNode) -> Result<TokenStream> {
         use register_node_elem::BitMask;
 
-        let node_base = node.node_base();
-        let name = node_base.name();
+        let name = node.node_base().name();
         let (addr, len, access) = self.register_attr(name, node.register_base())?;
         let sign = node.sign();
         let ty = self.int_ty_from(name, len, sign)?;
@@ -190,8 +233,7 @@ impl XML {
     }
 
     fn expand_float_reg(&self, node: &genapi_parser::FloatRegNode) -> Result<TokenStream> {
-        let node_base = node.node_base();
-        let name = node_base.name();
+        let name = node.node_base().name();
         let (addr, len, access) = self.register_attr(name, node.register_base())?;
         let ty = self.float_ty_from(name, len)?;
 
@@ -203,8 +245,7 @@ impl XML {
     }
 
     fn expand_string_reg(&self, node: &genapi_parser::StringRegNode) -> Result<TokenStream> {
-        let node_base = node.node_base();
-        let name = node_base.name();
+        let name = node.node_base().name();
         let (addr, len, access) = self.register_attr(name, node.register_base())?;
 
         let name = format_ident!("{}", name);
@@ -215,8 +256,7 @@ impl XML {
     }
 
     fn expand_reg(&self, node: &genapi_parser::RegisterNode) -> Result<TokenStream> {
-        let node_base = node.node_base();
-        let name = node_base.name();
+        let name = node.node_base().name();
         let (addr, len, access) = self.register_attr(name, node.register_base())?;
 
         let name = format_ident!("{}", name);

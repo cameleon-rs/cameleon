@@ -26,6 +26,7 @@ pub enum GenApi {
     xsi:schemaLocation="http://www.genicam.org/GenApi/Version_1_0 GenApiSchema.xsd">
 
     <Category Name="Root" NameSpace="Standard">
+        <pFeature>MyInteger</pFeature>
         <pFeature>MyIntReg</pFeature>
         <pFeature>MyMaskedIntReg</pFeature>
         <pFeature>MyFloatReg</pFeature>
@@ -34,6 +35,10 @@ pub enum GenApi {
         <pFeature>MyStructEntry1</pFeature>
         <pFeature>MyStructEntry2</pFeature>
     </Category>
+
+    <Integer Name="MyInteger">
+      <Value>10</Value>  
+    </Integer>
 
     <IntReg Name="MyIntReg">
       <Address>20000</Address>
@@ -108,6 +113,7 @@ fn main() {
     xsi:schemaLocation="http://www.genicam.org/GenApi/Version_1_0 GenApiSchema.xsd">
 
     <Category Name="Root" NameSpace="Standard">
+        <pFeature>MyInteger</pFeature>
         <pFeature>MyIntReg</pFeature>
         <pFeature>MyMaskedIntReg</pFeature>
         <pFeature>MyFloatReg</pFeature>
@@ -116,6 +122,10 @@ fn main() {
         <pFeature>MyStructEntry1</pFeature>
         <pFeature>MyStructEntry2</pFeature>
     </Category>
+
+    <Integer Name="MyInteger">
+      <Value>10</Value>  
+    </Integer>
 
     <IntReg Name="MyIntReg">
       <Address>20000</Address>
@@ -186,6 +196,8 @@ fn main() {
     let vendor_name = GenApi::vendor_name();
     assert_eq!(vendor_name, "CameleonVendor");
 
+    assert_eq!(GenApi::MyInteger, 10);
+
     let raw_reg = GenApi::MyIntReg::raw();
     assert_eq!(raw_reg.offset, 20000);
     assert_eq!(raw_reg.len, 8);
@@ -216,5 +228,5 @@ fn main() {
 
     let memory = Memory::new();
 
-    assert_eq!(&memory.read::<GenApi::XML>().unwrap(), &xml_str);
+    assert_eq!(&memory.read::<GenApi::Xml>().unwrap(), &xml_str);
 }
