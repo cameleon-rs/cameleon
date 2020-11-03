@@ -13,7 +13,7 @@ pub struct SystemModule {
 impl SystemModule {
     pub fn new() -> Self {
         let port_info = PortInfo {
-            id: "Cameleon System Module".into(),
+            id: memory::GenApi::TLID.into(),
             vendor: memory::GenApi::vendor_name().into(),
             tl_type: TlType::Mixed,
             module_type: ModuleType::System,
