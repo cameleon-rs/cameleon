@@ -63,11 +63,15 @@ impl SystemModule {
         use memory::GenApi;
 
         self.vm.write::<GenApi::TLPathReg>(file!().into()).unwrap();
+
+        // Initialize registers related to interface.
         self.vm.write::<GenApi::InterfaceSelectorReg>(0).unwrap();
+        self.handle_interface_selector_change();
         self.vm
             .write::<GenApi::InterfaceSelectorMaxReg>(NUM_INTERFACE as u32)
             .unwrap();
 
+        // Register observers that trigger events in response to memory write.
         self.register_observers();
     }
 
@@ -118,10 +122,10 @@ impl SystemModule {
 
         macro_rules! byte_array_to_int {
             ($array:expr, $array_size:literal, $result_ty: ty) => {{
-                let mut result: $result_ty = 0;
-                for i in 0..$array_size {
-                    result += $array[i] as $result_ty;
+                let mut result = $array[0] as $result_ty;
+                for i in 1..$array_size {
                     result <<= 8;
+                    result += $array[i] as $result_ty;
                 }
                 result
             }};
@@ -214,5 +218,33 @@ impl MemoryObserver for InterfaceSelectorRegObserver {
             .lock()
             .unwrap()
             .push_back(MemoryEvent::InterfaceSelector)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use memory::GenApi;
+
+    #[test]
+    fn test_initialize_with_u3v_interface() {
+        let system_module = SystemModule::new();
+        assert_eq!(
+            &system_module.vm.read::<GenApi::TLPathReg>().unwrap(),
+            file!()
+        );
+        assert_eq!(
+            system_module
+                .vm
+                .read::<GenApi::InterfaceSelectorReg>()
+                .unwrap(),
+            0
+        );
+
+        let u3v_interface = system_module.interfaces()[0].clone();
+        assert_eq!(
+            &system_module.vm.read::<GenApi::InterfaceIDReg>().unwrap(),
+            u3v_interface.lock().unwrap().unique_id()
+        );
     }
 }
