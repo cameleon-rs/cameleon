@@ -127,7 +127,6 @@ pub(super) enum GenApi {
         <pFeature>InterfaceUpdateList</pFeature>
         <pFeature>InterfaceSelector</pFeature>
         <pFeature>InterfaceID</pFeature>
-        <pFeature>InterfaceDisplayName</pFeature>
         <pFeature>GevInterfaceMACAddress</pFeature>
         <pFeature>GevInterfaceDefaultIPAddress</pFeature>
         <pFeature>GevInterfaceDefaultSubnetMask</pFeature>
@@ -153,12 +152,6 @@ pub(super) enum GenApi {
         <Description>GenTL Producer wide unique identifier of the selected interface.</Description>
         <Visibility>Beginner</Visibility>
         <pValue>InterfaceIDReg</pValue>
-    </String>
-
-    <String Name="InterfaceDisplayName" NameSpace="Standard">
-        <Description>A user-friendly name of the Interface.</Description>
-        <Visibility>Beginner</Visibility>
-        <pValue>InterfaceDisplayNameReg</pValue>
     </String>
 
     <Integer Name="GevInterfaceMACAddress" NameSpace="Standard">
@@ -234,26 +227,20 @@ pub(super) enum GenApi {
         <pPort>TLPort</pPort>
     </StringReg>
 
-    <StringReg Name="InterfaceDisplayNameReg" NameSpace="Custom">
+    <MaskedIntReg Name="GevInterfaceMACAddressReg" NameSpace="Custom">
         <Visibility>Invisible</Visibility>
         <Address>1100</Address>
-        <Length>64</Length>
-        <AccessMode>RO</AccessMode>
-        <pPort>TLPort</pPort>
-    </StringReg>
-
-    <IntReg Name="GevInterfaceMACAddressReg" NameSpace="Custom">
-        <Visibility>Invisible</Visibility>
-        <Address>1164</Address>
         <Length>8</Length>
         <AccessMode>RO</AccessMode>
         <pPort>TLPort</pPort>
+        <LSB>0</LSB>
+        <MSB>47</MSB>
         <Endianess>LittleEndian</Endianess>
-    </IntReg>
+    </MaskedIntReg>
 
     <IntReg Name="GevInterfaceDefaultIPAddressReg" NameSpace="Custom">
         <Visibility>Invisible</Visibility>
-        <Address>1172</Address>
+        <Address>1108</Address>
         <Length>4</Length>
         <AccessMode>RO</AccessMode>
         <pPort>TLPort</pPort>
@@ -262,7 +249,7 @@ pub(super) enum GenApi {
 
     <IntReg Name="GevInterfaceDefaultSubnetMaskReg" NameSpace="Custom">
         <Visibility>Invisible</Visibility>
-        <Address>1176</Address>
+        <Address>1112</Address>
         <Length>4</Length>
         <AccessMode>RO</AccessMode>
         <pPort>TLPort</pPort>
@@ -271,7 +258,7 @@ pub(super) enum GenApi {
 
     <IntReg Name="GevInterfaceDefaultGatewayReg" NameSpace="Custom">
         <Visibility>Invisible</Visibility>
-        <Address>1180</Address>
+        <Address>1116</Address>
         <Length>4</Length>
         <AccessMode>RO</AccessMode>
         <pPort>TLPort</pPort>
