@@ -157,6 +157,12 @@ impl SystemModule {
     }
 }
 
+impl Default for SystemModule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Port for SystemModule {
     fn read(&self, address: u64, size: usize) -> GenTlResult<Vec<u8>> {
         let address = address as usize;

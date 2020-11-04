@@ -33,3 +33,9 @@ impl Interface for U3VInterfaceModule {
         None
     }
 }
+
+impl Default for U3VInterfaceModule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
