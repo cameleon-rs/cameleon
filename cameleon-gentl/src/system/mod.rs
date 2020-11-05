@@ -115,9 +115,9 @@ impl SystemModule {
 
         let interface = &self.interfaces[interface_idx].lock().unwrap();
 
-        let unique_id = interface.unique_id();
+        let interface_id = interface.interface_id();
         self.vm
-            .write::<GenApi::InterfaceIDReg>(unique_id.into())
+            .write::<GenApi::InterfaceIDReg>(interface_id.into())
             .unwrap();
 
         macro_rules! byte_array_to_int {
@@ -244,7 +244,7 @@ mod tests {
         let u3v_interface = system_module.interfaces()[0].clone();
         assert_eq!(
             &system_module.vm.read::<GenApi::InterfaceIDReg>().unwrap(),
-            u3v_interface.lock().unwrap().unique_id()
+            u3v_interface.lock().unwrap().interface_id()
         );
     }
 }

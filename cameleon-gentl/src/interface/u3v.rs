@@ -13,7 +13,7 @@ impl U3VInterfaceModule {
 }
 
 impl Interface for U3VInterfaceModule {
-    fn unique_id(&self) -> &'static str {
+    fn interface_id(&self) -> &str {
         "Cameleon-U3V-Interface-Module"
     }
 

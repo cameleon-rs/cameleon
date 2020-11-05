@@ -4,7 +4,7 @@ mod u3v_memory;
 
 // TODO: Add device related functions.
 pub trait Interface {
-    fn unique_id(&self) -> &'static str;
+    fn interface_id(&self) -> &str;
 
     fn mac_addr(&self) -> Option<[u8; 6]>;
 
