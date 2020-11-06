@@ -10,7 +10,7 @@ use cameleon_impl::memory::MemoryError;
 #[derive(Error, Debug)]
 pub enum GenTlError {
     /// The handle isn't opend.
-    #[error("the handle isn't opend")]
+    #[error("the handle isn't opened")]
     NotOpend,
 
     /// The access to the requested register address is denied because the register is not writable
@@ -23,12 +23,24 @@ pub enum GenTlError {
     InvalidAddress,
 
     /// An invalid value has been written.
-    #[error("An invalid value has been written: {}", 0)]
+    #[error("an invalid value has been written: {}", 0)]
     InvalidValue(std::borrow::Cow<'static, str>),
 
     /// Communication error or connection lost.
-    #[error("Communication error or connection lost: {}", 0)]
+    #[error("communication error or connection lost: {}", 0)]
     IoError(Box<dyn std::error::Error>),
+
+    /// Requested resource is already in use.
+    #[error("requested resource is already in use")]
+    ResourceInUse,
+
+    /// ID doesn't reference any module or remote device.
+    #[error("given ID doesn't reference any module or remote device: {}", 0)]
+    InvalidId(String),
+
+    /// A provided index referencing a Producer internal object is out of bounds.
+    #[error("given index is out of range")]
+    InvalidIndex,
 }
 
 impl From<MemoryError> for GenTlError {

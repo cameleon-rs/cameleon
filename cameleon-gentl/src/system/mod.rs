@@ -68,7 +68,7 @@ impl SystemModule {
         self.vm.write::<GenApi::InterfaceSelectorReg>(0).unwrap();
         self.handle_interface_selector_change();
         self.vm
-            .write::<GenApi::InterfaceSelectorMaxReg>(NUM_INTERFACE as u32)
+            .write::<GenApi::InterfaceSelectorMaxReg>(NUM_INTERFACE as u32 - 1)
             .unwrap();
 
         // Register observers that trigger events in response to memory write.

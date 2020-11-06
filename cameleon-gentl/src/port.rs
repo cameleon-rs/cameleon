@@ -20,6 +20,7 @@ pub trait Port {
     fn xml_infos(&self) -> &[XmlInfo];
 }
 
+#[derive(Clone)]
 pub struct PortInfo {
     /// Unique ID of the module the port reference.
     pub id: String,
@@ -50,6 +51,7 @@ pub struct PortInfo {
     pub port_name: String,
 }
 
+#[derive(Clone)]
 pub enum TlType {
     /// Camera Link.
     CameraLink,
@@ -71,6 +73,7 @@ pub enum TlType {
     Mixed,
 }
 
+#[derive(Clone)]
 pub enum ModuleType {
     /// System Module.
     System,
@@ -91,6 +94,7 @@ pub enum ModuleType {
     RemoteDevice,
 }
 
+#[derive(Clone)]
 pub enum PortAccess {
     /// Read Only.
     RO,
@@ -108,6 +112,7 @@ pub enum PortAccess {
     NI,
 }
 
+#[derive(Clone)]
 pub enum Endianness {
     /// Little Endian.
     LE,
@@ -115,17 +120,20 @@ pub enum Endianness {
     BE,
 }
 
+#[derive(Clone)]
 pub struct XmlInfo {
     pub location: XmlLocation,
     pub schema_version: Version,
     pub compressed: Compressed,
 }
 
+#[derive(Clone)]
 pub enum Compressed {
     None,
     Zip,
 }
 
+#[derive(Clone)]
 pub enum XmlLocation {
     RegisterMap { address: u64, size: usize },
     LocalFile(std::path::PathBuf),

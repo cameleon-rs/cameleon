@@ -1,6 +1,6 @@
-use crate::port::TlType;
-
 use cameleon_impl::memory::{genapi, memory};
+
+use crate::port::TlType;
 
 #[memory]
 pub(super) struct Memory {

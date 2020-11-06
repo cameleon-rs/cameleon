@@ -1,5 +1,9 @@
 use cameleon_impl::memory::{genapi, memory};
 
+use crate::device::DeviceAccessStatus;
+
+use crate::port::TlType;
+
 #[memory]
 pub(super) struct Memory {
     genapi: GenApi,
@@ -257,4 +261,28 @@ pub(super) enum GenApi {
 
 </RegisterDescription>
 "#,
+}
+
+impl From<DeviceAccessStatus> for GenApi::DeviceAccessStatus {
+    fn from(status: DeviceAccessStatus) -> Self {
+        use DeviceAccessStatus::*;
+
+        match status {
+            Unknown => GenApi::DeviceAccessStatus::Unknown,
+            ReadWrite => GenApi::DeviceAccessStatus::ReadWrite,
+            ReadOnly => GenApi::DeviceAccessStatus::ReadOnly,
+            NoAccess => GenApi::DeviceAccessStatus::NoAccess,
+            Busy => GenApi::DeviceAccessStatus::Busy,
+            OpenReadWrite => GenApi::DeviceAccessStatus::OpenReadWrite,
+            OpenReadOnly => GenApi::DeviceAccessStatus::OpenReadOnly,
+        }
+    }
+}
+
+impl Into<TlType> for GenApi::InterfaceType {
+    fn into(self) -> TlType {
+        match self {
+            GenApi::InterfaceType::USB3Vision => TlType::USB3Vision,
+        }
+    }
 }
