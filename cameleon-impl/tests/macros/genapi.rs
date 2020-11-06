@@ -37,8 +37,11 @@ pub enum GenApi {
     </Category>
 
     <Integer Name="MyInteger">
-      <Value>10</Value>  
+      <Value>10</Value>
     </Integer>
+
+    <Port Name="Device" NameSpace="Standard">
+    </Port>
 
     <IntReg Name="MyIntReg">
       <Address>20000</Address>
@@ -124,8 +127,11 @@ fn main() {
     </Category>
 
     <Integer Name="MyInteger">
-      <Value>10</Value>  
+      <Value>10</Value>
     </Integer>
+
+    <Port Name="Device" NameSpace="Standard">
+    </Port>
 
     <IntReg Name="MyIntReg">
       <Address>20000</Address>
@@ -197,6 +203,8 @@ fn main() {
     assert_eq!(vendor_name, "CameleonVendor");
 
     assert_eq!(GenApi::MyInteger, 10);
+
+    assert_eq!(GenApi::Device, "Device");
 
     let raw_reg = GenApi::MyIntReg::raw();
     assert_eq!(raw_reg.offset, 20000);

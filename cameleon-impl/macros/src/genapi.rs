@@ -36,7 +36,7 @@ impl GenApiDefinition {
         let ident = &self.xml.ident;
         let register = self.expand_register()?;
         let genapi_util = self.expand_genapi_util()?;
-        let imms = self.xml.expand_imms()?;
+        let non_registeres = self.xml.epxand_non_register()?;
 
         Ok(quote! {
             #[allow(non_snake_case)]
@@ -44,7 +44,7 @@ impl GenApiDefinition {
             #vis mod #ident {
                 #register
                 #genapi_util
-                #(#imms)*
+                #(#non_registeres)*
             }
         })
     }
@@ -143,32 +143,38 @@ impl XML {
         Ok(regs)
     }
 
-    fn expand_imms(&self) -> Result<Vec<TokenStream>> {
+    fn epxand_non_register(&self) -> Result<Vec<TokenStream>> {
         use genapi_parser::{numeric_node_elem::ValueKind, ImmOrPNode, NodeKind::*};
-        let mut imms = vec![];
+        let mut non_registeres = vec![];
         let vis_inside_mod = modify_visibility(&self.vis)?;
 
         macro_rules! expand_imm {
             ($node: ident, $ty:ty, value_kind) => {{
-                let name = format_ident!("{}", $node.node_base().name());
-                let value = match $node.value_kind() {
-                    ValueKind::Value(v) => v,
-                    _ => continue,
-                };
-
-                imms.push(quote! {
-                    #vis_inside_mod const #name: $ty = #value;
-                });
+                expand_imm!(
+                    $node,
+                    $ty,
+                    match $node.value_kind() {
+                        ValueKind::Value(v) => v,
+                        _ => continue,
+                    }
+                );
             }};
 
             ($node: ident, $ty:ty) => {{
-                let name = format_ident!("{}", $node.node_base().name());
-                let value = match $node.value() {
-                    ImmOrPNode::Imm(v) => v,
-                    _ => continue,
-                };
+                expand_imm!(
+                    $node,
+                    $ty,
+                    match $node.value() {
+                        ImmOrPNode::Imm(v) => v,
+                        _ => continue,
+                    }
+                );
+            }};
 
-                imms.push(quote! {
+            ($node: ident, $ty:ty, $value:expr) => {{
+                let name = format_ident!("{}", $node.node_base().name());
+                let value = $value;
+                non_registeres.push(quote! {
                     #vis_inside_mod const #name: $ty = #value;
                 });
             }};
@@ -180,11 +186,12 @@ impl XML {
                 Float(node) => expand_imm!(node, f64, value_kind),
                 Boolean(node) => expand_imm!(node, bool),
                 String(node) => expand_imm!(node, &'static str),
+                Port(node) => expand_imm!(node, &'static str, node.node_base().name()),
                 _ => {}
             }
         }
 
-        Ok(imms)
+        Ok(non_registeres)
     }
 
     fn expand_xml(&self) -> Result<TokenStream> {

@@ -31,7 +31,7 @@ impl SystemModule {
             endianness: Endianness::LE,
             access: PortAccess::RW,
             version: memory::GenApi::genapi_version(),
-            port_name: "TLPort".into(),
+            port_name: memory::GenApi::TLPort.into(),
         };
 
         let xml_info = XmlInfo {
