@@ -1,5 +1,9 @@
 use cameleon_impl::memory::{genapi, memory};
 
+use crate::port::TlType;
+
+use super::DeviceAccessStatus;
+
 #[memory]
 pub(super) struct Memory {
     genapi: GenApi,
@@ -203,4 +207,61 @@ pub(super) enum GenApi {
 
 </RegisterDescription>
 "#,
+}
+
+impl Into<TlType> for GenApi::DeviceType {
+    fn into(self) -> TlType {
+        match self {
+            GenApi::DeviceType::USB3Vision => TlType::USB3Vision,
+        }
+    }
+}
+
+impl Into<DeviceAccessStatus> for GenApi::DeviceAccessStatus {
+    fn into(self) -> DeviceAccessStatus {
+        use DeviceAccessStatus::*;
+
+        match self {
+            GenApi::DeviceAccessStatus::Unknown => Unknown,
+            GenApi::DeviceAccessStatus::ReadWrite => ReadWrite,
+            GenApi::DeviceAccessStatus::ReadOnly => ReadOnly,
+            GenApi::DeviceAccessStatus::NoAccess => NoAccess,
+            GenApi::DeviceAccessStatus::Busy => Busy,
+            GenApi::DeviceAccessStatus::OpenReadWrite => OpenReadWrite,
+            GenApi::DeviceAccessStatus::OpenReadOnly => OpenReadOnly,
+        }
+    }
+}
+
+impl From<DeviceAccessStatus> for GenApi::DeviceAccessStatus {
+    fn from(status: DeviceAccessStatus) -> Self {
+        use DeviceAccessStatus::*;
+
+        match status {
+            Unknown => GenApi::DeviceAccessStatus::Unknown,
+            ReadWrite => GenApi::DeviceAccessStatus::ReadWrite,
+            ReadOnly => GenApi::DeviceAccessStatus::ReadOnly,
+            NoAccess => GenApi::DeviceAccessStatus::NoAccess,
+            Busy => GenApi::DeviceAccessStatus::Busy,
+            OpenReadWrite => GenApi::DeviceAccessStatus::OpenReadWrite,
+            OpenReadOnly => GenApi::DeviceAccessStatus::OpenReadOnly,
+        }
+    }
+}
+
+impl GenApi::DeviceAccessStatus {
+    pub(crate) fn from_num(num: isize) -> Self {
+        use GenApi::DeviceAccessStatus::*;
+
+        match num {
+            _ if num == Unknown as isize => Unknown,
+            _ if num == ReadWrite as isize => ReadWrite,
+            _ if num == ReadOnly as isize => ReadOnly,
+            _ if num == NoAccess as isize => NoAccess,
+            _ if num == Busy as isize => Busy,
+            _ if num == OpenReadWrite as isize => OpenReadWrite,
+            _ if num == OpenReadOnly as isize => OpenReadOnly,
+            _ => unreachable!(),
+        }
+    }
 }
