@@ -197,7 +197,7 @@ impl XML {
 
     fn expand_enumeration_node(
         &self,
-        node: &Box<genapi_parser::EnumerationNode>,
+        node: &genapi_parser::EnumerationNode,
     ) -> Result<TokenStream> {
         let name = format_ident!("{}", node.node_base().name());
         let variants = node.entries().iter().map(|ent| {
@@ -209,6 +209,7 @@ impl XML {
         let vis_inside_mod = modify_visibility(&self.vis)?;
 
         Ok(quote! {
+            #[derive(Clone, Copy)]
             #vis_inside_mod enum #name {
                 #(#variants,)*
             }
