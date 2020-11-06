@@ -36,7 +36,7 @@ impl GenApiDefinition {
         let ident = &self.xml.ident;
         let register = self.expand_register()?;
         let genapi_util = self.expand_genapi_util()?;
-        let non_registeres = self.xml.epxand_non_register()?;
+        let non_registers = self.xml.epxand_non_register()?;
 
         Ok(quote! {
             #[allow(non_snake_case)]
@@ -44,7 +44,7 @@ impl GenApiDefinition {
             #vis mod #ident {
                 #register
                 #genapi_util
-                #(#non_registeres)*
+                #(#non_registers)*
             }
         })
     }
@@ -145,7 +145,7 @@ impl XML {
 
     fn epxand_non_register(&self) -> Result<Vec<TokenStream>> {
         use genapi_parser::{numeric_node_elem::ValueKind, ImmOrPNode, NodeKind::*};
-        let mut non_registeres = vec![];
+        let mut non_registers = vec![];
         let vis_inside_mod = modify_visibility(&self.vis)?;
 
         macro_rules! expand_imm {
@@ -174,7 +174,7 @@ impl XML {
             ($node: ident, $ty:ty, $value:expr) => {{
                 let name = format_ident!("{}", $node.node_base().name());
                 let value = $value;
-                non_registeres.push(quote! {
+                non_registers.push(quote! {
                     #vis_inside_mod const #name: $ty = #value;
                 });
             }};
@@ -187,11 +187,32 @@ impl XML {
                 Boolean(node) => expand_imm!(node, bool),
                 String(node) => expand_imm!(node, &'static str),
                 Port(node) => expand_imm!(node, &'static str, node.node_base().name()),
+                Enumeration(node) => non_registers.push(self.expand_enumeration_node(node)?),
                 _ => {}
             }
         }
 
-        Ok(non_registeres)
+        Ok(non_registers)
+    }
+
+    fn expand_enumeration_node(
+        &self,
+        node: &Box<genapi_parser::EnumerationNode>,
+    ) -> Result<TokenStream> {
+        let name = format_ident!("{}", node.node_base().name());
+        let variants = node.entries().iter().map(|ent| {
+            let var = format_ident!("{}", ent.node_base().name());
+            let value = ent.value() as isize;
+            quote!(#var = #value)
+        });
+
+        let vis_inside_mod = modify_visibility(&self.vis)?;
+
+        Ok(quote! {
+            #vis_inside_mod enum #name {
+                #(#variants,)*
+            }
+        })
     }
 
     fn expand_xml(&self) -> Result<TokenStream> {

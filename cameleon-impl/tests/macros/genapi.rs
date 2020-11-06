@@ -91,6 +91,46 @@ pub enum GenApi {
         </StructEntry>
     </StructReg>
 
+    <Enumeration Name="DeviceAccessStatus" NameSpace="Standard">
+        <Description>Gives the device's access status at the moment of the last execution of the DeviceUpdateList command.</Description>
+        <Visibility>Expert</Visibility>
+        <EnumEntry Name="Unknown" NameSpace="Standard">
+            <Description>Not known to producer.</Description>
+            <Value>0</Value>
+        </EnumEntry>
+
+        <EnumEntry Name="ReadWrite" NameSpace="Standard">
+            <Description>Full access.</Description>
+            <Value>1</Value>
+        </EnumEntry>
+
+        <EnumEntry Name="ReadOnly" NameSpace="Standard">
+            <Description>Read-only access.</Description>
+            <Value>2</Value>
+        </EnumEntry>
+
+        <EnumEntry Name="NoAccess" NameSpace="Standard">
+            <Description>Not available to connect.</Description>
+            <Value>3</Value>
+        </EnumEntry>
+
+        <EnumEntry Name="Busy" NameSpace="Standard">
+            <Description>The device is already opened by another entity.</Description>
+            <Value>4</Value>
+        </EnumEntry>
+
+        <EnumEntry Name="OpenReadWrite" NameSpace="Standard">
+            <Description>Open in Read/Write mode by this GenTL host.</Description>
+            <Value>5</Value>
+        </EnumEntry>
+
+        <EnumEntry Name="OpenReadOnly" NameSpace="Standard">
+            <Description>Open in Read only mode by this GenTL host</Description>
+            <Value>6</Value>
+        </EnumEntry>
+
+        <Value>3</Value>
+    </Enumeration>
 
 </RegisterDescription>
 "#,
@@ -181,6 +221,46 @@ fn main() {
         </StructEntry>
     </StructReg>
 
+    <Enumeration Name="DeviceAccessStatus" NameSpace="Standard">
+        <Description>Gives the device's access status at the moment of the last execution of the DeviceUpdateList command.</Description>
+        <Visibility>Expert</Visibility>
+        <EnumEntry Name="Unknown" NameSpace="Standard">
+            <Description>Not known to producer.</Description>
+            <Value>0</Value>
+        </EnumEntry>
+
+        <EnumEntry Name="ReadWrite" NameSpace="Standard">
+            <Description>Full access.</Description>
+            <Value>1</Value>
+        </EnumEntry>
+
+        <EnumEntry Name="ReadOnly" NameSpace="Standard">
+            <Description>Read-only access.</Description>
+            <Value>2</Value>
+        </EnumEntry>
+
+        <EnumEntry Name="NoAccess" NameSpace="Standard">
+            <Description>Not available to connect.</Description>
+            <Value>3</Value>
+        </EnumEntry>
+
+        <EnumEntry Name="Busy" NameSpace="Standard">
+            <Description>The device is already opened by another entity.</Description>
+            <Value>4</Value>
+        </EnumEntry>
+
+        <EnumEntry Name="OpenReadWrite" NameSpace="Standard">
+            <Description>Open in Read/Write mode by this GenTL host.</Description>
+            <Value>5</Value>
+        </EnumEntry>
+
+        <EnumEntry Name="OpenReadOnly" NameSpace="Standard">
+            <Description>Open in Read only mode by this GenTL host</Description>
+            <Value>6</Value>
+        </EnumEntry>
+
+        <Value>3</Value>
+    </Enumeration>
 
 </RegisterDescription>
 "#
@@ -203,6 +283,10 @@ fn main() {
     assert_eq!(vendor_name, "CameleonVendor");
 
     assert_eq!(GenApi::MyInteger, 10);
+
+    assert_eq!(GenApi::DeviceAccessStatus::Unknown as isize, 0);
+    assert_eq!(GenApi::DeviceAccessStatus::ReadWrite as isize, 1);
+    assert_eq!(GenApi::DeviceAccessStatus::OpenReadOnly as isize, 6);
 
     assert_eq!(GenApi::Device, "Device");
 

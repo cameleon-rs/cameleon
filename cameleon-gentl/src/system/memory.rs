@@ -1,3 +1,5 @@
+use crate::port::TlType;
+
 use cameleon_impl::memory::{genapi, memory};
 
 #[memory]
@@ -267,4 +269,12 @@ pub(super) enum GenApi {
 
 </RegisterDescription>
 "#,
+}
+
+impl Into<TlType> for GenApi::TLType {
+    fn into(self) -> TlType {
+        match self {
+            GenApi::TLType::Mixed => TlType::Mixed,
+        }
+    }
 }
