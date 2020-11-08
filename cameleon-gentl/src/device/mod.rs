@@ -26,3 +26,11 @@ pub enum DeviceAccessStatus {
     /// The device is already owned/opened by this GenTL Producer with RO access.
     OpenReadOnly,
 }
+
+impl DeviceAccessStatus {
+    pub fn is_opened(self) -> bool {
+        use DeviceAccessStatus::*;
+
+        matches!(self, OpenReadOnly | OpenReadWrite)
+    }
+}

@@ -24,8 +24,6 @@ pub struct U3VDeviceModule {
     event_channel: Option<Arc<Mutex<usb3::ReceiveChannel>>>,
     stream_channel: Option<Arc<Mutex<usb3::ReceiveChannel>>>,
 
-    is_opened: bool,
-
     /// Current status of the device.  
     /// `DeviceAccessStatus` and `DeviceAccessStatusReg` in VM doesn't reflect this value while
     /// [`Interface::UpdateDeviceList`] is called as the GenTL specification describes.
@@ -40,7 +38,8 @@ impl U3VDeviceModule {
     /// In order to open the device, please call [cameleon_gentl::interface::u3v::U3VInterfaceModule::open_device] as
     /// GenTL specification describes.
     pub fn close(&mut self) -> GenTlResult<()> {
-        if !self.is_opened() {
+        let current_status: DeviceAccessStatus = self.current_status.into();
+        if !current_status.is_opened() {
             return Ok(());
         }
 
@@ -56,18 +55,13 @@ impl U3VDeviceModule {
             stream_channel.lock().unwrap().close()?;
         }
 
-        self.is_opened = false;
         self.current_status = memory::GenApi::DeviceAccessStatus::ReadWrite;
 
         Ok(())
     }
 
-    pub fn is_opened(&self) -> bool {
-        self.is_opened
-    }
-
     /// NOTE: Unlike another module of GenTL, this methods doesn't initialize VM registers due to spec requirements.
-    /// Initialization of VM registers is done in [`open`] method.
+    /// Initialization of VM registers is done in [`U3VDeviceModule::open`] method.
     pub(crate) fn new(device: usb3::Device) -> Self {
         let device_info = device.device_info();
 
@@ -101,14 +95,14 @@ impl U3VDeviceModule {
             event_channel: None,
             stream_channel: None,
 
-            is_opened: false,
             current_status: memory::GenApi::DeviceAccessStatus::Unknown,
         }
     }
 
     /// Try to open the remote device and initialize VM regiteres.
     pub(crate) fn open(&mut self) -> GenTlResult<()> {
-        if self.is_opened() {
+        let current_status: DeviceAccessStatus = self.current_status.into();
+        if current_status.is_opened() {
             return Err(GenTlError::ResourceInUse);
         }
 
@@ -144,7 +138,6 @@ impl U3VDeviceModule {
         self.ctrl_channel = Some(Arc::new(ctrl_channel.into()));
         self.event_channel = event_channel.map(|c| Arc::new(c.into()));
         self.stream_channel = stream_channel.map(|c| Arc::new(c.into()));
-        self.is_opened = true;
         self.current_status = memory::GenApi::DeviceAccessStatus::OpenReadWrite;
 
         Ok(())
@@ -155,13 +148,18 @@ impl U3VDeviceModule {
     }
 
     /// Reflect current_status to `DeviceAccessStatusReg` in VM.
+    /// Actual current status of the device isn't visible until this method is called.
+    /// See GenTL specification for more details.
     pub(crate) fn reflect_status(&mut self) {
         self.vm
             .write::<memory::GenApi::DeviceAccessStatusReg>(self.current_status as u32)
             .unwrap();
     }
 
-    /// Access status of the device. Returned status is same as `DeviceAccessStatusReg`.
+    /// Access status of the device. Returned status is same value as `DeviceAccessStatusReg`.
+    /// Make sure to call [`U3VDeviceModule::reflect_status`] to obtain up to date status before
+    /// calling [`U3VDeviceModule::access_status`].  
+    /// See GenTL specification for more details.
     pub(crate) fn access_status(&self) -> DeviceAccessStatus {
         let raw_value = self
             .vm
