@@ -1,4 +1,4 @@
-use crate::usb3::{DeviceInfo, Result};
+use crate::u3v::{DeviceInfo, Result};
 
 use super::channel::*;
 

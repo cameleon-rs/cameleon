@@ -2,7 +2,7 @@ use rand::seq::SliceRandom;
 use semver::Version;
 use thiserror::Error;
 
-use crate::usb3::{DeviceInfo, SupportedSpeed};
+use crate::u3v::{DeviceInfo, SupportedSpeed};
 
 use super::{
     device::Device,
@@ -26,16 +26,16 @@ pub type BuilderResult<T> = std::result::Result<T, BuilderError>;
 /// An emulator is passed to the device pool and user can't control the emulator itself directly
 /// once build process is finished by calling [`build`].
 ///
-/// Emulators in the device pool can be found by [`cameleon_device::usb3::enumerate_device`] and controlled via
-/// [`cameleon_device::usb3::Device`] in the same way as real device.
+/// Emulators in the device pool can be found by [`cameleon_device::u3v::enumerate_device`] and controlled via
+/// [`cameleon_device::u3v::Device`] in the same way as real device.
 ///
-/// [`cameleon_device::usb3::enumerate_device`]: fn.enumerate_device.html
-/// [`cameleon_device::usb3::Device`]: struct.Device.html
+/// [`cameleon_device::u3v::enumerate_device`]: fn.enumerate_device.html
+/// [`cameleon_device::u3v::Device`]: struct.Device.html
 /// [`build`]: ./struct.EmulatorBuilder.html#method.build
 ///
 /// # Example
 /// ```rust
-/// use cameleon_device::usb3::{EmulatorBuilder, enumerate_device};
+/// use cameleon_device::u3v::{EmulatorBuilder, enumerate_device};
 ///
 /// // Build device with default configuration and pass it to the device pool.
 /// // Now the device pool has one device.
@@ -71,15 +71,15 @@ impl EmulatorBuilder {
     /// Build an emulator and pass it to the device pool. User can't control the emulator itself
     /// directly once call this method.
     ///
-    /// Emulators in the device pool can be found by [`cameleon_device::usb3::enumerate_device`] and controlled via
-    /// [`cameleon_device::usb3::Device`] in the same way as real device.
+    /// Emulators in the device pool can be found by [`cameleon_device::u3v::enumerate_device`] and controlled via
+    /// [`cameleon_device::u3v::Device`] in the same way as real device.
     ///
-    /// [`cameleon_device::usb3::enumerate_device`]: fn.enumerate_device.html
-    /// [`cameleon_device::usb3::Device`]: struct.Device.html
+    /// [`cameleon_device::u3v::enumerate_device`]: fn.enumerate_device.html
+    /// [`cameleon_device::u3v::Device`]: struct.Device.html
     ///
     /// # Example
     /// ```rust
-    /// use cameleon_device::usb3::EmulatorBuilder;
+    /// use cameleon_device::u3v::EmulatorBuilder;
     ///
     /// // Build device with default configuration and pass it to the device pool.
     /// // Now the device pool has one device.
@@ -110,7 +110,7 @@ impl EmulatorBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use cameleon_device::usb3::EmulatorBuilder;
+    /// use cameleon_device::u3v::EmulatorBuilder;
     ///
     /// assert!(EmulatorBuilder::new().model_name("my camera").is_ok());
     /// assert!(EmulatorBuilder::new().model_name("私のカメラ").is_err());
@@ -136,7 +136,7 @@ impl EmulatorBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use cameleon_device::usb3::EmulatorBuilder;
+    /// use cameleon_device::u3v::EmulatorBuilder;
     ///
     /// assert!(EmulatorBuilder::new().family_name("my camera family").is_ok());
     /// assert!(EmulatorBuilder::new().family_name("私のカメラ家族").is_err());
@@ -162,7 +162,7 @@ impl EmulatorBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use cameleon_device::usb3::EmulatorBuilder;
+    /// use cameleon_device::u3v::EmulatorBuilder;
     ///
     /// assert!(EmulatorBuilder::new().serial_number("CAM1984").is_ok());
     /// assert!(EmulatorBuilder::new().serial_number("カム1984年").is_err());
@@ -188,7 +188,7 @@ impl EmulatorBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use cameleon_device::usb3::EmulatorBuilder;
+    /// use cameleon_device::u3v::EmulatorBuilder;
     ///
     /// assert!(EmulatorBuilder::new().user_defined_name("user define name").is_ok());
     /// assert!(EmulatorBuilder::new().user_defined_name("使用者が定義した名前").is_err());

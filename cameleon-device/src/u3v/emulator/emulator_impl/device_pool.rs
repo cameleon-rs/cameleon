@@ -6,7 +6,7 @@ use async_std::{
 };
 use lazy_static::lazy_static;
 
-use crate::usb3::{DeviceInfo, LibUsbError, Result};
+use crate::u3v::{DeviceInfo, LibUsbError, Result};
 
 use super::{
     device::Device,

@@ -25,9 +25,9 @@ trybuild = { version = "1.0.34" }
 libusb = ["rusb"]
 
 [[example]]
-name = "usb3_device_enumeration"
-path = "examples/usb3/device_enumeration.rs"
+name = "u3v_device_enumeration"
+path = "examples/u3v/device_enumeration.rs"
 
 [[example]]
-name = "usb3_device_control"
-path = "examples/usb3/device_control.rs"
+name = "u3v_device_control"
+path = "examples/u3v/device_control.rs"

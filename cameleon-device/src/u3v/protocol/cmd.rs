@@ -2,7 +2,7 @@ use std::{convert::TryInto, io::Write};
 
 use byteorder::{WriteBytesExt, LE};
 
-use crate::usb3::{Error, Result};
+use crate::u3v::{Error, Result};
 
 #[derive(Debug)]
 pub struct CommandPacket<T> {

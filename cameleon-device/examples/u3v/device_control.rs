@@ -4,7 +4,7 @@ use std::time::Duration;
 extern crate byteorder;
 extern crate cameleon_device;
 
-use cameleon_device::usb3::{protocol::*, *};
+use cameleon_device::u3v::{protocol::*, *};
 
 fn main() {
     // Need to build emulator in case libusb is not supported.

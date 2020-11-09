@@ -469,7 +469,7 @@ type ProtocolResult<T> = std::result::Result<T, ProtocolError>;
 
 /// Command packet parser implementaion.
 mod cmd {
-    pub(super) use crate::usb3::protocol::cmd::{
+    pub(super) use crate::u3v::protocol::cmd::{
         ReadMem, ReadMemStacked, ScdKind, WriteMem, WriteMemStacked,
     };
 
@@ -477,7 +477,7 @@ mod cmd {
 
     use byteorder::{ReadBytesExt, LE};
 
-    use crate::usb3::protocol::{cmd::*, parse_util};
+    use crate::u3v::protocol::{cmd::*, parse_util};
 
     use super::{ProtocolError, ProtocolResult};
 
@@ -724,13 +724,13 @@ mod ack {
 
     use byteorder::{WriteBytesExt, LE};
 
-    use crate::usb3::protocol::{
+    use crate::u3v::protocol::{
         ack::{AckCcd, Status, StatusKind},
         cmd,
     };
 
     use super::ProtocolResult;
-    pub(super) use crate::usb3::protocol::ack::{
+    pub(super) use crate::u3v::protocol::ack::{
         GenCpStatus, Pending, ReadMem, ReadMemStacked, ScdKind, UsbSpecificStatus, WriteMem,
         WriteMemStacked,
     };
@@ -1021,7 +1021,7 @@ mod ack {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use crate::usb3::protocol::ack as host_side_ack;
+        use crate::u3v::protocol::ack as host_side_ack;
 
         #[test]
         fn test_read_mem() {
@@ -1116,7 +1116,7 @@ mod ack {
         }
 
         #[test]
-        fn test_usb3_error() {
+        fn test_u3v_error() {
             let err_status = UsbSpecificStatus::StreamEndpointHalted;
             let command = ErrorAck::new(err_status, ScdKind::ReadMem).finalize(1);
             let mut buf = vec![];

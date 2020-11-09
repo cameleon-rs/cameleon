@@ -117,7 +117,7 @@ mod event_packet {
     use byteorder::{WriteBytesExt, LE};
     use thiserror::Error;
 
-    pub(super) use crate::usb3::protocol::event::EventScd;
+    pub(super) use crate::u3v::protocol::event::EventScd;
 
     #[derive(Debug, Error)]
     pub(super) enum ProtocolError {
@@ -210,7 +210,7 @@ mod event_packet {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use crate::usb3::protocol::event;
+        use crate::u3v::protocol::event;
 
         #[test]
         fn test_single_event() {
@@ -240,7 +240,7 @@ mod tests {
 
     use async_std::{future::timeout, sync::channel, task};
 
-    use crate::usb3::protocol::event;
+    use crate::u3v::protocol::event;
 
     use super::*;
 

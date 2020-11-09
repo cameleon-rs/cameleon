@@ -3,7 +3,7 @@
 fn test_exceptional_scenario() {
     use std::time::Duration;
 
-    use cameleon_device::usb3::*;
+    use cameleon_device::u3v::*;
 
     const TIME_OUT: Duration = Duration::from_millis(100);
 

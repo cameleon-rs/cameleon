@@ -6,7 +6,7 @@ pub use channel::{ControlChannel, ReceiveChannel};
 pub use device::Device;
 pub use device_builder::enumerate_device;
 
-use crate::usb3::{Error, LibUsbError};
+use crate::u3v::{Error, LibUsbError};
 
 impl From<rusb::Error> for Error {
     fn from(err: rusb::Error) -> Error {

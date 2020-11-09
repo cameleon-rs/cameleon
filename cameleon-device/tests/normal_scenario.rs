@@ -4,7 +4,7 @@ fn test_normal_scenario() {
     use std::time::Duration;
 
     use byteorder::{ReadBytesExt, WriteBytesExt, LE};
-    use cameleon_device::usb3::{
+    use cameleon_device::u3v::{
         protocol::{ack, cmd},
         *,
     };

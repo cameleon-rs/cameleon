@@ -2,7 +2,7 @@ use std::io::Cursor;
 
 use byteorder::{ReadBytesExt, LE};
 
-use crate::usb3::{Error, Result};
+use crate::u3v::{Error, Result};
 
 use super::parse_util;
 

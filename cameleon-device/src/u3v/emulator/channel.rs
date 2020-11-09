@@ -1,6 +1,6 @@
 use std::time;
 
-use crate::usb3::Result;
+use crate::u3v::Result;
 
 use super::emulator_impl::DeviceHandle;
 

@@ -1,7 +1,7 @@
 use byteorder::{ReadBytesExt, LE};
 use semver::Version;
 
-use crate::usb3::{DeviceInfo, Error, Result, SupportedSpeed};
+use crate::u3v::{DeviceInfo, Error, Result, SupportedSpeed};
 
 use super::{
     channel::{ControlIfaceInfo, ReceiveIfaceInfo},

@@ -7,7 +7,7 @@ use std::{
 
 use async_std::{sync::TrySendError, task};
 
-use crate::usb3::{LibUsbError, Result};
+use crate::u3v::{LibUsbError, Result};
 
 use super::{
     device_pool::{DevicePipe, DevicePool},

@@ -6,7 +6,7 @@ use async_std::{
 };
 use futures::channel::oneshot;
 
-use crate::usb3::DeviceInfo;
+use crate::u3v::DeviceInfo;
 
 use super::{fake_protocol::*, interface::Interface, memory::Memory};
 
