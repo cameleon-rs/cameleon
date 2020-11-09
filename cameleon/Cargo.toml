@@ -1,0 +1,16 @@
+[package]
+name = "cameleon"
+version = "0.1.0"
+authors = ["Cameleon Project Developers"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+thiserror = "1.0.20"
+
+cameleon-device = { path = "../cameleon-device" }
+
+
+[features]
+libusb = ["cameleon-device/libusb"]
