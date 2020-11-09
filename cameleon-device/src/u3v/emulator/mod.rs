@@ -8,7 +8,7 @@ pub use emulator_impl::{BuilderError, BuilderResult, EmulatorBuilder};
 
 use crate::u3v::Result;
 
-pub fn enumerate_device() -> Result<Vec<Device>> {
+pub fn enumerate_devices() -> Result<Vec<Device>> {
     let device_ids = emulator_impl::DevicePool::with(|pool| pool.device_ids());
     let mut devices = Vec::with_capacity(device_ids.len());
 

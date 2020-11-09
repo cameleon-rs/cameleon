@@ -6,30 +6,30 @@ use super::emulator_impl::DeviceHandle;
 
 pub struct ControlChannel {
     device_handle: DeviceHandle,
-    is_open: bool,
+    is_opened: bool,
 }
 
 impl ControlChannel {
     pub fn open(&mut self) -> Result<()> {
-        if !self.is_open() {
+        if !self.is_opened() {
             self.device_handle.claim_interface()?;
-            self.is_open = true;
+            self.is_opened = true;
         }
 
         Ok(())
     }
 
     pub fn close(&mut self) -> Result<()> {
-        if self.is_open() {
+        if self.is_opened() {
             self.device_handle.release_interface()?;
-            self.is_open = false;
+            self.is_opened = false;
         }
 
         Ok(())
     }
 
-    pub fn is_open(&self) -> bool {
-        self.is_open
+    pub fn is_opened(&self) -> bool {
+        self.is_opened
     }
 
     pub fn send(&self, buf: &[u8], timeout: time::Duration) -> Result<usize> {
@@ -52,37 +52,44 @@ impl ControlChannel {
     pub(super) fn new(device_handle: DeviceHandle) -> Self {
         Self {
             device_handle,
-            is_open: false,
+            is_opened: false,
         }
+    }
+}
+
+impl Drop for ControlChannel {
+    // TODO: logging.
+    fn drop(&mut self) {
+        let _ = self.close();
     }
 }
 
 pub struct ReceiveChannel {
     device_handle: DeviceHandle,
-    is_open: bool,
+    is_opened: bool,
 }
 
 impl ReceiveChannel {
     pub fn open(&mut self) -> Result<()> {
-        if !self.is_open() {
+        if !self.is_opened() {
             self.device_handle.claim_interface()?;
-            self.is_open = true;
+            self.is_opened = true;
         }
 
         Ok(())
     }
 
     pub fn close(&mut self) -> Result<()> {
-        if self.is_open() {
+        if self.is_opened() {
             self.device_handle.release_interface()?;
         }
 
-        self.is_open = false;
+        self.is_opened = false;
         Ok(())
     }
 
-    pub fn is_open(&self) -> bool {
-        self.is_open
+    pub fn is_opened(&self) -> bool {
+        self.is_opened
     }
 
     pub fn recv(&self, buf: &mut [u8], timeout: time::Duration) -> Result<usize> {
@@ -101,7 +108,13 @@ impl ReceiveChannel {
     pub(super) fn new(device_handle: DeviceHandle) -> Self {
         Self {
             device_handle,
-            is_open: false,
+            is_opened: false,
         }
+    }
+}
+
+impl Drop for ReceiveChannel {
+    fn drop(&mut self) {
+        let _ = self.close();
     }
 }

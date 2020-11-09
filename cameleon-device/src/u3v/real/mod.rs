@@ -4,7 +4,7 @@ mod device_builder;
 
 pub use channel::{ControlChannel, ReceiveChannel};
 pub use device::Device;
-pub use device_builder::enumerate_device;
+pub use device_builder::enumerate_devices;
 
 use crate::u3v::{Error, LibUsbError};
 

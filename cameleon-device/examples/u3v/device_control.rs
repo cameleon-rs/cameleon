@@ -15,7 +15,7 @@ fn main() {
         .build();
 
     // Enumerate devices connected to the host.
-    let devices: Vec<Device> = enumerate_device().unwrap().into_iter().collect();
+    let devices: Vec<Device> = enumerate_devices().unwrap().into_iter().collect();
 
     if devices.is_empty() {
         println!("no device found");

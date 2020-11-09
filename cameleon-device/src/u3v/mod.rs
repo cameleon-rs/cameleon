@@ -49,7 +49,7 @@ pub enum LibUsbError {
     Io,
     #[error("invalid parameter")]
     InvalidParam,
-    #[error("access denied (insufficient permissins)")]
+    #[error("access denied (insufficient permissions)")]
     Access,
     #[error("no such device (it may have been disconnected)")]
     NoDevice,

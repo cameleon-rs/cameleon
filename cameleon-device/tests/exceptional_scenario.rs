@@ -10,7 +10,7 @@ fn test_exceptional_scenario() {
     // Set emulated device.
     EmulatorBuilder::new().build();
 
-    let mut devices = enumerate_device().unwrap();
+    let mut devices = enumerate_devices().unwrap();
     assert_eq!(devices.len(), 1);
     let device = devices.pop().unwrap();
 

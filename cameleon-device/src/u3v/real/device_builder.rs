@@ -18,7 +18,7 @@ const IAD_FUNCTION_PROTOCOL: u8 = 0x00;
 
 const USB3V_SUBCLASS: u8 = 0x05;
 
-pub fn enumerate_device() -> Result<Vec<Device>> {
+pub fn enumerate_devices() -> Result<Vec<Device>> {
     let rusb_device_list = rusb::DeviceList::new()?;
     let builders = rusb_device_list
         .iter()

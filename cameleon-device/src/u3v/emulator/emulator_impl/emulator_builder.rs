@@ -26,16 +26,16 @@ pub type BuilderResult<T> = std::result::Result<T, BuilderError>;
 /// An emulator is passed to the device pool and user can't control the emulator itself directly
 /// once build process is finished by calling [`build`].
 ///
-/// Emulators in the device pool can be found by [`cameleon_device::u3v::enumerate_device`] and controlled via
+/// Emulators in the device pool can be found by [`cameleon_device::u3v::enumerate_devices`] and controlled via
 /// [`cameleon_device::u3v::Device`] in the same way as real device.
 ///
-/// [`cameleon_device::u3v::enumerate_device`]: fn.enumerate_device.html
+/// [`cameleon_device::u3v::enumerate_devices`]: fn.enumerate_devices.html
 /// [`cameleon_device::u3v::Device`]: struct.Device.html
 /// [`build`]: ./struct.EmulatorBuilder.html#method.build
 ///
 /// # Example
 /// ```rust
-/// use cameleon_device::u3v::{EmulatorBuilder, enumerate_device};
+/// use cameleon_device::u3v::{EmulatorBuilder, enumerate_devices};
 ///
 /// // Build device with default configuration and pass it to the device pool.
 /// // Now the device pool has one device.
@@ -45,7 +45,7 @@ pub type BuilderResult<T> = std::result::Result<T, BuilderError>;
 /// // Now the device pool has two devices.
 /// EmulatorBuilder::new().model_name("Cameleon Model").unwrap().serial_number("CAM1984").unwrap().build();
 ///
-/// let devices = enumerate_device().unwrap();
+/// let devices = enumerate_devices().unwrap();
 /// assert_eq!(devices.len(), 2);
 ///
 /// ```
@@ -71,10 +71,10 @@ impl EmulatorBuilder {
     /// Build an emulator and pass it to the device pool. User can't control the emulator itself
     /// directly once call this method.
     ///
-    /// Emulators in the device pool can be found by [`cameleon_device::u3v::enumerate_device`] and controlled via
+    /// Emulators in the device pool can be found by [`cameleon_device::u3v::enumerate_devices`] and controlled via
     /// [`cameleon_device::u3v::Device`] in the same way as real device.
     ///
-    /// [`cameleon_device::u3v::enumerate_device`]: fn.enumerate_device.html
+    /// [`cameleon_device::u3v::enumerate_devices`]: fn.enumerate_devices.html
     /// [`cameleon_device::u3v::Device`]: struct.Device.html
     ///
     /// # Example

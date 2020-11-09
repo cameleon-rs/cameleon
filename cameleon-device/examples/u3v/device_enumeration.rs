@@ -10,7 +10,7 @@ fn main() {
         .unwrap()
         .build();
 
-    let devices = enumerate_device().unwrap();
+    let devices = enumerate_devices().unwrap();
     if devices.is_empty() {
         println!("no device found");
     }
