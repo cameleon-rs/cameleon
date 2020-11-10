@@ -184,6 +184,10 @@ impl Status {
         self.code
     }
 
+    pub fn kind(&self) -> StatusKind {
+        self.kind
+    }
+
     fn parse(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
         let code = cursor.read_u16::<LE>()?;
 
