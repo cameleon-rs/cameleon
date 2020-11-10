@@ -40,7 +40,7 @@ where
 
     pub fn cmd_len(&self) -> usize {
         // Magic(4bytes) + ccd + scd
-        4 + self.ccd.len() as usize + self.scd.scd_len() as usize
+        4 + CommandCcd::len() as usize + self.scd.scd_len() as usize
     }
 
     pub fn request_id(&self) -> u16 {
@@ -58,6 +58,10 @@ where
     pub fn new(scd: T, request_id: u16) -> Self {
         let ccd = CommandCcd::from_scd(&scd, request_id);
         Self { ccd, scd }
+    }
+
+    fn header_len() -> usize {
+        4 + CommandCcd::len() as usize
     }
 }
 
@@ -88,6 +92,38 @@ pub struct WriteMem<'a> {
     len: u16,
 }
 
+pub struct WriteMemChunks<'a> {
+    address: u64,
+    data: &'a [u8],
+    data_idx: usize,
+    maximum_data_len: usize,
+}
+
+impl<'a> std::iter::Iterator for WriteMemChunks<'a> {
+    type Item = WriteMem<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.data_idx == self.data.len() {
+            return None;
+        }
+
+        if self.data_idx + self.maximum_data_len < self.data.len() {
+            let next_item = WriteMem::new(
+                self.address,
+                &self.data[self.data_idx..self.data_idx + self.maximum_data_len],
+            )
+            .unwrap();
+            self.address += self.maximum_data_len as u64;
+            self.data_idx += self.maximum_data_len;
+            Some(next_item)
+        } else {
+            let next_item = WriteMem::new(self.address, &self.data[self.data_idx..]).unwrap();
+            self.data_idx = self.data.len();
+            Some(next_item)
+        }
+    }
+}
+
 impl<'a> WriteMem<'a> {
     pub fn new(address: u64, data: &'a [u8]) -> Result<Self> {
         let data_len = into_scd_len(data.len())?;
@@ -98,6 +134,26 @@ impl<'a> WriteMem<'a> {
             data,
             data_len,
             len,
+        })
+    }
+
+    /// Split into multiple [`WriteMem`] chunks so that all commands resulting from chunks fit into `cmd_len`.
+    pub fn chunks(&self, cmd_len: usize) -> Result<WriteMemChunks<'a>> {
+        let maximum_data_len = cmd_len
+            .checked_sub(CommandPacket::<WriteMem>::header_len() + 8)
+            .ok_or_else(|| {
+                let msg = format!(
+                    "cmd_len must be larger than {}",
+                    CommandPacket::<WriteMem>::header_len() + 8
+                );
+                Error::InvalidPacket(msg.into())
+            })?;
+
+        Ok(WriteMemChunks {
+            address: self.address,
+            data: &self.data,
+            data_idx: 0,
+            maximum_data_len,
         })
     }
 
@@ -223,7 +279,7 @@ impl CommandCcd {
         Ok(())
     }
 
-    const fn len(&self) -> u16 {
+    pub const fn len() -> u16 {
         // flags(2bytes) + command_id(2bytes) + scd_len(2bytes) + request_id(2bytes)
         8
     }
@@ -491,5 +547,28 @@ mod tests {
         expected.extend(vec![0x11, 0x12, 0x13, 0x14]); // Data block 1.
 
         assert_eq!(buf, expected);
+    }
+
+    #[test]
+    fn test_write_mem_chunks() {
+        let data = vec![0; 128];
+        let write_mem = WriteMem::new(0, &data).unwrap();
+
+        let mut expected_addr = 0;
+        let mut sent_data_len = 0;
+
+        let chunks: Vec<_> = write_mem.chunks(24).unwrap().collect();
+
+        for i in 0..chunks.len() - 1 {
+            assert_eq!(chunks[i].address, expected_addr);
+            expected_addr += chunks[i].data_len as u64;
+            sent_data_len += chunks[i].data_len;
+
+            assert_eq!(chunks[i].clone().finalize(i as u16).cmd_len(), 24);
+        }
+
+        let last_chunk = chunks.last().unwrap();
+        assert_eq!(last_chunk.address, expected_addr);
+        assert_eq!(last_chunk.data_len, data.len() as u16 - sent_data_len);
     }
 }
