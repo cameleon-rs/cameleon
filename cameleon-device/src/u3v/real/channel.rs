@@ -7,32 +7,32 @@ use super::device::RusbDevHandle;
 pub struct ControlChannel {
     device_handle: RusbDevHandle,
     iface_info: ControlIfaceInfo,
-    is_open: bool,
+    is_opened: bool,
 }
 
 impl ControlChannel {
     pub fn open(&mut self) -> Result<()> {
-        if !self.is_open() {
+        if !self.is_opened() {
             self.device_handle
                 .claim_interface(self.iface_info.iface_number)?;
-            self.is_open = true;
+            self.is_opened = true;
         }
 
         Ok(())
     }
 
     pub fn close(&mut self) -> Result<()> {
-        if self.is_open() {
+        if self.is_opened() {
             self.device_handle
                 .release_interface(self.iface_info.iface_number)?;
-            self.is_open = false;
+            self.is_opened = false;
         }
 
         Ok(())
     }
 
-    pub fn is_open(&self) -> bool {
-        self.is_open
+    pub fn is_opened(&self) -> bool {
+        self.is_opened
     }
 
     pub fn send(&self, buf: &[u8], timeout: time::Duration) -> Result<usize> {
@@ -63,7 +63,7 @@ impl ControlChannel {
         Self {
             device_handle,
             iface_info,
-            is_open: false,
+            is_opened: false,
         }
     }
 }
@@ -71,32 +71,32 @@ impl ControlChannel {
 pub struct ReceiveChannel {
     device_handle: RusbDevHandle,
     iface_info: ReceiveIfaceInfo,
-    is_open: bool,
+    is_opened: bool,
 }
 
 impl ReceiveChannel {
     pub fn open(&mut self) -> Result<()> {
-        if !self.is_open() {
+        if !self.is_opened() {
             self.device_handle
                 .claim_interface(self.iface_info.iface_number)?;
-            self.is_open = true;
+            self.is_opened = true;
         }
 
         Ok(())
     }
 
     pub fn close(&mut self) -> Result<()> {
-        if self.is_open() {
+        if self.is_opened() {
             self.device_handle
                 .release_interface(self.iface_info.iface_number)?;
         }
 
-        self.is_open = false;
+        self.is_opened = false;
         Ok(())
     }
 
-    pub fn is_open(&self) -> bool {
-        self.is_open
+    pub fn is_opened(&self) -> bool {
+        self.is_opened
     }
 
     pub fn recv(&self, buf: &mut [u8], timeout: time::Duration) -> Result<usize> {
@@ -120,7 +120,7 @@ impl ReceiveChannel {
         Self {
             device_handle,
             iface_info,
-            is_open: false,
+            is_opened: false,
         }
     }
 }

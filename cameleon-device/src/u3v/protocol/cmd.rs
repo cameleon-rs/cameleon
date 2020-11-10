@@ -124,6 +124,10 @@ impl ReadMem {
             maximum_read_length,
         })
     }
+
+    pub fn read_length(&self) -> u16 {
+        self.read_length
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
