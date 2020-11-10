@@ -5,6 +5,7 @@ fn test_normal_scenario() {
 
     use byteorder::{ReadBytesExt, WriteBytesExt, LE};
     use cameleon_device::u3v::{
+        prelude::*,
         protocol::{ack, cmd},
         *,
     };

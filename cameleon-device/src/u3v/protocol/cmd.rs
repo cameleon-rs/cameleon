@@ -124,10 +124,6 @@ impl ReadMem {
             maximum_read_length,
         })
     }
-
-    pub fn finalize(self, request_id: u16) -> CommandPacket<Self> {
-        CommandPacket::new(self, request_id)
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -183,6 +179,11 @@ impl<'a> WriteMem<'a> {
         })
     }
 
+    /// Data length of the
+    pub fn data_len(&self) -> usize {
+        self.data.len()
+    }
+
     /// Split into multiple [`WriteMem`] chunks so that all commands resulting from chunks fit into `cmd_len`.
     pub fn chunks(&self, cmd_len: usize) -> Result<WriteMemChunks<'a>> {
         let cmd_header_len = CommandPacket::<WriteMem>::header_len() + 8;
@@ -201,10 +202,6 @@ impl<'a> WriteMem<'a> {
             data_idx: 0,
             maximum_data_len,
         })
-    }
-
-    pub fn finalize(self, request_id: u16) -> CommandPacket<Self> {
-        CommandPacket::new(self, request_id)
     }
 }
 
@@ -225,10 +222,6 @@ impl ReadMemStacked {
             len,
             ack_scd_len,
         })
-    }
-
-    pub fn finalize(self, request_id: u16) -> CommandPacket<Self> {
-        CommandPacket::new(self, request_id)
     }
 
     fn len(regs: &[ReadMem]) -> Result<u16> {
@@ -264,10 +257,6 @@ impl<'a> WriteMemStacked<'a> {
             len,
             ack_scd_len,
         })
-    }
-
-    pub fn finalize(self, request_id: u16) -> CommandPacket<Self> {
-        CommandPacket::new(self, request_id)
     }
 
     fn len(entries: &[WriteMem<'a>]) -> Result<u16> {
@@ -368,7 +357,7 @@ impl ScdKind {
     }
 }
 
-pub trait CommandScd: std::fmt::Debug {
+pub trait CommandScd: std::fmt::Debug + Sized {
     fn flag(&self) -> CommandFlag;
 
     fn scd_kind(&self) -> ScdKind;
@@ -378,6 +367,10 @@ pub trait CommandScd: std::fmt::Debug {
     fn serialize(&self, buf: impl Write) -> Result<()>;
 
     fn ack_scd_len(&self) -> u16;
+
+    fn finalize(self, request_id: u16) -> CommandPacket<Self> {
+        CommandPacket::new(self, request_id)
+    }
 }
 
 impl CommandScd for ReadMem {
