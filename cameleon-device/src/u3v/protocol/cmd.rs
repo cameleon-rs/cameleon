@@ -71,12 +71,58 @@ pub struct ReadMem {
     pub(crate) read_length: u16,
 }
 
+pub struct ReadMemChunks {
+    address: u64,
+    read_length: u16,
+    maximum_read_length: usize,
+}
+
+impl std::iter::Iterator for ReadMemChunks {
+    type Item = ReadMem;
+
+    fn next(&mut self) -> Option<ReadMem> {
+        if self.read_length == 0 {
+            return None;
+        }
+
+        if self.read_length as usize > self.maximum_read_length {
+            let next_item = ReadMem::new(self.address, self.maximum_read_length as u16);
+            self.read_length -= self.maximum_read_length as u16;
+            self.address += self.maximum_read_length as u64;
+            Some(next_item)
+        } else {
+            let next_item = ReadMem::new(self.address, self.read_length);
+            self.read_length = 0;
+            Some(next_item)
+        }
+    }
+}
+
 impl ReadMem {
     pub fn new(address: u64, read_length: u16) -> Self {
         Self {
             address,
             read_length,
         }
+    }
+
+    /// Split into multiple [`ReadMem`] chunks so that all corresponding ack length fit into `ack_len`.
+    pub fn chunks(&self, ack_len: usize) -> Result<ReadMemChunks> {
+        let ack_header_length = CommandPacket::<ReadMem>::ACK_HEADER_LENGTH;
+        if ack_len <= ack_header_length {
+            let msg = format!(
+                "ack length must be larger than {}",
+                CommandPacket::<ReadMem>::ACK_HEADER_LENGTH
+            );
+            return Err(Error::InvalidPacket(msg.into()));
+        };
+        let maximum_read_length = ack_len - ack_header_length;
+
+        Ok(ReadMemChunks {
+            address: self.address,
+            read_length: self.read_length,
+            maximum_read_length,
+        })
     }
 
     pub fn finalize(self, request_id: u16) -> CommandPacket<Self> {
@@ -139,15 +185,15 @@ impl<'a> WriteMem<'a> {
 
     /// Split into multiple [`WriteMem`] chunks so that all commands resulting from chunks fit into `cmd_len`.
     pub fn chunks(&self, cmd_len: usize) -> Result<WriteMemChunks<'a>> {
-        let maximum_data_len = cmd_len
-            .checked_sub(CommandPacket::<WriteMem>::header_len() + 8)
-            .ok_or_else(|| {
-                let msg = format!(
-                    "cmd_len must be larger than {}",
-                    CommandPacket::<WriteMem>::header_len() + 8
-                );
-                Error::InvalidPacket(msg.into())
-            })?;
+        let cmd_header_len = CommandPacket::<WriteMem>::header_len() + 8;
+        if cmd_len <= cmd_header_len {
+            let msg = format!(
+                "cmd_len must be larger than {}",
+                CommandPacket::<WriteMem>::header_len() + 8
+            );
+            return Err(Error::InvalidPacket(msg.into()));
+        };
+        let maximum_data_len = cmd_len - cmd_header_len;
 
         Ok(WriteMemChunks {
             address: self.address,
@@ -547,6 +593,25 @@ mod tests {
         expected.extend(vec![0x11, 0x12, 0x13, 0x14]); // Data block 1.
 
         assert_eq!(buf, expected);
+    }
+
+    #[test]
+    fn test_read_mem_chunks() {
+        let read_mem = ReadMem::new(0, 128);
+        let chunks: Vec<_> = read_mem.chunks(24).unwrap().collect();
+
+        let mut expected_addr = 0;
+        let mut read_len = 0;
+        for i in 0..chunks.len() - 1 {
+            assert_eq!(chunks[i].address, expected_addr);
+            expected_addr += chunks[i].read_length as u64;
+            read_len += chunks[i].read_length;
+            assert_eq!(chunks[i].clone().finalize(i as u16).maximum_ack_len(), 24);
+        }
+
+        let last_chunk = chunks.last().unwrap();
+        assert_eq!(last_chunk.address, expected_addr);
+        assert_eq!(last_chunk.read_length + read_len, read_mem.read_length);
     }
 
     #[test]
