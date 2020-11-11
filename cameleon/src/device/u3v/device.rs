@@ -33,8 +33,8 @@ impl Device {
         Ok(())
     }
 
-    pub fn control_handle(&self) -> DeviceResult<ControlHandle> {
-        if self.ctrl_handle.is_opened() {
+    pub fn control_handle(&mut self) -> DeviceResult<ControlHandle> {
+        if self.is_opened() {
             Ok(self.ctrl_handle.clone())
         } else {
             Err(DeviceError::NotOpened)

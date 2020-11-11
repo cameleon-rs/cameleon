@@ -1,4 +1,7 @@
-use std::time::Duration;
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 use cameleon_device::{
     u3v,
@@ -8,15 +11,99 @@ use cameleon_device::{
 use crate::device::{DeviceError, DeviceResult};
 
 /// Initial timeout duration for transaction between device and host.
+/// This value is temporarily used until the device's bootstrap register value is read.
 const INITIAL_TIMEOUT_DURATION: Duration = Duration::from_millis(500);
 
 /// Initial maximum command  packet length for transaction between device and host.
+/// This value is temporarily used until the device's bootstrap register value is read.
 const INITIAL_MAXIMUM_CMD_LENGTH: u32 = 1024;
 
 /// Initial maximum acknowledge packet length for transaction between device and host.
+/// This value is temporarily used until the device's bootstrap register value is read.
 const INITIAL_MAXIMUM_ACK_LENGTH: u32 = 1024;
 
+/// Thread safe control handle of the device.  
+#[derive(Clone)]
 pub struct ControlHandle {
+    inner: Arc<Mutex<ControlHandleImpl>>,
+}
+
+impl ControlHandle {
+    /// Read data from the device's memory.
+    /// Read length is same as `buf.len()`.
+    pub fn read_mem(&self, address: u64, buf: &mut [u8]) -> DeviceResult<()> {
+        self.inner.lock().unwrap().read_mem(address, buf)
+    }
+
+    /// Write data to the device's memory.
+    pub fn write_mem(&self, address: u64, data: &[u8]) -> DeviceResult<()> {
+        self.inner.lock().unwrap().write_mem(address, data)
+    }
+
+    /// Capacity of the buffer inside [`ControlHandleImpl`], the buffer is used for
+    /// serializing/deserializing packet. This buffer automatically extend according to packet
+    /// length.
+    pub fn buffer_capacity(&self) -> usize {
+        self.inner.lock().unwrap().buffer_capacity()
+    }
+
+    /// Resize the capacity of the buffer inside [`ControlHandleImpl`], the buffer is used for
+    /// serializing/deserializing packet. This buffer automatically extend according to packet
+    /// length.
+    pub fn resize_buffer(&self, size: usize) {
+        self.inner.lock().unwrap().resize_buffer(size)
+    }
+
+    /// Is control handle opened.
+    pub fn is_opened(&self) -> bool {
+        self.inner.lock().unwrap().is_opened()
+    }
+
+    /// Timeout duration of each transaction between device.
+    /// NOTE: [`ControlHandle::read_mem`] and [`ControlHandle::write_mem`] may send multiple
+    /// requests in a single call.
+    pub fn timeout_duration(&self) -> Duration {
+        self.inner.lock().unwrap().config.timeout_duration
+    }
+
+    /// Set timeout duration of each transaction between device.
+    /// NOTE: [`ControlHandle::read_mem`] and [`ControlHandle::write_mem`] may send multiple
+    /// requests in a single call.
+    ///
+    /// In normal use case, no need to modify timeout duration.
+    pub fn set_timeout_duration(&self, duration: Duration) {
+        self.inner.lock().unwrap().config.timeout_duration = duration;
+    }
+
+    /// The value determines how many times to retry when pending acknowledge is returned from the
+    /// device.
+    pub fn retry_count(&self) -> u16 {
+        self.inner.lock().unwrap().config.retry_count
+    }
+
+    /// Set the value determines how many times to retry when pending acknowledge is returned from the
+    /// device.
+    pub fn set_retry_count(&mut self, count: u16) {
+        self.inner.lock().unwrap().config.retry_count = count;
+    }
+
+    pub(super) fn open(&self) -> DeviceResult<()> {
+        self.inner.lock().unwrap().open()
+    }
+
+    pub(super) fn close(&self) -> DeviceResult<()> {
+        self.inner.lock().unwrap().close()
+    }
+
+    pub(super) fn new(device: &u3v::Device) -> DeviceResult<Self> {
+        let inner = ControlHandleImpl::new(device)?;
+        Ok(Self {
+            inner: Arc::new(Mutex::new(inner)),
+        })
+    }
+}
+
+struct ControlHandleImpl {
     inner: u3v::ControlChannel,
 
     config: ConnectionConfig,
@@ -27,14 +114,11 @@ pub struct ControlHandle {
     buffer: Vec<u8>,
 }
 
-impl ControlHandle {
-    /// Set configuration that manages connection parameters.
-    /// NOTE: The parameter is shared by all handles provided by the same [`super::Device`].
-    pub fn set_config(&mut self, config: ConnectionConfig) {
-        self.config = config;
-    }
+impl ControlHandleImpl {
+    /// Write data to the device's memory.
+    fn write_mem(&mut self, address: u64, data: &[u8]) -> DeviceResult<()> {
+        self.assert_open()?;
 
-    pub fn write_mem(&mut self, address: u64, data: &[u8]) -> DeviceResult<()> {
         let cmd = cmd::WriteMem::new(address, data)?;
         let maximum_cmd_length = self.config.maximum_cmd_length;
 
@@ -52,14 +136,18 @@ impl ControlHandle {
         Ok(())
     }
 
-    pub fn read_mem(&mut self, mut address: u64, buf: &mut [u8]) -> DeviceResult<()> {
+    /// Read data from the device's memory.
+    /// Read length is same as `buf.len()`.
+    fn read_mem(&mut self, mut address: u64, buf: &mut [u8]) -> DeviceResult<()> {
+        self.assert_open()?;
+
         // Chunks buffer if buffer length is larger than u16::MAX.
         for buf_chunk in buf.chunks_mut(std::u16::MAX as usize) {
             // Create command for buffer chunk.
             let cmd = cmd::ReadMem::new(address, buf_chunk.len() as u16);
             let maximum_ack_length = self.config.maximum_ack_length;
 
-            // Chunks command so that acknowledge packet length fits to maximum_ack_length.
+            // Chunks command so that each acknowledge packet length fits to maximum_ack_length.
             let mut total_read_len = 0;
             for cmd_chunk in cmd.chunks(maximum_ack_length as usize).unwrap() {
                 let read_len = cmd_chunk.read_length();
@@ -75,29 +163,51 @@ impl ControlHandle {
         Ok(())
     }
 
-    pub fn buffer_capacity(&self) -> usize {
+    /// Capacity of the buffer inside [`ControlHandleImpl`], the buffer is used for
+    /// serializing/deserializing packet. This buffer automatically extend according to packet
+    /// length.
+    fn buffer_capacity(&self) -> usize {
         self.buffer.capacity()
     }
 
-    pub fn shrink_buffer(&mut self, size: usize) {
+    /// Resize the capacity of the buffer inside [`ControlHandleImpl`], the buffer is used for
+    /// serializing/deserializing packet. This buffer automatically extend according to packet
+    /// length.
+    fn resize_buffer(&mut self, size: usize) {
         self.buffer.resize(size, 0);
         self.buffer.shrink_to_fit();
     }
 
-    pub(super) fn open(&mut self) -> DeviceResult<()> {
+    fn open(&mut self) -> DeviceResult<()> {
+        if self.is_opened() {
+            return Ok(());
+        }
+
         self.inner.open()?;
         // Clean up control channel state.
-        self.inner.set_halt(self.config.timeout_duration())?;
+        self.inner.set_halt(self.config.timeout_duration)?;
         self.inner.clear_halt()?;
 
         Ok(())
     }
 
-    pub(super) fn close(&mut self) -> DeviceResult<()> {
-        Ok(self.inner.close()?)
+    fn assert_open(&self) -> DeviceResult<()> {
+        if !self.is_opened() {
+            Err(DeviceError::NotOpened)
+        } else {
+            Ok(())
+        }
     }
 
-    pub(super) fn new(device: &u3v::Device) -> DeviceResult<Self> {
+    fn close(&mut self) -> DeviceResult<()> {
+        if !self.is_opened() {
+            Ok(())
+        } else {
+            Ok(self.inner.close()?)
+        }
+    }
+
+    fn new(device: &u3v::Device) -> DeviceResult<Self> {
         let inner = device.control_channel()?;
 
         Ok(Self {
@@ -108,7 +218,7 @@ impl ControlHandle {
         })
     }
 
-    pub(super) fn is_opened(&self) -> bool {
+    fn is_opened(&self) -> bool {
         self.inner.is_opened()
     }
 
@@ -127,7 +237,7 @@ impl ControlHandle {
         // Serialize and send command.
         cmd.serialize(self.buffer.as_mut_slice())?;
         self.inner
-            .send(&self.buffer[..cmd_len], self.config.timeout_duration())?;
+            .send(&self.buffer[..cmd_len], self.config.timeout_duration)?;
 
         // Receive ack.
         // If ack status is invalid, return error.
@@ -139,7 +249,7 @@ impl ControlHandle {
         while retry_count > 0 {
             let recv_len = self
                 .inner
-                .recv(&mut self.buffer, self.config.timeout_duration())?;
+                .recv(&mut self.buffer, self.config.timeout_duration)?;
 
             let ack = ack::AckPacket::parse(&self.buffer[0..recv_len])?;
             self.verify_ack(&ack)?;
@@ -185,28 +295,19 @@ impl ControlHandle {
     }
 }
 
-pub struct ConnectionConfig {
+struct ConnectionConfig {
+    /// Timeout duration of each transaction between device.
     timeout_duration: Duration,
 
+    /// The value determines how many times to retry when pending acknowledge is returned from the
+    /// device.
     retry_count: u16,
 
     /// Maximum length of a command sent to device from host. Unit is byte.
     maximum_cmd_length: u32,
 
-    /// Maximum length of a ack sent to host from device. Unit is byte.
+    /// Maximum length of a acknowledge sent to host from device. Unit is byte.
     maximum_ack_length: u32,
-}
-
-impl ConnectionConfig {
-    /// Timeout duration of each transaction between device.
-    pub fn timeout_duration(&self) -> Duration {
-        self.timeout_duration
-    }
-
-    /// Set timeout duration of each transaction between device.
-    pub fn set_timeout_duration(&mut self, duration: Duration) {
-        self.timeout_duration = duration;
-    }
 }
 
 impl Default for ConnectionConfig {

@@ -1,7 +1,7 @@
 mod control_handle;
 mod device;
 
-pub use control_handle::{ConnectionConfig, ControlHandle};
+pub use control_handle::ControlHandle;
 pub use device::{enumerate_devices, Device};
 
 use cameleon_device::u3v;
