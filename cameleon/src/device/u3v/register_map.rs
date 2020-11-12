@@ -1,4 +1,4 @@
-use std::{fmt, time::Duration};
+use std::{convert::TryInto, fmt, time::Duration};
 
 use cameleon_device::u3v::register_map::*;
 use semver;
@@ -13,7 +13,7 @@ struct Abrm {
     manufacturer_name: String,
     model_name: String,
     family_name: Option<String>,
-    device_version: semver::Version,
+    device_version: String,
     manufacturer_info: String,
     serial_number: String,
     user_defined_name: Option<String>,
@@ -33,49 +33,90 @@ struct Abrm {
     // * IMPLEMENTATION_ENDIANNESS
 }
 
+/// Read and parse register value.
+fn read_register<T>(
+    handle: &ControlHandle,
+    buf: &mut Vec<u8>,
+    addr: u64,
+    len: u16,
+) -> DeviceResult<T>
+where
+    T: ParseBytes,
+{
+    let len = len as usize;
+    if buf.len() < len {
+        buf.resize(len, 0);
+    }
+
+    handle.read_mem(addr, &mut buf[..len])?;
+    T::parse_bytes(&buf[..len])
+}
+
 impl Abrm {
     pub(super) fn new(handle: &ControlHandle) -> DeviceResult<Self> {
         use abrm::*;
 
         let mut buf = vec![0; 64];
-        macro_rules! sync_register {
-            ($register_info:ident, $ty:ty) => {{
-                let (addr, len) = $register_info;
-                let len = len as usize;
-                if buf.len() < len {
-                    buf.resize(len, 0);
-                }
 
-                handle.read_mem(addr, &mut buf[..len])?;
-                <$ty>::parse_bytes(&buf[..len])?
-            }};
-        }
+        let device_capability: DeviceCapability =
+            read_register(handle, &mut buf, DEVICE_CAPABILITY.0, DEVICE_CAPABILITY.1)?;
 
-        let device_capability = sync_register!(DEVICE_CAPABILITY, DeviceCapability);
-        let gencp_version = sync_register!(GENCP_VERSION, semver::Version);
-        let manufacturer_name = sync_register!(GENCP_VERSION, String);
-        let model_name = sync_register!(MODEL_NAME, String);
+        let gencp_version = read_register(handle, &mut buf, GENCP_VERSION.0, GENCP_VERSION.1)?;
+        let manufacturer_name =
+            read_register(handle, &mut buf, MANUFACTURER_NAME.0, MANUFACTURER_NAME.1)?;
+        let model_name = read_register(handle, &mut buf, MODEL_NAME.0, MODEL_NAME.1)?;
         let family_name = if device_capability.is_family_name_supported() {
-            Some(sync_register!(FAMILY_NAME, String))
+            Some(read_register(
+                handle,
+                &mut buf,
+                FAMILY_NAME.0,
+                FAMILY_NAME.1,
+            )?)
         } else {
             None
         };
-        let device_version = sync_register!(DEVICE_VERSION, semver::Version);
-        let manufacturer_info = sync_register!(MANUFACTURER_INFO, String);
-        let serial_number = sync_register!(SERIAL_NUMBER, String);
+        let device_version = read_register(handle, &mut buf, DEVICE_VERSION.0, DEVICE_VERSION.1)?;
+        let manufacturer_info =
+            read_register(handle, &mut buf, MANUFACTURER_INFO.0, MANUFACTURER_INFO.1)?;
+        let serial_number = read_register(handle, &mut buf, SERIAL_NUMBER.0, SERIAL_NUMBER.1)?;
         let user_defined_name = if device_capability.is_user_defined_name_suported() {
-            Some(sync_register!(USER_DEFINED_NAME, String))
+            Some(read_register(
+                handle,
+                &mut buf,
+                USER_DEFINED_NAME.0,
+                USER_DEFINED_NAME.1,
+            )?)
         } else {
             None
         };
-        let maximum_device_response_time = sync_register!(MAXIMUM_DEVICE_RESPONSE_TIME, Duration);
-        let manifest_table_address = sync_register!(MANIFEST_TABLE_ADDRESS, u64);
-        let sbrm_address = sync_register!(SBRM_ADDRESS, u64);
-        let timestamp = sync_register!(TIMESTAMP, u64);
-        let timestamp_increment = sync_register!(TIMESTAMP_INCREMENT, u32);
+        let maximum_device_response_time = read_register(
+            handle,
+            &mut buf,
+            MAXIMUM_DEVICE_RESPONSE_TIME.0,
+            MAXIMUM_DEVICE_RESPONSE_TIME.1,
+        )?;
+        let manifest_table_address = read_register(
+            handle,
+            &mut buf,
+            MANIFEST_TABLE_ADDRESS.0,
+            MANIFEST_TABLE_ADDRESS.1,
+        )?;
+        let sbrm_address = read_register(handle, &mut buf, SBRM_ADDRESS.0, SBRM_ADDRESS.1)?;
+        let timestamp = read_register(handle, &mut buf, TIMESTAMP.0, TIMESTAMP.1)?;
+        let timestamp_increment = read_register(
+            handle,
+            &mut buf,
+            TIMESTAMP_INCREMENT.0,
+            TIMESTAMP_INCREMENT.1,
+        )?;
         let device_software_interface_version =
             if device_capability.is_device_software_interface_version_supported() {
-                Some(sync_register!(DEVICE_SOFTWARE_INTERFACE_VERSION, String))
+                Some(read_register(
+                    handle,
+                    &mut buf,
+                    DEVICE_SOFTWARE_INTERFACE_VERSION.0,
+                    TIMESTAMP.1,
+                )?)
             } else {
                 None
             };
@@ -170,36 +211,60 @@ trait ParseBytes: Sized {
 
 impl ParseBytes for semver::Version {
     fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
-        todo!()
+        let minor = u16::parse_bytes(&bytes[0..16])?;
+        let major = u16::parse_bytes(&bytes[16..])?;
+        Ok(semver::Version::new(major as u64, minor as u64, 0))
     }
 }
 
 impl ParseBytes for DeviceCapability {
     fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
-        todo!()
+        let raw = bytes.try_into().unwrap();
+        Ok(Self { raw })
     }
 }
 
 impl ParseBytes for String {
     fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
-        todo!()
+        // The string may be zero-terminated.
+        let len = bytes.iter().position(|&b| b == 0);
+        let s = if let Some(len) = len {
+            std::str::from_utf8(&bytes[..len])
+        } else {
+            std::str::from_utf8(bytes)
+        };
+
+        let s = s.map_err(|_| {
+            DeviceError::InternalError("device's string register value is broken".into())
+        })?;
+
+        Ok(s.into())
     }
 }
 
 impl ParseBytes for Duration {
     fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
-        todo!()
+        let raw = u64::parse_bytes(bytes)?;
+        Ok(Duration::from_millis(raw))
     }
 }
 
-impl ParseBytes for u64 {
-    fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
-        todo!()
-    }
+macro_rules! impl_parse_bytes_for_numeric {
+    ($ty:ty) => {
+        impl ParseBytes for $ty {
+            fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
+                let bytes = bytes.try_into().unwrap();
+                Ok(<$ty>::from_le_bytes(bytes))
+            }
+        }
+    };
 }
 
-impl ParseBytes for u32 {
-    fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
-        todo!()
-    }
-}
+impl_parse_bytes_for_numeric!(u8);
+impl_parse_bytes_for_numeric!(u16);
+impl_parse_bytes_for_numeric!(u32);
+impl_parse_bytes_for_numeric!(u64);
+impl_parse_bytes_for_numeric!(i8);
+impl_parse_bytes_for_numeric!(i16);
+impl_parse_bytes_for_numeric!(i32);
+impl_parse_bytes_for_numeric!(i64);
