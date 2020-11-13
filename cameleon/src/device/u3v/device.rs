@@ -4,7 +4,7 @@ use crate::device::{DeviceError, DeviceResult};
 
 use super::{
     control_handle::ControlHandle,
-    register_map::{Abrm, AbrmStaticData},
+    register_map::{Abrm, AbrmStaticData, Sbrm, SbrmStaticData},
 };
 
 pub type DeviceInfo = u3v::DeviceInfo;
@@ -12,9 +12,11 @@ pub type DeviceInfo = u3v::DeviceInfo;
 pub struct Device {
     device: u3v::Device,
 
-    ctrl_handle: ControlHandle,
     // TODO: Stream and event handles.
+    ctrl_handle: ControlHandle,
+
     abrm: Option<AbrmStaticData>,
+    sbrm: Option<SbrmStaticData>,
 }
 
 impl Device {
@@ -25,6 +27,7 @@ impl Device {
             device,
             ctrl_handle,
             abrm: None,
+            sbrm: None,
         })
     }
 
@@ -34,13 +37,14 @@ impl Device {
         }
 
         self.ctrl_handle.open()?;
-        if self.abrm.is_none() {
-            // TODO: SBRM
-            self.abrm = Some(AbrmStaticData::new(&self.ctrl_handle)?);
-        }
+        let abrm = AbrmStaticData::new(&self.ctrl_handle)?;
+        let sbrm = SbrmStaticData::new(abrm.sbrm_address, &self.ctrl_handle)?;
 
-        // TODO: initialize control handle parameters.
-        // self.ctrl_handle.initialize_params(abrm, sbrm);
+        // Initialize transaction configuration using boot register map.
+        self.ctrl_handle.initialize_config(&abrm, &sbrm);
+
+        self.abrm = Some(abrm);
+        self.sbrm = Some(sbrm);
 
         Ok(())
     }
@@ -64,6 +68,14 @@ impl Device {
     pub fn abrm(&self) -> DeviceResult<Abrm> {
         if self.is_opened() {
             Ok(Abrm::new(self.abrm.as_ref().unwrap(), &self.ctrl_handle))
+        } else {
+            Err(DeviceError::NotOpened)
+        }
+    }
+
+    pub fn sbrm(&self) -> DeviceResult<Sbrm> {
+        if self.is_opened() {
+            Ok(Sbrm::new(self.sbrm.as_ref().unwrap()))
         } else {
             Err(DeviceError::NotOpened)
         }
