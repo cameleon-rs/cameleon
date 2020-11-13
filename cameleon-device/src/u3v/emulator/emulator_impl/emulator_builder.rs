@@ -2,7 +2,7 @@ use rand::seq::SliceRandom;
 use semver::Version;
 use thiserror::Error;
 
-use crate::u3v::{DeviceInfo, SupportedSpeed};
+use crate::u3v::{BusSpeed, DeviceInfo};
 
 use super::{
     device::Device,
@@ -212,7 +212,7 @@ impl EmulatorBuilder {
         let device_version = self.memory.read::<DeviceVersion>().unwrap();
         let manufacturer_info = self.memory.read::<ManufacturerInfo>().unwrap();
         let user_defined_name = Some(self.memory.read::<UserDefinedName>().unwrap());
-        let supported_speed = SupportedSpeed::SuperSpeed;
+        let supported_speed = BusSpeed::SuperSpeed;
         let serial_number = self.memory.read::<SerialNumber>().unwrap();
 
         // TODO: Read from SBRM.

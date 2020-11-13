@@ -1,7 +1,7 @@
 use byteorder::{ReadBytesExt, LE};
 use semver::Version;
 
-use crate::u3v::{DeviceInfo, Error, Result, SupportedSpeed};
+use crate::u3v::{BusSpeed, DeviceInfo, Error, Result};
 
 use super::{
     channel::{ControlIfaceInfo, ReceiveIfaceInfo},
@@ -354,15 +354,15 @@ impl DeviceInfoDescriptor {
             Some(channel.read_string_descriptor_ascii(self.user_defined_name_idx)?)
         };
         let supported_speed = if self.supported_speed_mask >> 4 & 0b1 == 1 {
-            SupportedSpeed::SuperSpeedPlus
+            BusSpeed::SuperSpeedPlus
         } else if self.supported_speed_mask >> 3 & 0b1 == 1 {
-            SupportedSpeed::SuperSpeed
+            BusSpeed::SuperSpeed
         } else if self.supported_speed_mask >> 2 & 0b1 == 1 {
-            SupportedSpeed::HighSpeed
+            BusSpeed::HighSpeed
         } else if self.supported_speed_mask >> 1 & 0b1 == 1 {
-            SupportedSpeed::FullSpeed
+            BusSpeed::FullSpeed
         } else if self.supported_speed_mask & 0b1 == 1 {
-            SupportedSpeed::LowSpeed
+            BusSpeed::LowSpeed
         } else {
             return Err(Error::InvalidDevice);
         };

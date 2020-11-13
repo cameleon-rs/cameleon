@@ -40,12 +40,12 @@ pub struct DeviceInfo {
     pub user_defined_name: Option<String>,
 
     /// Bus speed supported by the device.
-    pub supported_speed: SupportedSpeed,
+    pub supported_speed: BusSpeed,
 }
 
 /// Bus speed supported by each USB device.
-#[derive(Clone, Debug)]
-pub enum SupportedSpeed {
+#[derive(Clone, Copy, Debug)]
+pub enum BusSpeed {
     /// USB 1.0/Low-Speed: 1.5 Mbps
     LowSpeed,
 

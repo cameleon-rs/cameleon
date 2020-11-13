@@ -21,7 +21,7 @@ pub use real::*;
 #[cfg(not(feature = "libusb"))]
 pub use emulator::*;
 
-pub use device_info::{DeviceInfo, SupportedSpeed};
+pub use device_info::{BusSpeed, DeviceInfo};
 
 use std::borrow::Cow;
 
