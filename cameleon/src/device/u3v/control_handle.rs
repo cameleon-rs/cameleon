@@ -18,11 +18,11 @@ const INITIAL_TIMEOUT_DURATION: Duration = Duration::from_millis(500);
 
 /// Initial maximum command  packet length for transaction between device and host.
 /// This value is temporarily used until the device's bootstrap register value is read.
-const INITIAL_MAXIMUM_CMD_LENGTH: u32 = 1024;
+const INITIAL_MAXIMUM_CMD_LENGTH: u32 = 128;
 
 /// Initial maximum acknowledge packet length for transaction between device and host.
 /// This value is temporarily used until the device's bootstrap register value is read.
-const INITIAL_MAXIMUM_ACK_LENGTH: u32 = 1024;
+const INITIAL_MAXIMUM_ACK_LENGTH: u32 = 128;
 
 /// Thread safe control handle of the device.  
 #[derive(Clone)]
