@@ -152,6 +152,64 @@ impl<'a> Abrm<'a> {
     }
 }
 
+pub struct Sbrm<'a> {
+    sbrm: &'a SbrmStaticData,
+}
+
+impl<'a> Sbrm<'a> {
+    pub fn u3v_version(&self) -> &'a semver::Version {
+        &self.sbrm.u3v_version
+    }
+
+    pub fn maximum_command_transfer_length(&self) -> u32 {
+        self.sbrm.maximum_command_transfer_length
+    }
+
+    pub fn maximum_acknowledge_trasfer_length(&self) -> u32 {
+        self.sbrm.maximum_acknowledge_trasfer_length
+    }
+
+    pub fn number_of_stream_channel(&self) -> u32 {
+        self.sbrm.number_of_stream_channel
+    }
+
+    pub fn sirm_address(&self) -> Option<u64> {
+        self.sbrm.sirm_address
+    }
+
+    pub fn sirm_length(&self) -> Option<u32> {
+        self.sbrm.sirm_length
+    }
+
+    pub fn eirm_address(&self) -> Option<u64> {
+        self.sbrm.eirm_address
+    }
+
+    pub fn eirm_length(&self) -> Option<u32> {
+        self.sbrm.eirm_length
+    }
+
+    pub fn iidc2_address(&self) -> Option<u64> {
+        self.sbrm.iidc2_address
+    }
+
+    pub fn current_speed(&self) -> u3v::BusSpeed {
+        self.sbrm.current_speed
+    }
+
+    pub fn is_sirm_available(&self) -> bool {
+        self.sbrm.u3v_capability.is_sirm_available()
+    }
+
+    pub fn is_eirm_available(&self) -> bool {
+        self.sbrm.u3v_capability.is_eirm_available()
+    }
+
+    pub fn is_iidc2_available(&self) -> bool {
+        self.sbrm.u3v_capability.is_iidc2_available()
+    }
+}
+
 pub(super) struct AbrmStaticData {
     gencp_version: semver::Version,
     manufacturer_name: String,
