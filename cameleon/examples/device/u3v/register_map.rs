@@ -14,6 +14,7 @@ fn main() {
     let mut device = devices.pop().unwrap();
     device.open().unwrap();
 
+    println!("\n### Technology Agnostic Boot Register Map ###\n");
     let abrm = device.abrm().unwrap();
 
     println!("gencp_version: {}", abrm.gencp_version());
@@ -63,4 +64,28 @@ fn main() {
     // if abrm.is_multi_event_supported() {
     //     abrm.enable_multi_event().unwrap();
     // }
+    //
+    println!("\n### Technology Specifig Boot Register Map ###\n");
+
+    let sbrm = device.sbrm().unwrap();
+    println!("u3v_version: {}", sbrm.u3v_version());
+    println!(
+        "maximum_command_transfer_length: {}",
+        sbrm.maximum_command_transfer_length()
+    );
+    println!(
+        "maximum_acknowledge_trasfer_length: {}",
+        sbrm.maximum_acknowledge_trasfer_length()
+    );
+    println!(
+        "number_of_stream_channel: {}",
+        sbrm.number_of_stream_channel()
+    );
+    println!("sirm_address: {:?}", sbrm.sirm_address());
+    println!("sirm_length: {:?}", sbrm.sirm_length());
+
+    println!("eirm_address: {:?}", sbrm.eirm_address());
+    println!("eirm_length: {:?}", sbrm.eirm_length());
+    println!("iidc2_address: {:?}", sbrm.iidc2_address());
+    println!("current_speed: {:?}", sbrm.current_speed());
 }
