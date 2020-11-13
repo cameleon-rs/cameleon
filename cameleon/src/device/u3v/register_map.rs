@@ -208,6 +208,10 @@ impl<'a> Sbrm<'a> {
     pub fn is_iidc2_available(&self) -> bool {
         self.sbrm.u3v_capability.is_iidc2_available()
     }
+
+    pub(super) fn new(sbrm: &'a SbrmStaticData) -> Self {
+        Self { sbrm }
+    }
 }
 
 pub(super) struct AbrmStaticData {
@@ -219,9 +223,9 @@ pub(super) struct AbrmStaticData {
     manufacturer_info: String,
     serial_number: String,
     device_capability: DeviceCapability,
-    maximum_device_response_time: Duration,
+    pub(super) maximum_device_response_time: Duration,
     manifest_table_address: u64,
-    sbrm_address: u64,
+    pub(super) sbrm_address: u64,
     timestamp_increment: u64,
     device_software_interface_version: Option<String>,
 }
@@ -294,19 +298,19 @@ impl AbrmStaticData {
 pub(super) struct SbrmStaticData {
     u3v_version: semver::Version,
     u3v_capability: U3VCapablitiy,
-    maximum_command_transfer_length: u32,
-    maximum_acknowledge_trasfer_length: u32,
+    pub(super) maximum_command_transfer_length: u32,
+    pub(super) maximum_acknowledge_trasfer_length: u32,
     number_of_stream_channel: u32,
-    sirm_address: Option<u64>,
-    sirm_length: Option<u32>,
-    eirm_address: Option<u64>,
-    eirm_length: Option<u32>,
+    pub(super) sirm_address: Option<u64>,
+    pub(super) sirm_length: Option<u32>,
+    pub(super) eirm_address: Option<u64>,
+    pub(super) eirm_length: Option<u32>,
     iidc2_address: Option<u64>,
     current_speed: u3v::BusSpeed,
 }
 
 impl SbrmStaticData {
-    fn new(sbrm_addr: u64, handle: &ControlHandle) -> DeviceResult<Self> {
+    pub(super) fn new(sbrm_addr: u64, handle: &ControlHandle) -> DeviceResult<Self> {
         use sbrm::*;
 
         let mut buf = vec![0; 64];

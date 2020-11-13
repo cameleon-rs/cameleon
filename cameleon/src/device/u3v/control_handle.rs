@@ -8,6 +8,8 @@ use cameleon_device::{
     u3v::protocol::{ack, cmd},
 };
 
+use super::register_map::{AbrmStaticData, SbrmStaticData};
+
 use crate::device::{DeviceError, DeviceResult};
 
 /// Initial timeout duration for transaction between device and host.
@@ -89,6 +91,14 @@ impl ControlHandle {
 
     pub(super) fn open(&self) -> DeviceResult<()> {
         self.inner.lock().unwrap().open()
+    }
+
+    pub(super) fn initialize_config(&self, abrm: &AbrmStaticData, sbrm: &SbrmStaticData) {
+        let mut inner = self.inner.lock().unwrap();
+
+        inner.config.timeout_duration = abrm.maximum_device_response_time;
+        inner.config.maximum_cmd_length = sbrm.maximum_acknowledge_trasfer_length;
+        inner.config.maximum_cmd_length = sbrm.maximum_acknowledge_trasfer_length;
     }
 
     pub(super) fn close(&self) -> DeviceResult<()> {
