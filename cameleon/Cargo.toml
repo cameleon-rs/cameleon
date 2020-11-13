@@ -15,3 +15,7 @@ cameleon-device = { path = "../cameleon-device" }
 
 [features]
 libusb = ["cameleon-device/libusb"]
+
+[[example]]
+name = "u3v_device_register_map"
+path = "examples/device/u3v/register_map.rs"
