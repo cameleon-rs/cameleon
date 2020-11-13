@@ -82,7 +82,7 @@ impl<'a> Abrm<'a> {
         self.handle.write_mem(addr, &buf)
     }
 
-    pub fn timestamp_increment(&self) -> u32 {
+    pub fn timestamp_increment(&self) -> u64 {
         self.abrm.timestamp_increment
     }
 
@@ -94,7 +94,7 @@ impl<'a> Abrm<'a> {
         self.abrm.maximum_device_response_time
     }
 
-    pub fn enable_multievent(&self) -> DeviceResult<()> {
+    pub fn enable_multi_event(&self) -> DeviceResult<()> {
         let mut config = self.device_configuration()?;
         if !config.is_multi_event_enabled() {
             config.enable_multi_event();
@@ -119,8 +119,12 @@ impl<'a> Abrm<'a> {
     }
 
     pub fn is_multi_event_enabled(&self) -> DeviceResult<bool> {
-        let config = self.device_configuration()?;
-        Ok(config.is_multi_event_enabled())
+        if self.abrm.device_capability.is_multi_event_supported() {
+            let config = self.device_configuration()?;
+            Ok(config.is_multi_event_enabled())
+        } else {
+            Ok(false)
+        }
     }
 
     pub fn is_multi_event_supported(&self) -> bool {
@@ -160,7 +164,7 @@ pub(super) struct AbrmStaticData {
     maximum_device_response_time: Duration,
     manifest_table_address: u64,
     sbrm_address: u64,
-    timestamp_increment: u32,
+    timestamp_increment: u64,
     device_software_interface_version: Option<String>,
 }
 
@@ -320,8 +324,8 @@ trait ParseBytes: Sized {
 
 impl ParseBytes for semver::Version {
     fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
-        let minor = u16::parse_bytes(&bytes[0..16])?;
-        let major = u16::parse_bytes(&bytes[16..])?;
+        let minor = u16::parse_bytes(&bytes[0..2])?;
+        let major = u16::parse_bytes(&bytes[2..])?;
         Ok(semver::Version::new(major as u64, minor as u64, 0))
     }
 }
@@ -358,8 +362,8 @@ impl ParseBytes for String {
 
 impl ParseBytes for Duration {
     fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
-        let raw = u64::parse_bytes(bytes)?;
-        Ok(Duration::from_millis(raw))
+        let raw = u32::parse_bytes(bytes)?;
+        Ok(Duration::from_millis(raw as u64))
     }
 }
 
