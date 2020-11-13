@@ -1,8 +1,11 @@
 use cameleon_device::u3v;
 
-use super::control_handle::ControlHandle;
-
 use crate::device::{DeviceError, DeviceResult};
+
+use super::{
+    control_handle::ControlHandle,
+    register_map::{Abrm, AbrmStaticData},
+};
 
 pub type DeviceInfo = u3v::DeviceInfo;
 
@@ -11,6 +14,7 @@ pub struct Device {
 
     ctrl_handle: ControlHandle,
     // TODO: Stream and event handles.
+    abrm: Option<AbrmStaticData>,
 }
 
 impl Device {
@@ -20,6 +24,7 @@ impl Device {
         Ok(Self {
             device,
             ctrl_handle,
+            abrm: None,
         })
     }
 
@@ -29,6 +34,13 @@ impl Device {
         }
 
         self.ctrl_handle.open()?;
+        if self.abrm.is_none() {
+            // TODO: SBRM
+            self.abrm = Some(AbrmStaticData::new(&self.ctrl_handle)?);
+        }
+
+        // TODO: initialize control handle parameters.
+        // self.ctrl_handle.initialize_params(abrm, sbrm);
 
         Ok(())
     }
@@ -49,6 +61,14 @@ impl Device {
         self.ctrl_handle.close()
     }
 
+    pub fn abrm(&self) -> DeviceResult<Abrm> {
+        if self.is_opened() {
+            Ok(Abrm::new(self.abrm.as_ref().unwrap(), &self.ctrl_handle))
+        } else {
+            Err(DeviceError::NotOpened)
+        }
+    }
+
     /// Basic information of the device. No need to call [`Device::open`] to obtain the
     /// information.
     pub fn device_info(&self) -> &DeviceInfo {
@@ -62,7 +82,7 @@ pub fn enumerate_devices() -> DeviceResult<Vec<Device>> {
 
     Ok(devices
         .into_iter()
-        .map(|dev| Device::new(dev))
+        .map(Device::new)
         .filter_map(|d| d.ok())
         .collect())
 }
