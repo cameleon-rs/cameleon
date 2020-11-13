@@ -1,6 +1,6 @@
 use std::{convert::TryInto, time::Duration};
 
-use cameleon_device::u3v::register_map::*;
+use cameleon_device::u3v::{self, register_map::*};
 
 use crate::device::{DeviceError, DeviceResult};
 
@@ -233,6 +233,89 @@ impl AbrmStaticData {
     }
 }
 
+pub(super) struct SbrmStaticData {
+    u3v_version: semver::Version,
+    u3v_capability: U3VCapablitiy,
+    maximum_command_transfer_length: u32,
+    maximum_acknowledge_trasfer_length: u32,
+    number_of_stream_channel: u32,
+    sirm_address: Option<u64>,
+    sirm_length: Option<u32>,
+    eirm_address: Option<u64>,
+    eirm_length: Option<u32>,
+    iidc2_address: Option<u64>,
+    current_speed: u3v::BusSpeed,
+}
+
+impl SbrmStaticData {
+    fn new(sbrm_addr: u64, handle: &ControlHandle) -> DeviceResult<Self> {
+        use sbrm::*;
+
+        let mut buf = vec![0; 64];
+        macro_rules! read_register {
+            ($register_info:ident) => {
+                read_register(
+                    handle,
+                    &mut buf,
+                    $register_info.0 + sbrm_addr,
+                    $register_info.1,
+                )
+            };
+        }
+
+        let u3v_version = read_register!(U3V_VERSION)?;
+
+        let u3v_capability: U3VCapablitiy = read_register!(U3VCP_CAPABILITY_REGISTER)?;
+
+        let maximum_command_transfer_length = read_register!(MAXIMUM_COMMAND_TRANSFER_LENGTH)?;
+
+        let maximum_acknowledge_trasfer_length =
+            read_register!(MAXIMUM_ACKNOWLEDGE_TRANSFER_LENGTH)?;
+
+        let number_of_stream_channel = read_register!(NUMBER_OF_STREAM_CHANNELS)?;
+
+        let (sirm_address, sirm_length) = if u3v_capability.is_sirm_available() {
+            (
+                Some(read_register!(SIRM_ADDRESS)?),
+                Some(read_register!(SIRM_LENGTH)?),
+            )
+        } else {
+            (None, None)
+        };
+
+        let (eirm_address, eirm_length) = if u3v_capability.is_eirm_available() {
+            (
+                Some(read_register!(EIRM_ADDRESS)?),
+                Some(read_register!(EIRM_LENGTH)?),
+            )
+        } else {
+            (None, None)
+        };
+
+        let iidc2_address = if u3v_capability.is_iidc2_available() {
+            Some(read_register!(IIDC2_ADDRESS)?)
+        } else {
+            None
+        };
+
+        let current_speed = read_register!(CURRENT_SPEED)?;
+
+        Ok(Self {
+            u3v_version,
+            u3v_capability,
+            maximum_command_transfer_length,
+            maximum_acknowledge_trasfer_length,
+            number_of_stream_channel,
+            sirm_address,
+            sirm_length,
+            eirm_address,
+            eirm_length,
+            iidc2_address,
+            current_speed,
+        })
+    }
+}
+
 /// Read and parse register value.
 fn read_register<T>(
     handle: &ControlHandle,
@@ -268,7 +351,7 @@ impl DeviceConfiguration {
     }
 }
 
-pub struct DeviceCapability([u8; 8]);
+struct DeviceCapability([u8; 8]);
 
 impl DeviceCapability {
     fn is_user_defined_name_supported(&self) -> bool {
@@ -292,6 +375,21 @@ impl DeviceCapability {
     /// Indicate whether the device supports software interface version is supported.
     fn is_device_software_interface_version_supported(&self) -> bool {
         is_bit_set(&self.0, 14)
+    }
+}
+
+struct U3VCapablitiy([u8; 8]);
+impl U3VCapablitiy {
+    fn is_sirm_available(&self) -> bool {
+        is_bit_set(&self.0, 0)
+    }
+
+    fn is_eirm_available(&self) -> bool {
+        is_bit_set(&self.0, 1)
+    }
+
+    fn is_iidc2_available(&self) -> bool {
+        is_bit_set(&self.0, 2)
     }
 }
 
@@ -364,6 +462,34 @@ impl ParseBytes for Duration {
     fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
         let raw = u32::parse_bytes(bytes)?;
         Ok(Duration::from_millis(raw as u64))
+    }
+}
+
+impl ParseBytes for U3VCapablitiy {
+    fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
+        Ok(Self(bytes.try_into().unwrap()))
+    }
+}
+
+impl ParseBytes for u3v::BusSpeed {
+    fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
+        use u3v::BusSpeed::*;
+
+        let raw = u32::parse_bytes(bytes)?;
+        let speed = match raw {
+            0b1 => LowSpeed,
+            0b10 => FullSpeed,
+            0b100 => HighSpeed,
+            0b1000 => SuperSpeed,
+            0b10000 => SuperSpeedPlus,
+            other => {
+                return Err(DeviceError::InternalError(
+                    format!("invalid bus speed defined:  {:#b}", other).into(),
+                ))
+            }
+        };
+
+        Ok(speed)
     }
 }
 
