@@ -1,6 +1,7 @@
+pub mod register_map;
+
 mod control_handle;
 mod device;
-mod register_map;
 
 pub use control_handle::ControlHandle;
 pub use device::{enumerate_devices, Device};
