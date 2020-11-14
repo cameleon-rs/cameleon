@@ -2,23 +2,30 @@ use cameleon_impl::memory::{memory, register_map};
 
 const SBRM_ADDRESS: u64 = 0xffff;
 
-// TODO: Multievent support.
 /// Offset | Value | Description.
 ///      0 |     1 | User Defined Name is supported.
 ///      1 |     0 | Access Privilege and Heartbeat are NOT supported.
 ///      2 |     0 | Message Channel is NOT supported.
 ///      3 |     1 | Timestampl is supported.
-///    7-4 |  0000 | String Encoding (Ascii).
+///    4-7 |  0000 | String Encoding (Ascii).
 ///      8 |     1 | Family Name is supported.
 ///      9 |     1 | SBRM is supported.
 ///     10 |     1 | Endianness Register is supported.
 ///     11 |     1 | Written Length Field is supported.
-///     12 |     0 | Multi Event is currentrly NOT supported.
-///     13 |     1 | Stacked Commands is supported.
+///     12 |     0 | Multi Event is currently NOT supported.
+///     13 |     0 | Stacked Commands is NOT supported.
 ///     14 |     1 | Device Software Interface Version is supported.
-///  63-15 |     0 | Reserved. All remained bits are set to 0.
+///  15-63 |     0 | Reserved. All remained bits are set to 0.
 const DEVICE_CAPABILITY: &[u8] = &[
-    0b1001, 0b0000, 0b1111, 0b0110, 0b0000, 0b0000, 0b0000, 0b0000,
+    0b1001, 0b0000, 0b1111, 0b0010, 0b0000, 0b0000, 0b0000, 0b0000,
+];
+
+/// Offset | Value | Description.
+///      0 |     0 | Heartbeat is not used.
+///      1 |     0 | MultiEvent is not enabled.
+///  15-63 |     0 | Reserved. All remained bits are set to 0.
+const DEVICE_CONFIGURATION: &[u8] = &[
+    0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000,
 ];
 
 #[memory]
@@ -67,8 +74,8 @@ pub(super) enum ABRM {
     #[register(len = 8, access = RO, ty = u64)]
     SBRMAddress = SBRM_ADDRESS,
 
-    #[register(len = 8, access = RO, ty = u64)]
-    DeviceConfiguration,
+    #[register(len = 8, access = RW, ty = Bytes)]
+    DeviceConfiguration = DEVICE_CONFIGURATION,
 
     #[register(len = 4, access = NA, ty = u32)]
     HeartbeatTimeout,
