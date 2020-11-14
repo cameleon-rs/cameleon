@@ -151,7 +151,9 @@ impl RegisterMap {
         let base = &self.args.base;
         let vis = self.modify_visibility();
         quote! {
-            #vis const BASE: usize = #base as usize;
+            #vis const fn base() -> usize {
+                #base as usize
+            }
         }
     }
 
@@ -159,7 +161,9 @@ impl RegisterMap {
         let size = self.size();
         let vis = self.modify_visibility();
         quote! {
-            #vis const SIZE: usize = #size;
+            #vis const fn size() -> usize {
+                #size
+            }
         }
     }
 

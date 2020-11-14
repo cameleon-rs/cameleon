@@ -1,7 +1,7 @@
 use cameleon_impl::memory::{memory, register_map};
 
 const SBRM_ADDRESS: u64 = 0xffff;
-const SIRM_ADDRESS: u64 = (SBRM::BASE + SBRM::SIZE) as u64;
+const SIRM_ADDRESS: u64 = (SBRM::base() + SBRM::size()) as u64;
 
 /// Offset | Value | Description.
 ///      0 |     1 | User Defined Name is supported.

@@ -94,7 +94,7 @@ pub enum BE {
 
 fn main() {
     // Test LE.
-    assert_eq!(LE::SIZE, 22 + 2);
+    assert_eq!(LE::size(), 22 + 2);
 
     let mut memory = Memory::new();
     assert_eq!(memory.read::<LE::U8Bit>().unwrap(), 0b1);
@@ -160,7 +160,7 @@ fn main() {
     assert_eq!(memory.read::<LE::OverlapSigned2>().unwrap(), -1);
 
     // Test BE.
-    assert_eq!(BE::SIZE, 22 + 2);
+    assert_eq!(BE::size(), 22 + 2);
 
     let mut memory = Memory::new();
     assert_eq!(memory.read::<BE::U8Bit>().unwrap(), 0b1);

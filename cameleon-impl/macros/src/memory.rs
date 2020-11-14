@@ -236,11 +236,11 @@ impl MemoryFragment {
 
     fn base(&self) -> TokenStream {
         let ty = &self.ty;
-        quote!(#ty::BASE)
+        quote!(#ty::base())
     }
 
     fn size(&self) -> TokenStream {
         let ty = &self.ty;
-        quote!(#ty::SIZE)
+        quote!(#ty::size())
     }
 }
