@@ -18,15 +18,14 @@ const SIRM_ADDRESS: u64 = (SBRM::base() + SBRM::size()) as u64;
 ///     14 |     1 | Device Software Interface Version is supported.
 ///  15-63 |     0 | Reserved. All remained bits are set to 0.
 const DEVICE_CAPABILITY: &[u8] = &[
-    0b1001, 0b0000, 0b1111, 0b0010, 0b0000, 0b0000, 0b0000, 0b0000,
-];
-
-/// Offset | Value | Description.
-///      0 |     0 | Heartbeat is not used.
-///      1 |     0 | MultiEvent is not enabled.
-///   2-63 |     0 | Reserved. All remained bits are set to 0.
-const DEVICE_CONFIGURATION: &[u8] = &[
-    0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000,
+    0b0000_1001,
+    0b0100_1111,
+    0b0000_0000,
+    0b0000_0000,
+    0b0000_0000,
+    0b0000_0000,
+    0b0000_0000,
+    0b0000_0000,
 ];
 
 /// Offset | Value | Description.
@@ -35,7 +34,29 @@ const DEVICE_CONFIGURATION: &[u8] = &[
 ///      2 |     0 | IIDC is NOT available.
 ///   3-63 |     0 | Reserved. All remained bits are set to 0.
 const U3V_CAPABILITY: &[u8] = &[
-    0b1100, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000,
+    0b0000_0011,
+    0b0000_0000,
+    0b0000_0000,
+    0b0000_0000,
+    0b0000_0000,
+    0b0000_0000,
+    0b0000_0000,
+    0b0000_0000,
+];
+
+/// Offset | Value | Description.
+///      0 |     0 | Heartbeat is not used.
+///      1 |     0 | MultiEvent is not enabled.
+///   2-63 |     0 | Reserved. All remained bits are set to 0.
+const DEVICE_CONFIGURATION: &[u8] = &[
+    0b0000_0000,
+    0b0000_0000,
+    0b0000_0000,
+    0b0000_0000,
+    0b0000_0000,
+    0b0000_0000,
+    0b0000_0000,
+    0b0000_0000,
 ];
 
 #[memory]
@@ -127,6 +148,9 @@ pub(super) enum SBRM {
     #[register(len = 8, access = RO, ty = Bytes)]
     U3VCapability = U3V_CAPABILITY,
 
+    #[register(len = 8, access = RW, ty = Bytes)]
+    U3VConfiguration, // Not used.
+
     #[register(len = 4, access = RO, ty = u32)]
     MaximumCommandTransferLength = 1024,
 
@@ -134,7 +158,7 @@ pub(super) enum SBRM {
     MaximumAcknowledgeTransferLength = 1024,
 
     #[register(len = 4, access = RO, ty = u32)]
-    NumberOfStrewamChannel = 1,
+    NumberOfStreamChannel = 1,
 
     #[register(len = 8, access = RO, ty = u64)]
     SirmAddress = SIRM_ADDRESS,
