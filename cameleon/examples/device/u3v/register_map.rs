@@ -15,6 +15,7 @@ fn main() {
     let mut devices = enumerate_devices().unwrap();
     if devices.is_empty() {
         println!("no device found");
+        return;
     }
 
     // Open the first device.
