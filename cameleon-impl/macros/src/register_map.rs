@@ -308,10 +308,10 @@ impl Register {
 
     fn impl_parse(&self, endianness: Endianness) -> TokenStream {
         let ty = &self.reg_attr.ty;
+        let len = &self.reg_attr.len();
         let main = match ty {
             RegisterType::Str => quote! {
-                let str_end = data.iter().position(|c| *c == 0)
-                    .ok_or_else(|| MemoryError::InvalidRegisterData("string reg must be null terminated".into()))?;
+                let str_end = data.iter().position(|c| *c == 0).unwrap_or(#len);
                 let result = std::str::from_utf8(&data[..str_end]).map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))?;
                 if !result.is_ascii() {
                     return Err(MemoryError::InvalidRegisterData("string reg must be ASCII".into()));
@@ -391,11 +391,6 @@ impl Register {
                 }
 
                 let mut result = data.into_bytes();
-                // Zero teminate.
-                match result.last() {
-                    Some(0) => {}
-                    _ => {result.push(0)}
-                }
 
                 if result.len() < #len {
                     result.resize(#len, 0);
