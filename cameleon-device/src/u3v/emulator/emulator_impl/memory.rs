@@ -1,6 +1,7 @@
 use cameleon_impl::memory::{memory, register_map};
 
 const SBRM_ADDRESS: u64 = 0xffff;
+const SIRM_ADDRESS: u64 = (SBRM::BASE + SBRM::SIZE) as u64;
 
 /// Offset | Value | Description.
 ///      0 |     1 | User Defined Name is supported.
@@ -23,14 +24,24 @@ const DEVICE_CAPABILITY: &[u8] = &[
 /// Offset | Value | Description.
 ///      0 |     0 | Heartbeat is not used.
 ///      1 |     0 | MultiEvent is not enabled.
-///  15-63 |     0 | Reserved. All remained bits are set to 0.
+///   2-63 |     0 | Reserved. All remained bits are set to 0.
 const DEVICE_CONFIGURATION: &[u8] = &[
     0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000,
+];
+
+/// Offset | Value | Description.
+///      0 |     1 | SIRM is available.
+///      1 |     1 | EIRM is available.
+///      2 |     0 | IIDC is NOT available.
+///   3-63 |     0 | Reserved. All remained bits are set to 0.
+const U3V_CAPABILITY: &[u8] = &[
+    0b1100, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000, 0b0000,
 ];
 
 #[memory]
 pub(super) struct Memory {
     abrm: ABRM,
+    sbrm: SBRM,
 }
 
 #[register_map(base = 0, endianness = LE)]
@@ -66,7 +77,7 @@ pub(super) enum ABRM {
     DeviceCapability = DEVICE_CAPABILITY,
 
     #[register(len = 4, access = RO, ty = u32)]
-    MaximumDeviceResponseTime = 100,
+    MaximumDeviceResponseTime = 500, // 500 ms.
 
     #[register(len = 8, access = RO, ty = u64)]
     ManifestTableAddress, // TODO: Define manifest table address,
@@ -103,4 +114,43 @@ pub(super) enum ABRM {
 
     #[register(len = 64, access = RO, ty = String)]
     DeviceSoftwareInterfaceVersion = "1.0.0",
+}
+
+#[register_map(base = SBRM_ADDRESS, endianness = LE)]
+pub(super) enum SBRM {
+    #[register(len = 2, access = RO, ty = u16)]
+    U3VVersionMinor = 0,
+
+    #[register(len = 2, access = RO, ty = u16)]
+    U3VVersionMajor = 1,
+
+    #[register(len = 8, access = RO, ty = Bytes)]
+    U3VCapability = U3V_CAPABILITY,
+
+    #[register(len = 4, access = RO, ty = u32)]
+    MaximumCommandTransferLength = 1024,
+
+    #[register(len = 4, access = RO, ty = u32)]
+    MaximumAcknowledgeTransferLength = 1024,
+
+    #[register(len = 4, access = RO, ty = u32)]
+    NumberOfStrewamChannel = 1,
+
+    #[register(len = 8, access = RO, ty = u64)]
+    SirmAddress = SIRM_ADDRESS,
+
+    #[register(len = 4, access = RO, ty = u32)]
+    SirmLength, // TODO: Filled after SIRM register map is implemented.
+
+    #[register(len = 8, access = RO, ty = u64)]
+    EirmAddress, // TODO: Filled after SIRM register map is implemented.
+
+    #[register(len = 4, access = RO, ty = u32)]
+    EirmLength, // TODO: Filled after EIRM register map is implmeneted.
+
+    #[register(len = 8, access = NA, ty = u64)]
+    Iidc2Address,
+
+    #[register(len=4, access = RO, ty=u32)]
+    CurrentSpeed = 0b1000,
 }

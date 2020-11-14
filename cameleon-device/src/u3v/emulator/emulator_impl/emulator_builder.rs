@@ -7,7 +7,7 @@ use crate::u3v::{BusSpeed, DeviceInfo};
 use super::{
     device::Device,
     device_pool::DevicePool,
-    memory::{Memory, ABRM},
+    memory::{Memory, ABRM, SBRM},
 };
 
 use cameleon_impl::memory::prelude::*;
@@ -202,6 +202,7 @@ impl EmulatorBuilder {
 
     fn build_device_info(&self) -> DeviceInfo {
         use ABRM::*;
+
         let gencp_version_major = self.memory.read::<GenCpVersionMajor>().unwrap();
         let gencp_version_minor = self.memory.read::<GenCpVersionMinor>().unwrap();
         let gencp_version = Version::new(gencp_version_major as u64, gencp_version_minor as u64, 0);
@@ -212,7 +213,7 @@ impl EmulatorBuilder {
         let device_version = self.memory.read::<DeviceVersion>().unwrap();
         let manufacturer_info = self.memory.read::<ManufacturerInfo>().unwrap();
         let user_defined_name = Some(self.memory.read::<UserDefinedName>().unwrap());
-        let supported_speed = BusSpeed::SuperSpeed;
+        let supported_speed = self.current_speed();
         let serial_number = self.memory.read::<SerialNumber>().unwrap();
 
         // TODO: Read from SBRM.
@@ -241,6 +242,18 @@ impl EmulatorBuilder {
             serial_number,
             user_defined_name,
             supported_speed,
+        }
+    }
+
+    fn current_speed(&self) -> BusSpeed {
+        use BusSpeed::*;
+        match self.memory.read::<SBRM::CurrentSpeed>().unwrap() {
+            0b00001 => LowSpeed,
+            0b00010 => FullSpeed,
+            0b00100 => HighSpeed,
+            0b01000 => SuperSpeed,
+            0b10000 => SuperSpeedPlus,
+            _ => unreachable!(),
         }
     }
 }
