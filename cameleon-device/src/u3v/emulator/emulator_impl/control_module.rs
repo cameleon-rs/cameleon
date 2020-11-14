@@ -18,7 +18,7 @@ use cameleon_impl::memory::{prelude::*, MemoryError, MemoryObserver};
 use super::{
     device::Timestamp,
     interface::IfaceState,
-    memory::{Memory, ABRM},
+    memory::{Memory, ABRM, SBRM},
     shared_queue::SharedQueue,
     signal::*,
     IfaceKind,
@@ -57,6 +57,16 @@ impl ControlModule {
     ) {
         let event_handler = self.register_observers().await;
 
+        let (maximum_cmd_length, maximum_ack_length) = {
+            let memory = self.memory.lock().await;
+            (
+                memory.read::<SBRM::MaximumCommandTransferLength>().unwrap() as usize,
+                memory
+                    .read::<SBRM::MaximumAcknowledgeTransferLength>()
+                    .unwrap() as usize,
+            )
+        };
+
         let mut worker_manager = WorkerManager::new(
             self.iface_state.clone(),
             self.memory.clone(),
@@ -64,6 +74,8 @@ impl ControlModule {
             event_handler,
             self.queue.clone(),
             signal_tx,
+            maximum_cmd_length,
+            maximum_ack_length,
         );
 
         while let Some(signal) = signal_rx.next().await {
@@ -114,6 +126,9 @@ struct WorkerManager {
 
     memory_event_handler: MemoryEventHandler,
 
+    maximum_cmd_length: usize,
+    maximum_ack_length: usize,
+
     /// Work as join handle coupled with `completed_rx`.
     /// All workers spawnd by the manager share this sender.
     completed_tx: Sender<()>,
@@ -130,6 +145,8 @@ impl WorkerManager {
         memory_event_handler: MemoryEventHandler,
         queue: SharedQueue<Vec<u8>>,
         signal_tx: Sender<InterfaceSignal>,
+        maximum_cmd_length: usize,
+        maximum_ack_length: usize,
     ) -> Self {
         let (completed_tx, completed_rx) = channel(1);
         let on_processing = Arc::new(AtomicBool::new(false));
@@ -145,6 +162,9 @@ impl WorkerManager {
             on_processing,
 
             memory_event_handler,
+
+            maximum_cmd_length,
+            maximum_ack_length,
 
             completed_tx,
             completed_rx,
@@ -163,6 +183,9 @@ impl WorkerManager {
             on_processing: self.on_processing.clone(),
 
             memory_event_handler: self.memory_event_handler.clone(),
+
+            maximum_cmd_length: self.maximum_cmd_length,
+            maximum_ack_length: self.maximum_ack_length,
 
             _completed: self.completed_tx.clone(),
         }
@@ -192,6 +215,9 @@ struct Worker {
 
     memory_event_handler: MemoryEventHandler,
 
+    maximum_cmd_length: usize,
+    maximum_ack_length: usize,
+
     _completed: Sender<()>,
 }
 
@@ -203,6 +229,14 @@ impl Worker {
             None => return,
         };
         let ccd = cmd_packet.ccd();
+
+        // If sent command length is larger than SBRM::MaximumCommandTransferLength, return error.
+        if (self.maximum_cmd_length) < command.len() {
+            let ack = ack::ErrorAck::new(ack::GenCpStatus::InvalidParameter, ccd.scd_kind())
+                .finalize(ccd.request_id());
+            self.enqueue_or_halt(ack);
+            return;
+        }
 
         // If another module is halted, return endpoint halted error
         if self.iface_state.is_halt(IfaceKind::Event).await {
@@ -386,6 +420,17 @@ impl Worker {
             log::error!("{}", e);
             return;
         }
+
+        // If ack packet length is larger than maximu_ack_length, return error.
+        let buf = if (self.maximum_ack_length) < buf.len() {
+            let err_ack = ack::ErrorAck::new(ack::GenCpStatus::InvalidParameter, ack.ccd.scd_kind)
+                .finalize(ack.ccd.request_id);
+            let mut buf = vec![];
+            err_ack.serialize(&mut buf).unwrap();
+            buf
+        } else {
+            buf
+        };
 
         if !self.queue.enqueue(buf) {
             log::warn!("control queue is full, entering a halted state");
@@ -736,7 +781,7 @@ mod ack {
     };
 
     pub(super) struct AckPacket<T> {
-        ccd: AckCcd,
+        pub(super) ccd: AckCcd,
         scd: T,
     }
 
