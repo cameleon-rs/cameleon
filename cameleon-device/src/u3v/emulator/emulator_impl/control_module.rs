@@ -57,16 +57,6 @@ impl ControlModule {
     ) {
         let event_handler = self.register_observers().await;
 
-        let (maximum_cmd_length, maximum_ack_length) = {
-            let memory = self.memory.lock().await;
-            (
-                memory.read::<SBRM::MaximumCommandTransferLength>().unwrap() as usize,
-                memory
-                    .read::<SBRM::MaximumAcknowledgeTransferLength>()
-                    .unwrap() as usize,
-            )
-        };
-
         let mut worker_manager = WorkerManager::new(
             self.iface_state.clone(),
             self.memory.clone(),
@@ -74,9 +64,8 @@ impl ControlModule {
             event_handler,
             self.queue.clone(),
             signal_tx,
-            maximum_cmd_length,
-            maximum_ack_length,
-        );
+        )
+        .await;
 
         while let Some(signal) = signal_rx.next().await {
             match signal {
@@ -138,18 +127,25 @@ struct WorkerManager {
 }
 
 impl WorkerManager {
-    fn new(
+    async fn new(
         iface_state: IfaceState,
         memory: Arc<Mutex<Memory>>,
         timestamp: Timestamp,
         memory_event_handler: MemoryEventHandler,
         queue: SharedQueue<Vec<u8>>,
         signal_tx: Sender<InterfaceSignal>,
-        maximum_cmd_length: usize,
-        maximum_ack_length: usize,
     ) -> Self {
         let (completed_tx, completed_rx) = channel(1);
         let on_processing = Arc::new(AtomicBool::new(false));
+        let (maximum_cmd_length, maximum_ack_length) = {
+            let memory = memory.lock().await;
+            (
+                memory.read::<SBRM::MaximumCommandTransferLength>().unwrap() as usize,
+                memory
+                    .read::<SBRM::MaximumAcknowledgeTransferLength>()
+                    .unwrap() as usize,
+            )
+        };
 
         Self {
             iface_state,

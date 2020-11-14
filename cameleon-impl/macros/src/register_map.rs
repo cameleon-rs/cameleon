@@ -705,18 +705,12 @@ enum RegisterType {
 impl RegisterType {
     fn is_integral(&self) -> bool {
         use RegisterType::*;
-        match self {
-            Str | Bytes | BitField(..) | F32 | F64 => false,
-            _ => true,
-        }
+        !matches!(self, Str | Bytes | BitField(..) | F32 | F64)
     }
 
     fn is_numerical(&self) -> bool {
         use RegisterType::*;
-        match self {
-            Str | Bytes | BitField(..) => false,
-            _ => true,
-        }
+        !matches!(self, Str | Bytes | BitField(..))
     }
 
     fn is_signed(&self) -> bool {

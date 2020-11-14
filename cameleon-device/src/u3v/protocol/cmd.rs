@@ -599,11 +599,11 @@ mod tests {
 
         let mut expected_addr = 0;
         let mut read_len = 0;
-        for i in 0..chunks.len() - 1 {
-            assert_eq!(chunks[i].address, expected_addr);
-            expected_addr += chunks[i].read_length as u64;
-            read_len += chunks[i].read_length;
-            assert_eq!(chunks[i].clone().finalize(i as u16).maximum_ack_len(), 24);
+        for (i, chunk) in chunks.iter().enumerate().take(chunks.len() - 1) {
+            assert_eq!(chunk.address, expected_addr);
+            expected_addr += chunk.read_length as u64;
+            read_len += chunk.read_length;
+            assert_eq!(chunk.clone().finalize(i as u16).maximum_ack_len(), 24);
         }
 
         let last_chunk = chunks.last().unwrap();
@@ -621,12 +621,12 @@ mod tests {
 
         let chunks: Vec<_> = write_mem.chunks(24).unwrap().collect();
 
-        for i in 0..chunks.len() - 1 {
-            assert_eq!(chunks[i].address, expected_addr);
-            expected_addr += chunks[i].data_len as u64;
-            sent_data_len += chunks[i].data_len;
+        for (i, chunk) in chunks.iter().enumerate().take(chunks.len() - 1) {
+            assert_eq!(chunk.address, expected_addr);
+            expected_addr += chunk.data_len as u64;
+            sent_data_len += chunk.data_len;
 
-            assert_eq!(chunks[i].clone().finalize(i as u16).cmd_len(), 24);
+            assert_eq!(chunk.clone().finalize(i as u16).cmd_len(), 24);
         }
 
         let last_chunk = chunks.last().unwrap();
