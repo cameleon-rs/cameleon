@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use cameleon_device::usb3;
+use cameleon_device::u3v;
 use cameleon_impl::memory::prelude::*;
 
 use crate::{port::*, GenTlError, GenTlResult};

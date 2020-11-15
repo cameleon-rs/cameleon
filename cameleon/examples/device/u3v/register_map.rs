@@ -82,7 +82,7 @@ fn main() {
         sbrm.maximum_command_transfer_length()
     );
     println!(
-        "maximum_acknowledge_trasfer_length: {}",
+        "maximum_acknowledge_transfer_length: {}",
         sbrm.maximum_acknowledge_trasfer_length()
     );
     println!(
