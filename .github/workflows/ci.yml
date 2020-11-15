@@ -84,7 +84,6 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: cameleon-device
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -119,6 +118,17 @@ jobs:
       # Test cameleon-device with libusb feature.
       - name: Test cameleon-device
         run: cargo test --all-targets --features libusb --color always
+        working-directory: cameleon-device
       # Doctest cameleon-device with libusb feature. --all-targets option doesn't invoke doctest, see https://github.com/rust-lang/cargo/issues/6669.
       - name: Doctest cameleon-device
         run: cargo test --doc --features libusb --color always
+        working-directory: cameleon-device
+
+      # Test cameleon with libusb feature.
+      - name: Test cameleon
+        run: cargo test --all-targets --features libusb --color always
+        working-directory: cameleon
+      # Doctest cameleon with libusb feature. --all-targets option doesn't invoke doctest, see https://github.com/rust-lang/cargo/issues/6669.
+      - name: Doctest cameleon
+        run: cargo test --doc --features libusb --color always
+        working-directory: cameleon

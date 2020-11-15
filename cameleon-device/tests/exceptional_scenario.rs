@@ -3,14 +3,14 @@
 fn test_exceptional_scenario() {
     use std::time::Duration;
 
-    use cameleon_device::usb3::*;
+    use cameleon_device::u3v::*;
 
     const TIME_OUT: Duration = Duration::from_millis(100);
 
     // Set emulated device.
     EmulatorBuilder::new().build();
 
-    let mut devices = enumerate_device().unwrap();
+    let mut devices = enumerate_devices().unwrap();
     assert_eq!(devices.len(), 1);
     let device = devices.pop().unwrap();
 

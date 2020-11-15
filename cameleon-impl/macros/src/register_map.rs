@@ -151,7 +151,9 @@ impl RegisterMap {
         let base = &self.args.base;
         let vis = self.modify_visibility();
         quote! {
-            #vis const BASE: usize = #base as usize;
+            #vis const fn base() -> usize {
+                #base as usize
+            }
         }
     }
 
@@ -159,7 +161,9 @@ impl RegisterMap {
         let size = self.size();
         let vis = self.modify_visibility();
         quote! {
-            #vis const SIZE: usize = #size;
+            #vis const fn size() -> usize {
+                #size
+            }
         }
     }
 
@@ -304,10 +308,10 @@ impl Register {
 
     fn impl_parse(&self, endianness: Endianness) -> TokenStream {
         let ty = &self.reg_attr.ty;
+        let len = &self.reg_attr.len();
         let main = match ty {
             RegisterType::Str => quote! {
-                let str_end = data.iter().position(|c| *c == 0)
-                    .ok_or_else(|| MemoryError::InvalidRegisterData("string reg must be null terminated".into()))?;
+                let str_end = data.iter().position(|c| *c == 0).unwrap_or(#len);
                 let result = std::str::from_utf8(&data[..str_end]).map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))?;
                 if !result.is_ascii() {
                     return Err(MemoryError::InvalidRegisterData("string reg must be ASCII".into()));
@@ -387,11 +391,6 @@ impl Register {
                 }
 
                 let mut result = data.into_bytes();
-                // Zero teminate.
-                match result.last() {
-                    Some(0) => {}
-                    _ => {result.push(0)}
-                }
 
                 if result.len() < #len {
                     result.resize(#len, 0);
@@ -706,18 +705,12 @@ enum RegisterType {
 impl RegisterType {
     fn is_integral(&self) -> bool {
         use RegisterType::*;
-        match self {
-            Str | Bytes | BitField(..) | F32 | F64 => false,
-            _ => true,
-        }
+        !matches!(self, Str | Bytes | BitField(..) | F32 | F64)
     }
 
     fn is_numerical(&self) -> bool {
         use RegisterType::*;
-        match self {
-            Str | Bytes | BitField(..) => false,
-            _ => true,
-        }
+        !matches!(self, Str | Bytes | BitField(..))
     }
 
     fn is_signed(&self) -> bool {
