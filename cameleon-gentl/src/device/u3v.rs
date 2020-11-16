@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use cameleon_device::u3v;
+use cameleon_device::u3v as usb3;
 use cameleon_impl::memory::prelude::*;
 
 use crate::{port::*, GenTlError, GenTlResult};
@@ -8,7 +8,7 @@ use crate::{port::*, GenTlError, GenTlResult};
 use super::{u3v_memory as memory, DeviceAccessStatus};
 
 pub(crate) fn enumerate_u3v_device() -> GenTlResult<Vec<Arc<Mutex<U3VDeviceModule>>>> {
-    Ok(usb3::enumerate_device()?
+    Ok(usb3::enumerate_devices()?
         .into_iter()
         .map(|dev| Arc::new(U3VDeviceModule::new(dev).into()))
         .collect())
