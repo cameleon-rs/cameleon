@@ -4,7 +4,7 @@ mod control_handle;
 mod device;
 
 pub use control_handle::ControlHandle;
-pub use device::{enumerate_devices, Device};
+pub use device::{enumerate_devices, Device, DeviceInfo};
 
 use cameleon_device::u3v;
 
