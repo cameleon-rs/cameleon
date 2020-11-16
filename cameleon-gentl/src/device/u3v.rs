@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use cameleon_device::u3v as usb3;
+use cameleon::device::u3v;
 use cameleon_impl::memory::prelude::*;
 
 use crate::{port::*, GenTlError, GenTlResult};
@@ -8,7 +8,8 @@ use crate::{port::*, GenTlError, GenTlResult};
 use super::{u3v_memory as memory, DeviceAccessStatus};
 
 pub(crate) fn enumerate_u3v_device() -> GenTlResult<Vec<Arc<Mutex<U3VDeviceModule>>>> {
-    Ok(usb3::enumerate_devices()?
+    Ok(u3v::enumerate_devices()
+        .unwrap()
         .into_iter()
         .map(|dev| Arc::new(U3VDeviceModule::new(dev).into()))
         .collect())
@@ -19,10 +20,7 @@ pub struct U3VDeviceModule {
     port_info: PortInfo,
     xml_infos: Vec<XmlInfo>,
 
-    device: usb3::Device,
-    ctrl_channel: Option<Arc<Mutex<usb3::ControlChannel>>>,
-    event_channel: Option<Arc<Mutex<usb3::ReceiveChannel>>>,
-    stream_channel: Option<Arc<Mutex<usb3::ReceiveChannel>>>,
+    device: u3v::Device,
 
     /// Current status of the device.  
     /// `DeviceAccessStatus` and `DeviceAccessStatusReg` in VM doesn't reflect this value while
@@ -38,31 +36,20 @@ impl U3VDeviceModule {
     /// In order to open the device, please call [cameleon_gentl::interface::u3v::U3VInterfaceModule::open_device] as
     /// GenTL specification describes.
     pub fn close(&mut self) -> GenTlResult<()> {
-        let current_status: DeviceAccessStatus = self.current_status.into();
-        if !current_status.is_opened() {
-            return Ok(());
-        }
+        let res: GenTlResult<()> = self.device.close().map_err(Into::into);
 
-        if let Some(ctrl_channel) = self.ctrl_channel.take() {
-            ctrl_channel.lock().unwrap().close()?;
-        }
-
-        if let Some(event_channel) = self.event_channel.take() {
-            event_channel.lock().unwrap().close()?;
-        }
-
-        if let Some(stream_channel) = self.stream_channel.take() {
-            stream_channel.lock().unwrap().close()?;
-        }
-
-        self.current_status = memory::GenApi::DeviceAccessStatus::ReadWrite;
+        self.current_status = match res {
+            Ok(()) => memory::GenApi::DeviceAccessStatus::ReadWrite,
+            Err(GenTlError::IoError(..)) => memory::GenApi::DeviceAccessStatus::NoAccess,
+            _ => memory::GenApi::DeviceAccessStatus::Unknown,
+        };
 
         Ok(())
     }
 
     /// NOTE: Unlike another module of GenTL, this methods doesn't initialize VM registers due to spec requirements.
     /// Initialization of VM registers is done in [`U3VDeviceModule::open`] method.
-    pub(crate) fn new(device: usb3::Device) -> Self {
+    pub(crate) fn new(device: u3v::Device) -> Self {
         let device_info = device.device_info();
 
         let port_info = PortInfo {
@@ -91,9 +78,6 @@ impl U3VDeviceModule {
             xml_infos: vec![xml_info],
 
             device,
-            ctrl_channel: None,
-            event_channel: None,
-            stream_channel: None,
 
             current_status: memory::GenApi::DeviceAccessStatus::Unknown,
         }
@@ -106,44 +90,19 @@ impl U3VDeviceModule {
             return Err(GenTlError::ResourceInUse);
         }
 
-        macro_rules! try_open {
-            ($channel:ident) => {
-                if let Err(e) = $channel.open() {
-                    match e {
-                        usb3::Error::LibUsbError(usb3::LibUsbError::Busy) => {
-                            self.current_status = memory::GenApi::DeviceAccessStatus::Busy;
-                        }
-                        _ => {
-                            self.current_status = memory::GenApi::DeviceAccessStatus::NoAccess;
-                        }
-                    }
-                    return Err(e.into());
-                }
-            };
-        }
+        let res: GenTlResult<()> = self.device.open().map_err(Into::into);
 
-        let mut ctrl_channel = self.device.control_channel()?;
-        try_open!(ctrl_channel);
+        self.current_status = match &res {
+            Ok(()) => memory::GenApi::DeviceAccessStatus::OpenReadWrite,
+            Err(GenTlError::AccessDenied) => memory::GenApi::DeviceAccessStatus::Busy,
+            Err(GenTlError::IoError(..)) => memory::GenApi::DeviceAccessStatus::NoAccess,
+            _ => memory::GenApi::DeviceAccessStatus::Unknown,
+        };
 
-        let mut event_channel = self.device.event_channel()?;
-        if let Some(event_channel) = &mut event_channel {
-            try_open!(event_channel);
-        }
-
-        let mut stream_channel = self.device.stream_channel()?;
-        if let Some(stream_channel) = &mut stream_channel {
-            try_open!(stream_channel);
-        }
-
-        self.ctrl_channel = Some(Arc::new(ctrl_channel.into()));
-        self.event_channel = event_channel.map(|c| Arc::new(c.into()));
-        self.stream_channel = stream_channel.map(|c| Arc::new(c.into()));
-        self.current_status = memory::GenApi::DeviceAccessStatus::OpenReadWrite;
-
-        Ok(())
+        res
     }
 
-    pub(crate) fn device_info(&self) -> &usb3::DeviceInfo {
+    pub(crate) fn device_info(&self) -> &u3v::DeviceInfo {
         self.device.device_info()
     }
 
@@ -212,11 +171,5 @@ impl Port for U3VDeviceModule {
 
     fn xml_infos(&self) -> &[XmlInfo] {
         &self.xml_infos
-    }
-}
-
-impl From<usb3::Error> for GenTlError {
-    fn from(err: usb3::Error) -> Self {
-        GenTlError::IoError(err.into())
     }
 }
