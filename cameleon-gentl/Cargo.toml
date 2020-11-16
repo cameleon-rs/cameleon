@@ -11,8 +11,9 @@ thiserror = "1.0.20"
 semver = "0.11.0"
 url = "2.1.1"
 
-cameleon-impl = { path = "../cameleon-impl" }
 cameleon-device = { path = "../cameleon-device" }
+cameleon-impl = { path = "../cameleon-impl" }
+cameleon = { path = "../cameleon" }
 
 [features]
 libusb = ["cameleon-device/libusb"]

@@ -5,13 +5,14 @@ pub mod system;
 
 use thiserror::Error;
 
+use cameleon::device::DeviceError;
 use cameleon_impl::memory::MemoryError;
 
 #[derive(Error, Debug)]
 pub enum GenTlError {
-    /// The handle isn't opend.
+    /// The handle isn't opened.
     #[error("the handle isn't opened")]
-    NotOpend,
+    NotOpened,
 
     /// The access to the requested register address is denied because the register is not writable
     /// or because the Port module is opened in a way that it does not allow write access.
@@ -49,6 +50,21 @@ impl From<MemoryError> for GenTlError {
             MemoryError::AddressNotReadable | MemoryError::AddressNotWritable => Self::AccessDenied,
             MemoryError::InvalidAddress => Self::InvalidAddress,
             MemoryError::InvalidRegisterData(cause) => Self::InvalidValue(cause),
+        }
+    }
+}
+
+impl From<DeviceError> for GenTlError {
+    fn from(err: DeviceError) -> Self {
+        use GenTlError::*;
+
+        match err {
+            DeviceError::Busy => ResourceInUse,
+            DeviceError::Disconnected | DeviceError::Io(..) | DeviceError::InternalError(..) => {
+                IoError(err.into())
+            }
+            DeviceError::NotOpened => NotOpened,
+            DeviceError::InvalidData(..) => InvalidValue(format!("{}", err).into()),
         }
     }
 }
