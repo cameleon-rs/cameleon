@@ -3,6 +3,8 @@ pub mod interface;
 pub mod port;
 pub mod system;
 
+mod ffi;
+
 use thiserror::Error;
 
 use cameleon::device::DeviceError;
