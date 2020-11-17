@@ -5,7 +5,7 @@ use std::{
 
 use cameleon_impl::memory::{prelude::*, MemoryObserver};
 
-use crate::{
+use crate::imp::{
     device::{
         u3v::{enumerate_u3v_device, U3VDeviceModule},
         DeviceAccessStatus,
@@ -18,7 +18,7 @@ use super::{u3v_memory as memory, Interface};
 
 const INTERFACE_ID: &str = "Cameleon-U3V-Interface-Module";
 
-pub struct U3VInterfaceModule {
+pub(crate) struct U3VInterfaceModule {
     vm: memory::Memory,
     port_info: PortInfo,
     xml_infos: Vec<XmlInfo>,
@@ -28,7 +28,7 @@ pub struct U3VInterfaceModule {
 }
 
 impl U3VInterfaceModule {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let port_info = PortInfo {
             id: INTERFACE_ID.into(),
             vendor: memory::GenApi::vendor_name().into(),
@@ -62,7 +62,7 @@ impl U3VInterfaceModule {
         module
     }
 
-    pub fn update_device_list(&mut self) -> GenTlResult<bool> {
+    pub(crate) fn update_device_list(&mut self) -> GenTlResult<bool> {
         // First, reflect current device status.
         for device in &self.devices {
             device.lock().unwrap().reflect_status();
@@ -109,7 +109,7 @@ impl U3VInterfaceModule {
         Ok(changed)
     }
 
-    pub fn open_device(&self, device_id: &str) -> GenTlResult<Arc<Mutex<U3VDeviceModule>>> {
+    pub(crate) fn open_device(&self, device_id: &str) -> GenTlResult<Arc<Mutex<U3VDeviceModule>>> {
         let device = self
             .find_device_by_id(device_id)
             .ok_or_else(|| GenTlError::InvalidId(device_id.into()))?;
@@ -117,7 +117,10 @@ impl U3VInterfaceModule {
         self.open_device_impl(device)
     }
 
-    pub fn open_device_by_idx(&self, idx: usize) -> GenTlResult<Arc<Mutex<U3VDeviceModule>>> {
+    pub(crate) fn open_device_by_idx(
+        &self,
+        idx: usize,
+    ) -> GenTlResult<Arc<Mutex<U3VDeviceModule>>> {
         if idx >= self.devices.len() {
             return Err(GenTlError::InvalidIndex);
         };
@@ -126,16 +129,16 @@ impl U3VInterfaceModule {
         self.open_device_impl(device)
     }
 
+    pub(crate) fn num_device(&self) -> usize {
+        self.devices.len()
+    }
+
     fn open_device_impl(
         &self,
         device: Arc<Mutex<U3VDeviceModule>>,
     ) -> GenTlResult<Arc<Mutex<U3VDeviceModule>>> {
         device.lock().unwrap().open()?;
         Ok(device)
-    }
-
-    pub fn num_device(&self) -> usize {
-        self.devices.len()
     }
 
     fn initialize_vm(&mut self) {

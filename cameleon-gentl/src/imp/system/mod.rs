@@ -7,13 +7,13 @@ use cameleon_impl::memory::{prelude::*, MemoryObserver};
 
 use super::{port::*, GenTlResult};
 
-use crate::interface::{u3v::U3VInterfaceModule, Interface};
+use crate::imp::interface::{u3v::U3VInterfaceModule, Interface};
 
 mod memory;
 
 const NUM_INTERFACE: usize = 1;
 
-pub struct SystemModule {
+pub(crate) struct SystemModule {
     vm: memory::Memory,
     port_info: PortInfo,
     xml_infos: Vec<XmlInfo>,
@@ -22,7 +22,7 @@ pub struct SystemModule {
 }
 
 impl SystemModule {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let port_info = PortInfo {
             id: memory::GenApi::TLID.into(),
             vendor: memory::GenApi::vendor_name().into(),
@@ -55,7 +55,7 @@ impl SystemModule {
         system_module
     }
 
-    pub fn interfaces(&self) -> &[Arc<Mutex<dyn Interface>>] {
+    pub(crate) fn interfaces(&self) -> &[Arc<Mutex<dyn Interface>>] {
         &self.interfaces
     }
 

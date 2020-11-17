@@ -1,8 +1,8 @@
 use cameleon_impl::memory::{genapi, memory};
 
-use crate::device::DeviceAccessStatus;
+use crate::imp::device::DeviceAccessStatus;
 
-use crate::port::TlType;
+use crate::imp::port::TlType;
 
 #[memory]
 pub(super) struct Memory {

@@ -1,10 +1,10 @@
-pub mod u3v;
+pub(crate) mod u3v;
 
 mod u3v_memory;
 
 /// The current accessibility of the device.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum DeviceAccessStatus {
+pub(crate) enum DeviceAccessStatus {
     /// The current availability of the device is unknown.
     Unknown,
 
@@ -28,7 +28,7 @@ pub enum DeviceAccessStatus {
 }
 
 impl DeviceAccessStatus {
-    pub fn is_opened(self) -> bool {
+    pub(crate) fn is_opened(self) -> bool {
         use DeviceAccessStatus::*;
 
         matches!(self, OpenReadOnly | OpenReadWrite)

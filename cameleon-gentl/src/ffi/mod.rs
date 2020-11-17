@@ -1,6 +1,6 @@
 use std::{borrow::Cow, cell::RefCell, sync::RwLock};
 
-use super::{GenTlError, GenTlResult};
+use crate::imp::{GenTlError, GenTlResult};
 
 #[allow(unused)]
 #[repr(i32)]

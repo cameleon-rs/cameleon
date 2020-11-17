@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use cameleon::device::u3v;
 use cameleon_impl::memory::prelude::*;
 
-use crate::{port::*, GenTlError, GenTlResult};
+use crate::imp::{port::*, GenTlError, GenTlResult};
 
 use super::{u3v_memory as memory, DeviceAccessStatus};
 
@@ -15,7 +15,7 @@ pub(crate) fn enumerate_u3v_device() -> GenTlResult<Vec<Arc<Mutex<U3VDeviceModul
         .collect())
 }
 
-pub struct U3VDeviceModule {
+pub(crate) struct U3VDeviceModule {
     vm: memory::Memory,
     port_info: PortInfo,
     xml_infos: Vec<XmlInfo>,
@@ -35,7 +35,7 @@ impl U3VDeviceModule {
     ///
     /// In order to open the device, please call [cameleon_gentl::interface::u3v::U3VInterfaceModule::open_device] as
     /// GenTL specification describes.
-    pub fn close(&mut self) -> GenTlResult<()> {
+    pub(crate) fn close(&mut self) -> GenTlResult<()> {
         let res: GenTlResult<()> = self.device.close().map_err(Into::into);
 
         self.current_status = match res {

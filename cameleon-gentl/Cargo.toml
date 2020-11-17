@@ -3,6 +3,7 @@ name = "cameleon-gentl"
 version = "0.1.0"
 authors = ["Cameleon Project Developers"]
 edition = "2018"
+publish = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -18,3 +19,6 @@ cameleon = { path = "../cameleon" }
 
 [features]
 libusb = ["cameleon/libusb"]
+
+[lib]
+crate-type = ["cdylib"]

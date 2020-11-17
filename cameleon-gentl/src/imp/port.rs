@@ -2,7 +2,7 @@ use semver::Version;
 
 use super::GenTlResult;
 
-pub trait Port {
+pub(crate) trait Port {
     /// Reads a number of bytes from a given address from the Port. This is the global
     /// GenICam GenApi read access function for all ports implemented in the GenTL
     /// implementation.
@@ -21,38 +21,38 @@ pub trait Port {
 }
 
 #[derive(Clone)]
-pub struct PortInfo {
+pub(crate) struct PortInfo {
     /// Unique ID of the module the port reference.
-    pub id: String,
+    pub(crate) id: String,
 
     /// Port vendor name.
     /// In case the underlying module has no explicit vendor the vendor of the
     /// GenTL Producer is to be used.
     /// In case of a Buffer or a Data Stream the GenTL Producer vendor and model are to be used.
-    pub vendor: String,
+    pub(crate) vendor: String,
 
     /// Transport layer technology that is supported in the module.
-    pub tl_type: TlType,
+    pub(crate) tl_type: TlType,
 
     /// GenTL Module the port refers to.
-    pub module_type: ModuleType,
+    pub(crate) module_type: ModuleType,
 
     /// Endianness of the port's data.
-    pub endianness: Endianness,
+    pub(crate) endianness: Endianness,
 
     /// Access right of the port.
-    pub access: PortAccess,
+    pub(crate) access: PortAccess,
 
     /// Version of the port.
-    pub version: Version,
+    pub(crate) version: Version,
 
     /// Name of the port as referenced in the XML description.
     /// This name is used to connect this port to the nodemap instance of this module.
-    pub port_name: String,
+    pub(crate) port_name: String,
 }
 
 #[derive(Clone)]
-pub enum TlType {
+pub(crate) enum TlType {
     /// Camera Link.
     CameraLink,
 
@@ -74,7 +74,7 @@ pub enum TlType {
 }
 
 #[derive(Clone)]
-pub enum ModuleType {
+pub(crate) enum ModuleType {
     /// System Module.
     System,
 
@@ -95,7 +95,7 @@ pub enum ModuleType {
 }
 
 #[derive(Clone)]
-pub enum PortAccess {
+pub(crate) enum PortAccess {
     /// Read Only.
     RO,
 
@@ -113,7 +113,7 @@ pub enum PortAccess {
 }
 
 #[derive(Clone)]
-pub enum Endianness {
+pub(crate) enum Endianness {
     /// Little Endian.
     LE,
     /// Big Endian.
@@ -121,20 +121,20 @@ pub enum Endianness {
 }
 
 #[derive(Clone)]
-pub struct XmlInfo {
-    pub location: XmlLocation,
-    pub schema_version: Version,
-    pub compressed: Compressed,
+pub(crate) struct XmlInfo {
+    pub(crate) location: XmlLocation,
+    pub(crate) schema_version: Version,
+    pub(crate) compressed: Compressed,
 }
 
 #[derive(Clone)]
-pub enum Compressed {
+pub(crate) enum Compressed {
     None,
     Zip,
 }
 
 #[derive(Clone)]
-pub enum XmlLocation {
+pub(crate) enum XmlLocation {
     RegisterMap { address: u64, size: usize },
     LocalFile(std::path::PathBuf),
     Url(url::Url),

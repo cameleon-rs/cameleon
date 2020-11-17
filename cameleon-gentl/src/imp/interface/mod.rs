@@ -1,11 +1,11 @@
-use crate::port::Port;
+use crate::imp::port::Port;
 
-pub mod u3v;
+pub(crate) mod u3v;
 
 mod u3v_memory;
 
 // TODO: Add device related functions.
-pub trait Interface: Port {
+pub(crate) trait Interface: Port {
     fn interface_id(&self) -> &str;
 
     fn mac_addr(&self) -> Option<[u8; 6]>;
