@@ -3,6 +3,8 @@ pub mod interface;
 pub mod port;
 pub mod system;
 
+#[allow(non_camel_case_types)]
+#[allow(non_snake_case)]
 mod ffi;
 
 use thiserror::Error;
