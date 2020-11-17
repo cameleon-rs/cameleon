@@ -26,6 +26,9 @@ pub enum DeviceError {
     /// e.g. try to write too large data that will overrun register.
     #[error("try to write invalid data to the device: {}", 0)]
     InvalidData(Box<dyn std::error::Error>),
+
+    #[error("operation timed out")]
+    Timeout,
 }
 
 pub type DeviceResult<T> = std::result::Result<T, DeviceError>;

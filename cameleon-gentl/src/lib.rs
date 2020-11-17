@@ -42,6 +42,10 @@ pub enum GenTlError {
     /// A provided index referencing a Producer internal object is out of bounds.
     #[error("given index is out of range")]
     InvalidIndex,
+
+    /// Operation timed out.
+    #[error("operation timed out")]
+    Timeout,
 }
 
 impl From<MemoryError> for GenTlError {
@@ -65,6 +69,7 @@ impl From<DeviceError> for GenTlError {
             }
             DeviceError::NotOpened => NotOpened,
             DeviceError::InvalidData(..) => InvalidValue(format!("{}", err).into()),
+            DeviceError::Timeout => Timeout,
         }
     }
 }

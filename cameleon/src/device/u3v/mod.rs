@@ -18,10 +18,11 @@ impl From<u3v::Error> for DeviceError {
             LibUsbError(libusb_error) => {
                 use u3v::LibUsbError::*;
                 match libusb_error {
-                    Io | InvalidParam | Access | Timeout | Overflow | Pipe | Interrupted
-                    | NoMem | NotSupported | BadDescriptor | Other => DeviceError::Io(err.into()),
+                    Io | InvalidParam | Access | Overflow | Pipe | Interrupted | NoMem
+                    | NotSupported | BadDescriptor | Other => DeviceError::Io(err.into()),
                     Busy => DeviceError::Busy,
                     NoDevice | NotFound => DeviceError::Disconnected,
+                    Timeout => DeviceError::Timeout,
                 }
             }
 
