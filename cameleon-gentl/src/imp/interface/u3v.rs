@@ -5,12 +5,14 @@ use std::{
 
 use cameleon_impl::memory::{prelude::*, MemoryObserver};
 
-use crate::imp::{
-    device::{
-        u3v::{enumerate_u3v_device, U3VDeviceModule},
-        DeviceAccessStatus,
+use crate::{
+    imp::{
+        device::{
+            u3v::{enumerate_u3v_device, U3VDeviceModule},
+            DeviceAccessStatus,
+        },
+        port::*,
     },
-    port::*,
     GenTlError, GenTlResult,
 };
 

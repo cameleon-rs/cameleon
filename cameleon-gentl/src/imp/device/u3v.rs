@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use cameleon::device::u3v;
 use cameleon_impl::memory::prelude::*;
 
-use crate::imp::{port::*, GenTlError, GenTlResult};
+use crate::{imp::port::*, GenTlError, GenTlResult};
 
 use super::{u3v_memory as memory, DeviceAccessStatus};
 
@@ -40,7 +40,7 @@ impl U3VDeviceModule {
 
         self.current_status = match res {
             Ok(()) => memory::GenApi::DeviceAccessStatus::ReadWrite,
-            Err(GenTlError::IoError(..)) => memory::GenApi::DeviceAccessStatus::NoAccess,
+            Err(GenTlError::Io(..)) => memory::GenApi::DeviceAccessStatus::NoAccess,
             _ => memory::GenApi::DeviceAccessStatus::Unknown,
         };
 
@@ -95,7 +95,7 @@ impl U3VDeviceModule {
         self.current_status = match &res {
             Ok(()) => memory::GenApi::DeviceAccessStatus::OpenReadWrite,
             Err(GenTlError::AccessDenied) => memory::GenApi::DeviceAccessStatus::Busy,
-            Err(GenTlError::IoError(..)) => memory::GenApi::DeviceAccessStatus::NoAccess,
+            Err(GenTlError::Io(..)) => memory::GenApi::DeviceAccessStatus::NoAccess,
             _ => memory::GenApi::DeviceAccessStatus::Unknown,
         };
 

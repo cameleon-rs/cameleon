@@ -5,9 +5,12 @@ use std::{
 
 use cameleon_impl::memory::{prelude::*, MemoryObserver};
 
-use super::{port::*, GenTlResult};
+use super::port::*;
 
-use crate::imp::interface::{u3v::U3VInterfaceModule, Interface};
+use crate::{
+    imp::interface::{u3v::U3VInterfaceModule, Interface},
+    GenTlResult,
+};
 
 mod memory;
 

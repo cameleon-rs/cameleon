@@ -1,6 +1,6 @@
 use semver::Version;
 
-use super::GenTlResult;
+use crate::GenTlResult;
 
 pub(crate) trait Port {
     /// Reads a number of bytes from a given address from the Port. This is the global
