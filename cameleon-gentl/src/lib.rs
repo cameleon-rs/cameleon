@@ -6,6 +6,7 @@ mod imp;
 use thiserror::Error;
 
 /// Errors defined in GenTL specification.
+#[allow(dead_code)]
 #[derive(Error, Debug)]
 pub(crate) enum GenTlError {
     /// Unspecified runtime error.
