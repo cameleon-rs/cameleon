@@ -33,3 +33,8 @@ impl From<DeviceError> for GenTlError {
         }
     }
 }
+
+pub(crate) enum CharEncoding {
+    Ascii,
+    UTF8,
+}
