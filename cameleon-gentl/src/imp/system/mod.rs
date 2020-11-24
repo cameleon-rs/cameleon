@@ -1,16 +1,17 @@
 use std::{
     collections::VecDeque,
+    path::Path,
     sync::{Arc, Mutex},
 };
 
 use cameleon_impl::memory::{prelude::*, MemoryObserver};
 
-use super::port::*;
-
 use crate::{
     imp::interface::{u3v::U3VInterfaceModule, Interface},
     GenTlResult,
 };
+
+use super::{port::*, *};
 
 mod memory;
 
@@ -20,6 +21,7 @@ pub(crate) struct SystemModule {
     vm: memory::Memory,
     port_info: PortInfo,
     xml_infos: Vec<XmlInfo>,
+    system_info: SystemInfo,
     interfaces: [Arc<Mutex<dyn Interface>>; NUM_INTERFACE],
     event_queue: Arc<Mutex<VecDeque<MemoryEvent>>>,
 }
@@ -46,10 +48,29 @@ impl SystemModule {
             compressed: Compressed::None,
         };
 
+        let system_info = SystemInfo {
+            id: memory::GenApi::TLID.into(),
+            vendor: memory::GenApi::vendor_name().into(),
+            model: memory::GenApi::model_name().into(),
+            version: format!(
+                "{}.{}.{}",
+                memory::GenApi::major_version(),
+                memory::GenApi::minor_version(),
+                memory::GenApi::subminor_version()
+            ),
+            tl_type: memory::GenApi::TLType::Mixed.into(),
+            full_path: Self::full_path(),
+            display_name: memory::GenApi::tool_tip().into(),
+            encoding: CharEncoding::Ascii,
+            gentl_version_major: memory::GenApi::GenTLVersionMajor as u32,
+            gentl_version_minor: memory::GenApi::GenTLVersionMinor as u32,
+        };
+
         let mut system_module = Self {
             vm: memory::Memory::new(),
             port_info,
             xml_infos: vec![xml_info],
+            system_info,
             interfaces: [Arc::new(Mutex::new(U3VInterfaceModule::new()))],
             event_queue: Arc::new(Mutex::new(VecDeque::new())),
         };
@@ -62,10 +83,17 @@ impl SystemModule {
         &self.interfaces
     }
 
+    pub(crate) fn system_info(&self) -> &SystemInfo {
+        &self.system_info
+    }
+
     fn initialize_vm(&mut self) {
         use memory::GenApi;
 
-        self.vm.write::<GenApi::TLPathReg>(file!().into()).unwrap();
+        let full_path = Self::full_path();
+        self.vm
+            .write::<GenApi::TLPathReg>(full_path.into_os_string().into_string().unwrap())
+            .unwrap();
 
         // Initialize registers related to interface.
         self.vm.write::<GenApi::InterfaceSelectorReg>(0).unwrap();
@@ -76,6 +104,11 @@ impl SystemModule {
 
         // Register observers that trigger events in response to memory write.
         self.register_observers();
+    }
+
+    fn full_path() -> std::path::PathBuf {
+        let path = Path::new(file!());
+        std::fs::canonicalize(path.file_name().unwrap()).unwrap()
     }
 
     fn register_observers(&mut self) {
@@ -194,6 +227,38 @@ impl Port for SystemModule {
     fn xml_infos(&self) -> &[XmlInfo] {
         &self.xml_infos
     }
+}
+
+pub(crate) struct SystemInfo {
+    /// Unique ID identifying a GenTL Producer.
+    pub id: String,
+
+    /// GenTL Producer vendor name.
+    pub vendor: String,
+
+    /// GenTL Producer model name.
+    pub model: String,
+
+    /// GenTL Producer version.
+    pub version: String,
+
+    /// Transport layer technology that is supported.
+    pub tl_type: TlType,
+
+    /// full path to this file.
+    pub full_path: std::path::PathBuf,
+
+    /// User readable name.
+    pub display_name: String,
+
+    /// The char encoding of the GenTL Producer.
+    pub encoding: CharEncoding,
+
+    /// Major version number of GenTL Standard Version this Producer complies with.
+    pub gentl_version_major: u32,
+
+    /// Minor version number of GenTL Standard Version this Producer complies with.
+    pub gentl_version_minor: u32,
 }
 
 #[derive(Clone, Copy)]

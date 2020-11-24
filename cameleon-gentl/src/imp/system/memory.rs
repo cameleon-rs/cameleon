@@ -82,7 +82,7 @@ pub(super) enum GenApi {
     </String>
 
     <String Name="TLPath" NameSpace="Standard">
-        <Description>Vendor specific version string of the GenTL Producer.</Description>
+        <Description>Full path to the GenTL Producer including filename and extension.</Description>
         <Visibility>Beginner</Visibility>
 
         <pValue>TLPathReg</pValue>

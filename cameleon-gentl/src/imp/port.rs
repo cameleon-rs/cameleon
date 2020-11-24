@@ -51,7 +51,7 @@ pub(crate) struct PortInfo {
     pub(crate) port_name: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub(crate) enum TlType {
     /// Camera Link.
     CameraLink,
