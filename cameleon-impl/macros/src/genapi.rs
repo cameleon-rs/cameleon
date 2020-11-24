@@ -77,6 +77,11 @@ impl GenApiDefinition {
         let genapi_subminor = self.xml.reg_desc.subminor_version();
 
         let vendor_name = self.xml.reg_desc.vendor_name();
+        let model_name = self.xml.reg_desc.model_name();
+        let tool_tip = self.xml.reg_desc.tool_tip();
+        let major_version = self.xml.reg_desc.major_version();
+        let minor_version = self.xml.reg_desc.minor_version();
+        let subminor_version = self.xml.reg_desc.subminor_version();
 
         Ok(quote! {
             #vis_inside_mod const fn xml_address() -> u64 {
@@ -89,6 +94,26 @@ impl GenApiDefinition {
 
             #vis_inside_mod const fn vendor_name() -> &'static str {
                 &#vendor_name
+            }
+
+            #vis_inside_mod const fn model_name() -> &'static str {
+                &#model_name
+            }
+
+            #vis_inside_mod const fn tool_tip() -> &'static str {
+                &#tool_tip
+            }
+
+            #vis_inside_mod const fn major_version() -> u64 {
+                #major_version
+            }
+
+            #vis_inside_mod const fn minor_version() -> u64 {
+                #minor_version
+            }
+
+            #vis_inside_mod const fn subminor_version() -> u64 {
+                #subminor_version
             }
 
             #vis_inside_mod fn schema_version() -> cameleon_impl::semver::Version {
