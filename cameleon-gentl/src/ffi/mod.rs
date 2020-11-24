@@ -131,6 +131,20 @@ thread_local! {
     }
 }
 
+impl crate::imp::port::TlType {
+    fn as_str(self) -> &'static str {
+        use super::imp::port::TlType::*;
+        match self {
+            CameraLink => "CL",
+            CameraLinkHS => "CLHS",
+            CoaXPress => "CXP",
+            GigEVision => "GEV",
+            USB3Vision => "U3V",
+            Mixed => "Mixed",
+        }
+    }
+}
+
 fn save_last_error<T>(res: GenTlResult<T>) {
     match res {
         Ok(_) => {}
@@ -159,6 +173,17 @@ fn copy_str(src: &str, dst: *mut libc::c_char) -> GenTlResult<libc::size_t> {
     }
 
     Ok(len_without_null + 1)
+}
+
+fn copy_numeric<T>(src: T, dst: *mut T) -> GenTlResult<libc::size_t> {
+    let len = std::mem::size_of::<T>();
+
+    if !dst.is_null() {
+        unsafe {
+            *dst = src;
+        }
+    }
+    Ok(len)
 }
 
 fn assert_lib_initialized() -> GenTlResult<()> {
