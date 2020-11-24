@@ -173,11 +173,11 @@ gentl_api!(
             }
         }) {
             Some((code, text)) => {
-                let size = try_gentl!(copy_str(&text, sErrorText));
+                let size = copy_str(&text, sErrorText)?;
                 (code, size)
             }
             None => {
-                let size = try_gentl!(copy_str("No Error", sErrorText));
+                let size = copy_str("No Error", sErrorText)?;
                 (Ok(()).into(), size)
             }
         };
