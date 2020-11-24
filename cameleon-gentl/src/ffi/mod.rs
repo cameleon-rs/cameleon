@@ -1,8 +1,6 @@
 #[macro_use]
 mod macros;
 
-pub mod system;
-
 use std::{
     cell::RefCell,
     sync::{Mutex, RwLock},
@@ -80,22 +78,25 @@ enum HandleType {
 
 #[repr(C)]
 #[allow(dead_code)]
-pub enum INFO_DATATYPE {
-    INFO_DATATYPE_UNKNOWN = 0,
-    INFO_DATATYPE_STRING = 1,
-    INFO_DATATYPE_STRINGLIST = 2,
-    INFO_DATATYPE_INT16 = 3,
-    INFO_DATATYPE_UINT16 = 4,
-    INFO_DATATYPE_INT32 = 5,
-    INFO_DATATYPE_UINT32 = 6,
-    INFO_DATATYPE_INT64 = 7,
-    INFO_DATATYPE_UINT64 = 8,
-    INFO_DATATYPE_FLOAT64 = 9,
-    INFO_DATATYPE_PTR = 10,
-    INFO_DATATYPE_BOOL8 = 11,
-    INFO_DATATYPE_SIZET = 12,
-    INFO_DATATYPE_BUFFER = 13,
-    INFO_DATATYPE_PTRDIFF = 14,
+
+newtype_enum! {
+    pub enum INFO_DATATYPE {
+        INFO_DATATYPE_UNKNOWN = 0,
+        INFO_DATATYPE_STRING = 1,
+        INFO_DATATYPE_STRINGLIST = 2,
+        INFO_DATATYPE_INT16 = 3,
+        INFO_DATATYPE_UINT16 = 4,
+        INFO_DATATYPE_INT32 = 5,
+        INFO_DATATYPE_UINT32 = 6,
+        INFO_DATATYPE_INT64 = 7,
+        INFO_DATATYPE_UINT64 = 8,
+        INFO_DATATYPE_FLOAT64 = 9,
+        INFO_DATATYPE_PTR = 10,
+        INFO_DATATYPE_BOOL8 = 11,
+        INFO_DATATYPE_SIZET = 12,
+        INFO_DATATYPE_BUFFER = 13,
+        INFO_DATATYPE_PTRDIFF = 14,
+    }
 }
 
 lazy_static::lazy_static! {

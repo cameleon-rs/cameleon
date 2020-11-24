@@ -36,3 +36,23 @@ macro_rules! gentl_api {
         }
     };
 }
+
+/// See https://github.com/rust-lang/rust/issues/36927 to know why this macro is needed.
+/// Fortunately, GenTL specification specifies that enumeration values are signed 32 bit integers
+/// (6.4 Enumerations).
+macro_rules! newtype_enum {
+    (
+    pub enum $name:ident {
+        $($variant:ident = $value:literal,)*
+    }
+    ) => {
+
+        #[derive(PartialEq, Eq)]
+        #[repr(transparent)]
+        pub struct $name(i32);
+
+        impl $name {
+            $(pub const $variant: $name = $name($value);)*
+        }
+    };
+}
