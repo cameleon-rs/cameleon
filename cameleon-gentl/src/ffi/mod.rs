@@ -1,8 +1,11 @@
 #[macro_use]
 mod macros;
 
+pub mod system;
+
 use std::{
     cell::RefCell,
+    mem::ManuallyDrop,
     sync::{Mutex, RwLock},
 };
 
@@ -76,8 +79,24 @@ enum HandleType {
     System(Mutex<SystemModule>),
 }
 
-#[repr(C)]
-#[allow(dead_code)]
+impl HandleType {
+    fn system(&self) -> GenTlResult<&Mutex<SystemModule>> {
+        match self {
+            HandleType::System(ref system) => Ok(system),
+        }
+    }
+
+    unsafe fn from_raw_manually_drop(
+        raw_handle: *mut libc::c_void,
+    ) -> GenTlResult<ManuallyDrop<Box<HandleType>>> {
+        if !raw_handle.is_null() {
+            let handle: Box<HandleType> = Box::from_raw(raw_handle as *mut HandleType);
+            Ok(ManuallyDrop::new(handle))
+        } else {
+            Err(GenTlError::InvalidHandle)
+        }
+    }
+}
 
 newtype_enum! {
     pub enum INFO_DATATYPE {
