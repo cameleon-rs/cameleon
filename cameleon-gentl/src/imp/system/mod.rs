@@ -22,12 +22,12 @@ pub(crate) struct SystemModule {
     port_info: PortInfo,
     xml_infos: Vec<XmlInfo>,
     system_info: SystemInfo,
-    interfaces: [Arc<Mutex<dyn Interface>>; NUM_INTERFACE],
+    interfaces: [Box<Mutex<dyn Interface + Send>>; NUM_INTERFACE],
     event_queue: Arc<Mutex<VecDeque<MemoryEvent>>>,
 }
 
 impl SystemModule {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new() -> GenTlResult<Self> {
         let port_info = PortInfo {
             id: memory::GenApi::TLID.into(),
             vendor: memory::GenApi::vendor_name().into(),
@@ -71,15 +71,15 @@ impl SystemModule {
             port_info,
             xml_infos: vec![xml_info],
             system_info,
-            interfaces: [Arc::new(Mutex::new(U3VInterfaceModule::new()))],
+            interfaces: [Box::new(Mutex::new(U3VInterfaceModule::new()))],
             event_queue: Arc::new(Mutex::new(VecDeque::new())),
         };
 
-        system_module.initialize_vm();
-        system_module
+        system_module.initialize_vm()?;
+        Ok(system_module)
     }
 
-    pub(crate) fn interfaces(&self) -> &[Arc<Mutex<dyn Interface>>] {
+    pub(crate) fn interfaces(&self) -> &[Box<Mutex<dyn Interface + Send>>] {
         &self.interfaces
     }
 
@@ -87,23 +87,25 @@ impl SystemModule {
         &self.system_info
     }
 
-    fn initialize_vm(&mut self) {
+    fn initialize_vm(&mut self) -> GenTlResult<()> {
         use memory::GenApi;
 
-        let full_path = Self::full_path();
-        self.vm
-            .write::<GenApi::TLPathReg>(full_path.into_os_string().into_string().unwrap())
-            .unwrap();
+        let full_path = Self::full_path()
+            .into_os_string()
+            .into_string()
+            .map_err(|e| GenTlError::Error(format!("{:?}", e)))?;
+        self.vm.write::<GenApi::TLPathReg>(full_path)?;
 
         // Initialize registers related to interface.
-        self.vm.write::<GenApi::InterfaceSelectorReg>(0).unwrap();
+        self.vm.write::<GenApi::InterfaceSelectorReg>(0)?;
         self.handle_interface_selector_change();
         self.vm
-            .write::<GenApi::InterfaceSelectorMaxReg>(NUM_INTERFACE as u32 - 1)
-            .unwrap();
+            .write::<GenApi::InterfaceSelectorMaxReg>(NUM_INTERFACE as u32 - 1)?;
 
         // Register observers that trigger events in response to memory write.
         self.register_observers();
+
+        Ok(())
     }
 
     fn full_path() -> std::path::PathBuf {
@@ -125,7 +127,7 @@ impl SystemModule {
             );
     }
 
-    fn handle_events(&mut self) {
+    fn handle_events(&mut self) -> GenTlResult<()> {
         loop {
             // Drop mutex guard in every iteration to avoid deadlock possibility.
             let event = self.event_queue.lock().unwrap().pop_front();
@@ -133,28 +135,29 @@ impl SystemModule {
             match event {
                 // We don't implement dynamic update of interfaces.
                 Some(MemoryEvent::InterfaceUpdateList) => {}
-                Some(MemoryEvent::InterfaceSelector) => self.handle_interface_selector_change(),
+                Some(MemoryEvent::InterfaceSelector) => self.handle_interface_selector_change()?,
                 None => break,
             }
         }
+
+        Ok(())
     }
 
-    fn handle_interface_selector_change(&mut self) {
+    fn handle_interface_selector_change(&mut self) -> GenTlResult<()> {
         use memory::GenApi;
 
-        let interface_idx = self.vm.read::<GenApi::InterfaceSelectorReg>().unwrap() as usize;
+        let interface_idx = self.vm.read::<GenApi::InterfaceSelectorReg>()? as usize;
 
         // Specified interface doesn't exist. In that case, just ignore.
         if interface_idx >= self.interfaces.len() {
-            return;
+            return Err(GenTlError::InvalidIndex);
         }
 
         let interface = &self.interfaces[interface_idx].lock().unwrap();
 
         let interface_id = interface.interface_id();
         self.vm
-            .write::<GenApi::InterfaceIDReg>(interface_id.into())
-            .unwrap();
+            .write::<GenApi::InterfaceIDReg>(interface_id.into())?;
 
         macro_rules! byte_array_to_int {
             ($array:expr, $array_size:literal, $result_ty: ty) => {{
@@ -170,36 +173,28 @@ impl SystemModule {
         if let Some(mac_addr) = interface.mac_addr() {
             let mac_addr = byte_array_to_int!(mac_addr, 6, u64);
             self.vm
-                .write::<GenApi::GevInterfaceMACAddressReg>(mac_addr)
-                .unwrap();
+                .write::<GenApi::GevInterfaceMACAddressReg>(mac_addr)?
         }
 
         if let Some(ip_addr) = interface.ip_addr() {
             let ip_addr = byte_array_to_int!(ip_addr.octets(), 4, u32);
             self.vm
-                .write::<GenApi::GevInterfaceDefaultIPAddressReg>(ip_addr)
-                .unwrap();
+                .write::<GenApi::GevInterfaceDefaultIPAddressReg>(ip_addr)?
         }
 
         if let Some(subnet_mask) = interface.subnet_mask() {
             let subnet_mask = byte_array_to_int!(subnet_mask.octets(), 4, u32);
             self.vm
-                .write::<GenApi::GevInterfaceDefaultSubnetMaskReg>(subnet_mask)
-                .unwrap();
+                .write::<GenApi::GevInterfaceDefaultSubnetMaskReg>(subnet_mask)?
         }
 
         if let Some(gateway_addr) = interface.gateway_addr() {
             let gateway_addr = byte_array_to_int!(gateway_addr.octets(), 4, u32);
             self.vm
-                .write::<GenApi::GevInterfaceDefaultGatewayReg>(gateway_addr)
-                .unwrap();
+                .write::<GenApi::GevInterfaceDefaultGatewayReg>(gateway_addr)?
         }
-    }
-}
 
-impl Default for SystemModule {
-    fn default() -> Self {
-        Self::new()
+        Ok(())
     }
 }
 
@@ -215,7 +210,7 @@ impl Port for SystemModule {
     fn write(&mut self, address: u64, data: &[u8]) -> GenTlResult<()> {
         self.vm.write_raw(address as usize, &data)?;
 
-        self.handle_events();
+        self.handle_events()?;
 
         Ok(())
     }
@@ -245,7 +240,7 @@ pub(crate) struct SystemInfo {
     /// Transport layer technology that is supported.
     pub tl_type: TlType,
 
-    /// full path to this file.
+    /// Full path to this file.
     pub full_path: std::path::PathBuf,
 
     /// User readable name.
@@ -296,11 +291,7 @@ mod tests {
 
     #[test]
     fn test_initialize_with_u3v_interface() {
-        let system_module = SystemModule::new();
-        assert_eq!(
-            &system_module.vm.read::<GenApi::TLPathReg>().unwrap(),
-            file!()
-        );
+        let system_module = SystemModule::new().unwrap();
         assert_eq!(
             system_module
                 .vm
@@ -309,7 +300,7 @@ mod tests {
             0
         );
 
-        let u3v_interface = system_module.interfaces()[0].clone();
+        let u3v_interface = system_module.interfaces()[0];
         assert_eq!(
             &system_module.vm.read::<GenApi::InterfaceIDReg>().unwrap(),
             u3v_interface.lock().unwrap().interface_id()

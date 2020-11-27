@@ -34,6 +34,7 @@ impl From<DeviceError> for GenTlError {
     }
 }
 
+#[derive(Clone, Copy)]
 pub(crate) enum CharEncoding {
     Ascii,
     UTF8,
