@@ -43,7 +43,10 @@ macro_rules! gentl_api {
 macro_rules! newtype_enum {
     (
     pub enum $name:ident {
-        $($variant:ident = $value:literal,)*
+        $(
+            $(#[$meta:meta])*
+            $variant:ident = $value:literal,
+        )*
     }
     ) => {
 
@@ -52,7 +55,10 @@ macro_rules! newtype_enum {
         pub struct $name(i32);
 
         impl $name {
-            $(pub const $variant: $name = $name($value);)*
+            $(
+                $(#[$meta])*
+                pub const $variant: $name = $name($value);
+            )*
         }
     };
 }
