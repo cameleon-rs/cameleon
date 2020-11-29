@@ -279,6 +279,10 @@ impl Interface for U3VInterfaceModule {
         INTERFACE_ID
     }
 
+    fn display_name(&self) -> &str {
+        "U3V Interface Module"
+    }
+
     fn mac_addr(&self) -> Option<[u8; 6]> {
         None
     }

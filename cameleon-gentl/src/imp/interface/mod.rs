@@ -8,6 +8,8 @@ mod u3v_memory;
 pub(crate) trait Interface: Port {
     fn interface_id(&self) -> &str;
 
+    fn display_name(&self) -> &str;
+
     fn mac_addr(&self) -> Option<[u8; 6]>;
 
     fn ip_addr(&self) -> Option<std::net::Ipv4Addr>;

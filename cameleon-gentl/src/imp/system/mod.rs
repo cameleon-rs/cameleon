@@ -79,8 +79,13 @@ impl SystemModule {
         Ok(system_module)
     }
 
-    pub(crate) fn interfaces(&self) -> &[Box<Mutex<dyn Interface + Send>>] {
-        &self.interfaces
+    pub(crate) fn interfaces(&self) -> impl Iterator<Item = &Mutex<dyn Interface + Send>> {
+        self.interfaces.iter().map(|iface| iface.as_ref())
+    }
+
+    pub(crate) fn interface_of(&self, id: &str) -> Option<&Mutex<dyn Interface + Send>> {
+        self.interfaces()
+            .find(|iface| iface.lock().unwrap().interface_id() == id)
     }
 
     pub(crate) fn system_info(&self) -> &SystemInfo {
@@ -98,7 +103,7 @@ impl SystemModule {
 
         // Initialize registers related to interface.
         self.vm.write::<GenApi::InterfaceSelectorReg>(0)?;
-        self.handle_interface_selector_change();
+        self.handle_interface_selector_change()?;
         self.vm
             .write::<GenApi::InterfaceSelectorMaxReg>(NUM_INTERFACE as u32 - 1)?;
 
@@ -300,7 +305,7 @@ mod tests {
             0
         );
 
-        let u3v_interface = system_module.interfaces()[0];
+        let u3v_interface = &system_module.interfaces()[0];
         assert_eq!(
             &system_module.vm.read::<GenApi::InterfaceIDReg>().unwrap(),
             u3v_interface.lock().unwrap().interface_id()
