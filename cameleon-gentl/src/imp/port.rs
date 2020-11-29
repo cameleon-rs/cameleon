@@ -14,10 +14,10 @@ pub(crate) trait Port {
     fn write(&mut self, address: u64, data: &[u8]) -> GenTlResult<()>;
 
     /// Get detailed port information.
-    fn port_info(&self) -> &PortInfo;
+    fn port_info(&self) -> GenTlResult<&PortInfo>;
 
     /// Get available xml infos of the port.
-    fn xml_infos(&self) -> &[XmlInfo];
+    fn xml_infos(&self) -> GenTlResult<&[XmlInfo]>;
 }
 
 #[derive(Clone)]

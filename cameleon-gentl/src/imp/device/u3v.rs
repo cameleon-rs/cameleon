@@ -165,11 +165,13 @@ impl Port for U3VDeviceModule {
         Ok(())
     }
 
-    fn port_info(&self) -> &PortInfo {
-        &self.port_info
+    fn port_info(&self) -> GenTlResult<&PortInfo> {
+        // TODO: open assertion.
+        Ok(&self.port_info)
     }
 
-    fn xml_infos(&self) -> &[XmlInfo] {
-        &self.xml_infos
+    fn xml_infos(&self) -> GenTlResult<&[XmlInfo]> {
+        // TODO: open assertion.
+        Ok(&self.xml_infos)
     }
 }

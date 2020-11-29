@@ -24,6 +24,7 @@ pub(crate) struct U3VInterfaceModule {
     vm: memory::Memory,
     port_info: PortInfo,
     xml_infos: Vec<XmlInfo>,
+    is_opened: bool,
 
     devices: Vec<Arc<Mutex<U3VDeviceModule>>>,
     event_queue: Arc<Mutex<VecDeque<MemoryEvent>>>,
@@ -55,6 +56,7 @@ impl U3VInterfaceModule {
             vm: memory::Memory::new(),
             port_info,
             xml_infos: vec![xml_info],
+            is_opened: false,
 
             devices: vec![],
             event_queue: Arc::new(Mutex::new(VecDeque::new())),
@@ -65,6 +67,8 @@ impl U3VInterfaceModule {
     }
 
     pub(crate) fn update_device_list(&mut self) -> GenTlResult<bool> {
+        self.assert_open()?;
+
         // First, reflect current device status.
         for device in &self.devices {
             device.lock().unwrap().reflect_status();
@@ -79,7 +83,7 @@ impl U3VInterfaceModule {
             let found_device_guard = found_device.lock().unwrap();
             let id = found_device_guard.device_id();
 
-            if let Some(device) = self.find_device_by_id(id) {
+            if let Some(device) = self.find_device_by_id(id)? {
                 // If device has already been found and its current status is NoAccess, then close
                 // it and change its status to Unknown(initial state).
                 let mut device_guard = device.lock().unwrap();
@@ -105,15 +109,17 @@ impl U3VInterfaceModule {
             self.vm
                 .write::<memory::GenApi::DeviceSelectorMaxReg>(self.devices.len() as u32 - 1)
                 .unwrap();
-            self.handle_device_selector_change();
+            self.handle_device_selector_change()?;
         }
 
         Ok(changed)
     }
 
     pub(crate) fn open_device(&self, device_id: &str) -> GenTlResult<Arc<Mutex<U3VDeviceModule>>> {
+        self.assert_open()?;
+
         let device = self
-            .find_device_by_id(device_id)
+            .find_device_by_id(device_id)?
             .ok_or_else(|| GenTlError::InvalidId(device_id.into()))?;
 
         self.open_device_impl(device)
@@ -123,6 +129,8 @@ impl U3VInterfaceModule {
         &self,
         idx: usize,
     ) -> GenTlResult<Arc<Mutex<U3VDeviceModule>>> {
+        self.assert_open()?;
+
         if idx >= self.devices.len() {
             return Err(GenTlError::InvalidIndex);
         };
@@ -131,8 +139,18 @@ impl U3VInterfaceModule {
         self.open_device_impl(device)
     }
 
-    pub(crate) fn num_device(&self) -> usize {
-        self.devices.len()
+    pub(crate) fn num_device(&self) -> GenTlResult<usize> {
+        self.assert_open()?;
+
+        Ok(self.devices.len())
+    }
+
+    fn assert_open(&self) -> GenTlResult<()> {
+        if self.is_opened {
+            Ok(())
+        } else {
+            Err(GenTlError::NotInitialized)
+        }
     }
 
     fn open_device_impl(
@@ -165,58 +183,60 @@ impl U3VInterfaceModule {
             .register_observer::<memory::GenApi::DeviceSelectorReg, _>(device_selector_observer);
     }
 
-    fn handle_events(&mut self) {
+    fn handle_events(&mut self) -> GenTlResult<()> {
         loop {
             // Drop mutex guard in every iteration to avoid deadlock possibility.
             let event = self.event_queue.lock().unwrap().pop_front();
 
             match event {
-                // We don't implement dynamic update of interfaces.
                 Some(MemoryEvent::DeviceUpdateList) => {
-                    // TODO: Logging.
-                    self.update_device_list().ok();
+                    self.update_device_list()?;
                 }
-                Some(MemoryEvent::DeviceSelector) => self.handle_device_selector_change(),
+                Some(MemoryEvent::DeviceSelector) => self.handle_device_selector_change()?,
                 None => break,
             }
         }
+
+        Ok(())
     }
 
-    fn find_device_by_id(&self, id: &str) -> Option<Arc<Mutex<U3VDeviceModule>>> {
-        self.devices
-            .iter()
-            .find(|dev| dev.lock().unwrap().port_info().id == id)
-            .cloned()
+    fn find_device_by_id(&self, id: &str) -> GenTlResult<Option<Arc<Mutex<U3VDeviceModule>>>> {
+        for dev in self.devices.iter() {
+            if dev.lock().unwrap().port_info()?.id == id {
+                return Ok(Some(dev.clone()));
+            }
+        }
+
+        Ok(None)
     }
 
-    fn handle_device_selector_change(&mut self) {
+    fn handle_device_selector_change(&mut self) -> GenTlResult<()> {
         use memory::GenApi;
 
         let device_idx = self.vm.read::<GenApi::DeviceSelectorReg>().unwrap() as usize;
 
         if device_idx >= self.devices.len() {
-            return;
+            return Err(GenTlError::InvalidIndex);
         }
 
         let device = self.devices[device_idx].lock().unwrap();
         let device_info = device.device_info();
 
         self.vm
-            .write::<GenApi::DeviceIDReg>(device.port_info().id.to_owned())
-            .unwrap();
+            .write::<GenApi::DeviceIDReg>(device.port_info()?.id.to_owned())?;
 
         self.vm
             .write::<GenApi::DeviceVendorNameReg>(device_info.vendor_name.to_owned())
             .unwrap();
 
         self.vm
-            .write::<GenApi::DeviceModelNameReg>(device_info.model_name.to_owned())
-            .unwrap();
+            .write::<GenApi::DeviceModelNameReg>(device_info.model_name.to_owned())?;
 
         let status: GenApi::DeviceAccessStatus = device.access_status().into();
         self.vm
-            .write::<GenApi::DeviceAccessStatusReg>(status as u32)
-            .unwrap();
+            .write::<GenApi::DeviceAccessStatusReg>(status as u32)?;
+
+        Ok(())
     }
 }
 
@@ -250,6 +270,7 @@ impl MemoryObserver for DeviceSelectorRegObserver {
 
 impl Port for U3VInterfaceModule {
     fn read(&self, address: u64, size: usize) -> GenTlResult<Vec<u8>> {
+        self.assert_open()?;
         let address = address as usize;
         Ok(self
             .vm
@@ -258,6 +279,7 @@ impl Port for U3VInterfaceModule {
     }
 
     fn write(&mut self, address: u64, data: &[u8]) -> GenTlResult<()> {
+        self.assert_open()?;
         self.vm.write_raw(address as usize, &data)?;
 
         self.handle_events();
@@ -265,16 +287,29 @@ impl Port for U3VInterfaceModule {
         Ok(())
     }
 
-    fn port_info(&self) -> &PortInfo {
-        &self.port_info
+    fn port_info(&self) -> GenTlResult<&PortInfo> {
+        self.assert_open()?;
+
+        Ok(&self.port_info)
     }
 
-    fn xml_infos(&self) -> &[XmlInfo] {
-        &self.xml_infos
+    fn xml_infos(&self) -> GenTlResult<&[XmlInfo]> {
+        self.assert_open()?;
+
+        Ok(&self.xml_infos)
     }
 }
 
 impl Interface for U3VInterfaceModule {
+    fn open(&mut self) -> GenTlResult<()> {
+        if self.is_opened {
+            Err(GenTlError::ResourceInUse)
+        } else {
+            self.is_opened = true;
+            Ok(())
+        }
+    }
+
     fn interface_id(&self) -> &str {
         INTERFACE_ID
     }

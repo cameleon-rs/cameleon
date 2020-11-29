@@ -220,12 +220,12 @@ impl Port for SystemModule {
         Ok(())
     }
 
-    fn port_info(&self) -> &PortInfo {
-        &self.port_info
+    fn port_info(&self) -> GenTlResult<&PortInfo> {
+        Ok(&self.port_info)
     }
 
-    fn xml_infos(&self) -> &[XmlInfo] {
-        &self.xml_infos
+    fn xml_infos(&self) -> GenTlResult<&[XmlInfo]> {
+        Ok(&self.xml_infos)
     }
 }
 
@@ -305,7 +305,7 @@ mod tests {
             0
         );
 
-        let u3v_interface = &system_module.interfaces()[0];
+        let u3v_interface = system_module.interfaces().nth(0).unwrap();
         assert_eq!(
             &system_module.vm.read::<GenApi::InterfaceIDReg>().unwrap(),
             u3v_interface.lock().unwrap().interface_id()
