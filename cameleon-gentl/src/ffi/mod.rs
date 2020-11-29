@@ -16,6 +16,16 @@ pub struct GC_ERROR(i32);
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct bool8_t(u8);
 
+impl bool8_t {
+    fn true_() -> Self {
+        Self(1)
+    }
+
+    fn false_() -> Self {
+        Self(0)
+    }
+}
+
 impl Into<bool> for bool8_t {
     fn into(self) -> bool {
         self.0 != 0
