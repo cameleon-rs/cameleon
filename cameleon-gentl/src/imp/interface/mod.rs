@@ -1,4 +1,4 @@
-use crate::{imp::port::Port, GenTlResult};
+use crate::{imp::port::*, GenTlResult};
 
 pub(crate) mod u3v;
 
@@ -11,6 +11,8 @@ pub(crate) trait Interface: Port {
     fn interface_id(&self) -> &str;
 
     fn display_name(&self) -> &str;
+
+    fn tl_type(&self) -> TlType;
 
     fn mac_addr(&self) -> Option<[u8; 6]>;
 

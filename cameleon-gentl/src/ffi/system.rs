@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::{ffi::CStr, sync::Mutex};
 
 use crate::{imp, GenTlError, GenTlResult};
 
@@ -151,7 +151,7 @@ gentl_api! {
         let system_handle = handle.system()?;
 
         system_handle.with(|handle| {
-            let iface = handle.interfaces().get(iIndex as usize).ok_or(GenTlError::InvalidIndex)?;
+            let iface = handle.interfaces().nth(iIndex as usize).ok_or(GenTlError::InvalidIndex)?;
             let iface_guard = iface.lock().unwrap();
             let id = iface_guard.interface_id();
 
@@ -174,7 +174,28 @@ gentl_api! {
     ) -> GenTlResult<()> {
         let handle = unsafe { ModuleHandle::from_raw_manually_drop(hSystem)? };
         let system_handle = handle.system()?;
-        todo!()
+        let id = unsafe {CStr::from_ptr(sIfaceID)}.to_string_lossy();
+
+        system_handle.with(|handle| {
+            use  interface::INTERFACE_INFO_CMD;
+            let iface = handle.interface_of(&id).ok_or_else(||GenTlError::InvalidId(id.into()))?;
+            let (size, info_data_type) = match iInfoCmd {
+                INTERFACE_INFO_CMD::INTERFACE_INFO_ID =>
+                    copy_info(iface.lock().unwrap().interface_id(), pBuffer as *mut libc::c_char),
+                INTERFACE_INFO_CMD::INTERFACE_INFO_DISPLAY_NAME =>
+                    copy_info(iface.lock().unwrap().display_name(), pBuffer as *mut libc::c_char),
+                INTERFACE_INFO_CMD::INTERFACE_INFO_TLTYPE =>
+                    copy_info(iface.lock().unwrap().tl_type(), pBuffer as *mut libc::c_char),
+                _ => Err(GenTlError::InvalidParameter),
+            }?;
+
+            unsafe {
+                *piSize = size;
+                *piType = info_data_type;
+            }
+
+            Ok(())
+        })
     }
 
 }
@@ -187,7 +208,7 @@ gentl_api! {
         system_handle.with(|handle| {
             let ifaces = handle.interfaces();
             unsafe {
-                *piNumIfaces = ifaces.len() as u32;
+                *piNumIfaces = ifaces.count() as u32;
             }
             Ok(())
         })
@@ -200,7 +221,21 @@ gentl_api! {
         sIfaceID: *const libc::c_char,
         phIface: *mut super::interface::IF_HANDLE,
     ) -> GenTlResult<()> {
-        todo!()
+        let handle = unsafe { ModuleHandle::from_raw_manually_drop(hSystem)? };
+        let system_handle = handle.system()?;
+        let id = unsafe {CStr::from_ptr(sIfaceID)}.to_string_lossy();
+
+        system_handle.with(|handle| {
+            let iface = handle.interface_of(&id).ok_or_else(|| GenTlError::InvalidId(id.into()))?;
+            iface.lock().unwrap().open()?;
+            let module_handle = Box::new(ModuleHandle::Interface(iface));
+
+            unsafe {
+                *phIface = module_handle.into_raw();
+            }
+
+            Ok(())
+        })
     }
 }
 
@@ -208,11 +243,15 @@ gentl_api! {
     pub fn TLUpdateInterfaceList(
         hSystem: TL_HANDLE,
         pbChanged: *mut bool8_t,
-        iTimeout: u64,
+        _iTimeout: u64,
     ) -> GenTlResult<()> {
         let handle = unsafe { ModuleHandle::from_raw_manually_drop(hSystem)? };
         let system_handle = handle.system()?;
         if system_handle.is_opened() {
+            unsafe {
+                *pbChanged = bool8_t::false_();
+            }
+
             Ok(())
         } else {
             Err(GenTlError::NotInitialized)

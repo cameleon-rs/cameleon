@@ -318,6 +318,10 @@ impl Interface for U3VInterfaceModule {
         "U3V Interface Module"
     }
 
+    fn tl_type(&self) -> TlType {
+        memory::GenApi::InterfaceType::USB3Vision.into()
+    }
+
     fn mac_addr(&self) -> Option<[u8; 6]> {
         None
     }
