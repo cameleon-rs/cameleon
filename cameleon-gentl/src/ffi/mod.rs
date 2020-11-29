@@ -6,7 +6,7 @@ pub mod system;
 
 use std::{cell::RefCell, mem::ManuallyDrop, sync::RwLock};
 
-use crate::{GenTlError, GenTlResult};
+use crate::{imp, GenTlError, GenTlResult};
 
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -213,6 +213,27 @@ impl CopyTo for &str {
         }
 
         Ok(len_without_null + 1)
+    }
+
+    fn info_data_type() -> INFO_DATATYPE {
+        INFO_DATATYPE::INFO_DATATYPE_STRING
+    }
+}
+
+impl CopyTo for imp::port::TlType {
+    type Destination = libc::c_char;
+
+    fn copy_to(&self, dst: *mut Self::Destination) -> GenTlResult<libc::size_t> {
+        let s = match self {
+            Self::CameraLink => "CL",
+            Self::CameraLinkHS => "CLHS",
+            Self::CoaXPress => "CXP",
+            Self::GigEVision => "GEV",
+            Self::USB3Vision => "U3V",
+            Self::Mixed => "Mixed",
+        };
+
+        s.copy_to(dst)
     }
 
     fn info_data_type() -> INFO_DATATYPE {
