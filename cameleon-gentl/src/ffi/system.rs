@@ -4,7 +4,7 @@ use crate::{imp, GenTlError, GenTlResult};
 
 use super::*;
 
-type TL_HANDLE = *mut libc::c_void;
+pub(super) type TL_HANDLE = *mut libc::c_void;
 
 pub(super) type SystemModule = Mutex<imp::system::SystemModule>;
 
