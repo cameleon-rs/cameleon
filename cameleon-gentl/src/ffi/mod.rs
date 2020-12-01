@@ -1,6 +1,7 @@
 #[macro_use]
 mod macros;
 
+pub mod device;
 pub mod interface;
 pub mod system;
 
