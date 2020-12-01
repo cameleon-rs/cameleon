@@ -22,12 +22,14 @@ pub(crate) struct SystemModule {
     port_info: PortInfo,
     xml_infos: Vec<XmlInfo>,
     system_info: SystemInfo,
+    is_opened: bool,
+
     interfaces: [Box<Mutex<dyn Interface + Send>>; NUM_INTERFACE],
     event_queue: Arc<Mutex<VecDeque<MemoryEvent>>>,
 }
 
 impl SystemModule {
-    pub(crate) fn new() -> GenTlResult<Self> {
+    pub(crate) fn new() -> Self {
         let port_info = PortInfo {
             id: memory::GenApi::TLID.into(),
             vendor: memory::GenApi::vendor_name().into(),
@@ -71,12 +73,36 @@ impl SystemModule {
             port_info,
             xml_infos: vec![xml_info],
             system_info,
+            is_opened: false,
+
             interfaces: [Box::new(Mutex::new(U3VInterfaceModule::new()))],
             event_queue: Arc::new(Mutex::new(VecDeque::new())),
         };
 
-        system_module.initialize_vm()?;
-        Ok(system_module)
+        system_module.initialize_vm().unwrap();
+        system_module
+    }
+
+    pub(crate) fn open(&mut self) -> GenTlResult<()> {
+        if self.is_opened {
+            Err(GenTlError::ResourceInUse)
+        } else {
+            self.is_opened = true;
+            Ok(())
+        }
+    }
+
+    pub(crate) fn close(&mut self) -> GenTlResult<()> {
+        self.assert_open()?;
+        for iface in &mut self.interfaces() {
+            let _ = iface.lock().unwrap().close();
+        }
+
+        Ok(())
+    }
+
+    pub(crate) fn is_opened(&self) -> bool {
+        self.is_opened
     }
 
     pub(crate) fn interfaces(&self) -> impl Iterator<Item = &Mutex<dyn Interface + Send>> {
@@ -90,6 +116,14 @@ impl SystemModule {
 
     pub(crate) fn system_info(&self) -> &SystemInfo {
         &self.system_info
+    }
+
+    fn assert_open(&self) -> GenTlResult<()> {
+        if self.is_opened {
+            Ok(())
+        } else {
+            Err(GenTlError::NotInitialized)
+        }
     }
 
     fn initialize_vm(&mut self) -> GenTlResult<()> {

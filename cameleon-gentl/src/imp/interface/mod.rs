@@ -8,6 +8,10 @@ mod u3v_memory;
 pub(crate) trait Interface: Port {
     fn open(&mut self) -> GenTlResult<()>;
 
+    fn close(&mut self) -> GenTlResult<()> {
+        todo!()
+    }
+
     fn interface_id(&self) -> &str;
 
     fn display_name(&self) -> &str;
