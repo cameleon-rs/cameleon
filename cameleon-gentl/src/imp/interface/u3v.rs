@@ -9,7 +9,7 @@ use crate::{
     imp::{
         device::{
             u3v::{enumerate_u3v_device, U3VDeviceModule},
-            DeviceAccessStatus,
+            Device, DeviceAccessStatus,
         },
         port::*,
     },
@@ -26,7 +26,7 @@ pub(crate) struct U3VInterfaceModule {
     xml_infos: Vec<XmlInfo>,
     is_opened: bool,
 
-    devices: Vec<Arc<Mutex<U3VDeviceModule>>>,
+    devices: Vec<Box<Mutex<U3VDeviceModule>>>,
     event_queue: Arc<Mutex<VecDeque<MemoryEvent>>>,
 }
 
@@ -75,7 +75,9 @@ impl U3VInterfaceModule {
         }
 
         // Enumerate devices connected to the interface.
-        let found_devices = enumerate_u3v_device()?;
+        let found_devices = enumerate_u3v_device()?
+            .into_iter()
+            .map(|dev| Box::new(Mutex::new(dev)));
 
         let mut changed = false;
 
@@ -115,30 +117,6 @@ impl U3VInterfaceModule {
         Ok(changed)
     }
 
-    pub(crate) fn open_device(&self, device_id: &str) -> GenTlResult<Arc<Mutex<U3VDeviceModule>>> {
-        self.assert_open()?;
-
-        let device = self
-            .find_device_by_id(device_id)?
-            .ok_or_else(|| GenTlError::InvalidId(device_id.into()))?;
-
-        self.open_device_impl(device)
-    }
-
-    pub(crate) fn open_device_by_idx(
-        &self,
-        idx: usize,
-    ) -> GenTlResult<Arc<Mutex<U3VDeviceModule>>> {
-        self.assert_open()?;
-
-        if idx >= self.devices.len() {
-            return Err(GenTlError::InvalidIndex);
-        };
-
-        let device = self.devices[idx].clone();
-        self.open_device_impl(device)
-    }
-
     pub(crate) fn num_device(&self) -> GenTlResult<usize> {
         self.assert_open()?;
 
@@ -153,12 +131,14 @@ impl U3VInterfaceModule {
         }
     }
 
-    fn open_device_impl(
-        &self,
-        device: Arc<Mutex<U3VDeviceModule>>,
-    ) -> GenTlResult<Arc<Mutex<U3VDeviceModule>>> {
-        device.lock().unwrap().open()?;
-        Ok(device)
+    fn find_device_by_id(&self, id: &str) -> GenTlResult<Option<&Mutex<U3VDeviceModule>>> {
+        for dev in self.devices.iter() {
+            if &dev.lock().unwrap().port_info()?.id == id {
+                return Ok(Some(dev.as_ref()));
+            }
+        }
+
+        Ok(None)
     }
 
     fn initialize_vm(&mut self) {
@@ -198,16 +178,6 @@ impl U3VInterfaceModule {
         }
 
         Ok(())
-    }
-
-    fn find_device_by_id(&self, id: &str) -> GenTlResult<Option<Arc<Mutex<U3VDeviceModule>>>> {
-        for dev in self.devices.iter() {
-            if dev.lock().unwrap().port_info()?.id == id {
-                return Ok(Some(dev.clone()));
-            }
-        }
-
-        Ok(None)
     }
 
     fn handle_device_selector_change(&mut self) -> GenTlResult<()> {
@@ -282,7 +252,7 @@ impl Port for U3VInterfaceModule {
         self.assert_open()?;
         self.vm.write_raw(address as usize, &data)?;
 
-        self.handle_events();
+        self.handle_events()?;
 
         Ok(())
     }
@@ -308,6 +278,15 @@ impl Interface for U3VInterfaceModule {
             self.is_opened = true;
             Ok(())
         }
+    }
+
+    fn close(&mut self) -> GenTlResult<()> {
+        for dev in &self.devices {
+            dev.lock().unwrap().close()?;
+        }
+
+        self.is_opened = false;
+        Ok(())
     }
 
     fn interface_id(&self) -> &str {
@@ -336,6 +315,14 @@ impl Interface for U3VInterfaceModule {
 
     fn gateway_addr(&self) -> Option<std::net::Ipv4Addr> {
         None
+    }
+
+    fn devices(&self) -> Vec<&Mutex<dyn Device>> {
+        let mut dyn_devices: Vec<&Mutex<dyn Device>> = Vec::with_capacity(self.devices.len());
+        for dev in &self.devices {
+            dyn_devices.push(dev.as_ref());
+        }
+        dyn_devices
     }
 }
 
