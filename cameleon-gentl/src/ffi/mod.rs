@@ -106,6 +106,13 @@ impl<'a> ModuleHandle<'a> {
         }
     }
 
+    fn interface(&self) -> GenTlResult<&'a interface::InterfaceModule> {
+        match self {
+            ModuleHandle::Interface(iface) => Ok(iface),
+            _ => Err(GenTlError::InvalidHandle),
+        }
+    }
+
     unsafe fn from_raw_manually_drop(
         raw_handle: *mut libc::c_void,
     ) -> GenTlResult<ManuallyDrop<Box<ModuleHandle<'a>>>> {
@@ -191,14 +198,16 @@ fn save_last_error<T>(res: GenTlResult<T>) {
 fn copy_info<T: CopyTo>(
     src: T,
     dst: *mut T::Destination,
-) -> GenTlResult<(libc::size_t, INFO_DATATYPE)> {
-    src.copy_to(dst).map(|size| (size, T::info_data_type()))
+    dst_size: *mut libc::size_t,
+) -> GenTlResult<INFO_DATATYPE> {
+    src.copy_to(dst, dst_size)?;
+    Ok(T::info_data_type())
 }
 
 trait CopyTo {
     type Destination;
 
-    fn copy_to(&self, dst: *mut Self::Destination) -> GenTlResult<libc::size_t>;
+    fn copy_to(&self, dst: *mut Self::Destination, dst_size: *mut libc::size_t) -> GenTlResult<()>;
 
     fn info_data_type() -> INFO_DATATYPE;
 }
@@ -206,24 +215,31 @@ trait CopyTo {
 impl CopyTo for &str {
     type Destination = libc::c_char;
 
-    fn copy_to(&self, dst: *mut Self::Destination) -> GenTlResult<libc::size_t> {
+    fn copy_to(&self, dst: *mut Self::Destination, dst_size: *mut libc::size_t) -> GenTlResult<()> {
         if !self.is_ascii() {
             return Err(GenTlError::InvalidValue("string is not ascii".into()));
         }
 
-        let len_without_null = self.len();
+        let string_len = self.len() + 1;
         if !dst.is_null() {
             unsafe {
+                if *dst_size < string_len {
+                    return Err(GenTlError::BufferTooSmall);
+                }
                 std::ptr::copy_nonoverlapping(
                     self.as_ptr() as *const libc::c_char,
                     dst,
-                    len_without_null,
+                    self.len(),
                 );
-                dst.offset(len_without_null as isize).write(0); // Null terminated.
+                dst.offset(self.len() as isize).write(0); // Null terminated.
             }
         }
 
-        Ok(len_without_null + 1)
+        unsafe {
+            *dst_size = string_len;
+        }
+
+        Ok(())
     }
 
     fn info_data_type() -> INFO_DATATYPE {
@@ -234,7 +250,7 @@ impl CopyTo for &str {
 impl CopyTo for imp::port::TlType {
     type Destination = libc::c_char;
 
-    fn copy_to(&self, dst: *mut Self::Destination) -> GenTlResult<libc::size_t> {
+    fn copy_to(&self, dst: *mut Self::Destination, dst_size: *mut libc::size_t) -> GenTlResult<()> {
         let s = match self {
             Self::CameraLink => "CL",
             Self::CameraLinkHS => "CLHS",
@@ -244,7 +260,7 @@ impl CopyTo for imp::port::TlType {
             Self::Mixed => "Mixed",
         };
 
-        s.copy_to(dst)
+        s.copy_to(dst, dst_size)
     }
 
     fn info_data_type() -> INFO_DATATYPE {
@@ -257,15 +273,26 @@ macro_rules! impl_copy_to_for_numeric {
         impl CopyTo for $ty {
             type Destination = $ty;
 
-            fn copy_to(&self, dst: *mut Self::Destination) -> GenTlResult<libc::size_t> {
+            fn copy_to(
+                &self,
+                dst: *mut Self::Destination,
+                dst_size: *mut libc::size_t,
+            ) -> GenTlResult<()> {
                 let len = std::mem::size_of::<$ty>();
 
                 if !dst.is_null() {
                     unsafe {
+                        if *dst_size < len {
+                            return Err(GenTlError::BufferTooSmall);
+                        }
                         *dst = *self;
                     }
                 }
-                Ok(len)
+
+                unsafe {
+                    *dst_size = len;
+                }
+                Ok(())
             }
 
             fn info_data_type() -> INFO_DATATYPE {
@@ -340,18 +367,17 @@ gentl_api!(
             }
         }) {
             Some((code, text)) => {
-                let size = text.as_str().copy_to(sErrorText)?;
+                let size = text.as_str().copy_to(sErrorText, piSize)?;
                 (code, size)
             }
             None => {
-                let size = "No Error".copy_to(sErrorText)?;
+                let size = "No Error".copy_to(sErrorText, piSize)?;
                 (Ok(()).into(), size)
             }
         };
 
         unsafe {
             *piErrorCode = code;
-            *piSize = size;
         }
 
         Ok(())

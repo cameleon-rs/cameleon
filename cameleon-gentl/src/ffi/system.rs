@@ -27,11 +27,11 @@ gentl_api! {
 gentl_api!(
     pub fn TLClose(hSystem: TL_HANDLE) -> GenTlResult<()> {
         let mut handle = unsafe { ModuleHandle::from_raw_manually_drop(hSystem)? };
-        let _ = handle.system()?;
+        let system_handle = handle.system()?;
 
-        // Close module.
-        SYSTEM_MODULE.lock().unwrap().close()?;
-        // Drop handle itself.
+        // Close the system module.
+        system_handle.lock().unwrap().close()?;
+        // Drop its handle.
         unsafe {
             std::mem::ManuallyDrop::drop(&mut handle);
         }
@@ -52,48 +52,60 @@ gentl_api!(
         let handle_guard = system_handle.lock().unwrap();
         let system_info = handle_guard.system_info();
 
-        let (size, info_data_type) = match iInfoCmd {
-            TL_INFO_CMD::TL_INFO_ID => {
-                copy_info(system_info.id.as_str(), pBuffer as *mut libc::c_char)
-            }
-            TL_INFO_CMD::TL_INFO_VENDOR => {
-                copy_info(system_info.vendor.as_str(), pBuffer as *mut libc::c_char)
-            }
-            TL_INFO_CMD::TL_INFO_MODEL => {
-                copy_info(system_info.model.as_str(), pBuffer as *mut libc::c_char)
-            }
-            TL_INFO_CMD::TL_INFO_VERSION => {
-                copy_info(system_info.version.as_str(), pBuffer as *mut libc::c_char)
-            }
-            TL_INFO_CMD::TL_INFO_TLTYPE => {
-                copy_info(system_info.tl_type.as_str(), pBuffer as *mut libc::c_char)
-            }
+        let info_data_type = match iInfoCmd {
+            TL_INFO_CMD::TL_INFO_ID => copy_info(
+                system_info.id.as_str(),
+                pBuffer as *mut libc::c_char,
+                piSize,
+            ),
+            TL_INFO_CMD::TL_INFO_VENDOR => copy_info(
+                system_info.vendor.as_str(),
+                pBuffer as *mut libc::c_char,
+                piSize,
+            ),
+            TL_INFO_CMD::TL_INFO_MODEL => copy_info(
+                system_info.model.as_str(),
+                pBuffer as *mut libc::c_char,
+                piSize,
+            ),
+            TL_INFO_CMD::TL_INFO_VERSION => copy_info(
+                system_info.version.as_str(),
+                pBuffer as *mut libc::c_char,
+                piSize,
+            ),
+            TL_INFO_CMD::TL_INFO_TLTYPE => copy_info(
+                system_info.tl_type.as_str(),
+                pBuffer as *mut libc::c_char,
+                piSize,
+            ),
             TL_INFO_CMD::TL_INFO_NAME => copy_info(
                 &*system_info.full_path.file_name().unwrap().to_string_lossy(),
                 pBuffer as *mut libc::c_char,
+                piSize,
             ),
             TL_INFO_CMD::TL_INFO_PATHNAME => copy_info(
                 &*system_info.full_path.to_string_lossy(),
                 pBuffer as *mut libc::c_char,
+                piSize,
             ),
             TL_INFO_CMD::TL_INFO_DISPLAYNAME => copy_info(
                 system_info.display_name.as_str(),
                 pBuffer as *mut libc::c_char,
+                piSize,
             ),
             TL_INFO_CMD::TL_INFO_CHAR_ENCODING => {
-                copy_info(system_info.encoding.as_raw(), pBuffer as *mut i32)
+                copy_info(system_info.encoding.as_raw(), pBuffer as *mut i32, piSize)
             }
             TL_INFO_CMD::TL_INFO_GENTL_VER_MAJOR => {
-                copy_info(system_info.gentl_version_major, pBuffer as *mut u32)
+                copy_info(system_info.gentl_version_major, pBuffer as *mut u32, piSize)
             }
             TL_INFO_CMD::TL_INFO_GENTL_VER_MINOR => {
-                copy_info(system_info.gentl_version_minor, pBuffer as *mut u32)
+                copy_info(system_info.gentl_version_minor, pBuffer as *mut u32, piSize)
             }
             _ => return Err(GenTlError::InvalidParameter),
         }?;
 
         unsafe {
-            *piSize = size;
             *piType = info_data_type;
         }
 
@@ -115,9 +127,7 @@ gentl_api! {
         let iface = handle_guard.interfaces().nth(iIndex as usize).ok_or(GenTlError::InvalidIndex)?;
         let iface_guard = iface.lock().unwrap();
         let id = iface_guard.interface_id();
-        unsafe {
-            *piSize = id.copy_to(sIfaceID)?;
-        }
+        id.copy_to(sIfaceID, piSize)?;
 
         Ok(())
     }
@@ -132,8 +142,6 @@ gentl_api! {
         pBuffer: *mut libc::c_void,
         piSize: *mut libc::size_t,
     ) -> GenTlResult<()> {
-        use interface::INTERFACE_INFO_CMD;
-
         let handle = unsafe { ModuleHandle::from_raw_manually_drop(hSystem)? };
         let system_handle = handle.system()?;
         let handle_guard = system_handle.lock().unwrap();
@@ -142,28 +150,8 @@ gentl_api! {
         let iface = handle_guard
             .interface_of(&id)
             .ok_or_else(|| GenTlError::InvalidId(id.into()))?;
-        let (size, info_data_type) = match iInfoCmd {
-            INTERFACE_INFO_CMD::INTERFACE_INFO_ID => copy_info(
-                iface.lock().unwrap().interface_id(),
-                pBuffer as *mut libc::c_char,
-            ),
-            INTERFACE_INFO_CMD::INTERFACE_INFO_DISPLAY_NAME => copy_info(
-                iface.lock().unwrap().display_name(),
-                pBuffer as *mut libc::c_char,
-            ),
-            INTERFACE_INFO_CMD::INTERFACE_INFO_TLTYPE => copy_info(
-                iface.lock().unwrap().tl_type(),
-                pBuffer as *mut libc::c_char,
-            ),
-            _ => Err(GenTlError::InvalidParameter),
-        }?;
 
-        unsafe {
-            *piSize = size;
-            *piType = info_data_type;
-        }
-
-        Ok(())
+        interface::if_get_info(iface, iInfoCmd, piType, pBuffer, piSize)
     }
 }
 
