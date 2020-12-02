@@ -5,13 +5,13 @@ use cameleon_impl::memory::prelude::*;
 
 use crate::{imp::port::*, GenTlError, GenTlResult};
 
-use super::{u3v_memory as memory, DeviceAccessStatus};
+use super::{u3v_memory as memory, Device, DeviceAccessStatus};
 
-pub(crate) fn enumerate_u3v_device() -> GenTlResult<Vec<Arc<Mutex<U3VDeviceModule>>>> {
+pub(crate) fn enumerate_u3v_device() -> GenTlResult<Vec<U3VDeviceModule>> {
     Ok(u3v::enumerate_devices()
         .unwrap()
         .into_iter()
-        .map(|dev| Arc::new(U3VDeviceModule::new(dev).into()))
+        .map(|dev| U3VDeviceModule::new(dev))
         .collect())
 }
 
@@ -30,23 +30,6 @@ pub(crate) struct U3VDeviceModule {
 
 // TODO: Implement methods for stream and event channel.
 impl U3VDeviceModule {
-    /// Close the remote device.
-    /// All channels to the remote device are invalidated.
-    ///
-    /// In order to open the device, please call [cameleon_gentl::interface::u3v::U3VInterfaceModule::open_device] as
-    /// GenTL specification describes.
-    pub(crate) fn close(&mut self) -> GenTlResult<()> {
-        let res: GenTlResult<()> = self.device.close().map_err(Into::into);
-
-        self.current_status = match res {
-            Ok(()) => memory::GenApi::DeviceAccessStatus::ReadWrite,
-            Err(GenTlError::Io(..)) => memory::GenApi::DeviceAccessStatus::NoAccess,
-            _ => memory::GenApi::DeviceAccessStatus::Unknown,
-        };
-
-        Ok(())
-    }
-
     /// NOTE: Unlike another module of GenTL, this methods doesn't initialize VM registers due to spec requirements.
     /// Initialization of VM registers is done in [`U3VDeviceModule::open`] method.
     pub(crate) fn new(device: u3v::Device) -> Self {
@@ -83,25 +66,6 @@ impl U3VDeviceModule {
         }
     }
 
-    /// Try to open the remote device and initialize VM regiteres.
-    pub(crate) fn open(&mut self) -> GenTlResult<()> {
-        let current_status: DeviceAccessStatus = self.current_status.into();
-        if current_status.is_opened() {
-            return Err(GenTlError::ResourceInUse);
-        }
-
-        let res: GenTlResult<()> = self.device.open().map_err(Into::into);
-
-        self.current_status = match &res {
-            Ok(()) => memory::GenApi::DeviceAccessStatus::OpenReadWrite,
-            Err(GenTlError::AccessDenied) => memory::GenApi::DeviceAccessStatus::Busy,
-            Err(GenTlError::Io(..)) => memory::GenApi::DeviceAccessStatus::NoAccess,
-            _ => memory::GenApi::DeviceAccessStatus::Unknown,
-        };
-
-        res
-    }
-
     pub(crate) fn device_info(&self) -> &u3v::DeviceInfo {
         self.device.device_info()
     }
@@ -135,6 +99,19 @@ impl U3VDeviceModule {
         let status: memory::GenApi::DeviceAccessStatus = status.into();
         self.current_status = status;
         self.reflect_status();
+    }
+
+    fn assert_open(&self) -> GenTlResult<()> {
+        if self.is_opened() {
+            Ok(())
+        } else {
+            Err(GenTlError::NotInitialized)
+        }
+    }
+
+    fn is_opened(&self) -> bool {
+        let current_status: DeviceAccessStatus = self.current_status.into();
+        current_status.is_opened()
     }
 
     fn handle_events(&mut self) {
@@ -173,5 +150,35 @@ impl Port for U3VDeviceModule {
     fn xml_infos(&self) -> GenTlResult<&[XmlInfo]> {
         // TODO: open assertion.
         Ok(&self.xml_infos)
+    }
+}
+
+impl Device for U3VDeviceModule {
+    fn open(&mut self) -> GenTlResult<()> {
+        if self.is_opened() {
+            return Err(GenTlError::ResourceInUse);
+        }
+
+        let res: GenTlResult<()> = self.device.open().map_err(Into::into);
+
+        self.current_status = match &res {
+            Ok(()) => memory::GenApi::DeviceAccessStatus::OpenReadWrite,
+            Err(GenTlError::AccessDenied) => memory::GenApi::DeviceAccessStatus::Busy,
+            Err(GenTlError::Io(..)) => memory::GenApi::DeviceAccessStatus::NoAccess,
+            _ => memory::GenApi::DeviceAccessStatus::Unknown,
+        };
+
+        res
+    }
+
+    fn close(&mut self) -> GenTlResult<()> {
+        let res: GenTlResult<()> = self.device.close().map_err(Into::into);
+        self.current_status = match res {
+            Ok(()) => memory::GenApi::DeviceAccessStatus::ReadWrite,
+            Err(GenTlError::Io(..)) => memory::GenApi::DeviceAccessStatus::NoAccess,
+            _ => memory::GenApi::DeviceAccessStatus::Unknown,
+        };
+
+        Ok(())
     }
 }

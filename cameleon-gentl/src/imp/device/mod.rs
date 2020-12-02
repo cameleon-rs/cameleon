@@ -1,3 +1,5 @@
+use crate::GenTlResult;
+
 pub(crate) mod u3v;
 
 mod u3v_memory;
@@ -32,5 +34,15 @@ impl DeviceAccessStatus {
         use DeviceAccessStatus::*;
 
         matches!(self, OpenReadOnly | OpenReadWrite)
+    }
+}
+
+pub(crate) trait Device {
+    fn open(&mut self) -> GenTlResult<()>;
+
+    fn close(&mut self) -> GenTlResult<()>;
+
+    fn device_id(&self) -> &str {
+        todo!()
     }
 }
