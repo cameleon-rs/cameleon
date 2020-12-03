@@ -66,7 +66,13 @@ impl U3VInterfaceModule {
         module
     }
 
-    pub(crate) fn update_device_list(&mut self) -> GenTlResult<bool> {
+    pub(crate) fn num_device(&self) -> GenTlResult<usize> {
+        self.assert_open()?;
+
+        Ok(self.devices.len())
+    }
+
+    fn update_device_list(&mut self) -> GenTlResult<bool> {
         self.assert_open()?;
 
         // First, reflect current device status.
@@ -115,12 +121,6 @@ impl U3VInterfaceModule {
         }
 
         Ok(changed)
-    }
-
-    pub(crate) fn num_device(&self) -> GenTlResult<usize> {
-        self.assert_open()?;
-
-        Ok(self.devices.len())
     }
 
     fn assert_open(&self) -> GenTlResult<()> {
@@ -323,6 +323,13 @@ impl Interface for U3VInterfaceModule {
             dyn_devices.push(dev.as_ref());
         }
         dyn_devices
+    }
+
+    // NOTE: We ignore timeout for now.
+    fn update_device_list(&mut self, _timeout: std::time::Duration) -> GenTlResult<bool> {
+        self.assert_open()?;
+
+        self.update_device_list()
     }
 }
 

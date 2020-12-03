@@ -33,6 +33,16 @@ impl Into<bool> for bool8_t {
     }
 }
 
+impl From<bool> for bool8_t {
+    fn from(v: bool) -> Self {
+        if v {
+            Self::true_()
+        } else {
+            Self::false_()
+        }
+    }
+}
+
 impl Into<GC_ERROR> for &GenTlError {
     fn into(self) -> GC_ERROR {
         use GenTlError::*;
@@ -42,7 +52,7 @@ impl Into<GC_ERROR> for &GenTlError {
             NotImplemented => -1003,
             ResourceInUse => -1004,
             AccessDenied => -1005,
-            InvalidModuleHandle => -1006,
+            InvalidHandle => -1006,
             InvalidId(..) => -1007,
             NoData => -1008,
             InvalidParameter => -1009,
@@ -95,7 +105,8 @@ struct LastError {
 
 enum ModuleHandle<'a> {
     System(&'a system::SystemModule),
-    Interface(&'a interface::InterfaceModule),
+    Interface(interface::InterfaceModuleRef<'a>),
+    Device(&'a device::DeviceModule),
 }
 
 impl<'a> ModuleHandle<'a> {
@@ -106,9 +117,9 @@ impl<'a> ModuleHandle<'a> {
         }
     }
 
-    fn interface(&self) -> GenTlResult<&'a interface::InterfaceModule> {
+    fn interface(&self) -> GenTlResult<interface::InterfaceModuleRef<'a>> {
         match self {
-            ModuleHandle::Interface(iface) => Ok(iface),
+            ModuleHandle::Interface(iface) => Ok(*iface),
             _ => Err(GenTlError::InvalidHandle),
         }
     }
@@ -359,7 +370,7 @@ gentl_api!(
         sErrorText: *mut libc::c_char,
         piSize: *mut libc::size_t,
     ) -> GenTlResult<()> {
-        let (code, size) = match LAST_ERROR.with(|err| {
+        let code = match LAST_ERROR.with(|err| {
             let err = err.borrow();
             match &err.err {
                 Some(err) => Some((err.into(), format!("{}", err))),
@@ -367,12 +378,12 @@ gentl_api!(
             }
         }) {
             Some((code, text)) => {
-                let size = text.as_str().copy_to(sErrorText, piSize)?;
-                (code, size)
+                text.as_str().copy_to(sErrorText, piSize)?;
+                code
             }
             None => {
-                let size = "No Error".copy_to(sErrorText, piSize)?;
-                (Ok(()).into(), size)
+                "No Error".copy_to(sErrorText, piSize)?;
+                Ok(()).into()
             }
         };
 

@@ -2,7 +2,7 @@ use std::{ffi::CStr, sync::Mutex};
 
 use crate::{imp, GenTlError, GenTlResult};
 
-use super::*;
+use super::{interface::InterfaceModuleRef, *};
 
 pub(super) type TL_HANDLE = *mut libc::c_void;
 
@@ -150,6 +150,7 @@ gentl_api! {
         let iface = handle_guard
             .interface_of(&id)
             .ok_or_else(|| GenTlError::InvalidId(id.into()))?;
+        let iface = InterfaceModuleRef::new(iface, hSystem);
 
         interface::if_get_info(iface, iInfoCmd, piType, pBuffer, piSize)
     }
@@ -182,6 +183,7 @@ gentl_api! {
         let id = unsafe {CStr::from_ptr(sIfaceID)}.to_string_lossy();
         let iface = handle_guard.interface_of(&id).ok_or_else(|| GenTlError::InvalidId(id.into()))?;
         iface.lock().unwrap().open()?;
+        let iface = InterfaceModuleRef::new(iface, hSystem);
         let module_handle = Box::new(ModuleHandle::Interface(iface));
 
         unsafe {
@@ -216,7 +218,7 @@ gentl_api! {
 
 newtype_enum! {
     pub enum TL_INFO_CMD {
-        /// Unique ID identifying a GenTL Producer"
+        /// Unique ID identifying a GenTL Producer.
         TL_INFO_ID = 0,
 
         /// GenTL Producer vendor name.

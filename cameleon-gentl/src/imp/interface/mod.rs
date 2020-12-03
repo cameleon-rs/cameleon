@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 
-use crate::{imp::device::Device, imp::port::*, GenTlResult};
+use crate::{imp::device::Device, imp::port::*, GenTlError, GenTlResult};
 
 pub(crate) mod u3v;
 
@@ -10,6 +10,8 @@ pub(crate) trait Interface: Port {
     fn open(&mut self) -> GenTlResult<()>;
 
     fn close(&mut self) -> GenTlResult<()>;
+
+    fn update_device_list(&mut self, timeout: std::time::Duration) -> GenTlResult<bool>;
 
     fn interface_id(&self) -> &str;
 
@@ -26,4 +28,11 @@ pub(crate) trait Interface: Port {
     fn gateway_addr(&self) -> Option<std::net::Ipv4Addr>;
 
     fn devices(&self) -> Vec<&Mutex<dyn Device>>;
+
+    fn device_by_id(&self, id: &str) -> GenTlResult<&Mutex<dyn Device>> {
+        self.devices()
+            .into_iter()
+            .find(|dev| dev.lock().unwrap().device_id() == id)
+            .ok_or_else(|| GenTlError::InvalidId(id.into()))
+    }
 }

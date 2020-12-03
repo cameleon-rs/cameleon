@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::{convert::TryInto, ffi::CStr, sync::Mutex, time::Duration};
 
 use crate::imp;
 
@@ -6,7 +6,62 @@ use super::*;
 
 pub(super) type IF_HANDLE = *mut libc::c_void;
 
-pub(super) type InterfaceModule = Mutex<dyn imp::interface::Interface>;
+//pub(super) type InterfaceModule = Mutex<dyn imp::interface::Interface>;
+#[derive(Clone, Copy)]
+pub(super) struct InterfaceModuleRef<'a> {
+    inner: &'a Mutex<dyn imp::interface::Interface>,
+    parent_tl: super::system::TL_HANDLE,
+}
+
+impl<'a> InterfaceModuleRef<'a> {
+    pub(super) fn new(
+        inner: &'a Mutex<dyn imp::interface::Interface>,
+        parent_tl: super::system::TL_HANDLE,
+    ) -> Self {
+        Self { inner, parent_tl }
+    }
+}
+
+impl<'a> std::ops::Deref for InterfaceModuleRef<'a> {
+    type Target = Mutex<dyn imp::interface::Interface>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+pub(super) fn if_get_info(
+    iface: InterfaceModuleRef,
+    iInfoCmd: INTERFACE_INFO_CMD,
+    piType: *mut INFO_DATATYPE,
+    pBuffer: *mut libc::c_void,
+    piSize: *mut libc::size_t,
+) -> GenTlResult<()> {
+    let info_data_type = match iInfoCmd {
+        INTERFACE_INFO_CMD::INTERFACE_INFO_ID => copy_info(
+            iface.lock().unwrap().interface_id(),
+            pBuffer as *mut libc::c_char,
+            piSize,
+        ),
+        INTERFACE_INFO_CMD::INTERFACE_INFO_DISPLAY_NAME => copy_info(
+            iface.lock().unwrap().display_name(),
+            pBuffer as *mut libc::c_char,
+            piSize,
+        ),
+        INTERFACE_INFO_CMD::INTERFACE_INFO_TLTYPE => copy_info(
+            iface.lock().unwrap().tl_type(),
+            pBuffer as *mut libc::c_char,
+            piSize,
+        ),
+        _ => Err(GenTlError::InvalidParameter),
+    }?;
+
+    unsafe {
+        *piType = info_data_type;
+    }
+
+    Ok(())
+}
 
 newtype_enum! {
     pub enum INTERFACE_INFO_CMD {
@@ -23,7 +78,17 @@ newtype_enum! {
 
 gentl_api! {
     pub fn IFClose(hIface: IF_HANDLE) -> GenTlResult<()> {
-        todo!()
+        let mut handle = unsafe { ModuleHandle::from_raw_manually_drop(hIface)? };
+        let iface_handle = handle.interface()?;
+
+        // Close the interface module.
+        iface_handle.lock().unwrap().close()?;
+        // Drop its handle.
+        unsafe {
+            std::mem::ManuallyDrop::drop(&mut handle);
+        }
+
+        Ok(())
     }
 }
 
@@ -32,10 +97,13 @@ gentl_api! {
         hIface: IF_HANDLE,
         iInfoCmd: INTERFACE_INFO_CMD,
         piType: *mut INFO_DATATYPE,
-        pBuffer: *mut ::std::os::raw::c_void,
+        pBuffer: *mut libc::c_void,
         piSize: *mut libc::size_t,
     ) -> GenTlResult<()> {
-        todo!()
+        let handle = unsafe { ModuleHandle::from_raw_manually_drop(hIface)? };
+        let iface = handle.interface()?;
+
+        if_get_info(iface, iInfoCmd, piType, pBuffer, piSize)
     }
 }
 
@@ -46,26 +114,52 @@ gentl_api! {
         sIDeviceID: *mut libc::c_char,
         piSize: *mut libc::size_t,
     ) -> GenTlResult<()> {
-        todo!()
+        let handle = unsafe { ModuleHandle::from_raw_manually_drop(hIface)? };
+        let iface = handle.interface()?;
+
+        let iface_guard = iface.lock().unwrap();
+        let devices = iface_guard.devices();
+        let device = devices
+            .get(iIndex as usize)
+            .ok_or(GenTlError::InvalidIndex)?;
+
+        device.lock().unwrap().device_id().copy_to(sIDeviceID, piSize)?;
+
+        Ok(())
     }
 }
 
 gentl_api! {
     pub fn IFGetDeviceInfo(
         hIface: IF_HANDLE,
-        sDeviceID: *const ::std::os::raw::c_char,
+        sDeviceID: *const libc::c_char,
         iInfoCmd: device::DEVICE_INFO_CMD,
         piType: *mut INFO_DATATYPE,
         pBuffer: *mut libc::c_void,
         piSize: *mut libc::size_t,
     ) -> GenTlResult<()> {
-        todo!()
+        let handle = unsafe { ModuleHandle::from_raw_manually_drop(hIface)? };
+        let iface = handle.interface()?;
+
+        let iface_guard = iface.lock().unwrap();
+        let id = unsafe { CStr::from_ptr(sDeviceID) }.to_string_lossy();
+        let device = iface_guard.device_by_id(&id)?;
+
+        device::dev_get_info(device, iInfoCmd, piType, pBuffer, piSize)
     }
 }
 
 gentl_api! {
     pub fn IFGetNumDevices(hIface: IF_HANDLE, piNumDevices: *mut u32) -> GenTlResult<()> {
-        todo!()
+        let handle = unsafe { ModuleHandle::from_raw_manually_drop(hIface)? };
+        let iface = handle.interface()?;
+
+        let device_num = iface.lock().unwrap().devices().len();
+        unsafe {
+            *piNumDevices = device_num as u32;
+        }
+
+        Ok(())
     }
 }
 
@@ -76,7 +170,20 @@ gentl_api! {
         iOpenFlag: device::DEVICE_ACCESS_FLAGS,
         phDevice: *mut device::DEV_HANDLE,
     ) -> GenTlResult<()> {
-        todo!()
+        let handle = unsafe { ModuleHandle::from_raw_manually_drop(hIface)? };
+        let iface = handle.interface()?;
+
+        let iface_guard = iface.lock().unwrap();
+        let id = unsafe { CStr::from_ptr(sDeviceID) }.to_string_lossy();
+        let device = iface_guard.device_by_id(&id)?;
+
+        device.lock().unwrap().open(iOpenFlag.try_into()?)?;
+        let device_handle = Box::new(ModuleHandle::Device(device));
+        unsafe {
+            *phDevice = device_handle.into_raw();
+        }
+
+        Ok(())
     }
 }
 
@@ -86,12 +193,30 @@ gentl_api! {
         pbChanged: *mut bool8_t,
         iTimeout: u64,
     ) -> GenTlResult<()> {
-        todo!()
+        let handle = unsafe { ModuleHandle::from_raw_manually_drop(hIface)? };
+        let iface = handle.interface()?;
+
+        let mut iface_guard = iface.lock().unwrap();
+        let timeout = Duration::from_millis(iTimeout);
+
+        let is_changed = iface_guard.update_device_list(timeout)?.into();
+        unsafe {
+            *pbChanged = is_changed;
+        }
+
+        Ok(())
     }
 }
 
 gentl_api! {
     pub fn IFGetParentTL(hIface: IF_HANDLE, phSystem: *mut system::TL_HANDLE) -> GenTlResult<()> {
-        todo!()
+        let handle = unsafe { ModuleHandle::from_raw_manually_drop(hIface)? };
+        let iface = handle.interface()?;
+
+        unsafe {
+            *phSystem = iface.parent_tl;
+        }
+
+        Ok(())
     }
 }

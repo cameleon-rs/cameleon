@@ -1,4 +1,20 @@
+use std::{convert::TryInto, sync::Mutex};
+
+use super::*;
+
 pub(super) type DEV_HANDLE = *mut libc::c_void;
+
+pub(super) type DeviceModule = Mutex<dyn imp::device::Device>;
+
+pub(super) fn dev_get_info(
+    iface: &DeviceModule,
+    iInfoCmd: DEVICE_INFO_CMD,
+    piType: *mut INFO_DATATYPE,
+    pBuffer: *mut libc::c_void,
+    piSize: *mut libc::size_t,
+) -> GenTlResult<()> {
+    todo!()
+}
 
 newtype_enum! {
     pub enum DEVICE_INFO_CMD {
@@ -24,5 +40,19 @@ newtype_enum! {
         DEVICE_ACCESS_FLAGS_LIST_DEVICE_ACCESS_CONTROL = 3,
         DEVICE_ACCESS_FLAGS_LIST_DEVICE_ACCESS_EXCLUSIVE = 4,
         DEVICE_ACCESS_FLAGS_LIST_DEVICE_ACCESS_CUSTOM_ID = 1000,
+    }
+}
+
+impl TryInto<imp::device::DeviceAccessFlag> for DEVICE_ACCESS_FLAGS {
+    type Error = GenTlError;
+
+    fn try_into(self) -> GenTlResult<imp::device::DeviceAccessFlag> {
+        use imp::device::DeviceAccessFlag::*;
+        match self {
+            DEVICE_ACCESS_FLAGS::DEVICE_ACCESS_FLAGS_LIST_DEVICE_ACCESS_READONLY => Ok(ReadOnly),
+            DEVICE_ACCESS_FLAGS::DEVICE_ACCESS_FLAGS_LIST_DEVICE_ACCESS_CONTROL => Ok(Control),
+            DEVICE_ACCESS_FLAGS::DEVICE_ACCESS_FLAGS_LIST_DEVICE_ACCESS_EXCLUSIVE => Ok(Exclusive),
+            _ => Err(GenTlError::InvalidParameter),
+        }
     }
 }

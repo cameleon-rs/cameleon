@@ -1,5 +1,3 @@
-use std::sync::{Arc, Mutex};
-
 use cameleon::device::u3v;
 use cameleon_impl::memory::prelude::*;
 
@@ -154,7 +152,11 @@ impl Port for U3VDeviceModule {
 }
 
 impl Device for U3VDeviceModule {
-    fn open(&mut self) -> GenTlResult<()> {
+    fn open(&mut self, access_flag: super::DeviceAccessFlag) -> GenTlResult<()> {
+        if access_flag != super::DeviceAccessFlag::Exclusive {
+            return Err(GenTlError::AccessDenied);
+        }
+
         if self.is_opened() {
             return Err(GenTlError::ResourceInUse);
         }
