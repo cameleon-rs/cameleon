@@ -4,10 +4,31 @@ use super::*;
 
 pub(super) type DEV_HANDLE = *mut libc::c_void;
 
-pub(super) type DeviceModule = Mutex<dyn imp::device::Device>;
+#[derive(Clone, Copy)]
+pub(super) struct DeviceModuleRef<'a> {
+    inner: &'a Mutex<dyn imp::device::Device>,
+    parent_if: super::interface::IF_HANDLE,
+}
+
+impl<'a> DeviceModuleRef<'a> {
+    pub(super) fn new(
+        inner: &'a Mutex<dyn imp::device::Device>,
+        parent_if: interface::IF_HANDLE,
+    ) -> Self {
+        Self { inner, parent_if }
+    }
+}
+
+impl<'a> std::ops::Deref for DeviceModuleRef<'a> {
+    type Target = Mutex<dyn imp::device::Device>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
 
 pub(super) fn dev_get_info(
-    iface: &DeviceModule,
+    iface: DeviceModuleRef,
     iInfoCmd: DEVICE_INFO_CMD,
     piType: *mut INFO_DATATYPE,
     pBuffer: *mut libc::c_void,

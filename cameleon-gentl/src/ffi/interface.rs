@@ -2,7 +2,7 @@ use std::{convert::TryInto, ffi::CStr, sync::Mutex, time::Duration};
 
 use crate::imp;
 
-use super::*;
+use super::{device::DeviceModuleRef, *};
 
 pub(super) type IF_HANDLE = *mut libc::c_void;
 
@@ -144,6 +144,7 @@ gentl_api! {
         let iface_guard = iface.lock().unwrap();
         let id = unsafe { CStr::from_ptr(sDeviceID) }.to_string_lossy();
         let device = iface_guard.device_by_id(&id)?;
+        let device = DeviceModuleRef::new(device, hIface);
 
         device::dev_get_info(device, iInfoCmd, piType, pBuffer, piSize)
     }
@@ -178,6 +179,7 @@ gentl_api! {
         let device = iface_guard.device_by_id(&id)?;
 
         device.lock().unwrap().open(iOpenFlag.try_into()?)?;
+        let device = DeviceModuleRef::new(device, hIface);
         let device_handle = Box::new(ModuleHandle::Device(device));
         unsafe {
             *phDevice = device_handle.into_raw();

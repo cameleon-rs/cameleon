@@ -6,7 +6,8 @@ use super::{interface::InterfaceModuleRef, *};
 
 pub(super) type TL_HANDLE = *mut libc::c_void;
 
-pub(super) type SystemModule = Mutex<imp::system::SystemModule>;
+pub(super) type SystemModuleRef<'a> = &'a Mutex<imp::system::SystemModule>;
+type SystemModule = Mutex<imp::system::SystemModule>;
 
 lazy_static::lazy_static! {
     static ref SYSTEM_MODULE: Box<SystemModule> = Box::new(Mutex::new(imp::system::SystemModule::new()));

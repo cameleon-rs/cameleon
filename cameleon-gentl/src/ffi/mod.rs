@@ -104,13 +104,13 @@ struct LastError {
 }
 
 enum ModuleHandle<'a> {
-    System(&'a system::SystemModule),
+    System(system::SystemModuleRef<'a>),
     Interface(interface::InterfaceModuleRef<'a>),
-    Device(&'a device::DeviceModule),
+    Device(device::DeviceModuleRef<'a>),
 }
 
 impl<'a> ModuleHandle<'a> {
-    fn system(&self) -> GenTlResult<&'a system::SystemModule> {
+    fn system(&self) -> GenTlResult<system::SystemModuleRef<'a>> {
         match self {
             ModuleHandle::System(system) => Ok(system),
             _ => Err(GenTlError::InvalidHandle),
@@ -120,6 +120,13 @@ impl<'a> ModuleHandle<'a> {
     fn interface(&self) -> GenTlResult<interface::InterfaceModuleRef<'a>> {
         match self {
             ModuleHandle::Interface(iface) => Ok(*iface),
+            _ => Err(GenTlError::InvalidHandle),
+        }
+    }
+
+    fn device(&self) -> GenTlResult<device::DeviceModuleRef<'a>> {
+        match self {
+            ModuleHandle::Device(dev) => Ok(*dev),
             _ => Err(GenTlError::InvalidHandle),
         }
     }
