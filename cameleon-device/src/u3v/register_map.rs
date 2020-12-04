@@ -1,6 +1,7 @@
 /// (Address, Length, Access Right) of registers in Technology Agnostic Boot Register Map (ABRM).
 pub mod abrm {
-    pub const GENCP_VERSION: (u64, u16) = (0x0000, 4);
+    pub const GENCP_VERSION_MINOR: (u64, u16) = (0x0000, 2);
+    pub const GENCP_VERSION_MAJOR: (u64, u16) = (0x0002, 2);
     pub const MANUFACTURER_NAME: (u64, u16) = (0x0004, 64);
     pub const MODEL_NAME: (u64, u16) = (0x0044, 64);
     pub const FAMILY_NAME: (u64, u16) = (0x0084, 64);
@@ -27,7 +28,8 @@ pub mod abrm {
 /// (Offset, Length, Access Right) of registers in Technology Specific Boot Register Map (SBRM).
 /// SBRM base address can be obtained by reading `abrm::SBRM_ADDRESS`.
 pub mod sbrm {
-    pub const U3V_VERSION: (u64, u16) = (0x0000, 4);
+    pub const U3V_VERSION_MINOR: (u64, u16) = (0x0000, 2);
+    pub const U3V_VERSION_MAJOR: (u64, u16) = (0x0002, 2);
     pub const U3VCP_CAPABILITY_REGISTER: (u64, u16) = (0x0004, 8);
     pub const U3VCP_CONFIGURATION_REGISTER: (u64, u16) = (0x000C, 8);
     pub const MAXIMUM_COMMAND_TRANSFER_LENGTH: (u64, u16) = (0x014, 4);

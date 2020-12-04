@@ -214,6 +214,44 @@ impl<'a> Sbrm<'a> {
     }
 }
 
+pub struct ManifestTable<'a> {
+    manifest_address: u64,
+    handle: &'a ControlHandle,
+}
+
+pub struct ManifestEntry<'a> {
+    entry_address: u64,
+    handle: &'a ControlHandle,
+}
+
+impl<'a> ManifestTable<'a> {
+    pub fn entries(&self) -> DeviceResult<impl Iterator<Item = ManifestEntry<'a>>> {
+        let entry_num: u64 = read_register(self.handle, &mut vec![], self.manifest_address, 8)?;
+        let first_entry_addr = self.manifest_address + 8;
+        let handle = self.handle;
+
+        Ok((0..entry_num)
+            .into_iter()
+            .map(move |i| ManifestEntry::new(first_entry_addr + i * 64, handle)))
+    }
+
+    pub(super) fn new(manifest_address: u64, handle: &'a ControlHandle) -> Self {
+        Self {
+            manifest_address,
+            handle,
+        }
+    }
+}
+
+impl<'a> ManifestEntry<'a> {
+    fn new(entry_address: u64, handle: &'a ControlHandle) -> Self {
+        Self {
+            entry_address,
+            handle,
+        }
+    }
+}
+
 pub(super) struct AbrmStaticData {
     gencp_version: semver::Version,
     manufacturer_name: String,
@@ -224,7 +262,7 @@ pub(super) struct AbrmStaticData {
     serial_number: String,
     device_capability: DeviceCapability,
     pub(super) maximum_device_response_time: Duration,
-    manifest_table_address: u64,
+    pub(super) manifest_table_address: u64,
     pub(super) sbrm_address: u64,
     timestamp_increment: u64,
     device_software_interface_version: Option<String>,
@@ -244,7 +282,10 @@ impl AbrmStaticData {
 
         let device_capability: DeviceCapability = read_register!(DEVICE_CAPABILITY)?;
 
-        let gencp_version = read_register!(GENCP_VERSION)?;
+        let gencp_version_minor: u16 = read_register!(GENCP_VERSION_MINOR)?;
+        let gencp_version_major: u16 = read_register!(GENCP_VERSION_MAJOR)?;
+        let gencp_version =
+            semver::Version::new(gencp_version_major as u64, gencp_version_minor as u64, 0);
 
         let manufacturer_name = read_register!(MANUFACTURER_NAME)?;
 
@@ -325,7 +366,10 @@ impl SbrmStaticData {
             };
         }
 
-        let u3v_version = read_register!(U3V_VERSION)?;
+        let u3v_version_minor: u16 = read_register!(U3V_VERSION_MINOR)?;
+        let u3v_version_major: u16 = read_register!(U3V_VERSION_MAJOR)?;
+        let u3v_version =
+            semver::Version::new(u3v_version_major as u64, u3v_version_minor as u64, 0);
 
         let u3v_capability: U3VCapablitiy = read_register!(U3VCP_CAPABILITY_REGISTER)?;
 
@@ -389,6 +433,12 @@ where
     T: ParseBytes,
 {
     let len = len as usize;
+    if cfg!(debug_assertion) {
+        if let Some(size_hint) = T::size_hint() {
+            debug_assert_eq!(len, size_hint);
+        }
+    }
+
     if buf.len() < len {
         buf.resize(len, 0);
     }
@@ -480,13 +530,9 @@ fn unset_bit(bytes: &mut [u8], offset: usize) {
 
 trait ParseBytes: Sized {
     fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self>;
-}
 
-impl ParseBytes for semver::Version {
-    fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
-        let minor = u16::parse_bytes(&bytes[0..2])?;
-        let major = u16::parse_bytes(&bytes[2..])?;
-        Ok(semver::Version::new(major as u64, minor as u64, 0))
+    fn size_hint() -> Option<usize> {
+        None
     }
 }
 
@@ -494,11 +540,19 @@ impl ParseBytes for DeviceConfiguration {
     fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
         Ok(Self(bytes.try_into().unwrap()))
     }
+
+    fn size_hint() -> Option<usize> {
+        Some(4)
+    }
 }
 
 impl ParseBytes for DeviceCapability {
     fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
         Ok(Self(bytes.try_into().unwrap()))
+    }
+
+    fn size_hint() -> Option<usize> {
+        Some(8)
     }
 }
 
@@ -525,11 +579,19 @@ impl ParseBytes for Duration {
         let raw = u32::parse_bytes(bytes)?;
         Ok(Duration::from_millis(raw as u64))
     }
+
+    fn size_hint() -> Option<usize> {
+        Some(8)
+    }
 }
 
 impl ParseBytes for U3VCapablitiy {
     fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
         Ok(Self(bytes.try_into().unwrap()))
+    }
+
+    fn size_hint() -> Option<usize> {
+        Some(8)
     }
 }
 
@@ -553,6 +615,10 @@ impl ParseBytes for u3v::BusSpeed {
 
         Ok(speed)
     }
+
+    fn size_hint() -> Option<usize> {
+        Some(4)
+    }
 }
 
 macro_rules! impl_parse_bytes_for_numeric {
@@ -561,6 +627,10 @@ macro_rules! impl_parse_bytes_for_numeric {
             fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
                 let bytes = bytes.try_into().unwrap();
                 Ok(<$ty>::from_le_bytes(bytes))
+            }
+
+            fn size_hint() -> Option<usize> {
+                Some(std::mem::size_of::<$ty>())
             }
         }
     };
