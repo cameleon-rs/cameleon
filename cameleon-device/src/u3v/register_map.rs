@@ -1,7 +1,6 @@
 /// (Address, Length, Access Right) of registers in Technology Agnostic Boot Register Map (ABRM).
 pub mod abrm {
-    pub const GENCP_VERSION_MINOR: (u64, u16) = (0x0000, 2);
-    pub const GENCP_VERSION_MAJOR: (u64, u16) = (0x0002, 2);
+    pub const GENCP_VERSION: (u64, u16) = (0x0000, 4);
     pub const MANUFACTURER_NAME: (u64, u16) = (0x0004, 64);
     pub const MODEL_NAME: (u64, u16) = (0x0044, 64);
     pub const FAMILY_NAME: (u64, u16) = (0x0084, 64);
@@ -28,8 +27,7 @@ pub mod abrm {
 /// (Offset, Length, Access Right) of registers in Technology Specific Boot Register Map (SBRM).
 /// SBRM base address can be obtained by reading `abrm::SBRM_ADDRESS`.
 pub mod sbrm {
-    pub const U3V_VERSION_MINOR: (u64, u16) = (0x0000, 2);
-    pub const U3V_VERSION_MAJOR: (u64, u16) = (0x0002, 2);
+    pub const U3V_VERSION: (u64, u16) = (0x0000, 4);
     pub const U3VCP_CAPABILITY_REGISTER: (u64, u16) = (0x0004, 8);
     pub const U3VCP_CONFIGURATION_REGISTER: (u64, u16) = (0x000C, 8);
     pub const MAXIMUM_COMMAND_TRANSFER_LENGTH: (u64, u16) = (0x014, 4);
@@ -67,4 +65,14 @@ pub mod sirm {
     pub const PAYLOAD_FINAL_TRANSFER1_SIZE: (u64, u16) = (0x0024, 4);
     pub const PAYLOAD_FINAL_TRANSFER2_SIZE: (u64, u16) = (0x0028, 4);
     pub const MAXIMUM_TRAILER_SIZE: (u64, u16) = (0x002C, 4);
+}
+
+/// (Offset, Length) of registers in a manifest entry.
+pub mod manifest_entry {
+    pub const GENICAM_FILE_VERSION: (u64, u16) = (0x0000, 4);
+    /// Information about schema version, file type and file format is serialized into 32 bit field.
+    pub const FILE_FORMAT_INFO: (u64, u16) = (0x0004, 4);
+    pub const REGISTER_ADDRESS: (u64, u16) = (0x0008, 8);
+    pub const FILE_SIZE: (u64, u16) = (0x0010, 8);
+    pub const SHA1_HASH: (u64, u16) = (0x0018, 20);
 }
