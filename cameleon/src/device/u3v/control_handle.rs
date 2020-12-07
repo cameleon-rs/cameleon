@@ -8,7 +8,7 @@ use cameleon_device::{
     u3v::protocol::{ack, cmd},
 };
 
-use super::register_map::{AbrmStaticData, SbrmStaticData};
+use super::register_map::Abrm;
 
 use crate::device::{DeviceError, DeviceResult};
 
@@ -24,7 +24,7 @@ const INITIAL_MAXIMUM_CMD_LENGTH: u32 = 128;
 /// This value is temporarily used until the device's bootstrap register value is read.
 const INITIAL_MAXIMUM_ACK_LENGTH: u32 = 128;
 
-/// Thread safe control handle of the device.  
+/// Thread safe control handle of the device.
 #[derive(Clone)]
 pub struct ControlHandle {
     inner: Arc<Mutex<ControlHandleImpl>>,
@@ -90,15 +90,24 @@ impl ControlHandle {
     }
 
     pub(super) fn open(&self) -> DeviceResult<()> {
-        self.inner.lock().unwrap().open()
+        self.inner.lock().unwrap().open()?;
+        self.initialize_config()
     }
 
-    pub(super) fn initialize_config(&self, abrm: &AbrmStaticData, sbrm: &SbrmStaticData) {
-        let mut inner = self.inner.lock().unwrap();
+    fn initialize_config(&self) -> DeviceResult<()> {
+        let abrm = Abrm::new(self)?;
+        let sbrm = abrm.sbrm()?;
 
-        inner.config.timeout_duration = abrm.maximum_device_response_time;
-        inner.config.maximum_cmd_length = sbrm.maximum_acknowledge_trasfer_length;
-        inner.config.maximum_cmd_length = sbrm.maximum_acknowledge_trasfer_length;
+        let timeout_duration = abrm.maximum_device_response_time()?;
+        let maximum_cmd_length = sbrm.maximum_command_transfer_length()?;
+        let maximum_ack_length = sbrm.maximum_acknowledge_trasfer_length()?;
+
+        let mut inner = self.inner.lock().unwrap();
+        inner.config.timeout_duration = timeout_duration;
+        inner.config.maximum_cmd_length = maximum_cmd_length;
+        inner.config.maximum_ack_length = maximum_ack_length;
+
+        Ok(())
     }
 
     pub(super) fn close(&self) -> DeviceResult<()> {
