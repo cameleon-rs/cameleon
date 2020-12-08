@@ -1,3 +1,4 @@
+use cameleon::device::CompressionType;
 use semver::Version;
 
 use crate::GenTlResult;
@@ -124,13 +125,7 @@ pub(crate) enum Endianness {
 pub(crate) struct XmlInfo {
     pub(crate) location: XmlLocation,
     pub(crate) schema_version: Version,
-    pub(crate) compressed: Compressed,
-}
-
-#[derive(Clone)]
-pub(crate) enum Compressed {
-    None,
-    Zip,
+    pub(crate) compressed: CompressionType,
 }
 
 #[derive(Clone)]

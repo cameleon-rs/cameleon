@@ -2,7 +2,7 @@ use std::{convert::TryInto, time::Duration};
 
 use cameleon_device::u3v::{self, register_map::*};
 
-use crate::device::{DeviceError, DeviceResult};
+use crate::device::{CompressionType, DeviceError, DeviceResult, GenICamFileType};
 
 use super::control_handle::ControlHandle;
 
@@ -465,22 +465,6 @@ impl GenICamFileInfo {
         let minor = (self.0 >> 16) & 0xff;
         semver::Version::new(major as u64, minor as u64, 0)
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum GenICamFileType {
-    /// This is the “normal” GenICam device xml containing all device features.
-    DeviceXml,
-    /// This is optional XML-file that contains only the chunkdata related nodes.
-    BufferXml,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum CompressionType {
-    /// Uncompressed GenICam XML file.
-    Uncompressed,
-    /// ZIP containing a single GenICam XML file.
-    Zip,
 }
 
 trait ParseBytes: Sized {

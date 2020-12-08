@@ -3,6 +3,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use cameleon::device::CompressionType;
 use cameleon_impl::memory::{prelude::*, MemoryObserver};
 
 use crate::{
@@ -49,7 +50,7 @@ impl U3VInterfaceModule {
                 size: memory::GenApi::xml_length(),
             },
             schema_version: memory::GenApi::schema_version(),
-            compressed: Compressed::None,
+            compressed: CompressionType::Uncompressed,
         };
 
         let mut module = Self {
@@ -64,12 +65,6 @@ impl U3VInterfaceModule {
 
         module.initialize_vm();
         module
-    }
-
-    pub(crate) fn num_device(&self) -> GenTlResult<usize> {
-        self.assert_open()?;
-
-        Ok(self.devices.len())
     }
 
     fn update_device_list(&mut self) -> GenTlResult<bool> {

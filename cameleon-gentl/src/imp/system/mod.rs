@@ -4,6 +4,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use cameleon::device::CompressionType;
 use cameleon_impl::memory::{prelude::*, MemoryObserver};
 
 use crate::{
@@ -47,7 +48,7 @@ impl SystemModule {
                 size: memory::GenApi::xml_length(),
             },
             schema_version: memory::GenApi::schema_version(),
-            compressed: Compressed::None,
+            compressed: CompressionType::Uncompressed,
         };
 
         let system_info = SystemInfo {

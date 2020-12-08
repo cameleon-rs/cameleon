@@ -32,3 +32,19 @@ pub enum DeviceError {
 }
 
 pub type DeviceResult<T> = std::result::Result<T, DeviceError>;
+
+#[derive(Debug, Clone, Copy)]
+pub enum GenICamFileType {
+    /// This is the “normal” GenICam device xml containing all device features.
+    DeviceXml,
+    /// This is optional XML-file that contains only the chunkdata related nodes.
+    BufferXml,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum CompressionType {
+    /// Uncompressed GenICam XML file.
+    Uncompressed,
+    /// ZIP containing a single GenICam XML file.
+    Zip,
+}

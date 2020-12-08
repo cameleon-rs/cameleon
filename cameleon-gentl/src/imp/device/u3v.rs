@@ -1,4 +1,5 @@
 use cameleon::device::u3v;
+use cameleon::device::CompressionType;
 use cameleon_impl::memory::prelude::*;
 
 use crate::{imp::port::*, GenTlError, GenTlResult};
@@ -28,7 +29,7 @@ pub(crate) struct U3VDeviceModule {
 
 // TODO: Implement methods for stream and event channel.
 impl U3VDeviceModule {
-    /// NOTE: Unlike another module of GenTL, this methods doesn't initialize VM registers due to spec requirements.
+    /// NOTE: Unlike another module of GenTL, this method doesn't initialize VM registers due to spec requirements.
     /// Initialization of VM registers is done in [`U3VDeviceModule::open`] method.
     pub(crate) fn new(device: u3v::Device) -> Self {
         let device_info = device.device_info();
@@ -50,7 +51,7 @@ impl U3VDeviceModule {
                 size: memory::GenApi::xml_length(),
             },
             schema_version: memory::GenApi::schema_version(),
-            compressed: Compressed::None,
+            compressed: CompressionType::Uncompressed,
         };
 
         Self {
@@ -125,6 +126,8 @@ impl Drop for U3VDeviceModule {
 
 impl Port for U3VDeviceModule {
     fn read(&self, address: u64, size: usize) -> GenTlResult<Vec<u8>> {
+        self.assert_open()?;
+
         let address = address as usize;
         Ok(self
             .vm
@@ -133,20 +136,23 @@ impl Port for U3VDeviceModule {
     }
 
     fn write(&mut self, address: u64, data: &[u8]) -> GenTlResult<()> {
-        self.vm.write_raw(address as usize, &data)?;
+        self.assert_open()?;
 
+        self.vm.write_raw(address as usize, &data)?;
         self.handle_events();
 
         Ok(())
     }
 
     fn port_info(&self) -> GenTlResult<&PortInfo> {
-        // TODO: open assertion.
+        self.assert_open()?;
+
         Ok(&self.port_info)
     }
 
     fn xml_infos(&self) -> GenTlResult<&[XmlInfo]> {
-        // TODO: open assertion.
+        self.assert_open()?;
+
         Ok(&self.xml_infos)
     }
 }
