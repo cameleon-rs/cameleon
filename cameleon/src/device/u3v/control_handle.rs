@@ -83,6 +83,10 @@ impl ControlHandle {
         self.inner.lock().unwrap().config.retry_count
     }
 
+    pub fn abrm(&self) -> DeviceResult<Abrm> {
+        Abrm::new(self)
+    }
+
     /// Set the value determines how many times to retry when pending acknowledge is returned from the
     /// device.
     pub fn set_retry_count(&mut self, count: u16) {
@@ -95,7 +99,7 @@ impl ControlHandle {
     }
 
     fn initialize_config(&self) -> DeviceResult<()> {
-        let abrm = Abrm::new(self)?;
+        let abrm = self.abrm()?;
         let sbrm = abrm.sbrm()?;
 
         let timeout_duration = abrm.maximum_device_response_time()?;

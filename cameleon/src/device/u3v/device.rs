@@ -2,10 +2,7 @@ use cameleon_device::u3v;
 
 use crate::device::{DeviceError, DeviceResult};
 
-use super::{
-    control_handle::ControlHandle,
-    register_map::{Abrm, ManifestTable, Sbrm},
-};
+use super::{control_handle::ControlHandle, register_map::Abrm};
 
 pub type DeviceInfo = u3v::DeviceInfo;
 
@@ -30,10 +27,10 @@ impl Device {
         self.ctrl_handle.close()
     }
 
-    pub fn control_handle(&mut self) -> DeviceResult<ControlHandle> {
+    pub fn control_handle(&self) -> DeviceResult<&ControlHandle> {
         self.assert_open()?;
 
-        Ok(self.ctrl_handle.clone())
+        Ok(&self.ctrl_handle)
     }
 
     pub fn is_opened(&self) -> bool {
@@ -44,7 +41,7 @@ impl Device {
     pub fn abrm(&self) -> DeviceResult<Abrm> {
         self.assert_open()?;
 
-        Abrm::new(&self.ctrl_handle)
+        self.ctrl_handle.abrm()
     }
 
     /// Basic information of the device. No need to call [`Device::open`] to obtain the
