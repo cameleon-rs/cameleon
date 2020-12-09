@@ -125,23 +125,25 @@ impl Drop for U3VDeviceModule {
 }
 
 impl Port for U3VDeviceModule {
-    fn read(&self, address: u64, size: usize) -> GenTlResult<Vec<u8>> {
+    fn read(&self, address: u64, buf: &mut [u8]) -> GenTlResult<usize> {
         self.assert_open()?;
 
         let address = address as usize;
-        Ok(self
-            .vm
-            .read_raw(address..size + address)
-            .map(|v| v.to_owned())?)
+        let len = buf.len();
+
+        let data = self.vm.read_raw(address..address + len)?;
+        buf.copy_from_slice(data);
+
+        Ok(len)
     }
 
-    fn write(&mut self, address: u64, data: &[u8]) -> GenTlResult<()> {
+    fn write(&mut self, address: u64, data: &[u8]) -> GenTlResult<usize> {
         self.assert_open()?;
 
         self.vm.write_raw(address as usize, &data)?;
         self.handle_events();
 
-        Ok(())
+        Ok(data.len())
     }
 
     fn port_info(&self) -> GenTlResult<&PortInfo> {

@@ -7,12 +7,12 @@ pub(crate) trait Port {
     /// Reads a number of bytes from a given address from the Port. This is the global
     /// GenICam GenApi read access function for all ports implemented in the GenTL
     /// implementation.
-    fn read(&self, address: u64, size: usize) -> GenTlResult<Vec<u8>>;
+    fn read(&self, address: u64, buf: &mut [u8]) -> GenTlResult<usize>;
 
     /// Writes a number of bytes at the given address to the Port. This is the global
     /// GenICam GenApi write access function for all ports implemented in the GenTL
     /// implementation.
-    fn write(&mut self, address: u64, data: &[u8]) -> GenTlResult<()>;
+    fn write(&mut self, address: u64, data: &[u8]) -> GenTlResult<usize>;
 
     /// Get detailed port information.
     fn port_info(&self) -> GenTlResult<&PortInfo>;
