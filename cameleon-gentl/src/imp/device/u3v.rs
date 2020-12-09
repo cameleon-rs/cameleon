@@ -20,6 +20,7 @@ pub(crate) struct U3VDeviceModule {
     xml_infos: Vec<XmlInfo>,
 
     device: u3v::Device,
+    remote_device: Option<Box<U3VRemoteDevice>>,
 
     /// Current status of the device.  
     /// `DeviceAccessStatus` and `DeviceAccessStatusReg` in VM doesn't reflect this value while
@@ -60,6 +61,7 @@ impl U3VDeviceModule {
             xml_infos: vec![xml_info],
 
             device,
+            remote_device: None,
 
             current_status: memory::GenApi::DeviceAccessStatus::Unknown,
         }
@@ -170,6 +172,8 @@ impl Device for U3VDeviceModule {
         }
 
         let res: GenTlResult<()> = self.device.open().map_err(Into::into);
+        let ctrl_handle = self.device.control_handle()?.clone();
+        self.remote_device = Some(U3VRemoteDevice::new(ctrl_handle)?.into());
 
         self.current_status = match &res {
             Ok(()) => memory::GenApi::DeviceAccessStatus::OpenReadWrite,
@@ -189,6 +193,95 @@ impl Device for U3VDeviceModule {
             _ => memory::GenApi::DeviceAccessStatus::Unknown,
         };
 
+        self.remote_device = None;
         Ok(())
+    }
+}
+
+pub(crate) struct U3VRemoteDevice {
+    handle: u3v::ControlHandle,
+    port_info: PortInfo,
+    xml_infos: Vec<XmlInfo>,
+}
+impl U3VRemoteDevice {
+    fn new(handle: u3v::ControlHandle) -> GenTlResult<Self> {
+        let port_info = Self::port_info(&handle)?;
+        let xml_infos = Self::xml_infos(&handle)?;
+        Ok(Self {
+            handle,
+            port_info,
+            xml_infos,
+        })
+    }
+
+    fn port_info(handle: &u3v::ControlHandle) -> GenTlResult<PortInfo> {
+        let abrm = handle.abrm()?;
+
+        let id = abrm.serial_number()?;
+        let vendor = abrm.manufacturer_name()?;
+        let tl_type = TlType::USB3Vision;
+        let module_type = ModuleType::RemoteDevice;
+        let endianness = Endianness::LE;
+        let access = PortAccess::RW;
+        let version = abrm.gencp_version()?;
+        let port_name = "Device".into();
+
+        Ok(PortInfo {
+            id,
+            vendor,
+            tl_type,
+            module_type,
+            endianness,
+            access,
+            version,
+            port_name,
+        })
+    }
+
+    fn xml_infos(handle: &u3v::ControlHandle) -> GenTlResult<Vec<XmlInfo>> {
+        let abrm = handle.abrm()?;
+        let manifest_table = abrm.manifest_table()?;
+
+        let mut xml_infos = vec![];
+        for ent in manifest_table.entries()? {
+            let file_address = ent.file_address()?;
+            let file_size = ent.file_size()?;
+            let file_info = ent.file_info()?;
+
+            let schema_version = file_info.schema_version();
+            let compressed = file_info.compression_type()?;
+
+            let info = XmlInfo {
+                location: XmlLocation::RegisterMap {
+                    address: file_address,
+                    size: file_size as usize,
+                },
+                schema_version,
+                compressed,
+            };
+            xml_infos.push(info);
+        }
+
+        Ok(xml_infos)
+    }
+}
+
+impl Port for U3VRemoteDevice {
+    fn read(&self, address: u64, buf: &mut [u8]) -> GenTlResult<usize> {
+        self.handle.read_mem(address, buf)?;
+        Ok(buf.len())
+    }
+
+    fn write(&mut self, address: u64, data: &[u8]) -> GenTlResult<usize> {
+        self.handle.write_mem(address, data)?;
+        Ok(data.len())
+    }
+
+    fn port_info(&self) -> GenTlResult<&PortInfo> {
+        Ok(&self.port_info)
+    }
+
+    fn xml_infos(&self) -> GenTlResult<&[XmlInfo]> {
+        Ok(&self.xml_infos)
     }
 }
