@@ -7,10 +7,10 @@ use crate::{imp::port::*, GenTlError, GenTlResult};
 use super::{u3v_memory as memory, Device, DeviceAccessStatus};
 
 pub(crate) fn enumerate_u3v_device() -> GenTlResult<Vec<U3VDeviceModule>> {
-    Ok(u3v::enumerate_devices()
-        .unwrap()
+    Ok(u3v::enumerate_devices()?
         .into_iter()
         .map(|dev| U3VDeviceModule::new(dev))
+        .filter_map(|dev| dev.ok())
         .collect())
 }
 
@@ -30,9 +30,7 @@ pub(crate) struct U3VDeviceModule {
 
 // TODO: Implement methods for stream and event channel.
 impl U3VDeviceModule {
-    /// NOTE: Unlike another module of GenTL, this method doesn't initialize VM registers due to spec requirements.
-    /// Initialization of VM registers is done in [`U3VDeviceModule::open`] method.
-    pub(crate) fn new(device: u3v::Device) -> Self {
+    pub(crate) fn new(device: u3v::Device) -> GenTlResult<Self> {
         let device_info = device.device_info();
 
         let port_info = PortInfo {
@@ -55,7 +53,7 @@ impl U3VDeviceModule {
             compressed: CompressionType::Uncompressed,
         };
 
-        Self {
+        let mut dev = Self {
             vm: memory::Memory::new(),
             port_info,
             xml_infos: vec![xml_info],
@@ -64,7 +62,10 @@ impl U3VDeviceModule {
             remote_device: None,
 
             current_status: memory::GenApi::DeviceAccessStatus::Unknown,
-        }
+        };
+
+        dev.initialize_vm()?;
+        Ok(dev)
     }
 
     pub(crate) fn device_info(&self) -> &u3v::DeviceInfo {
@@ -116,7 +117,24 @@ impl U3VDeviceModule {
     }
 
     fn handle_events(&mut self) {
-        todo!()
+        // TODO: Handle stream related events.
+    }
+
+    fn initialize_vm(&mut self) -> GenTlResult<()> {
+        use memory::GenApi;
+        self.vm
+            .write::<GenApi::DeviceIDReg>(self.device_id().into())?;
+
+        let info = self.device.device_info();
+        self.vm
+            .write::<GenApi::DeviceVendorNameReg>(info.vendor_name.clone())?;
+        self.vm
+            .write::<GenApi::DeviceModelNameReg>(info.model_name.clone())?;
+        self.reflect_status();
+
+        // TODO: Initialize registeres related to stream.
+
+        Ok(())
     }
 }
 
@@ -195,6 +213,10 @@ impl Device for U3VDeviceModule {
 
         self.remote_device = None;
         Ok(())
+    }
+
+    fn device_id(&self) -> &str {
+        &self.port_info.id
     }
 }
 

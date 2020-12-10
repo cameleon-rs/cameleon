@@ -55,7 +55,5 @@ pub(crate) trait Device {
 
     fn close(&mut self) -> GenTlResult<()>;
 
-    fn device_id(&self) -> &str {
-        todo!()
-    }
+    fn device_id(&self) -> &str;
 }
