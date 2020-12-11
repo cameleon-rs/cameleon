@@ -2,6 +2,8 @@ use crate::GenTlResult;
 
 pub(crate) mod u3v;
 
+use crate::imp::port::*;
+
 mod u3v_memory;
 
 /// The current accessibility of the device.
@@ -51,9 +53,44 @@ impl DeviceAccessStatus {
 }
 
 pub(crate) trait Device {
+    /// Open the device and the remote device.
     fn open(&mut self, access_flag: DeviceAccessFlag) -> GenTlResult<()>;
 
+    /// close the device and the remote device.
     fn close(&mut self) -> GenTlResult<()>;
 
+    /// ID of the device module.
     fn device_id(&self) -> &str;
+
+    /// Port of the remote device.
+    fn remote_device(&self) -> GenTlResult<&dyn Port>;
+
+    /// Vendor name of the remote device.
+    fn vendor_name(&self) -> GenTlResult<String>;
+
+    /// Model name of the remote device.
+    fn model_name(&self) -> GenTlResult<String>;
+
+    /// Display name of the remote device.
+    /// If this is not defined in the device this should be “VENDOR MODEL (ID)”
+    fn display_name(&self) -> GenTlResult<String>;
+
+    /// Transport layer type of the device.
+    fn tl_type(&self) -> TlType;
+
+    /// Access status of the device.
+    fn device_access_status(&self) -> DeviceAccessStatus;
+
+    /// User defined name of the device.
+    /// If the information is not available, return [`GenTlError::NotAvailable`].
+    fn user_defined_name(&self) -> GenTlResult<String>;
+
+    /// Serial number of the remote device.
+    fn serial_number(&self) -> GenTlResult<String>;
+
+    /// evice version in string format.
+    fn device_version(&self) -> GenTlResult<String>;
+
+    /// Tick frequency of the device’s timestamp counter in ticks per second
+    fn timespamp_frequency(&self) -> GenTlResult<u64>;
 }

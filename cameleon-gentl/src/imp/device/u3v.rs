@@ -218,6 +218,58 @@ impl Device for U3VDeviceModule {
     fn device_id(&self) -> &str {
         &self.port_info.id
     }
+
+    fn remote_device(&self) -> GenTlResult<&dyn Port> {
+        self.assert_open()?;
+
+        Ok(self.remote_device.as_ref().unwrap().as_ref())
+    }
+
+    fn vendor_name(&self) -> GenTlResult<String> {
+        Ok(self.device.device_info().vendor_name.clone())
+    }
+
+    fn model_name(&self) -> GenTlResult<String> {
+        Ok(self.device.device_info().model_name.clone())
+    }
+
+    fn display_name(&self) -> GenTlResult<String> {
+        let vendor = self.vendor_name()?;
+        let model_name = self.model_name()?;
+        let id = self.device_id();
+        Ok(format!("{} {} ({})", vendor, model_name, id))
+    }
+
+    fn tl_type(&self) -> TlType {
+        TlType::USB3Vision
+    }
+
+    fn device_access_status(&self) -> DeviceAccessStatus {
+        self.access_status()
+    }
+
+    fn user_defined_name(&self) -> GenTlResult<String> {
+        let abrm = self.device.abrm()?;
+        let user_defined_name = abrm.user_defined_name()?;
+        user_defined_name.ok_or(GenTlError::NotAvailable)
+    }
+
+    fn serial_number(&self) -> GenTlResult<String> {
+        Ok(self.device.device_info().serial_number.clone())
+    }
+
+    fn device_version(&self) -> GenTlResult<String> {
+        let abrm = self.device.abrm()?;
+        Ok(abrm.device_version()?)
+    }
+
+    fn timespamp_frequency(&self) -> GenTlResult<u64> {
+        let abrm = self.device.abrm()?;
+
+        //  U3V's Timestamp increment represents ns / tick.
+        let timestamp_increment = abrm.timestamp_increment()?;
+        Ok((1000_000_000) / timestamp_increment)
+    }
 }
 
 pub(crate) struct U3VRemoteDevice {
@@ -225,6 +277,7 @@ pub(crate) struct U3VRemoteDevice {
     port_info: PortInfo,
     xml_infos: Vec<XmlInfo>,
 }
+
 impl U3VRemoteDevice {
     fn new(handle: u3v::ControlHandle) -> GenTlResult<Self> {
         let port_info = Self::port_info(&handle)?;
