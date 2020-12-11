@@ -97,7 +97,7 @@ impl<'a> Abrm<'a> {
     }
 
     pub fn timestamp(&self) -> DeviceResult<u64> {
-        self.read_register(abrm::TIMESTAMP_LATCH)
+        self.read_register(abrm::TIMESTAMP)
     }
 
     pub fn set_timestamp_latch_bit(&self) -> DeviceResult<()> {
