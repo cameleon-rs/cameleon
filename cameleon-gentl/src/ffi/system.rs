@@ -54,54 +54,42 @@ gentl_api!(
         let system_info = handle_guard.system_info();
 
         let info_data_type = match iInfoCmd {
-            TL_INFO_CMD::TL_INFO_ID => copy_info(
-                system_info.id.as_str(),
-                pBuffer as *mut libc::c_char,
-                piSize,
-            ),
-            TL_INFO_CMD::TL_INFO_VENDOR => copy_info(
-                system_info.vendor.as_str(),
-                pBuffer as *mut libc::c_char,
-                piSize,
-            ),
-            TL_INFO_CMD::TL_INFO_MODEL => copy_info(
-                system_info.model.as_str(),
-                pBuffer as *mut libc::c_char,
-                piSize,
-            ),
-            TL_INFO_CMD::TL_INFO_VERSION => copy_info(
-                system_info.version.as_str(),
-                pBuffer as *mut libc::c_char,
-                piSize,
-            ),
-            TL_INFO_CMD::TL_INFO_TLTYPE => copy_info(
-                system_info.tl_type.as_str(),
-                pBuffer as *mut libc::c_char,
-                piSize,
-            ),
+            TL_INFO_CMD::TL_INFO_ID => copy_info(system_info.id.as_str(), pBuffer, piSize),
+
+            TL_INFO_CMD::TL_INFO_VENDOR => copy_info(system_info.vendor.as_str(), pBuffer, piSize),
+
+            TL_INFO_CMD::TL_INFO_MODEL => copy_info(system_info.model.as_str(), pBuffer, piSize),
+
+            TL_INFO_CMD::TL_INFO_VERSION => {
+                copy_info(system_info.version.as_str(), pBuffer, piSize)
+            }
+
+            TL_INFO_CMD::TL_INFO_TLTYPE => copy_info(system_info.tl_type.as_str(), pBuffer, piSize),
+
             TL_INFO_CMD::TL_INFO_NAME => copy_info(
                 &*system_info.full_path.file_name().unwrap().to_string_lossy(),
-                pBuffer as *mut libc::c_char,
+                pBuffer,
                 piSize,
             ),
-            TL_INFO_CMD::TL_INFO_PATHNAME => copy_info(
-                &*system_info.full_path.to_string_lossy(),
-                pBuffer as *mut libc::c_char,
-                piSize,
-            ),
-            TL_INFO_CMD::TL_INFO_DISPLAYNAME => copy_info(
-                system_info.display_name.as_str(),
-                pBuffer as *mut libc::c_char,
-                piSize,
-            ),
+
+            TL_INFO_CMD::TL_INFO_PATHNAME => {
+                copy_info(&*system_info.full_path.to_string_lossy(), pBuffer, piSize)
+            }
+
+            TL_INFO_CMD::TL_INFO_DISPLAYNAME => {
+                copy_info(system_info.display_name.as_str(), pBuffer, piSize)
+            }
+
             TL_INFO_CMD::TL_INFO_CHAR_ENCODING => {
-                copy_info(system_info.encoding.as_raw(), pBuffer as *mut i32, piSize)
+                copy_info(system_info.encoding.as_raw(), pBuffer, piSize)
             }
+
             TL_INFO_CMD::TL_INFO_GENTL_VER_MAJOR => {
-                copy_info(system_info.gentl_version_major, pBuffer as *mut u32, piSize)
+                copy_info(system_info.gentl_version_major, pBuffer, piSize)
             }
+
             TL_INFO_CMD::TL_INFO_GENTL_VER_MINOR => {
-                copy_info(system_info.gentl_version_minor, pBuffer as *mut u32, piSize)
+                copy_info(system_info.gentl_version_minor, pBuffer, piSize)
             }
             _ => return Err(GenTlError::InvalidParameter),
         }?;

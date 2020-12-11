@@ -215,10 +215,10 @@ fn save_last_error<T>(res: GenTlResult<T>) {
 
 fn copy_info<T: CopyTo>(
     src: T,
-    dst: *mut T::Destination,
+    dst: *mut libc::c_void,
     dst_size: *mut libc::size_t,
 ) -> GenTlResult<INFO_DATATYPE> {
-    src.copy_to(dst, dst_size)?;
+    src.copy_to(dst as *mut T::Destination, dst_size)?;
     Ok(T::info_data_type())
 }
 
@@ -283,6 +283,28 @@ impl CopyTo for imp::port::TlType {
 
     fn info_data_type() -> INFO_DATATYPE {
         INFO_DATATYPE::INFO_DATATYPE_STRING
+    }
+}
+
+impl CopyTo for imp::device::DeviceAccessStatus {
+    type Destination = i32;
+
+    fn copy_to(&self, dst: *mut Self::Destination, dst_size: *mut libc::size_t) -> GenTlResult<()> {
+        let val = match self {
+            Self::Unknown => 0,
+            Self::ReadWrite => 1,
+            Self::ReadOnly => 2,
+            Self::NoAccess => 3,
+            Self::Busy => 4,
+            Self::OpenReadWrite => 5,
+            Self::OpenReadOnly => 6,
+        };
+
+        val.copy_to(dst, dst_size)
+    }
+
+    fn info_data_type() -> INFO_DATATYPE {
+        INFO_DATATYPE::INFO_DATATYPE_INT32
     }
 }
 

@@ -37,22 +37,20 @@ pub(super) fn if_get_info(
     pBuffer: *mut libc::c_void,
     piSize: *mut libc::size_t,
 ) -> GenTlResult<()> {
+    let iface_guard = iface.lock().unwrap();
     let info_data_type = match iInfoCmd {
-        INTERFACE_INFO_CMD::INTERFACE_INFO_ID => copy_info(
-            iface.lock().unwrap().interface_id(),
-            pBuffer as *mut libc::c_char,
-            piSize,
-        ),
-        INTERFACE_INFO_CMD::INTERFACE_INFO_DISPLAY_NAME => copy_info(
-            iface.lock().unwrap().display_name(),
-            pBuffer as *mut libc::c_char,
-            piSize,
-        ),
-        INTERFACE_INFO_CMD::INTERFACE_INFO_TLTYPE => copy_info(
-            iface.lock().unwrap().tl_type(),
-            pBuffer as *mut libc::c_char,
-            piSize,
-        ),
+        INTERFACE_INFO_CMD::INTERFACE_INFO_ID => {
+            copy_info(iface_guard.interface_id(), pBuffer, piSize)
+        }
+
+        INTERFACE_INFO_CMD::INTERFACE_INFO_DISPLAY_NAME => {
+            copy_info(iface_guard.display_name(), pBuffer, piSize)
+        }
+
+        INTERFACE_INFO_CMD::INTERFACE_INFO_TLTYPE => {
+            copy_info(iface_guard.tl_type(), pBuffer, piSize)
+        }
+
         _ => Err(GenTlError::InvalidParameter),
     }?;
 
