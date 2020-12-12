@@ -219,7 +219,7 @@ impl Device for U3VDeviceModule {
         &self.port_info.id
     }
 
-    fn remote_device(&self) -> GenTlResult<&dyn Port> {
+    fn remote_device(&self) -> GenTlResult<&dyn super::RemoteDevice> {
         self.assert_open()?;
 
         Ok(self.remote_device.as_ref().unwrap().as_ref())
@@ -360,3 +360,5 @@ impl Port for U3VRemoteDevice {
         Ok(&self.xml_infos)
     }
 }
+
+impl super::RemoteDevice for U3VRemoteDevice {}
