@@ -3,6 +3,7 @@ mod macros;
 
 pub mod device;
 pub mod interface;
+pub mod port;
 pub mod system;
 
 use std::{cell::RefCell, mem::ManuallyDrop, sync::RwLock};
