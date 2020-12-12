@@ -107,6 +107,7 @@ enum ModuleHandle<'a> {
     System(system::SystemModuleRef<'a>),
     Interface(interface::InterfaceModuleRef<'a>),
     Device(device::DeviceModuleRef<'a>),
+    RemoteDevice(device::RemoteDeviceRef<'a>),
 }
 
 impl<'a> ModuleHandle<'a> {

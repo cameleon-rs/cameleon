@@ -29,40 +29,98 @@ impl<'a> std::ops::Deref for DeviceModuleRef<'a> {
     }
 }
 
+#[derive(Clone, Copy)]
+pub(super) struct RemoteDeviceRef<'a> {
+    inner: &'a dyn imp::device::RemoteDevice,
+}
+
+impl<'a> std::ops::Deref for RemoteDeviceRef<'a> {
+    type Target = &'a dyn imp::device::RemoteDevice;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
 pub(super) fn dev_get_info(
-    iface: DeviceModuleRef,
+    dev: DeviceModuleRef,
     iInfoCmd: DEVICE_INFO_CMD,
     piType: *mut INFO_DATATYPE,
     pBuffer: *mut libc::c_void,
     piSize: *mut libc::size_t,
 ) -> GenTlResult<()> {
-    todo!()
+    let dev_guard = dev.lock().unwrap();
+    let info_data_type = match iInfoCmd {
+        DEVICE_INFO_CMD::DEVICE_INFO_ID => copy_info(dev_guard.device_id(), pBuffer, piSize),
+
+        DEVICE_INFO_CMD::DEVICE_INFO_VENDOR => {
+            copy_info(dev_guard.vendor_name()?.as_str(), pBuffer, piSize)
+        }
+
+        DEVICE_INFO_CMD::DEVICE_INFO_MODEL => {
+            copy_info(dev_guard.model_name()?.as_str(), pBuffer, piSize)
+        }
+
+        DEVICE_INFO_CMD::DEVICE_INFO_TLTYPE => copy_info(dev_guard.tl_type(), pBuffer, piSize),
+
+        DEVICE_INFO_CMD::DEVICE_INFO_DISPLAYNAME => {
+            copy_info(dev_guard.display_name()?.as_str(), pBuffer, piSize)
+        }
+
+        DEVICE_INFO_CMD::DEVICE_INFO_ACCESS_STATUS => {
+            copy_info(dev_guard.device_access_status(), pBuffer, piSize)
+        }
+
+        DEVICE_INFO_CMD::DEVICE_INFO_USER_DEFINED_NAME => {
+            copy_info(dev_guard.user_defined_name()?.as_str(), pBuffer, piSize)
+        }
+
+        DEVICE_INFO_CMD::DEVICE_INFO_SERIAL_NUMBER => {
+            copy_info(dev_guard.serial_number()?.as_str(), pBuffer, piSize)
+        }
+
+        DEVICE_INFO_CMD::DEVICE_INFO_VERSION => {
+            copy_info(dev_guard.device_version()?.as_str(), pBuffer, piSize)
+        }
+
+        DEVICE_INFO_CMD::DEVICE_INFO_TIMESTAMP_FREQUENCY => {
+            copy_info(dev_guard.timespamp_frequency()?, pBuffer, piSize)
+        }
+
+        _ => Err(GenTlError::InvalidParameter),
+    }?;
+
+    unsafe {
+        *piType = info_data_type;
+    }
+
+    Ok(())
 }
 
 newtype_enum! {
     pub enum DEVICE_INFO_CMD {
-        DEVICE_INFO_CMD_LIST_DEVICE_INFO_ID = 0,
-        DEVICE_INFO_CMD_LIST_DEVICE_INFO_VENDOR = 1,
-        DEVICE_INFO_CMD_LIST_DEVICE_INFO_MODEL = 2,
-        DEVICE_INFO_CMD_LIST_DEVICE_INFO_TLTYPE = 3,
-        DEVICE_INFO_CMD_LIST_DEVICE_INFO_DISPLAYNAME = 4,
-        DEVICE_INFO_CMD_LIST_DEVICE_INFO_ACCESS_STATUS = 5,
-        DEVICE_INFO_CMD_LIST_DEVICE_INFO_USER_DEFINED_NAME = 6,
-        DEVICE_INFO_CMD_LIST_DEVICE_INFO_SERIAL_NUMBER = 7,
-        DEVICE_INFO_CMD_LIST_DEVICE_INFO_VERSION = 8,
-        DEVICE_INFO_CMD_LIST_DEVICE_INFO_TIMESTAMP_FREQUENCY = 9,
-        DEVICE_INFO_CMD_LIST_DEVICE_INFO_CUSTOM_ID = 1000,
+        DEVICE_INFO_ID = 0,
+        DEVICE_INFO_VENDOR = 1,
+        DEVICE_INFO_MODEL = 2,
+        DEVICE_INFO_TLTYPE = 3,
+        DEVICE_INFO_DISPLAYNAME = 4,
+        DEVICE_INFO_ACCESS_STATUS = 5,
+        DEVICE_INFO_USER_DEFINED_NAME = 6,
+        DEVICE_INFO_SERIAL_NUMBER = 7,
+        DEVICE_INFO_VERSION = 8,
+        DEVICE_INFO_TIMESTAMP_FREQUENCY = 9,
+        DEVICE_INFO_CUSTOM_ID = 1000,
     }
 }
 
 newtype_enum! {
     pub enum DEVICE_ACCESS_FLAGS {
-        DEVICE_ACCESS_FLAGS_LIST_DEVICE_ACCESS_UNKNOWN = 0,
-        DEVICE_ACCESS_FLAGS_LIST_DEVICE_ACCESS_NONE = 1,
-        DEVICE_ACCESS_FLAGS_LIST_DEVICE_ACCESS_READONLY = 2,
-        DEVICE_ACCESS_FLAGS_LIST_DEVICE_ACCESS_CONTROL = 3,
-        DEVICE_ACCESS_FLAGS_LIST_DEVICE_ACCESS_EXCLUSIVE = 4,
-        DEVICE_ACCESS_FLAGS_LIST_DEVICE_ACCESS_CUSTOM_ID = 1000,
+        DEVICE_ACCESS_UNKNOWN = 0,
+        DEVICE_ACCESS_NONE = 1,
+        DEVICE_ACCESS_READONLY = 2,
+        DEVICE_ACCESS_CONTROL = 3,
+        DEVICE_ACCESS_EXCLUSIVE = 4,
+        DEVICE_ACCESS_CUSTOM_ID = 1000,
     }
 }
 
@@ -72,9 +130,9 @@ impl TryInto<imp::device::DeviceAccessFlag> for DEVICE_ACCESS_FLAGS {
     fn try_into(self) -> GenTlResult<imp::device::DeviceAccessFlag> {
         use imp::device::DeviceAccessFlag::*;
         match self {
-            DEVICE_ACCESS_FLAGS::DEVICE_ACCESS_FLAGS_LIST_DEVICE_ACCESS_READONLY => Ok(ReadOnly),
-            DEVICE_ACCESS_FLAGS::DEVICE_ACCESS_FLAGS_LIST_DEVICE_ACCESS_CONTROL => Ok(Control),
-            DEVICE_ACCESS_FLAGS::DEVICE_ACCESS_FLAGS_LIST_DEVICE_ACCESS_EXCLUSIVE => Ok(Exclusive),
+            DEVICE_ACCESS_FLAGS::DEVICE_ACCESS_READONLY => Ok(ReadOnly),
+            DEVICE_ACCESS_FLAGS::DEVICE_ACCESS_CONTROL => Ok(Control),
+            DEVICE_ACCESS_FLAGS::DEVICE_ACCESS_EXCLUSIVE => Ok(Exclusive),
             _ => Err(GenTlError::InvalidParameter),
         }
     }
@@ -82,7 +140,18 @@ impl TryInto<imp::device::DeviceAccessFlag> for DEVICE_ACCESS_FLAGS {
 
 gentl_api! {
     pub fn DevClose(hDevice: DEV_HANDLE) -> GenTlResult<()> {
-        todo!()
+        let mut handle = unsafe { ModuleHandle::from_raw_manually_drop(hDevice)? };
+        let dev_handle = handle.device()?;
+
+        // Close the device module.
+        dev_handle.lock().unwrap().close()?;
+
+        // Drop the handle.
+        unsafe {
+            std::mem::ManuallyDrop::drop(&mut handle)
+        }
+
+        Ok(())
     }
 }
 
@@ -94,7 +163,10 @@ gentl_api! {
         pBuffer: *mut libc::c_void,
         piSize: *mut libc::size_t,
     ) -> GenTlResult<()> {
-        todo!()
+        let handle = unsafe { ModuleHandle::from_raw_manually_drop(hDevice)? };
+        let dev_handle = handle.device()?;
+
+        dev_get_info(dev_handle, iInfoCmd, piType, pBuffer, piSize)
     }
 }
 
@@ -118,7 +190,19 @@ gentl_api! {
 
 gentl_api! {
     pub fn DevGetPort(hDevice: DEV_HANDLE, phRemoteDevice: *mut PORT_HANDLE) -> GenTlResult<()> {
-        todo!()
+        let handle = unsafe { ModuleHandle::from_raw_manually_drop(hDevice)? };
+        let dev_handle = handle.device()?;
+        let dev_guard = dev_handle.lock().unwrap();
+
+        let remote_device = RemoteDeviceRef{
+            inner: dev_guard.remote_device()?
+        };
+        let remote_device_handle = Box::new(ModuleHandle::RemoteDevice(remote_device));
+        unsafe {
+            *phRemoteDevice = remote_device_handle.into_raw();
+        }
+
+        Ok(())
     }
 }
 
@@ -134,6 +218,13 @@ gentl_api! {
 
 gentl_api! {
     pub fn DevGetParentIF(hDevice: DEV_HANDLE, phIface: *mut interface::IF_HANDLE) -> GenTlResult<()> {
-        todo!()
+        let handle = unsafe { ModuleHandle::from_raw_manually_drop(hDevice)? };
+        let dev_handle = handle.device()?;
+
+        unsafe {
+            *phIface = dev_handle.parent_if;
+        }
+
+        Ok(())
     }
 }
