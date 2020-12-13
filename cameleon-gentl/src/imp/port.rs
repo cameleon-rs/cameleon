@@ -64,6 +64,9 @@ pub(crate) struct PortInfo {
     /// In case of a Buffer or a Data Stream the GenTL Producer vendor and model are to be used.
     pub(crate) vendor: String,
 
+    /// Port modle name.
+    pub(crate) model: String,
+
     /// Transport layer technology that is supported in the module.
     pub(crate) tl_type: TlType,
 
@@ -145,7 +148,7 @@ pub(crate) enum PortAccess {
     NI,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub(crate) enum Endianness {
     /// Little Endian.
     LE,

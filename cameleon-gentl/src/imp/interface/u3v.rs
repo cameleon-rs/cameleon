@@ -36,6 +36,7 @@ impl U3VInterfaceModule {
         let port_info = PortInfo {
             id: INTERFACE_ID.into(),
             vendor: memory::GenApi::vendor_name().into(),
+            model: memory::GenApi::model_name().into(),
             tl_type: memory::GenApi::InterfaceType::USB3Vision.into(),
             module_type: ModuleType::Interface,
             endianness: Endianness::LE,

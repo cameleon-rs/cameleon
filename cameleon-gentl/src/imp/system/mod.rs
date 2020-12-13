@@ -34,6 +34,7 @@ impl SystemModule {
         let port_info = PortInfo {
             id: memory::GenApi::TLID.into(),
             vendor: memory::GenApi::vendor_name().into(),
+            model: memory::GenApi::model_name().into(),
             tl_type: memory::GenApi::TLType::Mixed.into(),
             module_type: ModuleType::System,
             endianness: Endianness::LE,
