@@ -1,4 +1,4 @@
-use std::{convert::TryInto, sync::Mutex};
+use std::{convert::TryInto, ops::Deref, sync::Mutex};
 
 use super::*;
 
@@ -10,18 +10,32 @@ pub(super) type DS_HANDLE = *mut libc::c_void;
 pub(super) struct DeviceModuleRef<'a> {
     inner: &'a Mutex<dyn imp::device::Device>,
     parent_if: super::interface::IF_HANDLE,
+    remote_handle: PORT_HANDLE,
 }
 
 impl<'a> DeviceModuleRef<'a> {
     pub(super) fn new(
         inner: &'a Mutex<dyn imp::device::Device>,
         parent_if: interface::IF_HANDLE,
-    ) -> Self {
-        Self { inner, parent_if }
+    ) -> GenTlResult<Self> {
+        let dev_guard = inner.lock().unwrap();
+
+        let remote_device = RemoteDeviceRef {
+            inner: dev_guard.remote_device()?,
+        };
+
+        let remote_handle =
+            unsafe { Box::new(ModuleHandle::RemoteDevice(remote_device)).into_raw() };
+
+        Ok(Self {
+            inner,
+            parent_if,
+            remote_handle,
+        })
     }
 }
 
-impl<'a> std::ops::Deref for DeviceModuleRef<'a> {
+impl<'a> Deref for DeviceModuleRef<'a> {
     type Target = Mutex<dyn imp::device::Device>;
 
     fn deref(&self) -> &Self::Target {
@@ -34,16 +48,16 @@ pub(super) struct RemoteDeviceRef<'a> {
     inner: &'a dyn imp::device::RemoteDevice,
 }
 
-impl<'a> std::ops::Deref for RemoteDeviceRef<'a> {
-    type Target = &'a dyn imp::device::RemoteDevice;
+impl<'a> Deref for RemoteDeviceRef<'a> {
+    type Target = dyn imp::device::RemoteDevice + 'a;
 
     fn deref(&self) -> &Self::Target {
-        &self.inner
+        self.inner
     }
 }
 
 pub(super) fn dev_get_info(
-    dev: DeviceModuleRef,
+    dev: impl Deref<Target = Mutex<dyn imp::device::Device>>,
     iInfoCmd: DEVICE_INFO_CMD,
     piType: *mut INFO_DATATYPE,
     pBuffer: *mut libc::c_void,
@@ -146,7 +160,14 @@ gentl_api! {
         // Close the device module.
         dev_handle.lock().unwrap().close()?;
 
-        // Drop the handle.
+        // Drop remote device handle.
+        // This seems weired but there is no function to close remote device in GenTL API.
+        unsafe {
+                let mut remote_handle = ModuleHandle::from_raw_manually_drop(dev_handle.remote_handle)?;
+                std::mem::ManuallyDrop::drop(&mut remote_handle);
+        }
+
+        // Drop the device handle.
         unsafe {
             std::mem::ManuallyDrop::drop(&mut handle)
         }
@@ -192,14 +213,9 @@ gentl_api! {
     pub fn DevGetPort(hDevice: DEV_HANDLE, phRemoteDevice: *mut PORT_HANDLE) -> GenTlResult<()> {
         let handle = unsafe { ModuleHandle::from_raw_manually_drop(hDevice)? };
         let dev_handle = handle.device()?;
-        let dev_guard = dev_handle.lock().unwrap();
 
-        let remote_device = RemoteDeviceRef{
-            inner: dev_guard.remote_device()?
-        };
-        let remote_device_handle = Box::new(ModuleHandle::RemoteDevice(remote_device));
         unsafe {
-            *phRemoteDevice = remote_device_handle.into_raw();
+            *phRemoteDevice = dev_handle.remote_handle;
         }
 
         Ok(())

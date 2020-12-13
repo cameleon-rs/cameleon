@@ -6,7 +6,6 @@ use super::{device::DeviceModuleRef, *};
 
 pub(super) type IF_HANDLE = *mut libc::c_void;
 
-//pub(super) type InterfaceModule = Mutex<dyn imp::interface::Interface>;
 #[derive(Clone, Copy)]
 pub(super) struct InterfaceModuleRef<'a> {
     inner: &'a Mutex<dyn imp::interface::Interface>,
@@ -142,7 +141,6 @@ gentl_api! {
         let iface_guard = iface.lock().unwrap();
         let id = unsafe { CStr::from_ptr(sDeviceID) }.to_string_lossy();
         let device = iface_guard.device_by_id(&id)?;
-        let device = DeviceModuleRef::new(device, hIface);
 
         device::dev_get_info(device, iInfoCmd, piType, pBuffer, piSize)
     }
@@ -177,7 +175,7 @@ gentl_api! {
         let device = iface_guard.device_by_id(&id)?;
 
         device.lock().unwrap().open(iOpenFlag.try_into()?)?;
-        let device = DeviceModuleRef::new(device, hIface);
+        let device = DeviceModuleRef::new(device, hIface)?;
         let device_handle = Box::new(ModuleHandle::Device(device));
         unsafe {
             *phDevice = device_handle.into_raw();
