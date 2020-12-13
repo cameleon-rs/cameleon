@@ -14,6 +14,38 @@ pub(crate) trait Port {
     /// implementation.
     fn write(&mut self, address: u64, data: &[u8]) -> GenTlResult<usize>;
 
+    /// Read multiple entries.
+    /// See "6.3.6 Port Functions" of GenTl specification for details.
+    fn read_stacked(
+        &self,
+        entries: &mut [(u64, &mut [u8])],
+        read_count: &mut usize,
+    ) -> GenTlResult<()> {
+        *read_count = 0;
+        for ent in entries {
+            self.read(ent.0, ent.1)?;
+            *read_count += 1;
+        }
+        Ok(())
+    }
+
+    /// Write to multiple entries.
+    /// See "6.3.6 Port Functions" of GenTl specification for details.
+    fn write_stacked(
+        &mut self,
+        entries: &[(u64, &[u8])],
+        written_count: &mut usize,
+    ) -> GenTlResult<()> {
+        *written_count = 0;
+
+        for ent in entries {
+            self.write(ent.0, ent.1)?;
+            *written_count += 1;
+        }
+
+        Ok(())
+    }
+
     /// Get detailed port information.
     fn port_info(&self) -> GenTlResult<&PortInfo>;
 
