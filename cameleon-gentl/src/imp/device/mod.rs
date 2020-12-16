@@ -1,3 +1,5 @@
+use std::sync::Mutex;
+
 use crate::GenTlResult;
 
 pub(crate) mod u3v;
@@ -63,7 +65,7 @@ pub(crate) trait Device: Port {
     fn device_id(&self) -> &str;
 
     /// Port of the remote device.
-    fn remote_device(&self) -> GenTlResult<&dyn RemoteDevice>;
+    fn remote_device(&self) -> GenTlResult<&Mutex<dyn Port>>;
 
     /// Vendor name of the remote device.
     fn vendor_name(&self) -> GenTlResult<String>;
@@ -94,7 +96,3 @@ pub(crate) trait Device: Port {
     /// Tick frequency of the device’s timestamp counter in ticks per second
     fn timespamp_frequency(&self) -> GenTlResult<u64>;
 }
-
-/// Trait for remote device which defined in GenTL specification.
-/// Implementor of the trait provides thread safe access to the remote device.
-pub(crate) trait RemoteDevice: Port {}

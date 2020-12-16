@@ -39,17 +39,17 @@ impl<'a> Deref for DeviceModuleRef<'a> {
     type Target = Mutex<dyn imp::device::Device>;
 
     fn deref(&self) -> &Self::Target {
-        &self.inner
+        self.inner
     }
 }
 
 #[derive(Clone, Copy)]
 pub(super) struct RemoteDeviceRef<'a> {
-    inner: &'a dyn imp::device::RemoteDevice,
+    inner: &'a Mutex<dyn imp::port::Port>,
 }
 
 impl<'a> Deref for RemoteDeviceRef<'a> {
-    type Target = dyn imp::device::RemoteDevice + 'a;
+    type Target = Mutex<dyn imp::port::Port>;
 
     fn deref(&self) -> &Self::Target {
         self.inner

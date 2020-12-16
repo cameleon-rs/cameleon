@@ -1,3 +1,5 @@
+use std::sync::Mutex;
+
 use cameleon::device::u3v;
 use cameleon::device::CompressionType;
 use cameleon_impl::memory::prelude::*;
@@ -20,7 +22,7 @@ pub(crate) struct U3VDeviceModule {
     xml_infos: Vec<XmlInfo>,
 
     device: u3v::Device,
-    remote_device: Option<Box<U3VRemoteDevice>>,
+    remote_device: Option<Box<Mutex<U3VRemoteDevice>>>,
 
     /// Current status of the device.  
     /// `DeviceAccessStatus` and `DeviceAccessStatusReg` in VM doesn't reflect this value while
@@ -36,6 +38,7 @@ impl U3VDeviceModule {
         let port_info = PortInfo {
             id: device_info.guid.clone(),
             vendor: memory::GenApi::vendor_name().into(),
+            model: memory::GenApi::model_name().into(),
             tl_type: memory::GenApi::DeviceType::USB3Vision.into(),
             module_type: ModuleType::Device,
             endianness: Endianness::LE,
@@ -50,6 +53,12 @@ impl U3VDeviceModule {
                 size: memory::GenApi::xml_length(),
             },
             schema_version: memory::GenApi::schema_version(),
+            file_version: semver::Version::new(
+                memory::GenApi::major_version(),
+                memory::GenApi::minor_version(),
+                memory::GenApi::subminor_version(),
+            ),
+            sha1_hash: None,
             compressed: CompressionType::Uncompressed,
         };
 
@@ -191,7 +200,7 @@ impl Device for U3VDeviceModule {
 
         let res: GenTlResult<()> = self.device.open().map_err(Into::into);
         let ctrl_handle = self.device.control_handle()?.clone();
-        self.remote_device = Some(U3VRemoteDevice::new(ctrl_handle)?.into());
+        self.remote_device = Some(Mutex::new(U3VRemoteDevice::new(ctrl_handle)?).into());
 
         self.current_status = match &res {
             Ok(()) => memory::GenApi::DeviceAccessStatus::OpenReadWrite,
@@ -219,7 +228,7 @@ impl Device for U3VDeviceModule {
         &self.port_info.id
     }
 
-    fn remote_device(&self) -> GenTlResult<&dyn super::RemoteDevice> {
+    fn remote_device(&self) -> GenTlResult<&Mutex<dyn Port>> {
         self.assert_open()?;
 
         Ok(self.remote_device.as_ref().unwrap().as_ref())
@@ -294,6 +303,7 @@ impl U3VRemoteDevice {
 
         let id = abrm.serial_number()?;
         let vendor = abrm.manufacturer_name()?;
+        let model = abrm.model_name()?;
         let tl_type = TlType::USB3Vision;
         let module_type = ModuleType::RemoteDevice;
         let endianness = Endianness::LE;
@@ -304,6 +314,7 @@ impl U3VRemoteDevice {
         Ok(PortInfo {
             id,
             vendor,
+            model,
             tl_type,
             module_type,
             endianness,
@@ -326,12 +337,17 @@ impl U3VRemoteDevice {
             let schema_version = file_info.schema_version();
             let compressed = file_info.compression_type()?;
 
+            let sha1_hash = ent.sha1_hash()?;
+            let file_version = ent.genicam_file_version()?;
+
             let info = XmlInfo {
                 location: XmlLocation::RegisterMap {
                     address: file_address,
                     size: file_size as usize,
                 },
                 schema_version,
+                file_version,
+                sha1_hash,
                 compressed,
             };
             xml_infos.push(info);
@@ -360,5 +376,3 @@ impl Port for U3VRemoteDevice {
         Ok(&self.xml_infos)
     }
 }
-
-impl super::RemoteDevice for U3VRemoteDevice {}

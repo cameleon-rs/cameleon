@@ -49,6 +49,12 @@ impl SystemModule {
                 size: memory::GenApi::xml_length(),
             },
             schema_version: memory::GenApi::schema_version(),
+            file_version: semver::Version::new(
+                memory::GenApi::major_version(),
+                memory::GenApi::minor_version(),
+                memory::GenApi::subminor_version(),
+            ),
+            sha1_hash: None,
             compressed: CompressionType::Uncompressed,
         };
 

@@ -267,6 +267,32 @@ impl CopyTo for &str {
     }
 }
 
+impl CopyTo for &[u8] {
+    type Destination = u8;
+
+    fn copy_to(&self, dst: *mut Self::Destination, dst_size: *mut libc::size_t) -> GenTlResult<()> {
+        let len = self.len();
+        if !dst.is_null() {
+            unsafe {
+                if *dst_size < len {
+                    return Err(GenTlError::BufferTooSmall);
+                }
+                std::ptr::copy_nonoverlapping(self.as_ptr(), dst, self.len());
+            }
+        }
+
+        unsafe {
+            *dst_size = len;
+        }
+
+        Ok(())
+    }
+
+    fn info_data_type() -> INFO_DATATYPE {
+        INFO_DATATYPE::INFO_DATATYPE_BUFFER
+    }
+}
+
 impl CopyTo for imp::port::TlType {
     type Destination = libc::c_char;
 
@@ -285,6 +311,53 @@ impl CopyTo for imp::port::TlType {
 
     fn info_data_type() -> INFO_DATATYPE {
         INFO_DATATYPE::INFO_DATATYPE_STRING
+    }
+}
+
+impl CopyTo for imp::port::ModuleType {
+    type Destination = libc::c_char;
+
+    fn copy_to(&self, dst: *mut Self::Destination, dst_size: *mut libc::size_t) -> GenTlResult<()> {
+        let s = match self {
+            Self::System => "TLSystem",
+            Self::Interface => "TLInterface",
+            Self::Device => "TLDevice",
+            Self::DataStream => "TLDataStream",
+            Self::Buffer => "TLBuffer",
+            Self::RemoteDevice => "Device",
+        };
+
+        s.copy_to(dst, dst_size)
+    }
+
+    fn info_data_type() -> INFO_DATATYPE {
+        INFO_DATATYPE::INFO_DATATYPE_STRING
+    }
+}
+
+impl CopyTo for bool8_t {
+    type Destination = u8;
+
+    fn copy_to(&self, dst: *mut Self::Destination, dst_size: *mut libc::size_t) -> GenTlResult<()> {
+        let len = std::mem::size_of::<u8>();
+
+        if !dst.is_null() {
+            unsafe {
+                if *dst_size < len {
+                    return Err(GenTlError::BufferTooSmall);
+                }
+                *dst = self.0;
+            }
+        }
+
+        unsafe {
+            *dst_size = len;
+        }
+        Ok(())
+    }
+
+    fn info_data_type() -> INFO_DATATYPE {
+        INFO_DATATYPE::INFO_DATATYPE_BOOL8
     }
 }
 

@@ -1,6 +1,8 @@
-#[allow(non_snake_case, non_camel_case_types)]
+// TODO: Remove #[allow(unused)]
+#[allow(non_snake_case, non_camel_case_types, unused)]
 pub mod ffi;
 
+#[allow(unused)]
 mod imp;
 
 use thiserror::Error;

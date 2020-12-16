@@ -109,7 +109,7 @@ pub(crate) enum TlType {
     Mixed,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub(crate) enum ModuleType {
     /// System Module.
     System,
@@ -130,7 +130,7 @@ pub(crate) enum ModuleType {
     RemoteDevice,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum PortAccess {
     /// Read Only.
     RO,
@@ -148,6 +148,22 @@ pub(crate) enum PortAccess {
     NI,
 }
 
+impl PortAccess {
+    pub(crate) fn is_readable(self) -> bool {
+        match self {
+            Self::RO | Self::RW => true,
+            _ => false,
+        }
+    }
+
+    pub(crate) fn is_writable(self) -> bool {
+        match self {
+            Self::WO | Self::RW => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 pub(crate) enum Endianness {
     /// Little Endian.
@@ -160,6 +176,8 @@ pub(crate) enum Endianness {
 pub(crate) struct XmlInfo {
     pub(crate) location: XmlLocation,
     pub(crate) schema_version: Version,
+    pub(crate) file_version: Version,
+    pub(crate) sha1_hash: Option<[u8; 20]>,
     pub(crate) compressed: CompressionType,
 }
 
