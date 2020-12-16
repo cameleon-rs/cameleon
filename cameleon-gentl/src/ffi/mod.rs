@@ -251,7 +251,7 @@ impl CopyTo for &str {
                     dst,
                     self.len(),
                 );
-                dst.offset(self.len() as isize).write(0); // Null terminated.
+                dst.add(self.len()).write(0); // Null terminated.
             }
         }
 

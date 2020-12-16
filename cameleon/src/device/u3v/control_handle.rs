@@ -42,16 +42,14 @@ impl ControlHandle {
         self.inner.lock().unwrap().write_mem(address, data)
     }
 
-    /// Capacity of the buffer inside [`ControlHandleImpl`], the buffer is used for
-    /// serializing/deserializing packet. This buffer automatically extend according to packet
-    /// length.
+    /// Capacity of the buffer which is used for serializing/deserializing packet.  
+    /// This buffer automatically extend according to packet length.
     pub fn buffer_capacity(&self) -> usize {
         self.inner.lock().unwrap().buffer_capacity()
     }
 
-    /// Resize the capacity of the buffer inside [`ControlHandleImpl`], the buffer is used for
-    /// serializing/deserializing packet. This buffer automatically extend according to packet
-    /// length.
+    /// Resize the capacity of the buffer which is used for serializing/deserializing packet.  
+    /// This buffer automatically extend according to packet length.
     pub fn resize_buffer(&self, size: usize) {
         self.inner.lock().unwrap().resize_buffer(size)
     }

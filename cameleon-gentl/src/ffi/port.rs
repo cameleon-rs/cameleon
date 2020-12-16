@@ -226,7 +226,7 @@ gentl_api! {
         let handle = unsafe { ModuleHandle::from_raw_manually_drop(hPort)? };
         let url = with_port!(handle, |port| {
             // Use first  info.
-            let xml_info = port.xml_infos()?.get(0).ok_or(GenTlError::Error("no xml information in the device".into()))?;
+            let xml_info = port.xml_infos()?.get(0).ok_or_else(|| GenTlError::Error("no xml information in the device".into()))?;
             file_location_to_url(xml_info, port.port_info()?)
         });
 
@@ -339,10 +339,10 @@ gentl_api! {
                         XmlLocation::LocalFile(path) => {
                             let err_msg = "local file name is invalid";
                             let file_name =
-                                path.file_name().ok_or(GenTlError::Error(err_msg.into()))?;
+                                path.file_name().ok_or_else(|| GenTlError::Error(err_msg.into()))?;
                             file_name
                                 .to_str()
-                                .ok_or(GenTlError::Error(err_msg.into()))?
+                                .ok_or_else(|| GenTlError::Error(err_msg.into()))?
                         }
 
                         _ => return Err(GenTlError::NotAvailable),
@@ -417,7 +417,7 @@ gentl_api! {
 
             let mut entries: Vec<_> = (0..*piNumEntries)
                 .map(|i| {
-                    let raw_ent = *pEntries.offset(i as isize);
+                    let raw_ent = *pEntries.add(i);
                     (
                         raw_ent.Address,
                         slice::from_raw_parts_mut(raw_ent.pBuffer as *mut u8, raw_ent.Size),
@@ -443,7 +443,7 @@ gentl_api! {
 
             let entries: Vec<_> = (0..*piNumEntries)
                 .map(|i| {
-                    let raw_ent = *pEntries.offset(i as isize);
+                    let raw_ent = *pEntries.add(i);
                     (
                         raw_ent.Address,
                         slice::from_raw_parts(raw_ent.pBuffer as *mut u8, raw_ent.Size),

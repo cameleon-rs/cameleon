@@ -11,7 +11,7 @@ use super::{u3v_memory as memory, Device, DeviceAccessStatus};
 pub(crate) fn enumerate_u3v_device() -> GenTlResult<Vec<U3VDeviceModule>> {
     Ok(u3v::enumerate_devices()?
         .into_iter()
-        .map(|dev| U3VDeviceModule::new(dev))
+        .map(U3VDeviceModule::new)
         .filter_map(|dev| dev.ok())
         .collect())
 }
@@ -277,7 +277,7 @@ impl Device for U3VDeviceModule {
 
         //  U3V's Timestamp increment represents ns / tick.
         let timestamp_increment = abrm.timestamp_increment()?;
-        Ok((1000_000_000) / timestamp_increment)
+        Ok((1_000_000_000) / timestamp_increment)
     }
 }
 

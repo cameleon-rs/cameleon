@@ -156,8 +156,8 @@ impl SystemModule {
     }
 
     fn full_path() -> std::path::PathBuf {
-        let path = Path::new(file!());
-        std::fs::canonicalize(path.file_name().unwrap()).unwrap()
+        let path = Path::new("../").join(file!());
+        std::fs::canonicalize(path).unwrap()
     }
 
     fn register_observers(&mut self) {
@@ -338,7 +338,7 @@ mod tests {
 
     #[test]
     fn test_initialize_with_u3v_interface() {
-        let system_module = SystemModule::new().unwrap();
+        let system_module = SystemModule::new();
         assert_eq!(
             system_module
                 .vm
@@ -347,7 +347,7 @@ mod tests {
             0
         );
 
-        let u3v_interface = system_module.interfaces().nth(0).unwrap();
+        let u3v_interface = system_module.interfaces().next().unwrap();
         assert_eq!(
             &system_module.vm.read::<GenApi::InterfaceIDReg>().unwrap(),
             u3v_interface.lock().unwrap().interface_id()

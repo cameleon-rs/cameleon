@@ -150,17 +150,11 @@ pub(crate) enum PortAccess {
 
 impl PortAccess {
     pub(crate) fn is_readable(self) -> bool {
-        match self {
-            Self::RO | Self::RW => true,
-            _ => false,
-        }
+        matches!(self, Self::RO | Self::RW)
     }
 
     pub(crate) fn is_writable(self) -> bool {
-        match self {
-            Self::WO | Self::RW => true,
-            _ => false,
-        }
+        matches!(self, Self::WO | Self::RW)
     }
 }
 

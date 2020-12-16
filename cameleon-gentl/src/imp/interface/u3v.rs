@@ -21,6 +21,7 @@ use super::{u3v_memory as memory, Interface};
 
 const INTERFACE_ID: &str = "Cameleon-U3V-Interface-Module";
 
+#[allow(clippy::vec_box)]
 pub(crate) struct U3VInterfaceModule {
     vm: memory::Memory,
     port_info: PortInfo,
@@ -135,7 +136,7 @@ impl U3VInterfaceModule {
 
     fn find_device_by_id(&self, id: &str) -> GenTlResult<Option<&Mutex<U3VDeviceModule>>> {
         for dev in self.devices.iter() {
-            if &dev.lock().unwrap().port_info()?.id == id {
+            if dev.lock().unwrap().port_info()?.id == id {
                 return Ok(Some(dev.as_ref()));
             }
         }
