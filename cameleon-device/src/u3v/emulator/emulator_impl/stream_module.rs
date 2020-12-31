@@ -1,6 +1,6 @@
 use async_std::{
     prelude::*,
-    sync::{Receiver, Sender},
+    channel::{Receiver, Sender},
 };
 
 use super::{

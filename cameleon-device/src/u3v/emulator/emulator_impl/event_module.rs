@@ -1,6 +1,6 @@
 use async_std::{
     prelude::*,
-    sync::{Receiver, Sender},
+    channel::{Receiver, Sender},
 };
 
 use super::{
@@ -238,7 +238,7 @@ mod event_packet {
 mod tests {
     use std::time::Duration;
 
-    use async_std::{future::timeout, sync::channel, task};
+    use async_std::{future::timeout, channel, task};
 
     use crate::u3v::protocol::event;
 
@@ -251,8 +251,8 @@ mod tests {
         Receiver<InterfaceSignal>,
         SharedQueue<Vec<u8>>,
     ) {
-        let (signal_tx, signal_rx) = channel(10);
-        let (iface_signal_tx, iface_signal_rx) = channel(10);
+        let (signal_tx, signal_rx) = channel::bounded(10);
+        let (iface_signal_tx, iface_signal_rx) = channel::bounded(10);
         let queue = SharedQueue::new(10);
         let event_module = EventModule::new(queue.clone(), 0);
         task::spawn(event_module.run(iface_signal_tx, signal_rx));

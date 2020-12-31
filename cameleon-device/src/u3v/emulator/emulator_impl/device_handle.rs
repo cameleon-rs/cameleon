@@ -5,7 +5,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use async_std::{sync::TrySendError, task};
+use async_std::{channel::TrySendError, task};
 
 use crate::u3v::{LibUsbError, Result};
 
@@ -123,7 +123,7 @@ impl DeviceHandle {
             let channel = self.channel()?.lock().await;
 
             channel.0.try_send(packet).map_err(|err| match err {
-                TrySendError::Disconnected(..) => LibUsbError::NoDevice,
+                TrySendError::Closed(..) => LibUsbError::NoDevice,
                 // This never occurs.
                 TrySendError::Full(..) => unreachable!(),
             })?;
