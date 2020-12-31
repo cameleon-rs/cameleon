@@ -106,7 +106,6 @@ impl EmulatorBuilder {
     /// If name is not ASCII string or the length is larger than 64, then
     /// [`BuilderError::InvalidString`] is returned.
     ///
-    /// [`BuilderError::InvalidString`]: enum.BuilderError.html#valirant.InvalidString
     /// # Examples
     ///
     /// ```rust
@@ -132,7 +131,6 @@ impl EmulatorBuilder {
     /// If name is not ASCII string or the length is larger than 64, then
     /// [`BuilderError::InvalidString`] is returned.
     ///
-    /// [`BuilderError::InvalidString`]: enum.BuilderError.html#valirant.InvalidString
     /// # Examples
     ///
     /// ```rust
@@ -158,7 +156,6 @@ impl EmulatorBuilder {
     /// If serial is not ASCII string or the length is larger than 64, then
     /// [`BuilderError::InvalidString`] is returned.
     ///
-    /// [`BuilderError::InvalidString`]: enum.BuilderError.html#valirant.InvalidString
     /// # Examples
     ///
     /// ```rust
@@ -184,7 +181,6 @@ impl EmulatorBuilder {
     /// If name is not ASCII string or the length is larger than 64, then
     /// [`BuilderError::InvalidString`] is returned.
     ///
-    /// [`BuilderError::InvalidString`]: enum.BuilderError.html#valirant.InvalidString
     /// # Examples
     ///
     /// ```rust
