@@ -1,7 +1,7 @@
 use std::{convert::TryInto, sync::Arc, time};
 
 use async_std::{
-    channel::{Receiver, Sender, self},
+    channel::{self, Receiver, Sender},
     sync::Mutex,
     task,
 };

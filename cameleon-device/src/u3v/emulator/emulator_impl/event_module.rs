@@ -1,6 +1,6 @@
 use async_std::{
-    prelude::*,
     channel::{Receiver, Sender},
+    prelude::*,
 };
 
 use super::{
@@ -238,7 +238,7 @@ mod event_packet {
 mod tests {
     use std::time::Duration;
 
-    use async_std::{future::timeout, channel, task};
+    use async_std::{channel, future::timeout, task};
 
     use crate::u3v::protocol::event;
 

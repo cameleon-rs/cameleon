@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use async_std::{
+    channel::{self, Receiver, Sender, TrySendError},
     prelude::*,
-    channel::{Receiver, Sender, self, TrySendError},
     sync::{Mutex, RwLock},
     task,
 };

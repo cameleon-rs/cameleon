@@ -7,8 +7,8 @@ use std::{
 };
 
 use async_std::{
+    channel::{self, Receiver, Sender},
     prelude::*,
-    channel::{Receiver, Sender, self},
     sync::Mutex,
     task,
 };
