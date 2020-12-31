@@ -66,3 +66,13 @@ pub mod sirm {
     pub const PAYLOAD_FINAL_TRANSFER2_SIZE: (u64, u16) = (0x0028, 4);
     pub const MAXIMUM_TRAILER_SIZE: (u64, u16) = (0x002C, 4);
 }
+
+/// (Offset, Length) of registers in a manifest entry.
+pub mod manifest_entry {
+    pub const GENICAM_FILE_VERSION: (u64, u16) = (0x0000, 4);
+    /// Information about schema version, file type and file format is serialized into 32 bit field.
+    pub const FILE_FORMAT_INFO: (u64, u16) = (0x0004, 4);
+    pub const REGISTER_ADDRESS: (u64, u16) = (0x0008, 8);
+    pub const FILE_SIZE: (u64, u16) = (0x0010, 8);
+    pub const SHA1_HASH: (u64, u16) = (0x0018, 20);
+}

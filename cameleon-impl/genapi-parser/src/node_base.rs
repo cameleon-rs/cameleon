@@ -11,7 +11,7 @@ macro_rules! optional_string_elem_getter {
         $name:ident
     ) => {
         $(#[$meta])*
-        pub fn $name(&self) -> Option<&str> {
+        pub fn $name(&self) -> Option<&'a str> {
             self.elem.$name.as_deref()
         }
     };
@@ -22,7 +22,7 @@ impl<'a> NodeBase<'a> {
         Self { attr, elem }
     }
 
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &'a str {
         &self.attr.name
     }
 
@@ -58,7 +58,7 @@ impl<'a> NodeBase<'a> {
         self.elem.imposed_access_mode
     }
 
-    pub fn p_errors(&self) -> &[String] {
+    pub fn p_errors(&self) -> &'a [String] {
         &self.elem.p_errors
     }
 

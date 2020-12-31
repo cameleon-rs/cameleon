@@ -1,7 +1,8 @@
 use std::{convert::TryInto, sync::Arc, time};
 
 use async_std::{
-    sync::{channel, Mutex, Receiver, Sender},
+    channel::{self, Receiver, Sender},
+    sync::Mutex,
     task,
 };
 use futures::channel::oneshot;
@@ -34,8 +35,8 @@ impl Device {
 
     pub(super) fn run(&mut self) -> (Sender<FakeReqPacket>, Receiver<FakeAckPacket>) {
         // Create channels for communication between device and host.
-        let (req_tx, req_rx) = channel(REQ_PACKET_CHANNEL_CAPACITY);
-        let (ack_tx, ack_rx) = channel(ACK_PACKET_CHANNEL_CAPACITY);
+        let (req_tx, req_rx) = channel::bounded(REQ_PACKET_CHANNEL_CAPACITY);
+        let (ack_tx, ack_rx) = channel::bounded(ACK_PACKET_CHANNEL_CAPACITY);
 
         // Create channel for communication between device and its internal interface.
         let (shutdown_tx, shutdown_rx) = oneshot::channel();

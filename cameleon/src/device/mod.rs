@@ -26,6 +26,25 @@ pub enum DeviceError {
     /// e.g. try to write too large data that will overrun register.
     #[error("try to write invalid data to the device: {}", 0)]
     InvalidData(Box<dyn std::error::Error>),
+
+    #[error("operation timed out")]
+    Timeout,
 }
 
 pub type DeviceResult<T> = std::result::Result<T, DeviceError>;
+
+#[derive(Debug, Clone, Copy)]
+pub enum GenICamFileType {
+    /// This is the “normal” GenICam device xml containing all device features.
+    DeviceXml,
+    /// This is optional XML-file that contains only the chunkdata related nodes.
+    BufferXml,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum CompressionType {
+    /// Uncompressed GenICam XML file.
+    Uncompressed,
+    /// ZIP containing a single GenICam XML file.
+    Zip,
+}

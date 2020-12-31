@@ -79,6 +79,7 @@ pub struct StructEntryNode {
     p_selected: Vec<String>,
 }
 
+/// See "2.8.7 StructReg" in GenICam Standard v2.1.1.
 macro_rules! merge_impl {
     ($lhs:ident, $rhs:ident, $name:ident) => {
         if $rhs.$name.is_some() {
@@ -88,13 +89,13 @@ macro_rules! merge_impl {
 
     ($lhs:ident, $rhs:ident, $name:ident, default) => {
         if $rhs.$name != Default::default() {
-            $rhs.$name = $rhs.$name;
+            $lhs.$name = $rhs.$name;
         }
     };
 
     ($lhs:ident, $rhs:ident, $name:ident, vec) => {
         if $rhs.$name.is_empty() {
-            $rhs.$name = $rhs.$name;
+            $lhs.$name = $rhs.$name.clone();
         }
     };
 }
@@ -148,7 +149,7 @@ impl StructEntryNode {
         self.clone().into_masked_int_reg(struct_reg)
     }
 
-    fn into_masked_int_reg(mut self, struct_reg: &StructRegNode) -> MaskedIntRegNode {
+    fn into_masked_int_reg(self, struct_reg: &StructRegNode) -> MaskedIntRegNode {
         let attr_base = self.attr_base;
 
         let mut register_base = struct_reg.register_base().clone();
@@ -178,7 +179,7 @@ impl StructEntryNode {
 }
 
 impl NodeElementBase {
-    fn merge(&mut self, mut rhs: Self) {
+    fn merge(&mut self, rhs: Self) {
         merge_impl!(self, rhs, tool_tip);
         merge_impl!(self, rhs, description);
         merge_impl!(self, rhs, display_name);

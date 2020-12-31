@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use async_std::{
+    channel::{self, Receiver, Sender, TrySendError},
     prelude::*,
-    sync::{channel, Mutex, Receiver, RwLock, Sender, TrySendError},
+    sync::{Mutex, RwLock},
     task,
 };
 use futures::{channel::oneshot, select, FutureExt};
@@ -46,7 +47,7 @@ impl Interface {
         _completed: oneshot::Sender<()>,
     ) {
         // Construct interface signal channel.
-        let (iface_signal_tx, signal_rx) = channel(CHANNEL_CAPACITY);
+        let (iface_signal_tx, signal_rx) = channel::bounded(CHANNEL_CAPACITY);
 
         // Construct and spawn control module.
         let ctrl_signal_tx = self.spawn_ctrl_module(iface_signal_tx.clone());
@@ -103,7 +104,7 @@ impl Interface {
     }
 
     fn spawn_ctrl_module(&self, signal_tx: Sender<InterfaceSignal>) -> Sender<ControlSignal> {
-        let (ctrl_signal_tx, ctrl_signal_rx) = channel(CHANNEL_CAPACITY);
+        let (ctrl_signal_tx, ctrl_signal_rx) = channel::bounded(CHANNEL_CAPACITY);
 
         // Construct and spawn control module.
         let control_module = ControlModule::new(
@@ -118,7 +119,7 @@ impl Interface {
     }
 
     fn spawn_event_module(&self, signal_tx: Sender<InterfaceSignal>) -> Sender<EventSignal> {
-        let (event_signal_tx, event_signal_rx) = channel(CHANNEL_CAPACITY);
+        let (event_signal_tx, event_signal_rx) = channel::bounded(CHANNEL_CAPACITY);
 
         // Construct and spawn control module.
         let event_module = EventModule::new(self.event_queue.clone(), 0);
@@ -128,7 +129,7 @@ impl Interface {
     }
 
     fn spawn_stream_module(&self, signal_tx: Sender<InterfaceSignal>) -> Sender<StreamSignal> {
-        let (stream_signal_tx, stream_signal_rx) = channel(CHANNEL_CAPACITY);
+        let (stream_signal_tx, stream_signal_rx) = channel::bounded(CHANNEL_CAPACITY);
 
         // Construct and spawn control module.
         let stream_module = StreamModule::new(self.timestamp.clone(), self.stream_queue.clone());
@@ -343,7 +344,7 @@ fn send_ack(sender: &Sender<FakeAckPacket>, iface: IfaceKind, ack_kind: FakeAckK
     let ack = FakeAckPacket::new(iface, ack_kind);
     match sender.try_send(ack) {
         Ok(()) => {}
-        Err(TrySendError::Disconnected(..)) => {
+        Err(TrySendError::Closed(..)) => {
             log::error!("can't send fake ack packet to the host. cause: recv end is disconnected.")
         }
         Err(TrySendError::Full(..)) => {

@@ -2,503 +2,490 @@ use std::{convert::TryInto, time::Duration};
 
 use cameleon_device::u3v::{self, register_map::*};
 
-use crate::device::{DeviceError, DeviceResult};
+use crate::device::{CompressionType, DeviceError, DeviceResult, GenICamFileType};
 
 use super::control_handle::ControlHandle;
 
 pub struct Abrm<'a> {
-    abrm: &'a AbrmStaticData,
     handle: &'a ControlHandle,
+    device_capability: DeviceCapability,
 }
 
 impl<'a> Abrm<'a> {
-    pub fn gencp_version(&self) -> semver::Version {
-        self.abrm.gencp_version.clone()
+    pub fn new(handle: &'a ControlHandle) -> DeviceResult<Self> {
+        let (capability_addr, capability_len) = abrm::DEVICE_CAPABILITY;
+        let device_capability = read_register(handle, capability_addr, capability_len)?;
+
+        Ok(Self {
+            handle,
+            device_capability,
+        })
     }
 
-    pub fn manufacturer_name(&self) -> &'a str {
-        &self.abrm.manufacturer_name
+    pub fn sbrm(&self) -> DeviceResult<Sbrm> {
+        Sbrm::new(self.handle, self.sbrm_address()?)
     }
 
-    pub fn model_name(&self) -> &'a str {
-        &self.abrm.model_name
+    pub fn manifest_table(&self) -> DeviceResult<ManifestTable> {
+        Ok(ManifestTable::new(
+            self.handle,
+            self.manifest_table_address()?,
+        ))
     }
 
-    pub fn family_name(&self) -> Option<&'a str> {
-        self.abrm.family_name.as_deref()
+    pub fn gencp_version(&self) -> DeviceResult<semver::Version> {
+        let gencp_version: u32 = self.read_register(abrm::GENCP_VERSION)?;
+        let gencp_version_minor = gencp_version & 0xff;
+        let gencp_version_major = (gencp_version >> 16) & 0xff;
+        Ok(semver::Version::new(
+            gencp_version_major as u64,
+            gencp_version_minor as u64,
+            0,
+        ))
     }
 
-    pub fn device_version(&self) -> &'a str {
-        &self.abrm.device_version
+    pub fn manufacturer_name(&self) -> DeviceResult<String> {
+        self.read_register(abrm::MANUFACTURER_NAME)
     }
 
-    pub fn manufacturer_info(&self) -> &'a str {
-        &self.abrm.manufacturer_info
+    pub fn model_name(&self) -> DeviceResult<String> {
+        self.read_register(abrm::MODEL_NAME)
     }
 
-    pub fn serial_number(&self) -> &'a str {
-        &self.abrm.serial_number
+    pub fn family_name(&self) -> DeviceResult<Option<String>> {
+        if self.device_capability.is_family_name_supported() {
+            self.read_register(abrm::FAMILY_NAME).map(Some)
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn device_version(&self) -> DeviceResult<String> {
+        self.read_register(abrm::DEVICE_VERSION)
+    }
+
+    pub fn manufacturer_info(&self) -> DeviceResult<String> {
+        self.read_register(abrm::MANUFACTURER_INFO)
+    }
+
+    pub fn serial_number(&self) -> DeviceResult<String> {
+        self.read_register(abrm::SERIAL_NUMBER)
     }
 
     pub fn user_defined_name(&self) -> DeviceResult<Option<String>> {
-        if self.is_user_defined_name_supported() {
-            let (addr, len) = abrm::USER_DEFINED_NAME;
-            read_register(self.handle, &mut vec![], addr, len).map(Some)
+        if self.device_capability.is_user_defined_name_supported() {
+            self.read_register(abrm::USER_DEFINED_NAME).map(Some)
         } else {
             Ok(None)
         }
     }
 
     pub fn set_user_defined_name(&self, name: &str) -> DeviceResult<()> {
-        if !self.is_user_defined_name_supported() {
+        if !self.device_capability.is_user_defined_name_supported() {
             return Ok(());
         }
 
-        let (addr, len) = abrm::USER_DEFINED_NAME;
-        let mut buf = vec![0; len as usize];
-        name.dump_bytes(&mut buf)?;
-
-        self.handle.write_mem(addr, &buf)
+        self.write_register(abrm::USER_DEFINED_NAME, name)
     }
 
-    pub fn manifest_table_address(&self) -> u64 {
-        self.abrm.manifest_table_address
+    pub fn manifest_table_address(&self) -> DeviceResult<u64> {
+        self.read_register(abrm::MANIFEST_TABLE_ADDRESS)
     }
 
-    pub fn sbrm_address(&self) -> u64 {
-        self.abrm.sbrm_address
+    pub fn sbrm_address(&self) -> DeviceResult<u64> {
+        self.read_register(abrm::SBRM_ADDRESS)
     }
 
     pub fn timestamp(&self) -> DeviceResult<u64> {
-        let (addr, len) = abrm::TIMESTAMP_LATCH;
-        read_register(&self.handle, &mut vec![], addr, len)
+        self.read_register(abrm::TIMESTAMP)
     }
 
     pub fn set_timestamp_latch_bit(&self) -> DeviceResult<()> {
-        let (addr, len) = abrm::TIMESTAMP_LATCH;
+        self.write_register(abrm::TIMESTAMP_LATCH, 1u32)
+    }
+
+    pub fn timestamp_increment(&self) -> DeviceResult<u64> {
+        self.read_register(abrm::TIMESTAMP_INCREMENT)
+    }
+
+    pub fn device_software_interface_version(&self) -> DeviceResult<Option<String>> {
+        if self
+            .device_capability
+            .is_device_software_interface_version_supported()
+        {
+            self.read_register(abrm::DEVICE_SOFTWARE_INTERFACE_VERSION)
+                .map(Some)
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn maximum_device_response_time(&self) -> DeviceResult<Duration> {
+        self.read_register(abrm::MAXIMUM_DEVICE_RESPONSE_TIME)
+    }
+
+    pub fn device_capability(&self) -> DeviceResult<DeviceCapability> {
+        Ok(self.device_capability)
+    }
+
+    pub fn device_configuration(&self) -> DeviceResult<DeviceConfiguration> {
+        self.read_register(abrm::DEVICE_CONFIGURATION)
+    }
+
+    pub fn write_device_configuration(&self, config: &DeviceConfiguration) -> DeviceResult<()> {
+        self.write_register(abrm::DEVICE_CONFIGURATION, config)
+    }
+
+    fn read_register<T>(&self, register: (u64, u16)) -> DeviceResult<T>
+    where
+        T: ParseBytes,
+    {
+        read_register(self.handle, register.0, register.1)
+    }
+
+    fn write_register(&self, register: (u64, u16), data: impl DumpBytes) -> DeviceResult<()> {
+        let (addr, len) = register;
         let mut buf = vec![0; len as usize];
-        1u32.dump_bytes(&mut buf)?;
-
-        self.handle.write_mem(addr, &buf)
-    }
-
-    pub fn timestamp_increment(&self) -> u64 {
-        self.abrm.timestamp_increment
-    }
-
-    pub fn device_software_interface_version(&self) -> Option<&'a str> {
-        self.abrm.device_software_interface_version.as_deref()
-    }
-
-    pub fn maximum_device_response_time(&self) -> Duration {
-        self.abrm.maximum_device_response_time
-    }
-
-    pub fn enable_multi_event(&self) -> DeviceResult<()> {
-        let mut config = self.device_configuration()?;
-        if !config.is_multi_event_enabled() {
-            config.enable_multi_event();
-            self.write_device_configuration(&config)
-        } else {
-            Ok(())
-        }
-    }
-
-    pub fn disable_multi_event(&self) -> DeviceResult<()> {
-        let mut config = self.device_configuration()?;
-        if config.is_multi_event_enabled() {
-            config.disable_multi_event();
-            self.write_device_configuration(&config)
-        } else {
-            Ok(())
-        }
-    }
-
-    pub fn is_user_defined_name_supported(&self) -> bool {
-        self.abrm.device_capability.is_user_defined_name_supported()
-    }
-
-    pub fn is_multi_event_enabled(&self) -> DeviceResult<bool> {
-        if self.abrm.device_capability.is_multi_event_supported() {
-            let config = self.device_configuration()?;
-            Ok(config.is_multi_event_enabled())
-        } else {
-            Ok(false)
-        }
-    }
-
-    pub fn is_multi_event_supported(&self) -> bool {
-        self.abrm.device_capability.is_multi_event_supported()
-    }
-
-    pub fn is_stacked_commands_supported(&self) -> bool {
-        self.abrm.device_capability.is_stacked_commands_supported()
-    }
-
-    pub(super) fn new(abrm: &'a AbrmStaticData, handle: &'a ControlHandle) -> Self {
-        Self { abrm, handle }
-    }
-
-    fn device_configuration(&self) -> DeviceResult<DeviceConfiguration> {
-        let (addr, len) = abrm::DEVICE_CONFIGURATION;
-        read_register(&self.handle, &mut vec![], addr, len)
-    }
-
-    fn write_device_configuration(&self, config: &DeviceConfiguration) -> DeviceResult<()> {
-        let (addr, len) = abrm::DEVICE_CONFIGURATION;
-        let mut buf = vec![0; len as usize];
-        config.dump_bytes(&mut buf)?;
+        data.dump_bytes(&mut buf)?;
         self.handle.write_mem(addr, &buf)
     }
 }
 
 pub struct Sbrm<'a> {
-    sbrm: &'a SbrmStaticData,
+    handle: &'a ControlHandle,
+    sbrm_addr: u64,
+    capability: U3VCapablitiy,
 }
 
 impl<'a> Sbrm<'a> {
-    pub fn u3v_version(&self) -> &'a semver::Version {
-        &self.sbrm.u3v_version
-    }
-
-    pub fn maximum_command_transfer_length(&self) -> u32 {
-        self.sbrm.maximum_command_transfer_length
-    }
-
-    pub fn maximum_acknowledge_trasfer_length(&self) -> u32 {
-        self.sbrm.maximum_acknowledge_trasfer_length
-    }
-
-    pub fn number_of_stream_channel(&self) -> u32 {
-        self.sbrm.number_of_stream_channel
-    }
-
-    pub fn sirm_address(&self) -> Option<u64> {
-        self.sbrm.sirm_address
-    }
-
-    pub fn sirm_length(&self) -> Option<u32> {
-        self.sbrm.sirm_length
-    }
-
-    pub fn eirm_address(&self) -> Option<u64> {
-        self.sbrm.eirm_address
-    }
-
-    pub fn eirm_length(&self) -> Option<u32> {
-        self.sbrm.eirm_length
-    }
-
-    pub fn iidc2_address(&self) -> Option<u64> {
-        self.sbrm.iidc2_address
-    }
-
-    pub fn current_speed(&self) -> u3v::BusSpeed {
-        self.sbrm.current_speed
-    }
-
-    pub fn is_sirm_available(&self) -> bool {
-        self.sbrm.u3v_capability.is_sirm_available()
-    }
-
-    pub fn is_eirm_available(&self) -> bool {
-        self.sbrm.u3v_capability.is_eirm_available()
-    }
-
-    pub fn is_iidc2_available(&self) -> bool {
-        self.sbrm.u3v_capability.is_iidc2_available()
-    }
-
-    pub(super) fn new(sbrm: &'a SbrmStaticData) -> Self {
-        Self { sbrm }
-    }
-}
-
-pub(super) struct AbrmStaticData {
-    gencp_version: semver::Version,
-    manufacturer_name: String,
-    model_name: String,
-    family_name: Option<String>,
-    device_version: String,
-    manufacturer_info: String,
-    serial_number: String,
-    device_capability: DeviceCapability,
-    pub(super) maximum_device_response_time: Duration,
-    manifest_table_address: u64,
-    pub(super) sbrm_address: u64,
-    timestamp_increment: u64,
-    device_software_interface_version: Option<String>,
-}
-
-impl AbrmStaticData {
-    pub(super) fn new(handle: &ControlHandle) -> DeviceResult<Self> {
-        use abrm::*;
-
-        let mut buf = vec![0; 64];
-
-        macro_rules! read_register {
-            ($register_info:ident) => {
-                read_register(handle, &mut buf, $register_info.0, $register_info.1)
-            };
-        }
-
-        let device_capability: DeviceCapability = read_register!(DEVICE_CAPABILITY)?;
-
-        let gencp_version = read_register!(GENCP_VERSION)?;
-
-        let manufacturer_name = read_register!(MANUFACTURER_NAME)?;
-
-        let model_name = read_register!(MODEL_NAME)?;
-
-        let family_name = if device_capability.is_family_name_supported() {
-            Some(read_register!(FAMILY_NAME)?)
-        } else {
-            None
-        };
-
-        let device_version = read_register!(DEVICE_VERSION)?;
-
-        let manufacturer_info = read_register!(MANUFACTURER_INFO)?;
-
-        let serial_number = read_register!(SERIAL_NUMBER)?;
-
-        let maximum_device_response_time = read_register!(MAXIMUM_DEVICE_RESPONSE_TIME)?;
-
-        let manifest_table_address = read_register!(MANIFEST_TABLE_ADDRESS)?;
-
-        let sbrm_address = read_register!(SBRM_ADDRESS)?;
-
-        let timestamp_increment = read_register!(TIMESTAMP_INCREMENT)?;
-
-        let device_software_interface_version =
-            if device_capability.is_device_software_interface_version_supported() {
-                Some(read_register!(DEVICE_SOFTWARE_INTERFACE_VERSION)?)
-            } else {
-                None
-            };
+    pub(super) fn new(handle: &'a ControlHandle, sbrm_addr: u64) -> DeviceResult<Self> {
+        let (capability_offset, capability_len) = sbrm::U3VCP_CAPABILITY_REGISTER;
+        let capability_addr = capability_offset + sbrm_addr;
+        let capability = read_register(handle, capability_addr, capability_len)?;
 
         Ok(Self {
-            gencp_version,
-            manufacturer_name,
-            model_name,
-            family_name,
-            device_version,
-            manufacturer_info,
-            serial_number,
-            device_capability,
-            maximum_device_response_time,
-            manifest_table_address,
-            sbrm_address,
-            timestamp_increment,
-            device_software_interface_version,
+            handle,
+            sbrm_addr,
+            capability,
         })
+    }
+
+    pub fn u3v_version(&self) -> DeviceResult<semver::Version> {
+        let u3v_version: u32 = self.read_register(sbrm::U3V_VERSION)?;
+        let u3v_version_minor = u3v_version & 0xff;
+        let u3v_version_major = (u3v_version >> 16) & 0xff;
+
+        Ok(semver::Version::new(
+            u3v_version_major as u64,
+            u3v_version_minor as u64,
+            0,
+        ))
+    }
+
+    pub fn maximum_command_transfer_length(&self) -> DeviceResult<u32> {
+        self.read_register(sbrm::MAXIMUM_COMMAND_TRANSFER_LENGTH)
+    }
+
+    pub fn maximum_acknowledge_trasfer_length(&self) -> DeviceResult<u32> {
+        self.read_register(sbrm::MAXIMUM_ACKNOWLEDGE_TRANSFER_LENGTH)
+    }
+
+    pub fn number_of_stream_channel(&self) -> DeviceResult<u32> {
+        self.read_register(sbrm::NUMBER_OF_STREAM_CHANNELS)
+    }
+
+    pub fn sirm_address(&self) -> DeviceResult<Option<u64>> {
+        if self.capability.is_sirm_available() {
+            self.read_register(sbrm::SIRM_ADDRESS).map(Some)
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn sirm_length(&self) -> DeviceResult<Option<u32>> {
+        if self.capability.is_sirm_available() {
+            self.read_register(sbrm::SIRM_LENGTH).map(Some)
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn eirm_address(&self) -> DeviceResult<Option<u64>> {
+        if self.capability.is_eirm_available() {
+            self.read_register(sbrm::EIRM_ADDRESS).map(Some)
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn eirm_length(&self) -> DeviceResult<Option<u32>> {
+        if self.capability.is_eirm_available() {
+            self.read_register(sbrm::EIRM_LENGTH).map(Some)
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn iidc2_address(&self) -> DeviceResult<Option<u64>> {
+        if self.capability.is_iidc2_available() {
+            self.read_register(sbrm::IIDC2_ADDRESS).map(Some)
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn current_speed(&self) -> DeviceResult<u3v::BusSpeed> {
+        self.read_register(sbrm::CURRENT_SPEED)
+    }
+
+    pub fn u3v_capability(&self) -> DeviceResult<U3VCapablitiy> {
+        Ok(self.capability)
+    }
+
+    fn read_register<T>(&self, register: (u64, u16)) -> DeviceResult<T>
+    where
+        T: ParseBytes,
+    {
+        let (offset, len) = register;
+        let addr = offset + self.sbrm_addr;
+        read_register(self.handle, addr, len)
     }
 }
 
-pub(super) struct SbrmStaticData {
-    u3v_version: semver::Version,
-    u3v_capability: U3VCapablitiy,
-    pub(super) maximum_command_transfer_length: u32,
-    pub(super) maximum_acknowledge_trasfer_length: u32,
-    number_of_stream_channel: u32,
-    pub(super) sirm_address: Option<u64>,
-    pub(super) sirm_length: Option<u32>,
-    pub(super) eirm_address: Option<u64>,
-    pub(super) eirm_length: Option<u32>,
-    iidc2_address: Option<u64>,
-    current_speed: u3v::BusSpeed,
+pub struct ManifestTable<'a> {
+    handle: &'a ControlHandle,
+    manifest_address: u64,
 }
 
-impl SbrmStaticData {
-    pub(super) fn new(sbrm_addr: u64, handle: &ControlHandle) -> DeviceResult<Self> {
-        use sbrm::*;
-
-        let mut buf = vec![0; 64];
-        macro_rules! read_register {
-            ($register_info:ident) => {
-                read_register(
-                    handle,
-                    &mut buf,
-                    $register_info.0 + sbrm_addr,
-                    $register_info.1,
-                )
-            };
+impl<'a> ManifestTable<'a> {
+    pub fn new(handle: &'a ControlHandle, manifest_address: u64) -> Self {
+        Self {
+            handle,
+            manifest_address,
         }
+    }
+    pub fn entries(&self) -> DeviceResult<impl Iterator<Item = ManifestEntry<'a>>> {
+        let entry_num: u64 = self.read_register((0, 8))?;
+        let first_entry_addr = self.manifest_address + 8;
+        let handle = self.handle;
 
-        let u3v_version = read_register!(U3V_VERSION)?;
+        Ok((0..entry_num)
+            .into_iter()
+            .map(move |i| ManifestEntry::new(first_entry_addr + i * 64, handle)))
+    }
 
-        let u3v_capability: U3VCapablitiy = read_register!(U3VCP_CAPABILITY_REGISTER)?;
+    fn read_register<T>(&self, register: (u64, u16)) -> DeviceResult<T>
+    where
+        T: ParseBytes,
+    {
+        let (offset, len) = register;
+        read_register(self.handle, offset + self.manifest_address, len)
+    }
+}
 
-        let maximum_command_transfer_length = read_register!(MAXIMUM_COMMAND_TRANSFER_LENGTH)?;
+pub struct ManifestEntry<'a> {
+    entry_addr: u64,
+    handle: &'a ControlHandle,
+}
 
-        let maximum_acknowledge_trasfer_length =
-            read_register!(MAXIMUM_ACKNOWLEDGE_TRANSFER_LENGTH)?;
+impl<'a> ManifestEntry<'a> {
+    pub fn new(entry_addr: u64, handle: &'a ControlHandle) -> Self {
+        Self { entry_addr, handle }
+    }
 
-        let number_of_stream_channel = read_register!(NUMBER_OF_STREAM_CHANNELS)?;
+    pub fn genicam_file_version(&self) -> DeviceResult<semver::Version> {
+        let file_version: u32 = self.read_register(manifest_entry::GENICAM_FILE_VERSION)?;
+        let subminor = file_version & 0xff;
+        let minor = (file_version >> 16) & 0xff;
+        let major = (file_version >> 24) & 0xff;
 
-        let (sirm_address, sirm_length) = if u3v_capability.is_sirm_available() {
-            (
-                Some(read_register!(SIRM_ADDRESS)?),
-                Some(read_register!(SIRM_LENGTH)?),
-            )
+        Ok(semver::Version::new(
+            major as u64,
+            minor as u64,
+            subminor as u64,
+        ))
+    }
+
+    /// Register address where GenApi XML file is located.
+    pub fn file_address(&self) -> DeviceResult<u64> {
+        self.read_register(manifest_entry::REGISTER_ADDRESS)
+    }
+
+    /// GenApi XML file size in bytes.
+    pub fn file_size(&self) -> DeviceResult<u64> {
+        self.read_register(manifest_entry::FILE_SIZE)
+    }
+
+    /// GenApi XML file info.
+    pub fn file_info(&self) -> DeviceResult<GenICamFileInfo> {
+        self.read_register(manifest_entry::FILE_FORMAT_INFO)
+    }
+
+    /// SHA1 hash of the file. In case the hash is not available, return None.
+    pub fn sha1_hash(&self) -> DeviceResult<Option<[u8; 20]>> {
+        // We don't use `self.read_register` here for perf.
+        let mut sha1_hash: [u8; 20] = [0; 20];
+        let addr = self.entry_addr + manifest_entry::SHA1_HASH.0;
+        self.handle.read_mem(addr, &mut sha1_hash)?;
+
+        // All bytes are 0 in case the hash is not available.
+        if sha1_hash.iter().all(|byte| *byte == 0) {
+            Ok(None)
         } else {
-            (None, None)
-        };
+            Ok(Some(sha1_hash))
+        }
+    }
 
-        let (eirm_address, eirm_length) = if u3v_capability.is_eirm_available() {
-            (
-                Some(read_register!(EIRM_ADDRESS)?),
-                Some(read_register!(EIRM_LENGTH)?),
-            )
-        } else {
-            (None, None)
-        };
-
-        let iidc2_address = if u3v_capability.is_iidc2_available() {
-            Some(read_register!(IIDC2_ADDRESS)?)
-        } else {
-            None
-        };
-
-        let current_speed = read_register!(CURRENT_SPEED)?;
-
-        Ok(Self {
-            u3v_version,
-            u3v_capability,
-            maximum_command_transfer_length,
-            maximum_acknowledge_trasfer_length,
-            number_of_stream_channel,
-            sirm_address,
-            sirm_length,
-            eirm_address,
-            eirm_length,
-            iidc2_address,
-            current_speed,
-        })
+    fn read_register<T>(&self, register: (u64, u16)) -> DeviceResult<T>
+    where
+        T: ParseBytes,
+    {
+        let (offset, len) = register;
+        let addr = offset + self.entry_addr;
+        read_register(self.handle, addr, len)
     }
 }
 
 /// Read and parse register value.
-fn read_register<T>(
-    handle: &ControlHandle,
-    buf: &mut Vec<u8>,
-    addr: u64,
-    len: u16,
-) -> DeviceResult<T>
+fn read_register<T>(handle: &ControlHandle, addr: u64, len: u16) -> DeviceResult<T>
 where
     T: ParseBytes,
 {
     let len = len as usize;
-    if buf.len() < len {
-        buf.resize(len, 0);
-    }
-
+    let mut buf = vec![0; len];
     handle.read_mem(addr, &mut buf[..len])?;
     T::parse_bytes(&buf[..len])
 }
 
-pub struct DeviceConfiguration([u8; 8]);
+macro_rules! is_bit_set {
+    ($val:expr, $bit:expr) => {
+        (($val >> $bit) & 1) == 1
+    };
+}
 
+macro_rules! set_bit {
+    ($val:expr,  $bit:expr) => {
+        $val |= (1 << $bit)
+    };
+}
+
+macro_rules! unset_bit {
+    ($val:expr,  $bit:expr) => {
+        $val &= !(1 << $bit)
+    };
+}
+
+#[derive(Clone, Copy)]
+pub struct DeviceConfiguration(u64);
 impl DeviceConfiguration {
     pub fn is_multi_event_enabled(&self) -> bool {
-        is_bit_set(&self.0, 1)
+        is_bit_set!(&self.0, 1)
     }
 
     pub fn enable_multi_event(&mut self) {
-        set_bit(&mut self.0, 1)
+        set_bit!(self.0, 1)
     }
 
     pub fn disable_multi_event(&mut self) {
-        unset_bit(&mut self.0, 1)
+        unset_bit!(self.0, 1)
     }
 }
 
-struct DeviceCapability([u8; 8]);
+#[derive(Clone, Copy)]
+pub struct DeviceCapability(u64);
 
 impl DeviceCapability {
-    fn is_user_defined_name_supported(&self) -> bool {
-        is_bit_set(&self.0, 0)
+    pub fn is_user_defined_name_supported(&self) -> bool {
+        is_bit_set!(&self.0, 0)
     }
 
-    fn is_family_name_supported(&self) -> bool {
-        is_bit_set(&self.0, 8)
+    pub fn is_family_name_supported(&self) -> bool {
+        is_bit_set!(&self.0, 8)
     }
 
     /// Indicate whether the device supports multiple events in a single event command packet.
-    fn is_multi_event_supported(&self) -> bool {
-        is_bit_set(&self.0, 12)
+    pub fn is_multi_event_supported(&self) -> bool {
+        is_bit_set!(&self.0, 12)
     }
 
     /// Indicate whether the device supports stacked commands (ReadMemStacked and WriteMemStacked).
-    fn is_stacked_commands_supported(&self) -> bool {
-        is_bit_set(&self.0, 13)
+    pub fn is_stacked_commands_supported(&self) -> bool {
+        is_bit_set!(&self.0, 13)
     }
 
     /// Indicate whether the device supports software interface version is supported.
-    fn is_device_software_interface_version_supported(&self) -> bool {
-        is_bit_set(&self.0, 14)
+    pub fn is_device_software_interface_version_supported(&self) -> bool {
+        is_bit_set!(&self.0, 14)
     }
 }
 
-struct U3VCapablitiy([u8; 8]);
+#[derive(Clone, Copy)]
+pub struct U3VCapablitiy(u64);
+
 impl U3VCapablitiy {
     fn is_sirm_available(&self) -> bool {
-        is_bit_set(&self.0, 0)
+        is_bit_set!(&self.0, 0)
     }
 
     fn is_eirm_available(&self) -> bool {
-        is_bit_set(&self.0, 1)
+        is_bit_set!(&self.0, 1)
     }
 
     fn is_iidc2_available(&self) -> bool {
-        is_bit_set(&self.0, 2)
+        is_bit_set!(&self.0, 2)
     }
 }
 
-fn is_bit_set(bytes: &[u8], offset: usize) -> bool {
-    debug_assert!(offset < bytes.len() * 8);
-    let idx = offset / 8;
-    let rem = offset % 8;
-    (bytes[idx] >> rem) & 1 == 1
-}
+pub struct GenICamFileInfo(u32);
+impl GenICamFileInfo {
+    pub fn file_type(&self) -> DeviceResult<GenICamFileType> {
+        let raw = self.0 & 0b111;
+        match raw {
+            0 => Ok(GenICamFileType::DeviceXml),
+            1 => Ok(GenICamFileType::BufferXml),
+            _ => Err(DeviceError::InternalError(
+                format!("Invalid U3V GenICamFileType value: {}", raw).into(),
+            )),
+        }
+    }
 
-fn set_bit(bytes: &mut [u8], offset: usize) {
-    debug_assert!(offset < bytes.len() * 8);
+    pub fn compression_type(&self) -> DeviceResult<CompressionType> {
+        let raw = (self.0 >> 10) & 0b111111;
+        match raw {
+            0 => Ok(CompressionType::Uncompressed),
+            1 => Ok(CompressionType::Zip),
+            _ => Err(DeviceError::InternalError(
+                format!("Invalid U3V GenICamFilFormat value: {}", raw).into(),
+            )),
+        }
+    }
 
-    let idx = offset / 8;
-    let rem = offset % 8;
-    bytes[idx] |= 1 << rem;
-}
-
-fn unset_bit(bytes: &mut [u8], offset: usize) {
-    debug_assert!(offset < bytes.len() * 8);
-
-    let idx = offset / 8;
-    let rem = offset % 8;
-    bytes[idx] &= !(1 << rem);
+    pub fn schema_version(&self) -> semver::Version {
+        let major = (self.0 >> 24) & 0xff;
+        let minor = (self.0 >> 16) & 0xff;
+        semver::Version::new(major as u64, minor as u64, 0)
+    }
 }
 
 trait ParseBytes: Sized {
     fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self>;
 }
 
-impl ParseBytes for semver::Version {
-    fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
-        let minor = u16::parse_bytes(&bytes[0..2])?;
-        let major = u16::parse_bytes(&bytes[2..])?;
-        Ok(semver::Version::new(major as u64, minor as u64, 0))
-    }
-}
-
 impl ParseBytes for DeviceConfiguration {
     fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
-        Ok(Self(bytes.try_into().unwrap()))
+        Ok(Self(u64::parse_bytes(bytes)?))
     }
 }
 
 impl ParseBytes for DeviceCapability {
     fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
-        Ok(Self(bytes.try_into().unwrap()))
+        Ok(Self(u64::parse_bytes(bytes)?))
+    }
+}
+
+impl ParseBytes for GenICamFileInfo {
+    fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
+        Ok(Self(u32::parse_bytes(bytes)?))
     }
 }
 
@@ -529,7 +516,7 @@ impl ParseBytes for Duration {
 
 impl ParseBytes for U3VCapablitiy {
     fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
-        Ok(Self(bytes.try_into().unwrap()))
+        Ok(Self(u64::parse_bytes(bytes)?))
     }
 }
 
@@ -579,6 +566,15 @@ trait DumpBytes {
     fn dump_bytes(&self, buf: &mut [u8]) -> DeviceResult<()>;
 }
 
+impl<T> DumpBytes for &T
+where
+    T: DumpBytes,
+{
+    fn dump_bytes(&self, buf: &mut [u8]) -> DeviceResult<()> {
+        (*self).dump_bytes(buf)
+    }
+}
+
 impl DumpBytes for &str {
     fn dump_bytes(&self, buf: &mut [u8]) -> DeviceResult<()> {
         if !self.is_ascii() {
@@ -604,10 +600,7 @@ impl DumpBytes for &str {
 
 impl DumpBytes for DeviceConfiguration {
     fn dump_bytes(&self, buf: &mut [u8]) -> DeviceResult<()> {
-        debug_assert_eq!(self.0.len(), buf.len());
-
-        buf.copy_from_slice(&self.0);
-        Ok(())
+        self.0.dump_bytes(buf)
     }
 }
 

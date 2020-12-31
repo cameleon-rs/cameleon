@@ -59,6 +59,7 @@ impl ControlChannel {
         self.device_handle.clear_halt(self.iface_info.bulk_out_ep)?;
         Ok(())
     }
+
     pub(super) fn new(device_handle: RusbDevHandle, iface_info: ControlIfaceInfo) -> Self {
         Self {
             device_handle,

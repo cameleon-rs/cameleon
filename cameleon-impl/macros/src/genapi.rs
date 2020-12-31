@@ -1,9 +1,11 @@
-use cameleon_impl_genapi_parser as genapi_parser;
-use genapi_parser::register_node_elem;
-
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{Error, Result};
+
+use cameleon_impl_genapi_parser as genapi_parser;
+use genapi_parser::register_node_elem;
+
+use super::util::modify_visibility;
 
 pub(super) fn expand(
     args: proc_macro::TokenStream,
@@ -30,16 +32,96 @@ impl GenApiDefinition {
     }
 
     fn expand(&self) -> Result<TokenStream> {
+        let vis = &self.xml.vis;
+        let ident = &self.xml.ident;
+        let register = self.expand_register()?;
+        let genapi_util = self.expand_genapi_util()?;
+        let non_registers = self.xml.epxand_non_register()?;
+
+        Ok(quote! {
+            #[allow(non_snake_case)]
+            #[allow(clippy::string_lit_as_bytes)]
+            #vis mod #ident {
+                #register
+                #genapi_util
+                #(#non_registers)*
+            }
+        })
+    }
+
+    fn expand_register(&self) -> Result<TokenStream> {
         let ident = &self.xml.ident;
         let vis = &self.xml.vis;
         let endianness = &self.args.endianness;
-
-        let regs = self.xml.expand_registers(&self.args)?;
+        let regs = self.xml.expand_registers()?;
 
         Ok(quote! {
-            #[cameleon_impl::memory::register_map(base = 0, endianness = #endianness)]
+            #[cameleon_impl::memory::register_map(base = 0, endianness = #endianness, genapi)]
             #vis enum #ident {
                 #(#regs,)*
+            }
+        })
+    }
+
+    fn expand_genapi_util(&self) -> Result<TokenStream> {
+        let vis_inside_mod = modify_visibility(&self.xml.vis)?;
+        let xml_length = self.xml.xml_str.value().as_bytes().len();
+        let xml_address = self.xml.xml_base_address()?;
+
+        let schema_major = self.xml.reg_desc.schema_major_version();
+        let schema_minor = self.xml.reg_desc.schema_minor_version();
+        let schema_subminor = self.xml.reg_desc.schema_subminor_version();
+
+        let genapi_major = self.xml.reg_desc.major_version();
+        let genapi_minor = self.xml.reg_desc.minor_version();
+        let genapi_subminor = self.xml.reg_desc.subminor_version();
+
+        let vendor_name = self.xml.reg_desc.vendor_name();
+        let model_name = self.xml.reg_desc.model_name();
+        let tool_tip = self.xml.reg_desc.tool_tip();
+        let major_version = self.xml.reg_desc.major_version();
+        let minor_version = self.xml.reg_desc.minor_version();
+        let subminor_version = self.xml.reg_desc.subminor_version();
+
+        Ok(quote! {
+            #vis_inside_mod const fn xml_address() -> u64 {
+                #xml_address as u64
+            }
+
+            #vis_inside_mod const fn xml_length() -> usize {
+                #xml_length as usize
+            }
+
+            #vis_inside_mod const fn vendor_name() -> &'static str {
+                &#vendor_name
+            }
+
+            #vis_inside_mod const fn model_name() -> &'static str {
+                &#model_name
+            }
+
+            #vis_inside_mod const fn tool_tip() -> &'static str {
+                &#tool_tip
+            }
+
+            #vis_inside_mod const fn major_version() -> u64 {
+                #major_version
+            }
+
+            #vis_inside_mod const fn minor_version() -> u64 {
+                #minor_version
+            }
+
+            #vis_inside_mod const fn subminor_version() -> u64 {
+                #subminor_version
+            }
+
+            #vis_inside_mod fn schema_version() -> cameleon_impl::semver::Version {
+                cameleon_impl::semver::Version::new(#schema_major, #schema_minor, #schema_subminor)
+            }
+
+            #vis_inside_mod fn genapi_version() -> cameleon_impl::semver::Version {
+                cameleon_impl::semver::Version::new(#genapi_major, #genapi_minor, #genapi_subminor)
             }
         })
     }
@@ -50,19 +132,17 @@ struct XML {
     vis: syn::Visibility,
     xml_tag: syn::Ident,
     xml_str: syn::LitStr,
-    #[allow(unused)]
     reg_desc: genapi_parser::RegisterDescription,
 }
 
 impl XML {
-    fn expand_registers(&self, args: &Args) -> Result<Vec<TokenStream>> {
+    fn expand_registers(&self) -> Result<Vec<TokenStream>> {
         let mut registers = self.expand_reg_desc()?;
-        registers.push(self.expand_xml(args));
+        registers.push(self.expand_xml()?);
 
         Ok(registers)
     }
 
-    #[allow(unused)]
     fn expand_reg_desc(&self) -> Result<Vec<TokenStream>> {
         use genapi_parser::NodeKind::*;
 
@@ -88,21 +168,93 @@ impl XML {
         Ok(regs)
     }
 
-    fn expand_xml(&self, args: &Args) -> TokenStream {
+    fn epxand_non_register(&self) -> Result<Vec<TokenStream>> {
+        use genapi_parser::{numeric_node_elem::ValueKind, ImmOrPNode, NodeKind::*};
+        let mut non_registers = vec![];
+        let vis_inside_mod = modify_visibility(&self.vis)?;
+
+        macro_rules! expand_imm {
+            ($node: ident, $ty:ty, value_kind) => {{
+                expand_imm!(
+                    $node,
+                    $ty,
+                    match $node.value_kind() {
+                        ValueKind::Value(v) => v,
+                        _ => continue,
+                    }
+                );
+            }};
+
+            ($node: ident, $ty:ty) => {{
+                expand_imm!(
+                    $node,
+                    $ty,
+                    match $node.value() {
+                        ImmOrPNode::Imm(v) => v,
+                        _ => continue,
+                    }
+                );
+            }};
+
+            ($node: ident, $ty:ty, $value:expr) => {{
+                let name = format_ident!("{}", $node.node_base().name());
+                let value = $value;
+                non_registers.push(quote! {
+                    #vis_inside_mod const #name: $ty = #value;
+                });
+            }};
+        }
+
+        for node in self.reg_desc.nodes() {
+            match node {
+                Integer(node) => expand_imm!(node, i64, value_kind),
+                Float(node) => expand_imm!(node, f64, value_kind),
+                Boolean(node) => expand_imm!(node, bool),
+                String(node) => expand_imm!(node, &'static str),
+                Port(node) => expand_imm!(node, &'static str, node.node_base().name()),
+                Enumeration(node) => non_registers.push(self.expand_enumeration_node(node)?),
+                _ => {}
+            }
+        }
+
+        Ok(non_registers)
+    }
+
+    fn expand_enumeration_node(
+        &self,
+        node: &genapi_parser::EnumerationNode,
+    ) -> Result<TokenStream> {
+        let name = format_ident!("{}", node.node_base().name());
+        let variants = node.entries().iter().map(|ent| {
+            let var = format_ident!("{}", ent.node_base().name());
+            let value = ent.value() as isize;
+            quote!(#var = #value)
+        });
+
+        let vis_inside_mod = modify_visibility(&self.vis)?;
+
+        Ok(quote! {
+            #[derive(Clone, Copy)]
+            #vis_inside_mod enum #name {
+                #(#variants,)*
+            }
+        })
+    }
+
+    fn expand_xml(&self) -> Result<TokenStream> {
         let xml_tag = &self.xml_tag;
         let xml_str = &self.xml_str;
         let xml_str_len = self.xml_str.value().as_bytes().len();
-        let xml_base = &args.xml_base;
+        let xml_base = self.xml_base_address()?;
 
-        quote! {
+        Ok(quote! {
             #[register(len = #xml_str_len, access = RO, ty = Bytes, offset = #xml_base)]
-            #xml_tag = #xml_str.as_bytes().into()
-        }
+             #xml_tag = #xml_str.as_bytes().into()
+        })
     }
 
     fn expand_int_reg(&self, node: &genapi_parser::IntRegNode) -> Result<TokenStream> {
-        let node_base = node.node_base();
-        let name = node_base.name();
+        let name = node.node_base().name();
         let (addr, len, access) = self.register_attr(name, node.register_base())?;
         let sign = node.sign();
         let ty = self.int_ty_from(name, len, sign)?;
@@ -117,8 +269,7 @@ impl XML {
     fn expand_masked_int_reg(&self, node: &genapi_parser::MaskedIntRegNode) -> Result<TokenStream> {
         use register_node_elem::BitMask;
 
-        let node_base = node.node_base();
-        let name = node_base.name();
+        let name = node.node_base().name();
         let (addr, len, access) = self.register_attr(name, node.register_base())?;
         let sign = node.sign();
         let ty = self.int_ty_from(name, len, sign)?;
@@ -136,8 +287,7 @@ impl XML {
     }
 
     fn expand_float_reg(&self, node: &genapi_parser::FloatRegNode) -> Result<TokenStream> {
-        let node_base = node.node_base();
-        let name = node_base.name();
+        let name = node.node_base().name();
         let (addr, len, access) = self.register_attr(name, node.register_base())?;
         let ty = self.float_ty_from(name, len)?;
 
@@ -149,8 +299,7 @@ impl XML {
     }
 
     fn expand_string_reg(&self, node: &genapi_parser::StringRegNode) -> Result<TokenStream> {
-        let node_base = node.node_base();
-        let name = node_base.name();
+        let name = node.node_base().name();
         let (addr, len, access) = self.register_attr(name, node.register_base())?;
 
         let name = format_ident!("{}", name);
@@ -161,8 +310,7 @@ impl XML {
     }
 
     fn expand_reg(&self, node: &genapi_parser::RegisterNode) -> Result<TokenStream> {
-        let node_base = node.node_base();
-        let name = node_base.name();
+        let name = node.node_base().name();
         let (addr, len, access) = self.register_attr(name, node.register_base())?;
 
         let name = format_ident!("{}", name);
@@ -247,6 +395,41 @@ impl XML {
         }
     }
 
+    fn xml_base_address(&self) -> Result<i64> {
+        use genapi_parser::NodeKind::*;
+
+        let mut xml_base = 0;
+        macro_rules! maximum_xml_base {
+            ($xml_base: ident, $node: ident) => {{
+                let node_base = $node.node_base();
+                let name = node_base.name();
+                let (addr, len, _) = self.register_attr(name, $node.register_base())?;
+                if addr + len > $xml_base {
+                    $xml_base = addr + len;
+                }
+            }};
+        }
+
+        for node in self.reg_desc.nodes() {
+            match node {
+                IntReg(node) => maximum_xml_base!(xml_base, node),
+                MaskedIntReg(node) => maximum_xml_base!(xml_base, node),
+                FloatReg(node) => maximum_xml_base!(xml_base, node),
+                StringReg(node) => maximum_xml_base!(xml_base, node),
+                Register(node) => maximum_xml_base!(xml_base, node),
+                StructReg(node) => {
+                    let masked_int_regs: Vec<_> = node.to_masked_int_regs();
+                    for node in &masked_int_regs {
+                        maximum_xml_base!(xml_base, node)
+                    }
+                }
+                _ => {}
+            };
+        }
+
+        Ok(xml_base)
+    }
+
     fn xml_err(&self, name: &str, msg: &str) -> Error {
         Error::new_spanned(&self.xml_str, format! {"{}: {}", name, msg})
     }
@@ -284,21 +467,13 @@ impl syn::parse::Parse for XML {
 }
 
 struct Args {
-    xml_base: syn::LitInt,
     endianness: syn::Ident,
 }
 
 impl syn::parse::Parse for Args {
     fn parse(input: syn::parse::ParseStream) -> Result<Self> {
-        let err_msg = "expected `#[register_map(xml_base = .., endianness = ..)]`";
-        let ident = input.parse::<syn::Ident>()?;
-        if ident != "xml_base" {
-            return Err(Error::new_spanned(ident, err_msg));
-        }
-        input.parse::<syn::Token![=]>()?;
-        let xml_base = input.parse()?;
+        let err_msg = "expected `#[register_map(endianness = ..)]`";
 
-        input.parse::<syn::Token![,]>()?;
         let ident = input.parse::<syn::Ident>()?;
         if ident != "endianness" {
             return Err(Error::new_spanned(ident, err_msg));
@@ -306,9 +481,6 @@ impl syn::parse::Parse for Args {
         input.parse::<syn::Token![=]>()?;
         let endianness = input.parse()?;
 
-        Ok(Self {
-            xml_base,
-            endianness,
-        })
+        Ok(Self { endianness })
     }
 }

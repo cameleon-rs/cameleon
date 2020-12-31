@@ -7,8 +7,9 @@ use std::{
 };
 
 use async_std::{
+    channel::{self, Receiver, Sender},
     prelude::*,
-    sync::{channel, Mutex, Receiver, Sender},
+    sync::Mutex,
     task,
 };
 use thiserror::Error;
@@ -96,7 +97,7 @@ impl ControlModule {
 
     async fn register_observers(&self) -> MemoryEventHandler {
         let mut memory = self.memory.lock().await;
-        let (tx, rx) = channel(MEMORY_EVENT_CHANNEL_CAPACITY);
+        let (tx, rx) = channel::bounded(MEMORY_EVENT_CHANNEL_CAPACITY);
         memory.register_observer::<ABRM::TimestampLatch, _>(TimestampLatchObserver { sender: tx });
 
         MemoryEventHandler { rx }
@@ -135,7 +136,7 @@ impl WorkerManager {
         queue: SharedQueue<Vec<u8>>,
         signal_tx: Sender<InterfaceSignal>,
     ) -> Self {
-        let (completed_tx, completed_rx) = channel(1);
+        let (completed_tx, completed_rx) = channel::bounded(1);
         let on_processing = Arc::new(AtomicBool::new(false));
         let (maximum_cmd_length, maximum_ack_length) = {
             let memory = memory.lock().await;
@@ -188,7 +189,7 @@ impl WorkerManager {
     }
 
     async fn wait_completion(&mut self) {
-        let (new_tx, new_rx) = channel(1);
+        let (new_tx, new_rx) = channel::bounded(1);
         // Drop old sender to wait workers completion only.
         self.completed_tx = new_tx;
 

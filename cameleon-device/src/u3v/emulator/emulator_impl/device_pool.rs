@@ -1,7 +1,8 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_std::{
-    sync::{Mutex, Receiver, Sender},
+    channel::{Receiver, Sender},
+    sync::Mutex,
     task,
 };
 use lazy_static::lazy_static;
