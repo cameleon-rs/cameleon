@@ -40,7 +40,7 @@ impl RegisterMap {
 
         let args: Args = syn::parse(args)?;
 
-        let mut offset = 0;
+        let mut offset = quote! {0};
         let mut regs = vec![];
         for variant in input_enum.variants.into_iter() {
             let reg = Register::parse(variant, &mut offset)?;
@@ -168,47 +168,61 @@ impl RegisterMap {
     }
 
     fn const_size(&self) -> Result<TokenStream> {
-        let size = self.size();
+        let sizes: Vec<_> = self
+            .regs
+            .iter()
+            .map(|reg| {
+                let offset = &reg.offset;
+                let len = &reg.reg_attr.len;
+                quote! {#offset + #len}
+            })
+            .collect();
+
         let vis = modify_visibility(&self.vis)?;
         Ok(quote! {
             #vis const fn size() -> usize {
-                #size
+                let arr = [#(#sizes,)*];
+                let mut i = 0;
+                let mut max = arr[0];
+
+                while i < arr.len() {
+                    let cand = arr[i];
+                    if max < cand {
+                        max = cand;
+                    }
+                    i += 1;
+                }
+
+                max
             }
         })
-    }
-
-    fn size(&self) -> usize {
-        let mut max_size = 0;
-        for reg in &self.regs {
-            let size = reg.offset + reg.reg_attr.len();
-            max_size = std::cmp::max(max_size, size);
-        }
-        max_size
     }
 }
 
 struct Register {
     ident: syn::Ident,
-    offset: usize,
+    offset: TokenStream,
     reg_attr: RegisterAttr,
     init: Option<InitValue>,
     attrs: Vec<syn::Attribute>,
 }
 
 impl Register {
-    fn parse(mut variant: syn::Variant, offset: &mut usize) -> Result<Self> {
+    fn parse(mut variant: syn::Variant, offset: &mut TokenStream) -> Result<Self> {
         let reg_attr = Self::parse_reg_attr(&mut variant)?;
         let ident = variant.ident;
 
-        let reg_offset = match reg_attr.specified_offset() {
+        let reg_offset = match &reg_attr.offset {
             Some(specified_offset) => {
-                *offset = specified_offset + reg_attr.len();
-                specified_offset
+                let len = &reg_attr.len;
+                *offset = quote! {#specified_offset + #len};
+                quote! {#specified_offset}
             }
             None => {
-                let reg_offset = *offset;
-                *offset += reg_attr.len();
-                reg_offset
+                let reg_offset = offset.clone();
+                let len = &reg_attr.len;
+                *offset = quote! { #reg_offset + #len };
+                quote! { #reg_offset }
             }
         };
 
@@ -255,15 +269,15 @@ impl Register {
         }
     }
 
-    fn impl_register(&self, base: &Base, endianness: Endianness) -> TokenStream {
+    fn impl_register(&self, base: &SizeKind, endianness: Endianness) -> TokenStream {
         let ty = &self.reg_attr.ty;
-        let len = self.reg_attr.len();
+        let len = &self.reg_attr.len;
 
         let parse = self.impl_parse(endianness);
         let serialize = self.impl_serialize(endianness);
         let write = self.impl_write(endianness);
 
-        let offset = self.offset;
+        let offset = &self.offset;
         let raw = quote! {
             fn raw() -> RawRegister {
                 RawRegister::new(#base as usize + #offset, #len)
@@ -298,7 +312,7 @@ impl Register {
 
     fn impl_parse(&self, endianness: Endianness) -> TokenStream {
         let ty = &self.reg_attr.ty;
-        let len = &self.reg_attr.len();
+        let len = &self.reg_attr.len;
         let main = match ty {
             RegisterType::Str => quote! {
                 let str_end = data.iter().position(|c| *c == 0).unwrap_or(#len);
@@ -373,7 +387,7 @@ impl Register {
 
     fn impl_serialize(&self, endianness: Endianness) -> TokenStream {
         let ty = &self.reg_attr.ty;
-        let len = self.reg_attr.len();
+        let len = &self.reg_attr.len;
         let main = match ty {
             RegisterType::Str => quote! {
                 if !data.is_ascii() {
@@ -508,23 +522,10 @@ impl Register {
 }
 
 struct RegisterAttr {
-    len: syn::LitInt,
+    len: SizeKind,
     access: AccessRight,
     ty: RegisterType,
-    offset: Option<syn::LitInt>,
-}
-
-impl RegisterAttr {
-    fn len(&self) -> usize {
-        self.len.base10_parse().unwrap()
-    }
-
-    fn specified_offset(&self) -> Option<usize> {
-        match &self.offset {
-            Some(offset) => Some(offset.base10_parse().unwrap()),
-            _ => None,
-        }
-    }
+    offset: Option<SizeKind>,
 }
 
 impl syn::parse::Parse for RegisterAttr {
@@ -537,9 +538,7 @@ impl syn::parse::Parse for RegisterAttr {
             other => return Err(Error::new_spanned(other, "expected len")),
         };
         ts.parse::<syn::Token![=]>()?;
-        let len = ts.parse::<syn::LitInt>()?;
-        // Verify litint.
-        len.base10_parse::<usize>()?;
+        let len = ts.parse()?;
 
         ts.parse::<syn::token::Comma>()?;
         match ts.parse::<syn::Ident>()? {
@@ -557,22 +556,13 @@ impl syn::parse::Parse for RegisterAttr {
         ts.parse::<syn::Token![=]>()?;
         let ty = ts.parse::<RegisterType>()?;
 
-        let base_ty = ty.base_ty();
-        if base_ty.is_numerical() && base_ty.numerical_bits() / 8 != len.base10_parse().unwrap() {
-            return Err(Error::new_spanned(
-                len,
-                "specified len doesn't fit with specified ty",
-            ));
-        }
-
         let offset = if ts.parse::<syn::token::Comma>().is_ok() {
             match ts.parse::<syn::Ident>()? {
                 offset if offset == "offset" => {}
                 other => return Err(Error::new_spanned(other, "expected offset")),
             }
             ts.parse::<syn::Token![=]>()?;
-            let offset = ts.parse::<syn::LitInt>()?;
-            Some(offset)
+            Some(ts.parse()?)
         } else {
             None
         };
@@ -698,11 +688,6 @@ impl RegisterType {
         !matches!(self, Str | Bytes | BitField(..) | F32 | F64)
     }
 
-    fn is_numerical(&self) -> bool {
-        use RegisterType::*;
-        !matches!(self, Str | Bytes | BitField(..))
-    }
-
     fn is_signed(&self) -> bool {
         use RegisterType::*;
         match self {
@@ -750,13 +735,6 @@ impl RegisterType {
             I64 => "i64",
             F32 => "f32",
             F64 => "f64",
-        }
-    }
-
-    fn base_ty(&self) -> Self {
-        match self {
-            RegisterType::BitField(bf) => *bf.ty.clone(),
-            _ => self.clone(),
         }
     }
 }
@@ -969,7 +947,7 @@ impl quote::ToTokens for RegisterType {
 }
 
 struct Args {
-    base: Base,
+    base: SizeKind,
     endianness: Endianness,
     from_genapi_expansion: bool,
 }
@@ -990,19 +968,41 @@ impl quote::ToTokens for Endianness {
 }
 
 #[derive(Clone)]
-enum Base {
+enum SizeKind {
     Lit(syn::LitInt),
     Var(syn::Path),
 }
 
-impl quote::ToTokens for Base {
+impl quote::ToTokens for SizeKind {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
-            Base::Lit(lit) => lit.to_tokens(tokens),
-            Base::Var(path) => {
+            SizeKind::Lit(lit) => lit.to_tokens(tokens),
+            SizeKind::Var(path) => {
                 let path = prepend_super_if_needed(path);
                 path.to_tokens(tokens)
             }
+        }
+    }
+}
+
+impl syn::parse::Parse for SizeKind {
+    fn parse(input: syn::parse::ParseStream) -> Result<Self> {
+        let size = input.parse::<syn::Expr>()?;
+        let err_msg = "path or litine expected";
+
+        match size {
+            syn::Expr::Lit(expr_lit) => {
+                if let syn::Lit::Int(litint) = expr_lit.lit {
+                    Ok(SizeKind::Lit(litint))
+                } else {
+                    Err(Error::new_spanned(expr_lit, err_msg))
+                }
+            }
+            syn::Expr::Path(p) => Ok(SizeKind::Var(p.path)),
+            other => Err(Error::new_spanned(
+                other,
+                "argument of offset attribute must be path or litint",
+            )),
         }
     }
 }
@@ -1017,26 +1017,7 @@ impl syn::parse::Parse for Args {
             ));
         }
         input.parse::<syn::Token![=]>()?;
-        let base = input.parse::<syn::Expr>()?;
-        let base = match base {
-            syn::Expr::Lit(expr_lit) => {
-                if let syn::Lit::Int(litint) = expr_lit.lit {
-                    Base::Lit(litint)
-                } else {
-                    return Err(Error::new_spanned(
-                        expr_lit,
-                        "argument of offset attribute must be path or litint",
-                    ));
-                }
-            }
-            syn::Expr::Path(p) => Base::Var(p.path),
-            other => {
-                return Err(Error::new_spanned(
-                    other,
-                    "argument of offset attribute must be path or litint",
-                ));
-            }
-        };
+        let base = input.parse()?;
 
         input.parse::<syn::Token![,]>()?;
         let ident = input.parse::<syn::Ident>()?;
@@ -1082,6 +1063,6 @@ fn prepend_super_if_needed(path: &syn::Path) -> syn::Path {
         return path.clone();
     }
 
-    let trailing_super = format_ident!("super");
-    syn::parse(quote! { #trailing_super::#path }.into()).unwrap()
+    let leading_super = format_ident!("super");
+    syn::parse(quote! { #leading_super::#path }.into()).unwrap()
 }

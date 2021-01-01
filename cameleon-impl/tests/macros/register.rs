@@ -11,7 +11,7 @@ pub enum ABRM {
     GenCpVersionMajor,
 
     #[register(len = 64, access = RW, ty = String)]
-    ManufacturerName = "Cameleon\0",
+    ManufacturerName = "Cameleon",
 
     #[register(len = 8, access = RO, ty = u64)]
     SBRMAddress = SBRM_ADDRESS,
@@ -23,10 +23,15 @@ pub enum ABRM {
     TestOffset2,
 }
 
+const MODEL_NAME_LEN: usize = 64;
+
 #[register_map(base = SBRM_ADDRESS, endianness = LE)]
 pub enum SBRM {
     #[register(len = 64, access = RW, ty = String)]
-    ManufacturerName = "Cameleon\0",
+    ManufacturerName = "Cameleon",
+
+    #[register(len = MODEL_NAME_LEN, access = RW, ty = String)]
+    ModelName = "Cameleon Model",
 }
 
 fn main() {
@@ -47,6 +52,13 @@ fn main() {
     let raw_reg = SBRM::ManufacturerName::raw();
     assert_eq!(raw_reg.offset, SBRM_ADDRESS as usize);
     assert_eq!(raw_reg.len, 64);
+
+    let raw_reg = SBRM::ModelName::raw();
+    assert_eq!(
+        raw_reg.offset,
+        SBRM_ADDRESS as usize + SBRM::ManufacturerName::raw().len
+    );
+    assert_eq!(raw_reg.len, MODEL_NAME_LEN);
 
     let raw_reg = ABRM::TestOffset::raw();
     assert_eq!(raw_reg.offset, 0x1000);
