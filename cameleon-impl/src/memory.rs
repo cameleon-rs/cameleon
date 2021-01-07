@@ -20,7 +20,7 @@ pub enum MemoryError {
 }
 
 pub mod prelude {
-    pub use super::{MemoryRead, MemoryWrite};
+    pub use super::{MemoryRead, MemoryWrite, Register};
 }
 
 pub trait MemoryRead {
@@ -66,16 +66,25 @@ pub enum AccessRight {
 }
 
 impl AccessRight {
-    pub fn is_readable(self) -> bool {
+    pub const fn is_readable(self) -> bool {
         self.as_num() & 0b1 == 1
     }
 
-    pub fn is_writable(self) -> bool {
+    pub const fn is_writable(self) -> bool {
         self.as_num() >> 1 == 1
     }
 
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::NA => "NA",
+            Self::RO => "RO",
+            Self::WO => "WO",
+            Self::RW => "RW",
+        }
+    }
+
     #[doc(hidden)]
-    pub fn as_num(self) -> u8 {
+    pub const fn as_num(self) -> u8 {
         match self {
             Self::NA => 0b00,
             Self::RO => 0b01,
