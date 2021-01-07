@@ -69,7 +69,7 @@ impl MemoryStruct {
             #vis struct #ident {
                 raw: Vec<u8>,
                 protection: cameleon_impl::memory::MemoryProtection,
-                observers: std::vec::Vec<(cameleon_impl::memory::RawRegister, std::boxed::Box<dyn cameleon_impl::memory::MemoryObserver>)>,
+                observers: std::vec::Vec<(std::ops::Range<usize>, std::boxed::Box<dyn cameleon_impl::memory::MemoryObserver>)>,
             }
         }
     }
@@ -86,9 +86,8 @@ impl MemoryStruct {
                 #[doc(hidden)]
                 fn notify_all(&self, written_range: std::ops::Range<usize>) {
 
-                    for (raw_reg, observer) in &self.observers {
+                    for (reg_range, observer) in &self.observers {
 
-                        let reg_range = raw_reg.range();
                         if written_range.start >= reg_range.end || written_range.end <= reg_range.start {
                             continue;
                         }
@@ -133,7 +132,7 @@ impl MemoryStruct {
                 }
 
                 fn access_right<T: cameleon_impl::memory::Register>(&self) -> cameleon_impl::memory::AccessRight {
-                    self.protection.access_right_with_range(T::raw().range())
+                    self.protection.access_right_with_range(T::range())
                 }
             }
 
@@ -154,13 +153,13 @@ impl MemoryStruct {
                 }
 
                 fn set_access_right<T: cameleon_impl::memory::Register>(&mut self, access_right: cameleon_impl::memory::AccessRight) {
-                    self.protection.set_access_right_with_range(T::raw().range(), access_right);
+                    self.protection.set_access_right_with_range(T::range(), access_right);
                 }
 
 
                 fn write<T: cameleon_impl::memory::Register>(&mut self, data: T::Ty) -> cameleon_impl::memory::MemoryResult<()>{
                     T::write(data, &mut self.raw)?;
-                    self.notify_all(T::raw().range());
+                    self.notify_all(T::range());
 
                     Ok(())
                 }
@@ -172,9 +171,9 @@ impl MemoryStruct {
                     where T: cameleon_impl::memory::Register,
                           U: cameleon_impl::memory::MemoryObserver + 'static
                 {
-                    let raw_reg = T::raw();
+                    let reg_range = T::range();
 
-                    self.observers.push((raw_reg, Box::new(observer)));
+                    self.observers.push((reg_range, Box::new(observer)));
                 }
 
             }

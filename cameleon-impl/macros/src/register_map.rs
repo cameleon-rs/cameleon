@@ -125,7 +125,7 @@ impl RegisterMap {
             let ident = &reg.ident;
             let access_right = &reg.reg_attr.access;
             quote! {
-                let range = #ident::raw().range();
+                let range = #ident::range();
                 memory_protection.set_access_right_with_range(range, AccessRight::#access_right);
             }
         });
@@ -268,17 +268,11 @@ impl Register {
     fn impl_register(&self, base: &SizeKind, endianness: Endianness) -> TokenStream {
         let ty = &self.reg_attr.ty;
         let len = &self.reg_attr.len;
+        let offset = &self.offset;
 
         let parse = self.impl_parse(endianness);
         let serialize = self.impl_serialize(endianness);
         let write = self.impl_write(endianness);
-
-        let offset = &self.offset;
-        let raw = quote! {
-            fn raw() -> RawRegister {
-                RawRegister::new(#base as usize + #offset, #len)
-            }
-        };
 
         let helper_methods = self.impl_helper_methods(endianness);
 
@@ -291,9 +285,11 @@ impl Register {
             impl Register for #ident {
                 type Ty = #ty;
 
+                const ADDRESS: usize = #base  as usize + #offset;
+                const LENGTH: usize = #len;
+
                 #parse
                 #serialize
-                #raw
                 #write
             }
         }
@@ -460,7 +456,7 @@ impl Register {
                 if bf.ty.integral_bits() == 8 {
                     quote! {
                         fn write(data: Self::Ty, memory: &mut[u8]) -> MemoryResult<()> {
-                            let range = Self::raw().range();
+                            let range = Self::range();
                             let data = Self::masked_int(data)?;
                             let original_data = memory.index(range.clone()).#read_integral().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))?;
                             let new_data = (original_data & !Self::mask()) | data;
@@ -471,7 +467,7 @@ impl Register {
                 } else {
                     quote! {
                         fn write(data: Self::Ty, memory: &mut[u8]) -> MemoryResult<()> {
-                            let range = Self::raw().range();
+                            let range = Self::range();
                             let data = Self::masked_int(data)?;
                             let original_data = memory.index(range.clone()).#read_integral::<#endianness>().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))?;
                             let new_data = (original_data & !Self::mask()) | data;

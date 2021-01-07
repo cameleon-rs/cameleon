@@ -191,46 +191,30 @@ impl MemoryProtection {
     }
 }
 
-#[doc(hidden)]
 pub trait Register {
     type Ty;
 
+    const ADDRESS: usize;
+    const LENGTH: usize;
+
     fn parse(data: &[u8]) -> MemoryResult<Self::Ty>;
     fn serialize(data: Self::Ty) -> MemoryResult<Vec<u8>>;
-    fn raw() -> RawRegister;
 
     fn write(data: Self::Ty, memory: &mut [u8]) -> MemoryResult<()> {
         let data = Self::serialize(data)?;
-        let range = Self::raw().range();
+        let range = Self::range();
+
         memory[range].copy_from_slice(data.as_slice());
         Ok(())
     }
 
     fn read(memory: &[u8]) -> MemoryResult<Self::Ty> {
-        let range = Self::raw().range();
+        let range = Self::range();
         Self::parse(&memory[range])
     }
-}
 
-/// Represents each register address and length.
-#[derive(Debug, Clone, Copy)]
-#[doc(hidden)]
-pub struct RawRegister {
-    /// Offset of the register.
-    pub offset: usize,
-    /// Length of the register.
-    pub len: usize,
-}
-
-impl RawRegister {
-    pub fn new(offset: usize, len: usize) -> Self {
-        Self { offset, len }
-    }
-
-    pub fn range(&self) -> std::ops::Range<usize> {
-        let start = self.offset;
-        let end = start + self.len;
-        start..end
+    fn range() -> std::ops::Range<usize> {
+        Self::ADDRESS..Self::ADDRESS + Self::LENGTH
     }
 }
 

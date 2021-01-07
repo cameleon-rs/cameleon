@@ -37,9 +37,12 @@ pub enum SBRM {
 fn main() {
     assert_eq!(ABRM::size(), 0x1008 + 8);
 
-    let raw_reg = ABRM::GenCpVersionMajor::raw();
-    assert_eq!(raw_reg.offset, 2);
-    assert_eq!(raw_reg.len, 2);
+    let (addr, len) = (
+        ABRM::GenCpVersionMajor::ADDRESS,
+        ABRM::GenCpVersionMajor::LENGTH,
+    );
+    assert_eq!(addr, 2);
+    assert_eq!(len, 2);
 
     let mut protection = MemoryProtection::new(ABRM::size());
     ABRM::init_memory_protection(&mut protection);
@@ -49,20 +52,20 @@ fn main() {
         AccessRight::RW
     );
 
-    let raw_reg = SBRM::ManufacturerName::raw();
-    assert_eq!(raw_reg.offset, SBRM_ADDRESS as usize);
-    assert_eq!(raw_reg.len, 64);
-
-    let raw_reg = SBRM::ModelName::raw();
-    assert_eq!(
-        raw_reg.offset,
-        SBRM_ADDRESS as usize + SBRM::ManufacturerName::raw().len
+    let (addr, len) = (
+        SBRM::ManufacturerName::ADDRESS,
+        SBRM::ManufacturerName::LENGTH,
     );
-    assert_eq!(raw_reg.len, MODEL_NAME_LEN);
+    assert_eq!(addr, SBRM_ADDRESS as usize);
+    assert_eq!(len, 64);
 
-    let raw_reg = ABRM::TestOffset::raw();
-    assert_eq!(raw_reg.offset, 0x1000);
+    let (addr, len) = (SBRM::ModelName::ADDRESS, SBRM::ModelName::LENGTH);
+    assert_eq!(addr, SBRM_ADDRESS as usize + 64,);
+    assert_eq!(len, MODEL_NAME_LEN);
 
-    let raw_reg = ABRM::TestOffset2::raw();
-    assert_eq!(raw_reg.offset, 0x1008);
+    let addr = ABRM::TestOffset::ADDRESS;
+    assert_eq!(addr, 0x1000);
+
+    let addr = ABRM::TestOffset2::ADDRESS;
+    assert_eq!(addr, 0x1008);
 }
