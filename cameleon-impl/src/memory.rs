@@ -196,6 +196,7 @@ pub trait Register {
 
     const ADDRESS: usize;
     const LENGTH: usize;
+    const ACCESS_RIGHT: AccessRight;
 
     fn parse(data: &[u8]) -> MemoryResult<Self::Ty>;
     fn serialize(data: Self::Ty) -> MemoryResult<Vec<u8>>;

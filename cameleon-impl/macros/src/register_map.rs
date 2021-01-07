@@ -126,7 +126,7 @@ impl RegisterMap {
             let access_right = &reg.reg_attr.access;
             quote! {
                 let range = #ident::range();
-                memory_protection.set_access_right_with_range(range, AccessRight::#access_right);
+                memory_protection.set_access_right_with_range(range, cameleon_impl::memory::AccessRight::#access_right);
             }
         });
 
@@ -277,6 +277,8 @@ impl Register {
         let helper_methods = self.impl_helper_methods(endianness);
 
         let ident = &self.ident;
+        let access_right = &self.reg_attr.access;
+
         quote! {
             impl #ident {
                 #helper_methods
@@ -287,6 +289,7 @@ impl Register {
 
                 const ADDRESS: usize = #base  as usize + #offset;
                 const LENGTH: usize = #len;
+                const ACCESS_RIGHT: cameleon_impl::memory::AccessRight = cameleon_impl::memory::AccessRight::#access_right;
 
                 #parse
                 #serialize
