@@ -99,18 +99,14 @@ impl RegisterMap {
             #(#structs)*
         };
 
-        if self.args.from_genapi_expansion {
-            Ok(impls)
-        } else {
-            Ok(quote! {
-                #(#attrs)*
-                #[allow(non_snake_case)]
-                #[allow(clippy::string_lit_as_bytes)]
-                #vis mod #mod_name {
-                    #impls
-                }
-            })
-        }
+        Ok(quote! {
+            #(#attrs)*
+            #[allow(non_snake_case)]
+            #[allow(clippy::string_lit_as_bytes)]
+            #vis mod #mod_name {
+                #impls
+            }
+        })
     }
 
     fn impl_register(&self) -> TokenStream {
@@ -949,7 +945,6 @@ impl quote::ToTokens for RegisterType {
 struct Args {
     base: SizeKind,
     endianness: Endianness,
-    from_genapi_expansion: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -1040,20 +1035,7 @@ impl syn::parse::Parse for Args {
             ));
         };
 
-        let from_genapi_expansion = if input.peek(syn::Token![,]) {
-            input.parse::<syn::Token![,]>().unwrap();
-            let ident = input.parse::<syn::Ident>()?;
-            assert_eq!(ident, "genapi");
-            true
-        } else {
-            false
-        };
-
-        Ok(Self {
-            base,
-            endianness,
-            from_genapi_expansion,
-        })
+        Ok(Self { base, endianness })
     }
 }
 
