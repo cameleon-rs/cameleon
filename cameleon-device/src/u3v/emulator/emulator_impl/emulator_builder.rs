@@ -43,7 +43,7 @@ pub type BuilderResult<T> = std::result::Result<T, BuilderError>;
 ///
 /// // Set model name and serial number, then build device.
 /// // Now the device pool has two devices.
-/// EmulatorBuilder::new().model_name("Cameleon Model").unwrap().serial_number("CAM1984").unwrap().build();
+/// EmulatorBuilder::new().user_defined_name("My Camera").unwrap().serial_number("CAM1984").unwrap().build();
 ///
 /// let devices = enumerate_devices().unwrap();
 /// assert_eq!(devices.len(), 2);

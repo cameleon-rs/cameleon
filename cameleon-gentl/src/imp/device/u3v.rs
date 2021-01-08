@@ -130,7 +130,7 @@ impl U3VDeviceModule {
     }
 
     fn is_opened(&self) -> bool {
-        let current_status: DeviceAccessStatus = self.current_status.into();
+        let current_status: DeviceAccessStatus = self.current_status;
         current_status.is_opened()
     }
 

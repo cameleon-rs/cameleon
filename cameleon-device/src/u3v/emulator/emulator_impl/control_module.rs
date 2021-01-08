@@ -559,7 +559,7 @@ mod cmd {
     }
 
     impl CommandCcd {
-        fn parse<'a>(cursor: &mut Cursor<&'a [u8]>) -> ProtocolResult<Self> {
+        fn parse(cursor: &mut Cursor<&[u8]>) -> ProtocolResult<Self> {
             let flag = CommandFlag::parse(cursor)?;
             let scd_kind = ScdKind::parse(cursor)?;
             let scd_len = cursor.read_u16::<LE>()?;
