@@ -112,12 +112,12 @@ pub(crate) enum TlType {
 impl TlType {
     pub(crate) const fn as_str(self) -> &'static str {
         match self {
-            CameraLink => "CL",
-            CameraLinkHS => "CLHS",
-            CoaXPress => "CXP",
-            GigEVision => "GEV",
-            USB3Vision => "U3V",
-            Mixed => "Mixed",
+            Self::CameraLink => "CL",
+            Self::CameraLinkHS => "CLHS",
+            Self::CoaXPress => "CXP",
+            Self::GigEVision => "GEV",
+            Self::USB3Vision => "U3V",
+            Self::Mixed => "Mixed",
         }
     }
 }

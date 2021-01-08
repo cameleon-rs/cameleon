@@ -1,12 +1,12 @@
-use std::sync::Mutex;
+use std::{convert::TryFrom, sync::Mutex};
 
-use crate::GenTlResult;
+use crate::{GenTlError, GenTlResult};
 
 pub(crate) mod u3v;
 
 use crate::imp::port::*;
 
-mod u3v_memory;
+mod u3v_genapi;
 
 /// The current accessibility of the device.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -37,12 +37,30 @@ impl DeviceAccessStatus {
     pub(crate) const fn as_str(self) -> &'static str {
         match self {
             Self::Unknown => "Unknown",
-            ReadWrite => "ReadWrite",
-            ReadOnly => "ReadOnly",
-            NoAccess => "NoAccess",
-            Busy => "Busy",
-            OpenReadWrite => "OpenReadWrite",
-            OpenReadOnly => "OpenReadOnly",
+            Self::ReadWrite => "ReadWrite",
+            Self::ReadOnly => "ReadOnly",
+            Self::NoAccess => "NoAccess",
+            Self::Busy => "Busy",
+            Self::OpenReadWrite => "OpenReadWrite",
+            Self::OpenReadOnly => "OpenReadOnly",
+        }
+    }
+}
+
+impl TryFrom<i32> for DeviceAccessStatus {
+    type Error = GenTlError;
+    fn try_from(value: i32) -> GenTlResult<Self> {
+        match value {
+            _ if value == (Self::Unknown as i32) => Ok(Self::Unknown),
+            _ if value == (Self::ReadWrite as i32) => Ok(Self::ReadWrite),
+            _ if value == (Self::ReadOnly as i32) => Ok(Self::ReadOnly),
+            _ if value == (Self::NoAccess as i32) => Ok(Self::NoAccess),
+            _ if value == (Self::Busy as i32) => Ok(Self::Busy),
+            _ if value == (Self::OpenReadWrite as i32) => Ok(Self::OpenReadWrite),
+            _ if value == (Self::OpenReadOnly as i32) => Ok(Self::OpenReadOnly),
+            _ => Err(GenTlError::InvalidValue(
+                "Invalid value for DeviceAccessStatus".into(),
+            )),
         }
     }
 }

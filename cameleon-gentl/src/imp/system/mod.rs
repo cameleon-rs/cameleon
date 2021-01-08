@@ -52,7 +52,7 @@ impl SystemModule {
 
         let xml_info = XmlInfo {
             location: XmlLocation::RegisterMap {
-                address: genapi::GENAPI_XML_ADDRESS,
+                address: genapi::GENAPI_XML_ADDRESS as u64,
                 size: genapi::GENAPI_XML_LENGTH,
             },
             schema_version: semver::Version::new(
