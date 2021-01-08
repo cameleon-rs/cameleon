@@ -81,7 +81,7 @@ impl RegisterMap {
         let init_memory_protection = self.impl_init_memory_protection()?;
         let base = self.const_base()?;
         let size = self.const_size()?;
-        let impl_register = self.impl_register();
+        let impl_register = self.impl_register(&vis_inside_mod);
 
         let impls = quote! {
             use std::{convert::TryInto, ops::{Index, IndexMut}};
@@ -109,11 +109,11 @@ impl RegisterMap {
         })
     }
 
-    fn impl_register(&self) -> TokenStream {
+    fn impl_register(&self, vis: &syn::Visibility) -> TokenStream {
         let impls = self
             .regs
             .iter()
-            .map(|reg| reg.impl_register(&self.args.base, self.args.endianness));
+            .map(|reg| reg.impl_register(&self.args.base, self.args.endianness, vis));
 
         quote! {
             #(#impls)*
@@ -265,7 +265,12 @@ impl Register {
         }
     }
 
-    fn impl_register(&self, base: &SizeKind, endianness: Endianness) -> TokenStream {
+    fn impl_register(
+        &self,
+        base: &SizeKind,
+        endianness: Endianness,
+        vis: &syn::Visibility,
+    ) -> TokenStream {
         let ty = &self.reg_attr.ty;
         let len = &self.reg_attr.len;
         let offset = &self.offset;
@@ -274,7 +279,7 @@ impl Register {
         let serialize = self.impl_serialize(endianness);
         let write = self.impl_write(endianness);
 
-        let helper_methods = self.impl_helper_methods(endianness);
+        let helper_methods = self.impl_helper(endianness, vis);
 
         let ident = &self.ident;
         let access_right = &self.reg_attr.access;
@@ -298,9 +303,9 @@ impl Register {
         }
     }
 
-    fn impl_helper_methods(&self, endianness: Endianness) -> TokenStream {
+    fn impl_helper(&self, endianness: Endianness, vis: &syn::Visibility) -> TokenStream {
         match &self.reg_attr.ty {
-            RegisterType::BitField(bf) => bf.impl_helper_methods(endianness),
+            RegisterType::BitField(bf) => bf.impl_helper(endianness, vis),
             _ => quote! {},
         }
     }
@@ -806,7 +811,7 @@ impl BitField {
         }
     }
 
-    fn impl_helper_methods(&self, endianness: Endianness) -> TokenStream {
+    fn impl_helper(&self, endianness: Endianness, vis: &syn::Visibility) -> TokenStream {
         let lsb = self.lsb(endianness);
         let msb = self.msb(endianness);
         let ty = &self.ty;
@@ -848,8 +853,14 @@ impl BitField {
             }
         };
 
+        let raw_lsb = &self.lsb;
+        let raw_msb = &self.msb;
+
         quote! {
             #mask
+
+            #vis const LSB: usize = #raw_lsb;
+            #vis const MSB: usize = #raw_msb;
 
             const fn min() -> #ty {
                 #min as #ty

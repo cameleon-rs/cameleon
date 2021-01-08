@@ -100,10 +100,14 @@ fn main() {
     assert_eq!(memory.read::<LE::U8Bit>().unwrap(), 0b1);
     memory.write::<LE::U8Bit>(0).unwrap();
     assert_eq!(memory.read::<LE::U8Bit>().unwrap(), 0b0);
+    assert_eq!(LE::U8Bit::LSB, 1);
+    assert_eq!(LE::U8Bit::MSB, 1);
 
     assert_eq!(memory.read::<LE::U8>().unwrap(), 0b1011);
     memory.write::<LE::U8>(0b0110).unwrap();
     assert_eq!(memory.read::<LE::U8>().unwrap(), 0b0110);
+    assert_eq!(LE::U8::LSB, 1);
+    assert_eq!(LE::U8::MSB, 4);
 
     assert_eq!(memory.read::<LE::U8Full>().unwrap(), 0xff);
     memory.write::<LE::U8Full>(0xb3).unwrap();
@@ -170,6 +174,8 @@ fn main() {
     assert_eq!(memory.read::<BE::U8>().unwrap(), 0b1011);
     memory.write::<BE::U8>(0b0110).unwrap();
     assert_eq!(memory.read::<BE::U8>().unwrap(), 0b0110);
+    assert_eq!(BE::U8::LSB, 4);
+    assert_eq!(BE::U8::MSB, 1);
 
     assert_eq!(memory.read::<BE::U8Full>().unwrap(), 0xff);
     memory.write::<BE::U8Full>(0xb3).unwrap();
