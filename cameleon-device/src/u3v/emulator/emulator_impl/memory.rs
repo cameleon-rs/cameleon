@@ -1,7 +1,13 @@
-use cameleon_impl::memory::{memory, register_map};
+use cameleon_impl::memory::{memory, register_map, Register};
 
-const SBRM_ADDRESS: u64 = 0xffff;
-const SIRM_ADDRESS: u64 = (SBRM::base() + SBRM::size()) as u64;
+use super::genapi;
+
+const ABRM_ADDRESS: usize = 0;
+const SBRM_ADDRESS: usize = 0xffff;
+
+const MANIFEST_TABLE_ADDRESS: usize = SBRM::base() + SBRM::size();
+const GENAPI_XML_ADDRESS: usize = ManifestTable::base() + ManifestTable::size();
+const GENAPI_XML_LENGTH: usize = genapi::GENAPI_XML.len();
 
 /// Offset | Value | Description.
 ///      0 |     1 | User Defined Name is supported.
@@ -63,9 +69,11 @@ const DEVICE_CONFIGURATION: &[u8] = &[
 pub(super) struct Memory {
     abrm: ABRM,
     sbrm: SBRM,
+    manifest_table: ManifestTable,
+    genapi_xml: GenApiXml,
 }
 
-#[register_map(base = 0, endianness = LE)]
+#[register_map(base = ABRM_ADDRESS, endianness = LE)]
 pub(super) enum ABRM {
     #[register(len = 2, access = RO, ty = u16)]
     GenCpVersionMinor = 1,
@@ -74,10 +82,10 @@ pub(super) enum ABRM {
     GenCpVersionMajor = 1,
 
     #[register(len = 64, access = RO, ty = String)]
-    ManufacturerName = "cameleon",
+    ManufacturerName = genapi::VENDOR_NAME,
 
     #[register(len = 64, access = RO, ty = String)]
-    ModelName = "cameleon model",
+    ModelName = genapi::MODEL_NAME,
 
     #[register(len = 64, access = RO, ty = String)]
     FamilyName = "cameleon family",
@@ -101,7 +109,7 @@ pub(super) enum ABRM {
     MaximumDeviceResponseTime = 500, // 500 ms.
 
     #[register(len = 8, access = RO, ty = u64)]
-    ManifestTableAddress, // TODO: Define manifest table address,
+    ManifestTableAddress = MANIFEST_TABLE_ADDRESS as u64,
 
     #[register(len = 8, access = RO, ty = u64)]
     SBRMAddress = SBRM_ADDRESS,
@@ -161,7 +169,7 @@ pub(super) enum SBRM {
     NumberOfStreamChannel = 1,
 
     #[register(len = 8, access = RO, ty = u64)]
-    SirmAddress = SIRM_ADDRESS,
+    SirmAddress, // TODO: Filled after SIMR register map is implemented.
 
     #[register(len = 4, access = RO, ty = u32)]
     SirmLength, // TODO: Filled after SIRM register map is implemented.
@@ -177,4 +185,55 @@ pub(super) enum SBRM {
 
     #[register(len=4, access = RO, ty=u32)]
     CurrentSpeed = 0b1000,
+}
+
+const MANIFEST_ENTRY0_BF_OFFSET: usize = (ManifestTable::GenICamFileVersionMajor::ADDRESS
+    + ManifestTable::GenICamFileVersionMajor::LENGTH)
+    - MANIFEST_TABLE_ADDRESS;
+
+#[register_map(base = MANIFEST_TABLE_ADDRESS, endianness = LE)]
+pub(super) enum ManifestTable {
+    #[register(len = 8, access = RO, ty = u64)]
+    EntryCount = 1,
+
+    // Manifest Entry 0 start.
+    #[register(len = 2, access = RO, ty = u16)]
+    GenICamFileVersionSubMinor = genapi::XML_SUBMINOR_VERSION as u16,
+
+    #[register(len = 1, access = RO, ty = u8)]
+    GenICamFileVersionMinor = genapi::XML_MINOR_VERSION as u8,
+
+    #[register(len = 1, access = RO, ty = u8)]
+    GenICamFileVersionMajor = genapi::XML_MAJOR_VERSION as u8,
+
+    #[register(len = 4, access = RO, ty = BitField<u32, LSB = 0, MSB = 2>, offset = MANIFEST_ENTRY0_BF_OFFSET)]
+    FileType = 0b000, // DeviceXML.
+
+    #[register(len = 4, access = RO, ty = BitField<u32, LSB = 10, MSB = 15>, offset = MANIFEST_ENTRY0_BF_OFFSET)]
+    FileFormat = 0b00000, // Uncompressed.
+
+    #[register(len = 4, access = RO, ty = BitField<u32, LSB = 16, MSB = 23>, offset = MANIFEST_ENTRY0_BF_OFFSET)]
+    SchemaVersionMinor = genapi::SCHEME_MINOR_VERSION as u32,
+
+    #[register(len = 4, access = RO, ty = BitField<u32, LSB = 24, MSB = 31>, offset = MANIFEST_ENTRY0_BF_OFFSET)]
+    SchemaVersionMajor = genapi::SCHEME_MAJOR_VERSION as u32,
+
+    #[register(len = 8, access = RO, ty = u64)]
+    RegisterAddress = GENAPI_XML_ADDRESS as u64,
+
+    #[register(len = 8, access = RO, ty = u64)]
+    FileSize = GENAPI_XML_LENGTH as u64,
+
+    #[register(len = 20, access = RO, ty = Bytes)]
+    Sha1Hash, // Hash is not available.
+
+    #[register(len = 20, access = NA, ty = Bytes)]
+    _Reserved,
+    // Manifest Entry 0 end.
+}
+
+#[register_map(base = GENAPI_XML_ADDRESS, endianness = LE)]
+pub(super) enum GenApiXml {
+    #[register(len = GENAPI_XML_LENGTH, access = RO, ty = String)]
+    Xml = genapi::GENAPI_XML,
 }

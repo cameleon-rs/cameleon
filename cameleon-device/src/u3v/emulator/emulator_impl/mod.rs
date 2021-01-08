@@ -5,6 +5,7 @@ mod device_pool;
 mod emulator_builder;
 mod event_module;
 mod fake_protocol;
+mod genapi;
 mod interface;
 mod memory;
 mod shared_queue;
