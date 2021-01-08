@@ -12,22 +12,21 @@ use crate::{
             u3v::{enumerate_u3v_device, U3VDeviceModule},
             Device, DeviceAccessStatus,
         },
+        genapi_common,
         port::*,
     },
     GenTlError, GenTlResult,
 };
 
-use super::{u3v_memory as memory, Interface};
-
-const INTERFACE_ID: &str = "Cameleon-U3V-Interface-Module";
+use super::{u3v_genapi as genapi, Interface};
+use genapi::GenApiReg;
 
 #[allow(clippy::vec_box)]
 pub(crate) struct U3VInterfaceModule {
-    vm: memory::Memory,
+    vm: genapi::Memory,
     port_info: PortInfo,
     xml_infos: Vec<XmlInfo>,
     is_opened: bool,
-
     devices: Vec<Box<Mutex<U3VDeviceModule>>>,
     event_queue: Arc<Mutex<VecDeque<MemoryEvent>>>,
 }
@@ -35,34 +34,42 @@ pub(crate) struct U3VInterfaceModule {
 impl U3VInterfaceModule {
     pub(crate) fn new() -> Self {
         let port_info = PortInfo {
-            id: INTERFACE_ID.into(),
-            vendor: memory::GenApi::vendor_name().into(),
-            model: memory::GenApi::model_name().into(),
-            tl_type: memory::GenApi::InterfaceType::USB3Vision.into(),
+            id: genapi::INTERFACE_ID.into(),
+            vendor: genapi::VENDOR_NAME.into(),
+            model: genapi::MODEL_NAME.into(),
+            tl_type: genapi::INTERFACE_TYPE,
             module_type: ModuleType::Interface,
             endianness: Endianness::LE,
             access: PortAccess::RW,
-            version: memory::GenApi::genapi_version(),
-            port_name: memory::GenApi::InterfacePort.into(),
+            version: semver::Version::new(
+                genapi::XML_MAJOR_VERSION,
+                genapi::XML_MINOR_VERSION,
+                genapi::XML_SUBMINOR_VERSION,
+            ),
+            port_name: genapi::PORT_NAME.into(),
         };
 
         let xml_info = XmlInfo {
             location: XmlLocation::RegisterMap {
-                address: memory::GenApi::xml_address(),
-                size: memory::GenApi::xml_length(),
+                address: genapi::GENAPI_XML_ADDRESS as u64,
+                size: genapi::GENAPI_XML_LENGTH,
             },
-            schema_version: memory::GenApi::schema_version(),
+            schema_version: semver::Version::new(
+                genapi_common::SCHEME_MAJOR_VERSION,
+                genapi_common::SCHEME_MINOR_VERSION,
+                genapi_common::SCHEME_SUBMINOR_VERSION,
+            ),
             file_version: semver::Version::new(
-                memory::GenApi::major_version(),
-                memory::GenApi::minor_version(),
-                memory::GenApi::subminor_version(),
+                genapi::XML_MAJOR_VERSION,
+                genapi::XML_MINOR_VERSION,
+                genapi::XML_SUBMINOR_VERSION,
             ),
             sha1_hash: None,
             compressed: CompressionType::Uncompressed,
         };
 
         let mut module = Self {
-            vm: memory::Memory::new(),
+            vm: genapi::Memory::new(),
             port_info,
             xml_infos: vec![xml_info],
             is_opened: false,
@@ -118,7 +125,7 @@ impl U3VInterfaceModule {
             }
 
             self.vm
-                .write::<memory::GenApi::DeviceSelectorMaxReg>(self.devices.len() as u32 - 1)
+                .write::<GenApiReg::DeviceSelectorMax>(self.devices.len() as u32 - 1)
                 .unwrap();
             self.handle_device_selector_change()?;
         }
@@ -145,13 +152,8 @@ impl U3VInterfaceModule {
     }
 
     fn initialize_vm(&mut self) {
-        use memory::GenApi;
-
-        self.vm
-            .write::<GenApi::InterfaceIDReg>(INTERFACE_ID.into())
-            .unwrap();
-        self.vm.write::<GenApi::DeviceSelectorMaxReg>(0).unwrap();
-        self.vm.write::<GenApi::DeviceSelectorReg>(0).unwrap();
+        self.vm.write::<GenApiReg::DeviceSelectorMax>(0).unwrap();
+        self.vm.write::<GenApiReg::DeviceSelector>(0).unwrap();
 
         self.register_observers();
     }
@@ -159,11 +161,11 @@ impl U3VInterfaceModule {
     fn register_observers(&mut self) {
         let device_update_observer = DeviceUpdateListRegObserver(self.event_queue.clone());
         self.vm
-            .register_observer::<memory::GenApi::DeviceUpdateListReg, _>(device_update_observer);
+            .register_observer::<GenApiReg::DeviceUpdateList, _>(device_update_observer);
 
         let device_selector_observer = DeviceSelectorRegObserver(self.event_queue.clone());
         self.vm
-            .register_observer::<memory::GenApi::DeviceSelectorReg, _>(device_selector_observer);
+            .register_observer::<GenApiReg::DeviceSelector, _>(device_selector_observer);
     }
 
     fn handle_events(&mut self) -> GenTlResult<()> {
@@ -184,9 +186,7 @@ impl U3VInterfaceModule {
     }
 
     fn handle_device_selector_change(&mut self) -> GenTlResult<()> {
-        use memory::GenApi;
-
-        let device_idx = self.vm.read::<GenApi::DeviceSelectorReg>().unwrap() as usize;
+        let device_idx = self.vm.read::<GenApiReg::DeviceSelector>().unwrap() as usize;
 
         if device_idx >= self.devices.len() {
             return Err(GenTlError::InvalidIndex);
@@ -196,18 +196,18 @@ impl U3VInterfaceModule {
         let device_info = device.device_info();
 
         self.vm
-            .write::<GenApi::DeviceIDReg>(device.port_info()?.id.to_owned())?;
+            .write::<GenApiReg::DeviceID>(device.port_info()?.id.to_owned())?;
 
         self.vm
-            .write::<GenApi::DeviceVendorNameReg>(device_info.vendor_name.to_owned())
+            .write::<GenApiReg::DeviceVendorName>(device_info.vendor_name.to_owned())
             .unwrap();
 
         self.vm
-            .write::<GenApi::DeviceModelNameReg>(device_info.model_name.to_owned())?;
+            .write::<GenApiReg::DeviceModelName>(device_info.model_name.to_owned())?;
 
-        let status: GenApi::DeviceAccessStatus = device.access_status().into();
+        let status: DeviceAccessStatus = device.access_status();
         self.vm
-            .write::<GenApi::DeviceAccessStatusReg>(status as u32)?;
+            .write::<GenApiReg::DeviceAccessStatus>(status as u32)?;
 
         Ok(())
     }
@@ -293,7 +293,7 @@ impl Interface for U3VInterfaceModule {
     }
 
     fn interface_id(&self) -> &str {
-        INTERFACE_ID
+        genapi::INTERFACE_ID
     }
 
     fn display_name(&self) -> &str {
@@ -301,7 +301,7 @@ impl Interface for U3VInterfaceModule {
     }
 
     fn tl_type(&self) -> TlType {
-        memory::GenApi::InterfaceType::USB3Vision.into()
+        genapi::INTERFACE_TYPE
     }
 
     fn mac_addr(&self) -> Option<[u8; 6]> {

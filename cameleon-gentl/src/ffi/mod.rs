@@ -351,15 +351,7 @@ impl CopyTo for imp::device::DeviceAccessStatus {
     type Destination = i32;
 
     fn copy_to(&self, dst: *mut Self::Destination, dst_size: *mut libc::size_t) -> GenTlResult<()> {
-        let val = match self {
-            Self::Unknown => 0,
-            Self::ReadWrite => 1,
-            Self::ReadOnly => 2,
-            Self::NoAccess => 3,
-            Self::Busy => 4,
-            Self::OpenReadWrite => 5,
-            Self::OpenReadOnly => 6,
-        };
+        let val = self as Self::Destination;
 
         val.copy_to(dst, dst_size)
     }

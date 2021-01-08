@@ -12,25 +12,39 @@ mod u3v_memory;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum DeviceAccessStatus {
     /// The current availability of the device is unknown.
-    Unknown,
+    Unknown = 0,
 
     /// The device is available to be opened for Read/Write access but it is currently not opened.
-    ReadWrite,
+    ReadWrite = 1,
 
     /// The device is available to be opened for Read access but is currently not opened.
-    ReadOnly,
+    ReadOnly = 2,
 
     /// The device is seen be the producer but is not available for access because it is not reachable.
-    NoAccess,
+    NoAccess = 3,
 
     /// The device is already owned/opened by another entity.
-    Busy,
+    Busy = 4,
 
     /// The device is already owned/opened by this GenTL Producer with RW access.
-    OpenReadWrite,
+    OpenReadWrite = 5,
 
     /// The device is already owned/opened by this GenTL Producer with RO access.
-    OpenReadOnly,
+    OpenReadOnly = 6,
+}
+
+impl DeviceAccessStatus {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::Unknown => "Unknown",
+            ReadWrite => "ReadWrite",
+            ReadOnly => "ReadOnly",
+            NoAccess => "NoAccess",
+            Busy => "Busy",
+            OpenReadWrite => "OpenReadWrite",
+            OpenReadOnly => "OpenReadOnly",
+        }
+    }
 }
 
 /// This enume defines different modes how a device is to be opened with the IFOpenDevice function.
