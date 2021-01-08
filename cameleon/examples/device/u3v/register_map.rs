@@ -108,26 +108,25 @@ fn main() {
     println!("current_speed: {:?}", sbrm.current_speed().unwrap());
 
     // Read manifest entries.
-    // TODO: Uncomment this after finish implementation of emulator memory.
-    // let manifest_table = abrm.manifest_table().unwrap();
-    // for (i, entry) in manifest_table.entries().unwrap().enumerate() {
-    //     println!("\n### Manifest Entry {}", i);
-    //     println!(
-    //         "GenICam file version: {}",
-    //         entry.genicam_file_version().unwrap()
-    //     );
-    //     println!("GenICam file address: {}", entry.file_address().unwrap());
-    //     println!("GenICam file size: {}", entry.file_size().unwrap());
+    let manifest_table = abrm.manifest_table().unwrap();
+    for (i, entry) in manifest_table.entries().unwrap().enumerate() {
+        println!("\n### Manifest Entry {}", i);
+        println!(
+            "GenICam file version: {}",
+            entry.genicam_file_version().unwrap()
+        );
+        println!("GenICam file address: {}", entry.file_address().unwrap());
+        println!("GenICam file size: {}", entry.file_size().unwrap());
 
-    //     let file_info = entry.file_info().unwrap();
-    //     println!(
-    //         "GenICam file compression type: {:?}",
-    //         file_info.compression_type().unwrap()
-    //     );
-    //     println!("GenICam file type: {:?}", file_info.file_type().unwrap());
-    //     println!(
-    //         "GenICam file schema version: {}",
-    //         file_info.schema_version()
-    //     );
-    // }
+        let file_info = entry.file_info().unwrap();
+        println!(
+            "GenICam file compression type: {:?}",
+            file_info.compression_type().unwrap()
+        );
+        println!("GenICam file type: {:?}", file_info.file_type().unwrap());
+        println!(
+            "GenICam file schema version: {}",
+            file_info.schema_version()
+        );
+    }
 }
