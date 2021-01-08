@@ -68,22 +68,23 @@ const PRODUCT_GUID: &str = "639290f8-043c-436d-b8d1-cb916e2928e9";
 const VERSION_GUID: &str = "fee92fd7-f388-44c7-bd07-c7f706bdc182";
 
 const GENAPI_XML: &str = formatcp!(
-    r#"<RegisterDescription
-    ModelName="{MODEL_NAME}"
-    VendorName="{VENDOR_NAME}"
-    StandardNameSpace="None"
-    SchemaMajorVersion="{SCHEME_MAJOR_VERSION}"
-    SchemaMinorVersion="{SCHEME_MINOR_VERSION}"
-    SchemaSubMinorVersion="{SCHEME_SUBMINOR_VERSION}"
-    MajorVersion="{XML_MAJOR_VERSION}"
-    MinorVersion="{XML_MINOR_VERSION}"
-    SubMinorVersion="{XML_SUBMINOR_VERSION}"
-    ToolTip="{TOOL_TIP}"
-    ProductGuid="{PRODUCT_GUID}"
-    VersionGuid="{VERSION_GUID}"
-    xmlns="http://www.genicam.org/GenApi/Version_1_1"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.genicam.org/GenApi/Version_1_1 http://www.genicam.org/GenApi/GenApiSchema_Version_1_1.xsd">
+    r#"<?xml version="1.0" encoding="UTF-8"?>
+<RegisterDescription
+ModelName="{MODEL_NAME}"
+VendorName="{VENDOR_NAME}"
+StandardNameSpace="None"
+SchemaMajorVersion="{SCHEME_MAJOR_VERSION}"
+SchemaMinorVersion="{SCHEME_MINOR_VERSION}"
+SchemaSubMinorVersion="{SCHEME_SUBMINOR_VERSION}"
+MajorVersion="{XML_MAJOR_VERSION}"
+MinorVersion="{XML_MINOR_VERSION}"
+SubMinorVersion="{XML_SUBMINOR_VERSION}"
+ToolTip="{TOOL_TIP}"
+ProductGuid="{PRODUCT_GUID}"
+VersionGuid="{VERSION_GUID}"
+xmlns="http://www.genicam.org/GenApi/Version_1_1"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://www.genicam.org/GenApi/Version_1_1 http://www.genicam.org/GenApi/GenApiSchema_Version_1_1.xsd">
 
     <Category Name="Root" NameSpace="Standard">
         <Description>Provides the Root of the GenICam features tree.</Description>
