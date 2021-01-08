@@ -182,20 +182,6 @@ thread_local! {
     }
 }
 
-impl crate::imp::port::TlType {
-    fn as_str(self) -> &'static str {
-        use super::imp::port::TlType::*;
-        match self {
-            CameraLink => "CL",
-            CameraLinkHS => "CLHS",
-            CoaXPress => "CXP",
-            GigEVision => "GEV",
-            USB3Vision => "U3V",
-            Mixed => "Mixed",
-        }
-    }
-}
-
 impl crate::imp::CharEncoding {
     fn as_raw(self) -> i32 {
         match self {
