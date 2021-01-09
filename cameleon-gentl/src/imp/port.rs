@@ -109,6 +109,19 @@ pub(crate) enum TlType {
     Mixed,
 }
 
+impl TlType {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::CameraLink => "CL",
+            Self::CameraLinkHS => "CLHS",
+            Self::CoaXPress => "CXP",
+            Self::GigEVision => "GEV",
+            Self::USB3Vision => "U3V",
+            Self::Mixed => "Mixed",
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 pub(crate) enum ModuleType {
     /// System Module.

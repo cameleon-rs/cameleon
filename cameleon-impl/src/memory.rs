@@ -1,4 +1,4 @@
-pub use cameleon_impl_macros::{genapi, memory, register_map};
+pub use cameleon_impl_macros::{memory, register_map};
 
 use thiserror::Error;
 
@@ -20,7 +20,7 @@ pub enum MemoryError {
 }
 
 pub mod prelude {
-    pub use super::{MemoryRead, MemoryWrite};
+    pub use super::{MemoryRead, MemoryWrite, Register};
 }
 
 pub trait MemoryRead {
@@ -66,16 +66,25 @@ pub enum AccessRight {
 }
 
 impl AccessRight {
-    pub fn is_readable(self) -> bool {
+    pub const fn is_readable(self) -> bool {
         self.as_num() & 0b1 == 1
     }
 
-    pub fn is_writable(self) -> bool {
+    pub const fn is_writable(self) -> bool {
         self.as_num() >> 1 == 1
     }
 
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::NA => "NA",
+            Self::RO => "RO",
+            Self::WO => "WO",
+            Self::RW => "RW",
+        }
+    }
+
     #[doc(hidden)]
-    pub fn as_num(self) -> u8 {
+    pub const fn as_num(self) -> u8 {
         match self {
             Self::NA => 0b00,
             Self::RO => 0b01,
@@ -191,46 +200,31 @@ impl MemoryProtection {
     }
 }
 
-#[doc(hidden)]
 pub trait Register {
     type Ty;
 
+    const ADDRESS: usize;
+    const LENGTH: usize;
+    const ACCESS_RIGHT: AccessRight;
+
     fn parse(data: &[u8]) -> MemoryResult<Self::Ty>;
     fn serialize(data: Self::Ty) -> MemoryResult<Vec<u8>>;
-    fn raw() -> RawRegister;
 
     fn write(data: Self::Ty, memory: &mut [u8]) -> MemoryResult<()> {
         let data = Self::serialize(data)?;
-        let range = Self::raw().range();
+        let range = Self::range();
+
         memory[range].copy_from_slice(data.as_slice());
         Ok(())
     }
 
     fn read(memory: &[u8]) -> MemoryResult<Self::Ty> {
-        let range = Self::raw().range();
+        let range = Self::range();
         Self::parse(&memory[range])
     }
-}
 
-/// Represents each register address and length.
-#[derive(Debug, Clone, Copy)]
-#[doc(hidden)]
-pub struct RawRegister {
-    /// Offset of the register.
-    pub offset: usize,
-    /// Length of the register.
-    pub len: usize,
-}
-
-impl RawRegister {
-    pub fn new(offset: usize, len: usize) -> Self {
-        Self { offset, len }
-    }
-
-    pub fn range(&self) -> std::ops::Range<usize> {
-        let start = self.offset;
-        let end = start + self.len;
-        start..end
+    fn range() -> std::ops::Range<usize> {
+        Self::ADDRESS..Self::ADDRESS + Self::LENGTH
     }
 }
 

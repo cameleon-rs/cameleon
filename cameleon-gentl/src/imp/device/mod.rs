@@ -1,36 +1,68 @@
-use std::sync::Mutex;
+use std::{convert::TryFrom, sync::Mutex};
 
-use crate::GenTlResult;
+use crate::{GenTlError, GenTlResult};
 
 pub(crate) mod u3v;
 
 use crate::imp::port::*;
 
-mod u3v_memory;
+mod u3v_genapi;
 
 /// The current accessibility of the device.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum DeviceAccessStatus {
     /// The current availability of the device is unknown.
-    Unknown,
+    Unknown = 0,
 
     /// The device is available to be opened for Read/Write access but it is currently not opened.
-    ReadWrite,
+    ReadWrite = 1,
 
     /// The device is available to be opened for Read access but is currently not opened.
-    ReadOnly,
+    ReadOnly = 2,
 
     /// The device is seen be the producer but is not available for access because it is not reachable.
-    NoAccess,
+    NoAccess = 3,
 
     /// The device is already owned/opened by another entity.
-    Busy,
+    Busy = 4,
 
     /// The device is already owned/opened by this GenTL Producer with RW access.
-    OpenReadWrite,
+    OpenReadWrite = 5,
 
     /// The device is already owned/opened by this GenTL Producer with RO access.
-    OpenReadOnly,
+    OpenReadOnly = 6,
+}
+
+impl DeviceAccessStatus {
+    pub(crate) const fn as_str(self) -> &'static str {
+        match self {
+            Self::Unknown => "Unknown",
+            Self::ReadWrite => "ReadWrite",
+            Self::ReadOnly => "ReadOnly",
+            Self::NoAccess => "NoAccess",
+            Self::Busy => "Busy",
+            Self::OpenReadWrite => "OpenReadWrite",
+            Self::OpenReadOnly => "OpenReadOnly",
+        }
+    }
+}
+
+impl TryFrom<i32> for DeviceAccessStatus {
+    type Error = GenTlError;
+    fn try_from(value: i32) -> GenTlResult<Self> {
+        match value {
+            _ if value == (Self::Unknown as i32) => Ok(Self::Unknown),
+            _ if value == (Self::ReadWrite as i32) => Ok(Self::ReadWrite),
+            _ if value == (Self::ReadOnly as i32) => Ok(Self::ReadOnly),
+            _ if value == (Self::NoAccess as i32) => Ok(Self::NoAccess),
+            _ if value == (Self::Busy as i32) => Ok(Self::Busy),
+            _ if value == (Self::OpenReadWrite as i32) => Ok(Self::OpenReadWrite),
+            _ if value == (Self::OpenReadOnly as i32) => Ok(Self::OpenReadOnly),
+            _ => Err(GenTlError::InvalidValue(
+                "Invalid value for DeviceAccessStatus".into(),
+            )),
+        }
+    }
 }
 
 /// This enume defines different modes how a device is to be opened with the IFOpenDevice function.

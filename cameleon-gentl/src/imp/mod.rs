@@ -3,6 +3,8 @@ pub(super) mod interface;
 pub(super) mod port;
 pub(super) mod system;
 
+mod genapi_common;
+
 use cameleon::device::DeviceError;
 use cameleon_impl::memory::MemoryError;
 

@@ -4,7 +4,7 @@ use crate::{imp::device::Device, imp::port::*, GenTlError, GenTlResult};
 
 pub(crate) mod u3v;
 
-mod u3v_memory;
+mod u3v_genapi;
 
 pub(crate) trait Interface: Port {
     fn open(&mut self) -> GenTlResult<()>;

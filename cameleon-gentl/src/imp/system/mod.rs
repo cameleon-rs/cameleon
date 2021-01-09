@@ -8,18 +8,21 @@ use cameleon::device::CompressionType;
 use cameleon_impl::memory::{prelude::*, MemoryObserver};
 
 use crate::{
-    imp::interface::{u3v::U3VInterfaceModule, Interface},
+    imp::{
+        genapi_common,
+        interface::{u3v::U3VInterfaceModule, Interface},
+    },
     GenTlResult,
 };
 
 use super::{port::*, *};
 
-mod memory;
+mod genapi;
 
 const NUM_INTERFACE: usize = 1;
 
 pub(crate) struct SystemModule {
-    vm: memory::Memory,
+    vm: genapi::Memory,
     port_info: PortInfo,
     xml_infos: Vec<XmlInfo>,
     system_info: SystemInfo,
@@ -32,52 +35,61 @@ pub(crate) struct SystemModule {
 impl SystemModule {
     pub(crate) fn new() -> Self {
         let port_info = PortInfo {
-            id: memory::GenApi::TLID.into(),
-            vendor: memory::GenApi::vendor_name().into(),
-            model: memory::GenApi::model_name().into(),
-            tl_type: memory::GenApi::TLType::Mixed.into(),
+            id: genapi::TLID.into(),
+            vendor: genapi::VENDOR_NAME.into(),
+            model: genapi::MODEL_NAME.into(),
+            tl_type: genapi::TL_TYPE,
             module_type: ModuleType::System,
             endianness: Endianness::LE,
             access: PortAccess::RW,
-            version: memory::GenApi::genapi_version(),
-            port_name: memory::GenApi::TLPort.into(),
+            version: semver::Version::new(
+                genapi::XML_MAJOR_VERSION,
+                genapi::XML_MINOR_VERSION,
+                genapi::XML_SUBMINOR_VERSION,
+            ),
+            port_name: genapi::PORT_NAME.into(),
         };
 
         let xml_info = XmlInfo {
             location: XmlLocation::RegisterMap {
-                address: memory::GenApi::xml_address(),
-                size: memory::GenApi::xml_length(),
+                address: genapi::GENAPI_XML_ADDRESS as u64,
+                size: genapi::GENAPI_XML_LENGTH,
             },
-            schema_version: memory::GenApi::schema_version(),
+            schema_version: semver::Version::new(
+                genapi_common::SCHEME_MAJOR_VERSION,
+                genapi_common::SCHEME_MINOR_VERSION,
+                genapi_common::SCHEME_SUBMINOR_VERSION,
+            ),
+
             file_version: semver::Version::new(
-                memory::GenApi::major_version(),
-                memory::GenApi::minor_version(),
-                memory::GenApi::subminor_version(),
+                genapi::XML_MAJOR_VERSION,
+                genapi::XML_MINOR_VERSION,
+                genapi::XML_SUBMINOR_VERSION,
             ),
             sha1_hash: None,
             compressed: CompressionType::Uncompressed,
         };
 
         let system_info = SystemInfo {
-            id: memory::GenApi::TLID.into(),
-            vendor: memory::GenApi::vendor_name().into(),
-            model: memory::GenApi::model_name().into(),
+            id: genapi::TLID.into(),
+            vendor: genapi::VENDOR_NAME.into(),
+            model: genapi::MODEL_NAME.into(),
             version: format!(
                 "{}.{}.{}",
-                memory::GenApi::major_version(),
-                memory::GenApi::minor_version(),
-                memory::GenApi::subminor_version()
+                genapi::XML_MAJOR_VERSION,
+                genapi::XML_MINOR_VERSION,
+                genapi::XML_SUBMINOR_VERSION,
             ),
-            tl_type: memory::GenApi::TLType::Mixed.into(),
+            tl_type: genapi::TL_TYPE,
             full_path: Self::full_path(),
-            display_name: memory::GenApi::tool_tip().into(),
+            display_name: genapi::TOOL_TIP.into(),
             encoding: CharEncoding::Ascii,
-            gentl_version_major: memory::GenApi::GenTLVersionMajor as u32,
-            gentl_version_minor: memory::GenApi::GenTLVersionMinor as u32,
+            gentl_version_major: genapi_common::GENTL_VERSION_MAJOR,
+            gentl_version_minor: genapi_common::GENTL_VERSION_MINOR,
         };
 
         let mut system_module = Self {
-            vm: memory::Memory::new(),
+            vm: genapi::Memory::new(),
             port_info,
             xml_infos: vec![xml_info],
             system_info,
@@ -135,19 +147,19 @@ impl SystemModule {
     }
 
     fn initialize_vm(&mut self) -> GenTlResult<()> {
-        use memory::GenApi;
+        use genapi::GenApiReg;
 
         let full_path = Self::full_path()
             .into_os_string()
             .into_string()
             .map_err(|e| GenTlError::Error(format!("{:?}", e)))?;
-        self.vm.write::<GenApi::TLPathReg>(full_path)?;
+        self.vm.write::<GenApiReg::TlPath>(full_path)?;
 
         // Initialize registers related to interface.
-        self.vm.write::<GenApi::InterfaceSelectorReg>(0)?;
+        self.vm.write::<GenApiReg::InterfaceSelector>(0)?;
         self.handle_interface_selector_change()?;
         self.vm
-            .write::<GenApi::InterfaceSelectorMaxReg>(NUM_INTERFACE as u32 - 1)?;
+            .write::<GenApiReg::InterfaceSelectorMax>(NUM_INTERFACE as u32 - 1)?;
 
         // Register observers that trigger events in response to memory write.
         self.register_observers();
@@ -161,17 +173,15 @@ impl SystemModule {
     }
 
     fn register_observers(&mut self) {
+        use genapi::GenApiReg;
+
         let interface_update_observer = InterfaceUpdateListRegObserver(self.event_queue.clone());
         self.vm
-            .register_observer::<memory::GenApi::InterfaceUpdateListReg, _>(
-                interface_update_observer,
-            );
+            .register_observer::<GenApiReg::InterfaceUpdateList, _>(interface_update_observer);
 
         let interface_selector_observer = InterfaceSelectorRegObserver(self.event_queue.clone());
         self.vm
-            .register_observer::<memory::GenApi::InterfaceSelectorReg, _>(
-                interface_selector_observer,
-            );
+            .register_observer::<GenApiReg::InterfaceSelector, _>(interface_selector_observer);
     }
 
     fn handle_events(&mut self) -> GenTlResult<()> {
@@ -191,9 +201,9 @@ impl SystemModule {
     }
 
     fn handle_interface_selector_change(&mut self) -> GenTlResult<()> {
-        use memory::GenApi;
+        use genapi::GenApiReg;
 
-        let interface_idx = self.vm.read::<GenApi::InterfaceSelectorReg>()? as usize;
+        let interface_idx = self.vm.read::<GenApiReg::InterfaceSelector>()? as usize;
 
         // Specified interface doesn't exist. In that case, just ignore.
         if interface_idx >= self.interfaces.len() {
@@ -204,7 +214,7 @@ impl SystemModule {
 
         let interface_id = interface.interface_id();
         self.vm
-            .write::<GenApi::InterfaceIDReg>(interface_id.into())?;
+            .write::<GenApiReg::InterfaceID>(interface_id.into())?;
 
         macro_rules! byte_array_to_int {
             ($array:expr, $array_size:literal, $result_ty: ty) => {{
@@ -220,25 +230,25 @@ impl SystemModule {
         if let Some(mac_addr) = interface.mac_addr() {
             let mac_addr = byte_array_to_int!(mac_addr, 6, u64);
             self.vm
-                .write::<GenApi::GevInterfaceMACAddressReg>(mac_addr)?
+                .write::<GenApiReg::GevInterfaceMACAddress>(mac_addr)?
         }
 
         if let Some(ip_addr) = interface.ip_addr() {
             let ip_addr = byte_array_to_int!(ip_addr.octets(), 4, u32);
             self.vm
-                .write::<GenApi::GevInterfaceDefaultIPAddressReg>(ip_addr)?
+                .write::<GenApiReg::GevInterfaceDefaultIPAddress>(ip_addr)?
         }
 
         if let Some(subnet_mask) = interface.subnet_mask() {
             let subnet_mask = byte_array_to_int!(subnet_mask.octets(), 4, u32);
             self.vm
-                .write::<GenApi::GevInterfaceDefaultSubnetMaskReg>(subnet_mask)?
+                .write::<GenApiReg::GevInterfaceDefaultSubnetMask>(subnet_mask)?
         }
 
         if let Some(gateway_addr) = interface.gateway_addr() {
             let gateway_addr = byte_array_to_int!(gateway_addr.octets(), 4, u32);
             self.vm
-                .write::<GenApi::GevInterfaceDefaultGatewayReg>(gateway_addr)?
+                .write::<GenApiReg::GevInterfaceDefaultGateway>(gateway_addr)?
         }
 
         Ok(())
@@ -334,7 +344,7 @@ impl MemoryObserver for InterfaceSelectorRegObserver {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use memory::GenApi;
+    use genapi::GenApiReg;
 
     #[test]
     fn test_initialize_with_u3v_interface() {
@@ -342,14 +352,14 @@ mod tests {
         assert_eq!(
             system_module
                 .vm
-                .read::<GenApi::InterfaceSelectorReg>()
+                .read::<GenApiReg::InterfaceSelector>()
                 .unwrap(),
             0
         );
 
         let u3v_interface = system_module.interfaces().next().unwrap();
         assert_eq!(
-            &system_module.vm.read::<GenApi::InterfaceIDReg>().unwrap(),
+            &system_module.vm.read::<GenApiReg::InterfaceID>().unwrap(),
             u3v_interface.lock().unwrap().interface_id()
         );
     }

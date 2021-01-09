@@ -43,7 +43,7 @@ pub type BuilderResult<T> = std::result::Result<T, BuilderError>;
 ///
 /// // Set model name and serial number, then build device.
 /// // Now the device pool has two devices.
-/// EmulatorBuilder::new().model_name("Cameleon Model").unwrap().serial_number("CAM1984").unwrap().build();
+/// EmulatorBuilder::new().user_defined_name("My Camera").unwrap().serial_number("CAM1984").unwrap().build();
 ///
 /// let devices = enumerate_devices().unwrap();
 /// assert_eq!(devices.len(), 2);
@@ -87,63 +87,13 @@ impl EmulatorBuilder {
     ///
     /// // Set model name and serial number, then build device.
     /// // Now the device pool has two devices.
-    /// EmulatorBuilder::new().model_name("Cameleon Model").unwrap().serial_number("CAM1984").unwrap().build();
+    /// EmulatorBuilder::new().user_defined_name("My Camera").unwrap().serial_number("CAM1984").unwrap().build();
     ///
     /// ```
     pub fn build(self) {
         let device_info = self.build_device_info();
         let device = Device::new(self.memory, device_info);
         DevicePool::with(|pool| pool.pool_and_run(device));
-    }
-
-    /// Setter of model name of the device. The data is flushed to ABRM segment of the device memory.
-    ///
-    /// If model name isn't set, default name is used.
-    ///
-    /// NOTE: Only ASCII string is accepted, and maximum string length is 64.
-    ///
-    /// # Errors
-    /// If name is not ASCII string or the length is larger than 64, then
-    /// [`BuilderError::InvalidString`] is returned.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use cameleon_device::u3v::EmulatorBuilder;
-    ///
-    /// assert!(EmulatorBuilder::new().model_name("my camera").is_ok());
-    /// assert!(EmulatorBuilder::new().model_name("私のカメラ").is_err());
-    /// ```
-    pub fn model_name(mut self, name: &str) -> BuilderResult<Self> {
-        self.memory
-            .write::<ABRM::UserDefinedName>(name.into())
-            .map_err(|e| BuilderError::InvalidString(format! {"{}", e}))?;
-        Ok(self)
-    }
-
-    /// Setter of family name of the device. The data is flushed to ABRM segment of the device memory.
-    ///
-    /// If family name isn't set, default name is used.
-    ///
-    /// NOTE: Only ASCII string is accepted, and maximum string length is 64.
-    ///
-    /// # Errors
-    /// If name is not ASCII string or the length is larger than 64, then
-    /// [`BuilderError::InvalidString`] is returned.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use cameleon_device::u3v::EmulatorBuilder;
-    ///
-    /// assert!(EmulatorBuilder::new().family_name("my camera family").is_ok());
-    /// assert!(EmulatorBuilder::new().family_name("私のカメラ家族").is_err());
-    /// ```
-    pub fn family_name(mut self, name: &str) -> BuilderResult<Self> {
-        self.memory
-            .write::<ABRM::UserDefinedName>(name.into())
-            .map_err(|e| BuilderError::InvalidString(format! {"{}", e}))?;
-        Ok(self)
     }
 
     /// Setter of serial number of the device. The data is flushed to ABRM segment of the device memory.

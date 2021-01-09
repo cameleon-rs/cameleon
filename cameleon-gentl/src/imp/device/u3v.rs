@@ -1,12 +1,16 @@
-use std::sync::Mutex;
+use std::{convert::TryFrom, sync::Mutex};
 
 use cameleon::device::u3v;
 use cameleon::device::CompressionType;
 use cameleon_impl::memory::prelude::*;
 
-use crate::{imp::port::*, GenTlError, GenTlResult};
+use crate::{
+    imp::{genapi_common, port::*},
+    GenTlError, GenTlResult,
+};
 
-use super::{u3v_memory as memory, Device, DeviceAccessStatus};
+use super::{u3v_genapi as genapi, Device, DeviceAccessStatus};
+use genapi::GenApiReg;
 
 pub(crate) fn enumerate_u3v_device() -> GenTlResult<Vec<U3VDeviceModule>> {
     Ok(u3v::enumerate_devices()?
@@ -17,7 +21,7 @@ pub(crate) fn enumerate_u3v_device() -> GenTlResult<Vec<U3VDeviceModule>> {
 }
 
 pub(crate) struct U3VDeviceModule {
-    vm: memory::Memory,
+    vm: genapi::Memory,
     port_info: PortInfo,
     xml_infos: Vec<XmlInfo>,
 
@@ -27,7 +31,7 @@ pub(crate) struct U3VDeviceModule {
     /// Current status of the device.  
     /// `DeviceAccessStatus` and `DeviceAccessStatusReg` in VM doesn't reflect this value while
     /// [`Interface::UpdateDeviceList`] is called as the GenTL specification describes.
-    current_status: memory::GenApi::DeviceAccessStatus,
+    current_status: super::DeviceAccessStatus,
 }
 
 // TODO: Implement methods for stream and event channel.
@@ -37,40 +41,48 @@ impl U3VDeviceModule {
 
         let port_info = PortInfo {
             id: device_info.guid.clone(),
-            vendor: memory::GenApi::vendor_name().into(),
-            model: memory::GenApi::model_name().into(),
-            tl_type: memory::GenApi::DeviceType::USB3Vision.into(),
-            module_type: ModuleType::Device,
+            vendor: genapi::VENDOR_NAME.into(),
+            model: genapi::MODEL_NAME.into(),
+            tl_type: genapi::DEVICE_TYPE,
+            module_type: ModuleType::Interface,
             endianness: Endianness::LE,
             access: PortAccess::RW,
-            version: memory::GenApi::genapi_version(),
-            port_name: memory::GenApi::DevicePort.into(),
+            version: semver::Version::new(
+                genapi::XML_MAJOR_VERSION,
+                genapi::XML_MINOR_VERSION,
+                genapi::XML_SUBMINOR_VERSION,
+            ),
+            port_name: genapi::PORT_NAME.into(),
         };
 
         let xml_info = XmlInfo {
             location: XmlLocation::RegisterMap {
-                address: memory::GenApi::xml_address(),
-                size: memory::GenApi::xml_length(),
+                address: genapi::GENAPI_XML_ADDRESS as u64,
+                size: genapi::GENAPI_XML_LENGTH,
             },
-            schema_version: memory::GenApi::schema_version(),
+            schema_version: semver::Version::new(
+                genapi_common::SCHEME_MAJOR_VERSION,
+                genapi_common::SCHEME_MINOR_VERSION,
+                genapi_common::SCHEME_SUBMINOR_VERSION,
+            ),
             file_version: semver::Version::new(
-                memory::GenApi::major_version(),
-                memory::GenApi::minor_version(),
-                memory::GenApi::subminor_version(),
+                genapi_common::SCHEME_MAJOR_VERSION,
+                genapi_common::SCHEME_MINOR_VERSION,
+                genapi_common::SCHEME_SUBMINOR_VERSION,
             ),
             sha1_hash: None,
             compressed: CompressionType::Uncompressed,
         };
 
         let mut dev = Self {
-            vm: memory::Memory::new(),
+            vm: genapi::Memory::new(),
             port_info,
             xml_infos: vec![xml_info],
 
             device,
             remote_device: None,
 
-            current_status: memory::GenApi::DeviceAccessStatus::Unknown,
+            current_status: super::DeviceAccessStatus::Unknown,
         };
 
         dev.initialize_vm()?;
@@ -86,7 +98,7 @@ impl U3VDeviceModule {
     /// See GenTL specification for more details.
     pub(crate) fn reflect_status(&mut self) {
         self.vm
-            .write::<memory::GenApi::DeviceAccessStatusReg>(self.current_status as u32)
+            .write::<GenApiReg::DeviceAccessStatus>(self.current_status as u32)
             .unwrap();
     }
 
@@ -95,11 +107,9 @@ impl U3VDeviceModule {
     /// calling [`U3VDeviceModule::access_status`].  
     /// See GenTL specification for more details.
     pub(crate) fn access_status(&self) -> DeviceAccessStatus {
-        let raw_value = self
-            .vm
-            .read::<memory::GenApi::DeviceAccessStatusReg>()
-            .unwrap();
-        memory::GenApi::DeviceAccessStatus::from_num(raw_value as isize).into()
+        let raw_value = self.vm.read::<GenApiReg::DeviceAccessStatus>().unwrap() as i32;
+        // Ok to unwrap because DeviceAccessStatus is RO register.
+        DeviceAccessStatus::try_from(raw_value).unwrap()
     }
 
     pub(crate) fn device_id(&self) -> &str {
@@ -107,7 +117,6 @@ impl U3VDeviceModule {
     }
 
     pub(crate) fn force_access_status(&mut self, status: DeviceAccessStatus) {
-        let status: memory::GenApi::DeviceAccessStatus = status.into();
         self.current_status = status;
         self.reflect_status();
     }
@@ -121,7 +130,7 @@ impl U3VDeviceModule {
     }
 
     fn is_opened(&self) -> bool {
-        let current_status: DeviceAccessStatus = self.current_status.into();
+        let current_status: DeviceAccessStatus = self.current_status;
         current_status.is_opened()
     }
 
@@ -130,15 +139,14 @@ impl U3VDeviceModule {
     }
 
     fn initialize_vm(&mut self) -> GenTlResult<()> {
-        use memory::GenApi;
         self.vm
-            .write::<GenApi::DeviceIDReg>(self.device_id().into())?;
+            .write::<GenApiReg::DeviceID>(self.device_id().into())?;
 
         let info = self.device.device_info();
         self.vm
-            .write::<GenApi::DeviceVendorNameReg>(info.vendor_name.clone())?;
+            .write::<GenApiReg::DeviceVendorName>(info.vendor_name.clone())?;
         self.vm
-            .write::<GenApi::DeviceModelNameReg>(info.model_name.clone())?;
+            .write::<GenApiReg::DeviceModelName>(info.model_name.clone())?;
         self.reflect_status();
 
         // TODO: Initialize registeres related to stream.
@@ -203,10 +211,10 @@ impl Device for U3VDeviceModule {
         self.remote_device = Some(Mutex::new(U3VRemoteDevice::new(ctrl_handle)?).into());
 
         self.current_status = match &res {
-            Ok(()) => memory::GenApi::DeviceAccessStatus::OpenReadWrite,
-            Err(GenTlError::AccessDenied) => memory::GenApi::DeviceAccessStatus::Busy,
-            Err(GenTlError::Io(..)) => memory::GenApi::DeviceAccessStatus::NoAccess,
-            _ => memory::GenApi::DeviceAccessStatus::Unknown,
+            Ok(()) => super::DeviceAccessStatus::OpenReadWrite,
+            Err(GenTlError::AccessDenied) => super::DeviceAccessStatus::Busy,
+            Err(GenTlError::Io(..)) => super::DeviceAccessStatus::NoAccess,
+            _ => super::DeviceAccessStatus::Unknown,
         };
 
         res
@@ -215,9 +223,9 @@ impl Device for U3VDeviceModule {
     fn close(&mut self) -> GenTlResult<()> {
         let res: GenTlResult<()> = self.device.close().map_err(Into::into);
         self.current_status = match res {
-            Ok(()) => memory::GenApi::DeviceAccessStatus::ReadWrite,
-            Err(GenTlError::Io(..)) => memory::GenApi::DeviceAccessStatus::NoAccess,
-            _ => memory::GenApi::DeviceAccessStatus::Unknown,
+            Ok(()) => super::DeviceAccessStatus::ReadWrite,
+            Err(GenTlError::Io(..)) => super::DeviceAccessStatus::NoAccess,
+            _ => super::DeviceAccessStatus::Unknown,
         };
 
         self.remote_device = None;
