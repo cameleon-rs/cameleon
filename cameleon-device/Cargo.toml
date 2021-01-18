@@ -17,7 +17,7 @@ rand = { version = "0.8.0" }
 cameleon-impl = { path = "../cameleon-impl" }
 
 # Dependencies for libusb.
-rusb = { version = "0.6.2", optional = true }
+rusb = { version = "0.7.0", optional = true }
 
 [dev-dependencies]
 trybuild = { version = "1.0.34" }
