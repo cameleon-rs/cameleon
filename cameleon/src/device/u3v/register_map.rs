@@ -6,18 +6,73 @@ use crate::device::{CompressionType, DeviceError, DeviceResult, GenICamFileType}
 
 use super::control_handle::ControlHandle;
 
-/// Represent Technology Agnostic Boot Register Map (ABRM), refer to GenCP specification for more
-/// information about ABRM.
+/// Represent Technology Agnostic Boot Register Map (`ABRM`), refer to `GenCP` specification for more
+/// information about `ABRM`.
 ///
 /// To maintain consistency with the device data, `Abrm` doesn't cache any data. It means
 /// that all methods of this struct cause communication with the device every time, thus the device
 /// is expected to be opened when methods are called.
+///
+/// # Examples
+///
+/// ```no_run
+/// use cameleon::device::u3v;
+/// // Enumerate devices connected to the host.
+/// let mut devices = u3v::enumerate_devices().unwrap();
+///
+/// // If no device is connected, return.
+/// if devices.is_empty() {
+///     return;
+/// }
+///
+/// let mut device = devices.pop().unwrap();
+/// // Open device.
+/// device.open().unwrap();
+///
+/// // Get Abrm.
+/// let abrm = device.abrm().unwrap();
+///
+/// // Read serial number from ABRM.
+/// let serial_number = abrm.serial_number().unwrap();
+/// println!("{}", serial_number);
+///
+/// // Check user defined name feature is supported.
+/// // If it is suppoted, read from and write to the register.
+/// let device_capability = abrm.device_capability().unwrap();
+/// if device_capability.is_user_defined_name_supported() {
+///     // Read from user defined name register.
+///     let user_defined_name = abrm.user_defined_name().unwrap().unwrap();
+///     println!("{}", user_defined_name);
+///
+///     // Write new name to the register.
+///     abrm.set_user_defined_name("cameleon").unwrap();
+/// }
+///
+/// ```
 pub struct Abrm<'a> {
     handle: &'a ControlHandle,
     device_capability: DeviceCapability,
 }
 
 impl<'a> Abrm<'a> {
+    /// Construct new `Abrm`.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use cameleon::device::u3v;
+    /// # let mut devices = u3v::enumerate_devices().unwrap();
+    /// # let mut device = devices.pop().unwrap();
+    /// # device.open().unwrap();
+    /// use cameleon::device::u3v::register_map::Abrm;
+    ///
+    /// // Construct `Abrm` from control handle of the device directly.
+    /// let control_handle = device.control_handle().unwrap();
+    /// let abrm = Abrm::new(&control_handle).unwrap();
+    ///
+    /// // Or `Device::abrm` can be used to construct it.
+    /// let abrm = device.abrm().unwrap();
+    /// ```
     pub fn new(handle: &'a ControlHandle) -> DeviceResult<Self> {
         let (capability_addr, capability_len) = abrm::DEVICE_CAPABILITY;
         let device_capability = read_register(handle, capability_addr, capability_len)?;
@@ -200,6 +255,11 @@ impl<'a> Abrm<'a> {
     }
 }
 
+/// Represent Technology Specific Boot Register Map (SBRM).
+///
+/// To maintain consistency with the device data, `Sbrm` doesn't cache any data. It means
+/// that all methods of this struct cause communication with the device every time, thus the device
+/// is expected to be opened when methods are called.
 pub struct Sbrm<'a> {
     handle: &'a ControlHandle,
     sbrm_addr: u64,
@@ -207,7 +267,10 @@ pub struct Sbrm<'a> {
 }
 
 impl<'a> Sbrm<'a> {
-    pub(super) fn new(handle: &'a ControlHandle, sbrm_addr: u64) -> DeviceResult<Self> {
+    /// Construct a `Sbrm`.
+    ///
+    /// [`Abrm::sbrm] can also be used to construct `Sbrm`.
+    pub fn new(handle: &'a ControlHandle, sbrm_addr: u64) -> DeviceResult<Self> {
         let (capability_offset, capability_len) = sbrm::U3VCP_CAPABILITY_REGISTER;
         let capability_addr = capability_offset + sbrm_addr;
         let capability = read_register(handle, capability_addr, capability_len)?;
@@ -219,6 +282,7 @@ impl<'a> Sbrm<'a> {
         })
     }
 
+    /// Version of U3V of the device.
     pub fn u3v_version(&self) -> DeviceResult<semver::Version> {
         let u3v_version: u32 = self.read_register(sbrm::U3V_VERSION)?;
         let u3v_version_minor = u3v_version & 0xff;
@@ -231,18 +295,31 @@ impl<'a> Sbrm<'a> {
         ))
     }
 
+    /// Maximum command transfer length in bytes.
+    ///
+    /// This value specifies the maximum byte length of the command which is sent from the host to
+    /// the device at one time.
     pub fn maximum_command_transfer_length(&self) -> DeviceResult<u32> {
         self.read_register(sbrm::MAXIMUM_COMMAND_TRANSFER_LENGTH)
     }
 
+    /// Maximum acknowledge transfer length in bytes.
+    ///
+    /// This value specifies the maximum byte length of the acknowledge command which is sent from the device to
+    /// the host at one time.
     pub fn maximum_acknowledge_trasfer_length(&self) -> DeviceResult<u32> {
         self.read_register(sbrm::MAXIMUM_ACKNOWLEDGE_TRANSFER_LENGTH)
     }
 
+    /// The number of stream channels the device has.
     pub fn number_of_stream_channel(&self) -> DeviceResult<u32> {
         self.read_register(sbrm::NUMBER_OF_STREAM_CHANNELS)
     }
 
+    /// The initial address of `Sirm`.
+    ///
+    /// NOTE: Some device doesn't support this feature.
+    /// Please refer to [`U3VCapablitiy`] to see whether the feature is available on the device.
     pub fn sirm_address(&self) -> DeviceResult<Option<u64>> {
         if self.capability.is_sirm_available() {
             self.read_register(sbrm::SIRM_ADDRESS).map(Some)
@@ -251,6 +328,10 @@ impl<'a> Sbrm<'a> {
         }
     }
 
+    /// The length of `Sirm`.
+    ///
+    /// NOTE: Some device doesn't support this feature.
+    /// Please refer to [`U3VCapablitiy`] to see whether the feature is available on the device.
     pub fn sirm_length(&self) -> DeviceResult<Option<u32>> {
         if self.capability.is_sirm_available() {
             self.read_register(sbrm::SIRM_LENGTH).map(Some)
@@ -259,6 +340,11 @@ impl<'a> Sbrm<'a> {
         }
     }
 
+    /// The initial address of `Eirm`.
+    ///
+    ///
+    /// NOTE: Some device doesn't support this feature.
+    /// Please refer to [`U3VCapablitiy`] to see whether the feature is available on the device.
     pub fn eirm_address(&self) -> DeviceResult<Option<u64>> {
         if self.capability.is_eirm_available() {
             self.read_register(sbrm::EIRM_ADDRESS).map(Some)
@@ -267,6 +353,10 @@ impl<'a> Sbrm<'a> {
         }
     }
 
+    /// The length of `Eirm`.
+    ///
+    /// NOTE: Some device doesn't support this feature.
+    /// Please refer to [`U3VCapablitiy`] to see whether the feature is available on the device.
     pub fn eirm_length(&self) -> DeviceResult<Option<u32>> {
         if self.capability.is_eirm_available() {
             self.read_register(sbrm::EIRM_LENGTH).map(Some)
@@ -275,6 +365,10 @@ impl<'a> Sbrm<'a> {
         }
     }
 
+    /// The initial address of `IIDC2`.
+    ///
+    /// NOTE: Some device doesn't support this feature.
+    /// Please refer to [`U3VCapablitiy`] to see whether the feature is available on the device.
     pub fn iidc2_address(&self) -> DeviceResult<Option<u64>> {
         if self.capability.is_iidc2_available() {
             self.read_register(sbrm::IIDC2_ADDRESS).map(Some)
@@ -283,10 +377,12 @@ impl<'a> Sbrm<'a> {
         }
     }
 
+    /// Current bus speed used to communication.
     pub fn current_speed(&self) -> DeviceResult<u3v::BusSpeed> {
         self.read_register(sbrm::CURRENT_SPEED)
     }
 
+    /// Indicate some optional features are supported or not.
     pub fn u3v_capability(&self) -> DeviceResult<U3VCapablitiy> {
         Ok(self.capability)
     }
