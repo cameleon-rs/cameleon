@@ -150,6 +150,27 @@ impl<'a> Abrm<'a> {
     ///
     /// NOTE: Some device doesn't support this feature.
     /// Please refer to [`DeviceCapability`] to see whether the feature is available on the device.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use cameleon::device::u3v;
+    /// # let mut devices = u3v::enumerate_devices().unwrap();
+    /// # let mut device = devices.pop().unwrap();
+    /// # device.open().unwrap();
+    /// let abrm = device.abrm().unwrap();
+    ///
+    /// // Check user defined name is supported.
+    /// let device_capability = abrm.device_capability().unwrap();
+    /// if !device_capability.is_user_defined_name_supported() {
+    ///     return;
+    /// }
+    ///
+    /// // Read user defined name.
+    /// let user_defined_name = abrm.user_defined_name().unwrap();
+    ///
+    /// println!("{:?}", user_defined_name);
+    /// ```
     pub fn user_defined_name(&self) -> DeviceResult<Option<String>> {
         if self.device_capability.is_user_defined_name_supported() {
             self.read_register(abrm::USER_DEFINED_NAME).map(Some)
@@ -166,6 +187,25 @@ impl<'a> Abrm<'a> {
     ///
     /// NOTE: Some device doesn't support this feature.
     /// Please refer to [`DeviceCapability`] to see whether the feature is available on the device.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use cameleon::device::u3v;
+    /// # let mut devices = u3v::enumerate_devices().unwrap();
+    /// # let mut device = devices.pop().unwrap();
+    /// # device.open().unwrap();
+    /// let abrm = device.abrm().unwrap();
+    ///
+    /// // Check user defined name is supported.
+    /// let device_capability = abrm.device_capability().unwrap();
+    /// if !device_capability.is_user_defined_name_supported() {
+    ///     return;
+    /// }
+    ///
+    /// // Write new name to the register.
+    /// abrm.set_user_defined_name("cameleon").unwrap();
+    /// ```
     pub fn set_user_defined_name(&self, name: &str) -> DeviceResult<()> {
         if !self.device_capability.is_user_defined_name_supported() {
             return Ok(());
@@ -175,11 +215,15 @@ impl<'a> Abrm<'a> {
     }
 
     /// The initial address of manifest table.
+    ///
+    /// To obtain [`ManifestTable`], it is easier to use [`Self::manifest_table`].
     pub fn manifest_table_address(&self) -> DeviceResult<u64> {
         self.read_register(abrm::MANIFEST_TABLE_ADDRESS)
     }
 
-    /// The initial address of Sbrm.
+    /// The initial address of `Sbrm`.
+    ///
+    /// To obtain [`Sbrm`], it is easier to use [`Self::sbrm`].
     pub fn sbrm_address(&self) -> DeviceResult<u64> {
         self.read_register(abrm::SBRM_ADDRESS)
     }
@@ -188,6 +232,23 @@ impl<'a> Abrm<'a> {
     ///
     /// Before calling this method, please make sure to call [`Self::set_timestamp_latch_bit`] that
     /// updates timestamp register.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use cameleon::device::u3v;
+    /// # let mut devices = u3v::enumerate_devices().unwrap();
+    /// # let mut device = devices.pop().unwrap();
+    /// # device.open().unwrap();
+    /// let abrm = device.abrm().unwrap();
+    ///
+    /// // In order to obtain current device internal clock,
+    /// // make sure to call `set_timestamp_latch_bit` to
+    /// // update timestamp register with current device internal clock.
+    /// abrm.set_timestamp_latch_bit().unwrap();
+    ///
+    /// let timestamp = abrm.timestamp();
+    /// ```
     pub fn timestamp(&self) -> DeviceResult<u64> {
         self.read_register(abrm::TIMESTAMP)
     }
@@ -231,11 +292,49 @@ impl<'a> Abrm<'a> {
     }
 
     /// Current configuration of the device.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use cameleon::device::u3v;
+    /// # let mut devices = u3v::enumerate_devices().unwrap();
+    /// # let mut device = devices.pop().unwrap();
+    /// # device.open().unwrap();
+    /// let abrm = device.abrm().unwrap();
+    ///
+    /// let configuration = abrm.device_configuration().unwrap();
+    /// if configuration.is_multi_event_enabled() {
+    ///     println!("Multi event is enabled")
+    /// } else {
+    ///     println!("Multi event is disabled")
+    /// }
+    /// ```
     pub fn device_configuration(&self) -> DeviceResult<DeviceConfiguration> {
         self.read_register(abrm::DEVICE_CONFIGURATION)
     }
 
     /// Write configuration to the device.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use cameleon::device::u3v;
+    /// # let mut devices = u3v::enumerate_devices().unwrap();
+    /// # let mut device = devices.pop().unwrap();
+    /// # device.open().unwrap();
+    /// let abrm = device.abrm().unwrap();
+    ///
+    /// // Check multi event feature is supported.
+    /// let capability = abrm.device_capability().unwrap();
+    /// if !capability.is_multi_event_supported() {
+    ///     return;
+    /// }
+    ///
+    /// // Enable multi event.
+    /// let mut configuration = abrm.device_configuration().unwrap();
+    /// configuration.set_multi_event_enable_bit();
+    /// abrm.write_device_configuration(&configuration).unwrap();
+    /// ```
     pub fn write_device_configuration(&self, config: &DeviceConfiguration) -> DeviceResult<()> {
         self.write_register(abrm::DEVICE_CONFIGURATION, config)
     }
