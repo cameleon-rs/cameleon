@@ -6,6 +6,12 @@ use crate::device::{CompressionType, DeviceError, DeviceResult, GenICamFileType}
 
 use super::control_handle::ControlHandle;
 
+/// Represent Technology Agnostic Boot Register Map (ABRM), refer to GenCP specification for more
+/// information about ABRM.
+///
+/// To maintain consistency with the device data, `Abrm` doesn't cache any data. It means
+/// that all methods of this struct cause communication with the device every time, thus the device
+/// is expected to be opened when methods are called.
 pub struct Abrm<'a> {
     handle: &'a ControlHandle,
     device_capability: DeviceCapability,
@@ -22,10 +28,12 @@ impl<'a> Abrm<'a> {
         })
     }
 
+    /// Return [`Sbrm`].
     pub fn sbrm(&self) -> DeviceResult<Sbrm> {
         Sbrm::new(self.handle, self.sbrm_address()?)
     }
 
+    /// Return [`ManifestTable`].
     pub fn manifest_table(&self) -> DeviceResult<ManifestTable> {
         Ok(ManifestTable::new(
             self.handle,
@@ -33,6 +41,7 @@ impl<'a> Abrm<'a> {
         ))
     }
 
+    /// GenCP version of the device.
     pub fn gencp_version(&self) -> DeviceResult<semver::Version> {
         let gencp_version: u32 = self.read_register(abrm::GENCP_VERSION)?;
         let gencp_version_minor = gencp_version & 0xff;
@@ -44,14 +53,20 @@ impl<'a> Abrm<'a> {
         ))
     }
 
+    /// Manufacture name of the device.
     pub fn manufacturer_name(&self) -> DeviceResult<String> {
         self.read_register(abrm::MANUFACTURER_NAME)
     }
 
+    /// Model name of the device.
     pub fn model_name(&self) -> DeviceResult<String> {
         self.read_register(abrm::MODEL_NAME)
     }
 
+    /// Family name of the device.  
+    ///
+    /// NOTE: Some device doesn't support this feature.
+    /// Please refer to [`DeviceCapability`] to see whether the feature is available on the device.
     pub fn family_name(&self) -> DeviceResult<Option<String>> {
         if self.device_capability.is_family_name_supported() {
             self.read_register(abrm::FAMILY_NAME).map(Some)
@@ -60,18 +75,26 @@ impl<'a> Abrm<'a> {
         }
     }
 
+    /// Device version, this information represents manufacturer specific information.
     pub fn device_version(&self) -> DeviceResult<String> {
         self.read_register(abrm::DEVICE_VERSION)
     }
 
+    /// Manufacturer info of the device, this information represents manufacturer specific
+    /// information.
     pub fn manufacturer_info(&self) -> DeviceResult<String> {
         self.read_register(abrm::MANUFACTURER_INFO)
     }
 
+    /// Serial number of the device.
     pub fn serial_number(&self) -> DeviceResult<String> {
         self.read_register(abrm::SERIAL_NUMBER)
     }
 
+    /// User defined name of the device.
+    ///
+    /// NOTE: Some device doesn't support this feature.
+    /// Please refer to [`DeviceCapability`] to see whether the feature is available on the device.
     pub fn user_defined_name(&self) -> DeviceResult<Option<String>> {
         if self.device_capability.is_user_defined_name_supported() {
             self.read_register(abrm::USER_DEFINED_NAME).map(Some)
@@ -80,6 +103,14 @@ impl<'a> Abrm<'a> {
         }
     }
 
+    /// Set user defined name of the device.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - A user defined name. The encoding must be ascii and the length must be less than 64.
+    ///
+    /// NOTE: Some device doesn't support this feature.
+    /// Please refer to [`DeviceCapability`] to see whether the feature is available on the device.
     pub fn set_user_defined_name(&self, name: &str) -> DeviceResult<()> {
         if !self.device_capability.is_user_defined_name_supported() {
             return Ok(());
@@ -88,26 +119,40 @@ impl<'a> Abrm<'a> {
         self.write_register(abrm::USER_DEFINED_NAME, name)
     }
 
+    /// The initial address of manifest table.
     pub fn manifest_table_address(&self) -> DeviceResult<u64> {
         self.read_register(abrm::MANIFEST_TABLE_ADDRESS)
     }
 
+    /// The initial address of Sbrm.
     pub fn sbrm_address(&self) -> DeviceResult<u64> {
         self.read_register(abrm::SBRM_ADDRESS)
     }
 
+    /// Timestamp that represents device internal clock in ns.
+    ///
+    /// Before calling this method, please make sure to call [`Self::set_timestamp_latch_bit`] that
+    /// updates timestamp register.
     pub fn timestamp(&self) -> DeviceResult<u64> {
         self.read_register(abrm::TIMESTAMP)
     }
 
+    /// Update timestamp register by set 1 to `timestamp_latch`.
     pub fn set_timestamp_latch_bit(&self) -> DeviceResult<()> {
         self.write_register(abrm::TIMESTAMP_LATCH, 1u32)
     }
 
+    /// Time stamp increment that indicates the ns/tick of the device internal clock.
+    ///
+    /// For example a value of 1000 indicates the device clock runs at 1MHz.
     pub fn timestamp_increment(&self) -> DeviceResult<u64> {
         self.read_register(abrm::TIMESTAMP_INCREMENT)
     }
 
+    /// Device software version.
+    ///
+    /// NOTE: Some device doesn't support this feature.
+    /// Please refer to [`DeviceCapability`] to see whether the feature is available on the device.
     pub fn device_software_interface_version(&self) -> DeviceResult<Option<String>> {
         if self
             .device_capability
@@ -120,18 +165,22 @@ impl<'a> Abrm<'a> {
         }
     }
 
+    /// Maximum device response time.
     pub fn maximum_device_response_time(&self) -> DeviceResult<Duration> {
         self.read_register(abrm::MAXIMUM_DEVICE_RESPONSE_TIME)
     }
 
+    /// Device capability.
     pub fn device_capability(&self) -> DeviceResult<DeviceCapability> {
         Ok(self.device_capability)
     }
 
+    /// Current configuration of the device.
     pub fn device_configuration(&self) -> DeviceResult<DeviceConfiguration> {
         self.read_register(abrm::DEVICE_CONFIGURATION)
     }
 
+    /// Write configuration to the device.
     pub fn write_device_configuration(&self, config: &DeviceConfiguration) -> DeviceResult<()> {
         self.write_register(abrm::DEVICE_CONFIGURATION, config)
     }
@@ -375,30 +424,39 @@ macro_rules! unset_bit {
     };
 }
 
+/// Configuration of the device.
 #[derive(Clone, Copy)]
 pub struct DeviceConfiguration(u64);
 impl DeviceConfiguration {
+    /// Indicate multi event is enabled on the device.
     pub fn is_multi_event_enabled(&self) -> bool {
         is_bit_set!(&self.0, 1)
     }
 
-    pub fn enable_multi_event(&mut self) {
+    /// Set multi event enable bit.
+    /// To reflect the configuration change, call [`Abrm::write_device_configuration`].
+    pub fn set_multi_event_enable_bit(&mut self) {
         set_bit!(self.0, 1)
     }
 
+    /// Unset bit multi event of the device.
+    /// To reflect the configuration change, call [`Abrm::write_device_configuration`].
     pub fn disable_multi_event(&mut self) {
         unset_bit!(self.0, 1)
     }
 }
 
+/// Indicate some optional features are supported or not.
 #[derive(Clone, Copy)]
 pub struct DeviceCapability(u64);
 
 impl DeviceCapability {
+    /// Indicate whether use defined name is supported or not.
     pub fn is_user_defined_name_supported(&self) -> bool {
         is_bit_set!(&self.0, 0)
     }
 
+    /// Indicate whether family name is supported or not.
     pub fn is_family_name_supported(&self) -> bool {
         is_bit_set!(&self.0, 8)
     }
