@@ -359,6 +359,33 @@ impl<'a> Abrm<'a> {
 /// To maintain consistency with the device data, `Sbrm` doesn't cache any data. It means
 /// that all methods of this struct cause communication with the device every time, thus the device
 /// is expected to be opened when methods are called.
+///
+/// # Examples
+///
+/// ```no_run
+/// use cameleon::device::u3v;
+/// // Enumerate devices connected to the host.
+/// let mut devices = u3v::enumerate_devices().unwrap();
+///
+/// // If no device is connected, return.
+/// if devices.is_empty() {
+///     return;
+/// }
+///
+/// let mut device = devices.pop().unwrap();
+/// // Open device.
+/// device.open().unwrap();
+///
+/// // Get Abrm.
+/// let abrm = device.abrm().unwrap();
+///
+/// // Get Sbrm from Abrm.
+/// let sbrm = abrm.sbrm().unwrap();
+///
+/// // Get U3V version of the device.
+/// let u3v_version = sbrm.u3v_version().unwrap();
+/// println!("{}", u3v_version);
+/// ```
 pub struct Sbrm<'a> {
     handle: &'a ControlHandle,
     sbrm_addr: u64,
@@ -366,9 +393,9 @@ pub struct Sbrm<'a> {
 }
 
 impl<'a> Sbrm<'a> {
-    /// Construct a `Sbrm`.
+    /// Construct new `Sbrm`.
     ///
-    /// [`Abrm::sbrm] can also be used to construct `Sbrm`.
+    /// To construct `Sbrm`, it is easier to call [`Abrm::sbrm].
     pub fn new(handle: &'a ControlHandle, sbrm_addr: u64) -> DeviceResult<Self> {
         let (capability_offset, capability_len) = sbrm::U3VCP_CAPABILITY_REGISTER;
         let capability_addr = capability_offset + sbrm_addr;
