@@ -1,6 +1,6 @@
 //! U3V device register classes.
 //!
-//! This module abstracts phicical configulation of the device and provides an easy access to
+//! This module abstracts physical configuration of the device and provides an easy access to
 //! its registers.
 //!
 //! # Examples
@@ -563,18 +563,41 @@ impl<'a> Sbrm<'a> {
     }
 }
 
+/// `ManifestTable` provides iterator of [`ManifestEntry`].
+///
+/// # Examples
+/// ```no_run
+/// # use cameleon::device::u3v;
+/// # let mut devices = u3v::enumerate_devices().unwrap();
+/// # let mut device = devices.pop().unwrap();
+/// # device.open().unwrap();
+/// // Get Abrm.
+/// let abrm = device.abrm().unwrap();
+///
+/// // Get manifest table.
+/// let manifest_table = abrm.manifest_table().unwrap();
+///
+/// // Iterate over entry.
+/// for entry in manifest_table.entries().unwrap() {
+///     // ...
+/// }
+/// ```
 pub struct ManifestTable<'a> {
     handle: &'a ControlHandle,
     manifest_address: u64,
 }
 
 impl<'a> ManifestTable<'a> {
+    /// Construct `ManifestTable` from its initial address. It may be easier to call
+    /// [`Abrm::manifest_table`]
     pub fn new(handle: &'a ControlHandle, manifest_address: u64) -> Self {
         Self {
             handle,
             manifest_address,
         }
     }
+
+    /// Return iterator of [`ManifestEntry`].
     pub fn entries(&self) -> DeviceResult<impl Iterator<Item = ManifestEntry<'a>>> {
         let entry_num: u64 = self.read_register((0, 8))?;
         let first_entry_addr = self.manifest_address + 8;
@@ -594,16 +617,40 @@ impl<'a> ManifestTable<'a> {
     }
 }
 
+/// Manifest entry describes GenApi XML properties.
+/// # Examples
+///
+/// ```no_run
+/// # use cameleon::device::u3v;
+/// # let mut devices = u3v::enumerate_devices().unwrap();
+/// # let mut device = devices.pop().unwrap();
+/// # device.open().unwrap();
+/// // Get Abrm.
+/// let abrm = device.abrm().unwrap();
+///
+/// // Get first manifest entry.
+/// let manifest_table = abrm.manifest_table().unwrap();
+/// let entry = manifest_table.entries().unwrap().next().unwrap();
+///
+/// // Get XML file address and length.
+/// let (address, len) = (entry.file_address().unwrap(), entry.file_size().unwrap());
+///
+/// // Get GenICam file version.
+/// let file_version = entry.genicam_file_version().unwrap();
+/// ```
 pub struct ManifestEntry<'a> {
     entry_addr: u64,
     handle: &'a ControlHandle,
 }
 
 impl<'a> ManifestEntry<'a> {
+    /// Construct `ManifestEntry` from its initial address.
+    /// Using [`ManifestTable::entries`] is recommended to obtain `ManifestEntry`.
     pub fn new(entry_addr: u64, handle: &'a ControlHandle) -> Self {
         Self { entry_addr, handle }
     }
 
+    /// GenICam file version.
     pub fn genicam_file_version(&self) -> DeviceResult<semver::Version> {
         let file_version: u32 = self.read_register(manifest_entry::GENICAM_FILE_VERSION)?;
         let subminor = file_version & 0xff;
@@ -687,6 +734,27 @@ macro_rules! unset_bit {
 }
 
 /// Configuration of the device.
+///
+/// # Examples
+///
+/// ```no_run
+/// # use cameleon::device::u3v;
+/// # let mut devices = u3v::enumerate_devices().unwrap();
+/// # let mut device = devices.pop().unwrap();
+/// # device.open().unwrap();
+/// let abrm = device.abrm().unwrap();
+///
+/// // Check multi event feature is supported.
+/// let capability = abrm.device_capability().unwrap();
+/// if !capability.is_multi_event_supported() {
+///     return;
+/// }
+///
+/// // Enable multi event by setting configuration.
+/// let mut configuration = abrm.device_configuration().unwrap();
+/// configuration.set_multi_event_enable_bit();
+/// abrm.write_device_configuration(&configuration).unwrap();
+/// ```
 #[derive(Clone, Copy)]
 pub struct DeviceConfiguration(u64);
 impl DeviceConfiguration {
