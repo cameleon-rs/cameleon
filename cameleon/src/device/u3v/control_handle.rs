@@ -25,50 +25,128 @@ const INITIAL_MAXIMUM_CMD_LENGTH: u32 = 128;
 const INITIAL_MAXIMUM_ACK_LENGTH: u32 = 128;
 
 /// Thread safe control handle of the device.
+///
+/// This handle provides low level API to read and write data from the device.  
+/// See [`ControlHandle::abrm`] and [`register_map`](super::register_map) which provide more
+/// convenient API to communicate with the device.
+///
+///
+/// # Examples
+///
+/// ```no_run
+/// use cameleon::device::u3v::enumerate_devices;
+///
+/// // Enumerate devices connected to the host.
+/// let mut devices = enumerate_devices().unwrap();
+///
+/// // If no device is found, return.
+/// if devices.is_empty() {
+///     return;
+/// }
+///
+/// // Make sure to open the device to obtain control handle.
+/// let mut device = devices.pop().unwrap();
+/// device.open().unwrap();
+///
+/// // Obtain control handle.
+/// let handle = device.control_handle().unwrap();
+///
+/// // Read 64bytes from address 0x0184.
+/// let address = 0x0184;
+/// let mut buffer = vec![0; 64];
+/// handle.read_mem(address, &mut buffer).unwrap();
+/// ```
 #[derive(Clone)]
 pub struct ControlHandle {
     inner: Arc<Mutex<ControlHandleImpl>>,
 }
 
 impl ControlHandle {
-    /// Read data from the device's memory.
+    /// Read data from the device's memory.  
     /// Read length is same as `buf.len()`.
+    ///
+    /// See [`ControlHandle::abrm`] and [`register_map`](super::register_map) which provide more
+    /// convenient API to communicate with the device.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use cameleon::device::u3v::enumerate_devices;
+    /// # let mut devices = enumerate_devices().unwrap();
+    /// # if devices.is_empty() {
+    /// #     return;
+    /// # }
+    /// # let mut device = devices.pop().unwrap();
+    /// # device.open().unwrap();
+    /// let handle = device.control_handle().unwrap();
+    /// // Read 64bytes from address 0x0184.
+    /// let address = 0x0184;
+    /// let mut buffer = vec![0; 64];
+    /// handle.read_mem(address, &mut buffer).unwrap();
+    /// ```
     pub fn read_mem(&self, address: u64, buf: &mut [u8]) -> DeviceResult<()> {
         self.inner.lock().unwrap().read_mem(address, buf)
     }
 
     /// Write data to the device's memory.
+    ///
+    /// See [`ControlHandle::abrm`] and [`register_map`](super::register_map) which provide more
+    /// convenient API to communicate with the device.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use cameleon::device::u3v::enumerate_devices;
+    ///
+    /// # // Enumerate devices connected to the host.
+    /// # let mut devices = enumerate_devices().unwrap();
+    /// # // If no device is found, return.
+    /// # if devices.is_empty() {
+    /// #     return;
+    /// # }
+    /// # // Make sure to open the device to obtain control handle.
+    /// # let mut device = devices.pop().unwrap();
+    /// # device.open().unwrap();
+    /// let handle = device.control_handle().unwrap();
+    ///
+    /// // Write b"Hello\0" to the address 0x0184.
+    /// let address = 0x0184;
+    /// let data = b"Hello\0";
+    /// handle.write_mem(address, data).unwrap();
+    /// ```
     pub fn write_mem(&self, address: u64, data: &[u8]) -> DeviceResult<()> {
         self.inner.lock().unwrap().write_mem(address, data)
     }
 
-    /// Capacity of the buffer which is used for serializing/deserializing packet.  
+    /// Capacity of internal buffer which is used for serializing/deserializing packet.  
     /// This buffer automatically extend according to packet length.
     pub fn buffer_capacity(&self) -> usize {
         self.inner.lock().unwrap().buffer_capacity()
     }
 
-    /// Resize the capacity of the buffer which is used for serializing/deserializing packet.  
+    /// Resize the capacity of internal buffer which is used for serializing/deserializing packet.  
     /// This buffer automatically extend according to packet length.
     pub fn resize_buffer(&self, size: usize) {
         self.inner.lock().unwrap().resize_buffer(size)
     }
 
-    /// Is control handle opened.
+    /// Return `true` if the device is opened.
     pub fn is_opened(&self) -> bool {
         self.inner.lock().unwrap().is_opened()
     }
 
     /// Timeout duration of each transaction between device.
+    ///
     /// NOTE: [`ControlHandle::read_mem`] and [`ControlHandle::write_mem`] may send multiple
-    /// requests in a single call.
+    /// requests in a single call. In that case, Timeout is reflected to each request.
     pub fn timeout_duration(&self) -> Duration {
         self.inner.lock().unwrap().config.timeout_duration
     }
 
     /// Set timeout duration of each transaction between device.
+    ///
     /// NOTE: [`ControlHandle::read_mem`] and [`ControlHandle::write_mem`] may send multiple
-    /// requests in a single call.
+    /// requests in a single call. In that case, Timeout is reflected to each request.
     ///
     /// In normal use case, no need to modify timeout duration.
     pub fn set_timeout_duration(&self, duration: Duration) {
@@ -81,6 +159,7 @@ impl ControlHandle {
         self.inner.lock().unwrap().config.retry_count
     }
 
+    /// Return [`Abrm`].
     pub fn abrm(&self) -> DeviceResult<Abrm> {
         Abrm::new(self)
     }
