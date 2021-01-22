@@ -1,3 +1,43 @@
+//! U3V device register classes.
+//!
+//! This module abstracts phicical configulation of the device and provides an easy access to
+//! its registers.
+//!
+//! # Examples
+//!
+//! ```no_run
+//! use cameleon::device::u3v;
+//! // Enumerate devices connected to the host.
+//! let mut devices = u3v::enumerate_devices().unwrap();
+//!
+//! // If no device is connected, return.
+//! if devices.is_empty() {
+//!     return;
+//! }
+//!
+//! let mut device = devices.pop().unwrap();
+//! // Open device.
+//! device.open().unwrap();
+//!
+//! // Get Abrm.
+//! let abrm = device.abrm().unwrap();
+//!
+//! // Read serial number from ABRM.
+//! let serial_number = abrm.serial_number().unwrap();
+//! println!("{}", serial_number);
+//!
+//! // Check user defined name feature is supported.
+//! // If it is suppoted, read from and write to the register.
+//! let device_capability = abrm.device_capability().unwrap();
+//! if device_capability.is_user_defined_name_supported() {
+//!     // Read from user defined name register.
+//!     let user_defined_name = abrm.user_defined_name().unwrap().unwrap();
+//!     println!("{}", user_defined_name);
+//!
+//!     // Write new name to the register.
+//!     abrm.set_user_defined_name("cameleon").unwrap();
+//! }
+//! ```
 use std::{convert::TryInto, time::Duration};
 
 use cameleon_device::u3v::{self, register_map::*};
@@ -84,12 +124,12 @@ impl<'a> Abrm<'a> {
     }
 
     /// Return [`Sbrm`].
-    pub fn sbrm(&self) -> DeviceResult<Sbrm> {
+    pub fn sbrm(&self) -> DeviceResult<Sbrm<'a>> {
         Sbrm::new(self.handle, self.sbrm_address()?)
     }
 
     /// Return [`ManifestTable`].
-    pub fn manifest_table(&self) -> DeviceResult<ManifestTable> {
+    pub fn manifest_table(&self) -> DeviceResult<ManifestTable<'a>> {
         Ok(ManifestTable::new(
             self.handle,
             self.manifest_table_address()?,
@@ -669,6 +709,32 @@ impl DeviceConfiguration {
 }
 
 /// Indicate some optional features are supported or not.
+///
+/// # Examples
+///
+/// ```no_run
+/// # use cameleon::device::u3v;
+/// # let mut devices = u3v::enumerate_devices().unwrap();
+/// # let mut device = devices.pop().unwrap();
+/// # device.open().unwrap();
+/// // Get Abrm.
+/// let abrm = device.abrm().unwrap();
+///
+/// // Get Device Capability of the device.
+/// let device_capability = abrm.device_capability().unwrap();
+///
+/// println!("Is user defined name supported: {}",
+///     device_capability.is_user_defined_name_supported());
+///
+/// println!("Is family name supported: {}",
+///     device_capability.is_family_name_supported());
+///
+/// println!("Is multi event supported: {}",
+///     device_capability.is_multi_event_supported());
+///
+/// println!("Is device software interface version suported: {}",
+///     device_capability.is_device_software_interface_version_supported());
+/// ```
 #[derive(Clone, Copy)]
 pub struct DeviceCapability(u64);
 
@@ -699,25 +765,79 @@ impl DeviceCapability {
     }
 }
 
+/// Indicate some optional U3V specific features are supported or not.
+///
+/// # Examples
+///
+/// ```no_run
+/// # use cameleon::device::u3v;
+/// # let mut devices = u3v::enumerate_devices().unwrap();
+/// # let mut device = devices.pop().unwrap();
+/// # device.open().unwrap();
+/// // Get Sbrm.
+/// let sbrm = device.abrm().unwrap().sbrm().unwrap();
+/// let u3v_capability = sbrm.u3v_capability().unwrap();
+///
+/// // Get U3V Capability of the device.
+/// let device_capability = sbrm.u3v_capability().unwrap();
+///
+/// println!("Is SIRM available: {}",
+///     device_capability.is_sirm_available());
+///
+/// println!("Is EIRM available: {}",
+///     device_capability.is_eirm_available());
+///
+/// println!("Is iidc2 available: {}",
+///     device_capability.is_iidc2_available());
+///
+/// ```
 #[derive(Clone, Copy)]
 pub struct U3VCapablitiy(u64);
 
 impl U3VCapablitiy {
-    fn is_sirm_available(&self) -> bool {
+    /// Indicate whether SIRM is available or not.
+    pub fn is_sirm_available(&self) -> bool {
         is_bit_set!(&self.0, 0)
     }
 
-    fn is_eirm_available(&self) -> bool {
+    /// Indicate whether EIRM is available or not.
+    pub fn is_eirm_available(&self) -> bool {
         is_bit_set!(&self.0, 1)
     }
 
-    fn is_iidc2_available(&self) -> bool {
+    /// Indicate whether IIDC2 is available or not.
+    pub fn is_iidc2_available(&self) -> bool {
         is_bit_set!(&self.0, 2)
     }
 }
 
+/// XML file information.
+///
+/// # Examples
+///
+/// ```no_run
+/// # use cameleon::device::u3v;
+/// # let mut devices = u3v::enumerate_devices().unwrap();
+/// # let mut device = devices.pop().unwrap();
+/// # device.open().unwrap();
+/// // Get Abrm.
+/// let abrm = device.abrm().unwrap();
+///
+/// // Get first manifest entry.
+/// let manifest_table = abrm.manifest_table().unwrap();
+/// let entry = manifest_table.entries().unwrap().next().unwrap();
+///
+/// // Get file info.
+/// let info = entry.file_info().unwrap();
+///
+/// let file_type = info.file_type();
+/// let compression_type = info.compression_type();
+/// let schema_version = info.schema_version();
+/// ```
 pub struct GenICamFileInfo(u32);
+
 impl GenICamFileInfo {
+    /// Type of the XML file.
     pub fn file_type(&self) -> DeviceResult<GenICamFileType> {
         let raw = self.0 & 0b111;
         match raw {
@@ -729,6 +849,7 @@ impl GenICamFileInfo {
         }
     }
 
+    /// Compression type of the XML File.
     pub fn compression_type(&self) -> DeviceResult<CompressionType> {
         let raw = (self.0 >> 10) & 0b111111;
         match raw {
@@ -740,6 +861,7 @@ impl GenICamFileInfo {
         }
     }
 
+    /// GenICam schema version of the XML file compiles with.
     pub fn schema_version(&self) -> semver::Version {
         let major = (self.0 >> 24) & 0xff;
         let minor = (self.0 >> 16) & 0xff;
