@@ -691,6 +691,21 @@ impl<'a> Sirm<'a> {
         self.write_register(sirm::MAXIMUM_LEADER_SIZE, size)
     }
 
+    /// Maximum trailer size in any device configuration.
+    pub fn maximum_trailer_size(&self) -> DeviceResult<u32> {
+        self.read_register(sirm::MAXIMUM_TRAILER_SIZE)
+    }
+
+    /// Set maximum trailer size in any device configuration.
+    ///
+    /// A trailer must be fit within one bulk transfer, so `maximum_trailer_size` is restricted by the
+    /// maximum size that one bulk transfer can contain.
+    /// If the trailer size is greater than this value in the current configuration, then device can't
+    /// start streaming.
+    pub fn set_maximum_trailer_size(&self, size: u32) -> DeviceResult<()> {
+        self.write_register(sirm::MAXIMUM_TRAILER_SIZE, size)
+    }
+
     /// Payload transfer size.
     ///
     /// Total Payload size = [`payload_transfer_size`](Self::payload_transfer_size) * [`payload_transfer_count`](Self::payload_transfer_count) + [`payload_final_transfer1_size`](Self::payload_final_transfer1_size) + [`payload_final_transfer2_size`](Self::payload_final_transfer2_size).
@@ -745,21 +760,6 @@ impl<'a> Sirm<'a> {
     /// Total Payload size = [`payload_transfer_size`](Self::payload_transfer_size) * [`payload_transfer_count`](Self::payload_transfer_count) + [`payload_final_transfer1_size`](Self::payload_final_transfer1_size) + [`payload_final_transfer2_size`](Self::payload_final_transfer2_size).
     pub fn set_payload_final_transfer2_size(&self, size: u32) -> DeviceResult<()> {
         self.write_register(sirm::PAYLOAD_FINAL_TRANSFER2_SIZE, size)
-    }
-
-    /// Maximum trailer size in any device configuration.
-    pub fn maximum_trailer_size(&self) -> DeviceResult<u32> {
-        self.read_register(sirm::MAXIMUM_TRAILER_SIZE)
-    }
-
-    /// Set maximum trailer size in any device configuration.
-    ///
-    /// A trailer must be fit within one bulk transfer, so `maximum_trailer_size` is restricted by the
-    /// maximum size that one bulk transfer can contain.
-    /// If the trailer size is greater than this value in the current configuration, then device can't
-    /// start streaming.
-    pub fn set_maximum_trailer_size(&self, size: u32) -> DeviceResult<()> {
-        self.write_register(sirm::MAXIMUM_TRAILER_SIZE, size)
     }
 
     fn read_register<T>(&self, register: (u64, u16)) -> DeviceResult<T>

@@ -110,7 +110,7 @@ fn main() {
     // Read manifest entries.
     let manifest_table = abrm.manifest_table().unwrap();
     for (i, entry) in manifest_table.entries().unwrap().enumerate() {
-        println!("\n### Manifest Entry {}", i);
+        println!("\n### Manifest Entry {} ###\n", i);
         println!(
             "GenICam file version: {}",
             entry.genicam_file_version().unwrap()
@@ -129,4 +129,56 @@ fn main() {
             file_info.schema_version()
         );
     }
+
+    // Read SIRM if it's available.
+    let sirm = if let Some(sirm) = sbrm.sirm().unwrap() {
+        sirm
+    } else {
+        println!("SIRM is not available");
+        return;
+    };
+
+    println!("\n### Streaming Interface Register Map ###\n");
+    println!(
+        "payload_size_alignment: {}",
+        sirm.payload_size_alignment().unwrap()
+    );
+
+    println!("is_stream_enable: {}", sirm.is_stream_enable().unwrap());
+    println!(
+        "required_payload_size: {}",
+        sirm.required_payload_size().unwrap()
+    );
+    println!(
+        "required_leader_size: {}",
+        sirm.required_leader_size().unwrap()
+    );
+    println!(
+        "required_trailer_size: {}",
+        sirm.required_trailer_size().unwrap()
+    );
+    println!(
+        "maximum_leader_size: {}",
+        sirm.maximum_leader_size().unwrap()
+    );
+    println!(
+        "maximum_trailer_size: {}",
+        sirm.maximum_trailer_size().unwrap()
+    );
+    println!(
+        "payload_transfer_size: {}",
+        sirm.payload_transfer_size().unwrap()
+    );
+    println!(
+        "payload_transfer_count: {}",
+        sirm.payload_transfer_count().unwrap()
+    );
+    println!(
+        "payload_final_transfer1_size: {}",
+        sirm.payload_final_transfer1_size().unwrap()
+    );
+    println!(
+        "payload_final_transfer2_size: {}",
+        sirm.payload_final_transfer2_size().unwrap()
+    );
 }
