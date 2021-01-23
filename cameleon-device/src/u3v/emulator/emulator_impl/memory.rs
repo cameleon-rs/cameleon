@@ -4,8 +4,8 @@ use super::genapi;
 
 const ABRM_ADDRESS: usize = 0;
 const SBRM_ADDRESS: usize = 0xffff;
-
-const MANIFEST_TABLE_ADDRESS: usize = SBRM::base() + SBRM::size();
+const SIRM_ADDRESS: usize = SBRM::base() + SBRM::size();
+const MANIFEST_TABLE_ADDRESS: usize = SIRM::base() + SIRM::size();
 const GENAPI_XML_ADDRESS: usize = ManifestTable::base() + ManifestTable::size();
 const GENAPI_XML_LENGTH: usize = genapi::GENAPI_XML.len();
 
@@ -69,6 +69,7 @@ const DEVICE_CONFIGURATION: &[u8] = &[
 pub(super) struct Memory {
     abrm: ABRM,
     sbrm: SBRM,
+    sirm: SIRM,
     manifest_table: ManifestTable,
     genapi_xml: GenApiXml,
 }
@@ -169,10 +170,10 @@ pub(super) enum SBRM {
     NumberOfStreamChannel = 1,
 
     #[register(len = 8, access = RO, ty = u64)]
-    SirmAddress, // TODO: Filled after SIMR register map is implemented.
+    SirmAddress = SIRM_ADDRESS,
 
     #[register(len = 4, access = RO, ty = u32)]
-    SirmLength, // TODO: Filled after SIRM register map is implemented.
+    SirmLength = SIRM::size() as u32,
 
     #[register(len = 8, access = RO, ty = u64)]
     EirmAddress, // TODO: Filled after SIRM register map is implemented.
@@ -185,6 +186,47 @@ pub(super) enum SBRM {
 
     #[register(len=4, access = RO, ty=u32)]
     CurrentSpeed = 0b1000,
+}
+
+pub(super) const PAYLOAD_ALIGNMENT: u8 = 4;
+/// Exp of payload alignment is in Upper 8bits of SI Info.
+/// TODO: Use integer::log2 when it's stabilized. See https://github.com/rust-lang/rust/issues/70887.
+const SI_INFO: u32 = 2 << 24;
+
+#[register_map(base = SIRM_ADDRESS, endianness = LE)]
+pub(super) enum SIRM {
+    #[register(len = 4, access = RO, ty = u32)]
+    Info = SI_INFO,
+
+    #[register(len = 4, access = RW, ty = u32)]
+    Control = 0,
+
+    #[register(len = 8, access = RO, ty = u64)]
+    RequiredPayloadSize = 15151104,
+
+    #[register(len = 4, access = RO, ty = u32)]
+    RequiredLeaderSize = 1024,
+
+    #[register(len = 4, access = RO, ty = u32)]
+    RequiredTrailerSize = 1024,
+
+    #[register(len = 4, access = RW, ty = u32)]
+    MaximumLeaderSize = 0,
+
+    #[register(len = 4, access = RW, ty = u32)]
+    PayloadTransferSize = 0,
+
+    #[register(len = 4, access = RW, ty = u32)]
+    PayloadTransferCount = 0,
+
+    #[register(len = 4, access = RW, ty = u32)]
+    PayloadFinalTransferSize1 = 0,
+
+    #[register(len = 4, access = RW, ty = u32)]
+    PayloadFinalTransferSize2 = 0,
+
+    #[register(len = 4, access = RW, ty = u32)]
+    MaximumTrailerSize = 0,
 }
 
 const MANIFEST_ENTRY0_BF_OFFSET: usize = (ManifestTable::GenICamFileVersionMajor::ADDRESS
