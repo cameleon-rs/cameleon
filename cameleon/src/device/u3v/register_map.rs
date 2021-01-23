@@ -482,6 +482,13 @@ impl<'a> Sbrm<'a> {
         self.read_register(sbrm::NUMBER_OF_STREAM_CHANNELS)
     }
 
+    /// Return [`Sirm`] if it's available.
+    pub fn sirm(&self) -> DeviceResult<Option<Sirm<'a>>> {
+        Ok(self
+            .sirm_address()?
+            .map(|addr| Sirm::new(self.handle, addr)))
+    }
+
     /// The initial address of `Sirm`.
     ///
     /// NOTE: Some device doesn't support this feature.
@@ -560,6 +567,216 @@ impl<'a> Sbrm<'a> {
         let (offset, len) = register;
         let addr = offset + self.sbrm_addr;
         read_register(self.handle, addr, len)
+    }
+}
+
+/// Represent Streaming Interface Register Map (SIRM).
+///
+/// To maintain consistency with the device data, `Sirm` doesn't cache any data. It means
+/// that all methods of this struct cause communication with the device every time, thus the device
+/// is expected to be opened when methods are called.
+///
+/// # Examples
+///
+/// ```no_run
+/// use cameleon::device::u3v;
+/// // Enumerate devices connected to the host.
+/// let mut devices = u3v::enumerate_devices().unwrap();
+///
+/// // If no device is connected, return.
+/// if devices.is_empty() {
+///     return;
+/// }
+///
+/// let mut device = devices.pop().unwrap();
+/// // Open device.
+/// device.open().unwrap();
+///
+/// // Get Sirm.
+/// let abrm = device.abrm().unwrap();
+/// let sbrm = abrm.sbrm().unwrap();
+/// if !sbrm.u3v_capability().unwrap().is_sirm_available() {
+///    return;
+/// }
+/// let sirm = sbrm.sirm().unwrap().unwrap();
+///
+/// // Enable streaming to make the device start to transmit image.
+/// sirm.enable_stream().unwrap();
+/// ```
+pub struct Sirm<'a> {
+    handle: &'a ControlHandle,
+    sirm_addr: u64,
+}
+
+impl<'a> Sirm<'a> {
+    /// Construct new `Sirm`.
+    ///
+    /// To construct `Sirm`, it's easier to call [`Sbrm::sirm`].
+    pub fn new(handle: &'a ControlHandle, sirm_addr: u64) -> Self {
+        Self { handle, sirm_addr }
+    }
+
+    /// Return required alignment size of payload.
+    ///
+    /// A host must use this value as a minimum alignment size when modifying SIRM registers
+    /// related to payload size.
+    pub fn payload_size_alignment(&self) -> DeviceResult<usize> {
+        let si_info: u32 = self.read_register(sirm::SI_INFO)?;
+        // Upper 8 bites specifies the exp of the alignment.
+        let exp = si_info >> 24;
+        Ok(2usize.pow(exp))
+    }
+
+    /// Enable stream.
+    ///
+    /// It's forbidden to write to SIRM registers while stream is enabled.
+    pub fn enable_stream(&self) -> DeviceResult<()> {
+        let value = 1u32;
+        self.write_register(sirm::SI_CONTROL, value)
+    }
+
+    /// Disable stream.
+    ///
+    /// It's forbidden to write to SIRM registers while stream is enabled.
+    pub fn disable_stream(&self) -> DeviceResult<()> {
+        let value = 0u32;
+        self.write_register(sirm::SI_CONTROL, value)
+    }
+
+    /// Return `true` if stream is enabled.
+    pub fn is_stream_enable(&self) -> DeviceResult<bool> {
+        let si_ctrl: u32 = self.read_register(sirm::SI_CONTROL)?;
+        Ok((si_ctrl & 1) == 1)
+    }
+
+    /// Payload size of an image or chunk data in current device configuration.
+    ///
+    /// This value is never changed while stream is enabled.
+    /// Once stream is disabled, the value may be changed, so The host must reload the value to
+    /// update the buffer size required for payload data.
+    pub fn required_payload_size(&self) -> DeviceResult<u64> {
+        self.read_register(sirm::REQUIRED_PAYLOAD_SIZE)
+    }
+
+    /// Leader size of an image or chunk data in current device configuration.
+    ///
+    /// This value is never changed while stream is enabled.
+    /// Once stream is disabled, the value may be changed, so The host must reload the value to
+    /// update the buffer size required for payload data.
+    pub fn required_leader_size(&self) -> DeviceResult<u32> {
+        self.read_register(sirm::REQUIRED_LEADER_SIZE)
+    }
+
+    /// Trailer size of an image or chunk data in current device configuration.
+    ///
+    /// This value is never changed while stream is enabled.
+    /// Once stream is disabled, the value may be changed, so The host must reload the value to
+    /// update the buffer size required for payload data.
+    pub fn required_trailer_size(&self) -> DeviceResult<u32> {
+        self.read_register(sirm::REQUIRED_TRAILER_SIZE)
+    }
+
+    /// Maximum leader size in any device configuration.
+    pub fn maximum_leader_size(&self) -> DeviceResult<u32> {
+        self.read_register(sirm::MAXIMUM_LEADER_SIZE)
+    }
+
+    /// Set maximum leader size in any device configuration.
+    ///
+    /// A leader must be fit within one bulk transfer, so `maximum_leader_size` is restricted by the
+    /// maximum size that one bulk transfer can contain.
+    /// If the leader size is greater than this value in the current configuration, then device can't
+    /// start streaming.
+    pub fn set_maximum_leader_size(&self, size: u32) -> DeviceResult<()> {
+        self.write_register(sirm::MAXIMUM_LEADER_SIZE, size)
+    }
+
+    /// Payload transfer size.
+    ///
+    /// Total Payload size = [`payload_transfer_size`](Self::payload_transfer_size) * [`payload_transfer_count`](Self::payload_transfer_count) + [`payload_final_transfer1_size`](Self::payload_final_transfer1_size) + [`payload_final_transfer2_size`](Self::payload_final_transfer2_size).
+    pub fn payload_transfer_size(&self) -> DeviceResult<u32> {
+        self.read_register(sirm::PAYLOAD_TRANSFER_SIZE)
+    }
+
+    /// Set payload transfer size.
+    ///
+    /// Total Payload size = [`payload_transfer_size`](Self::payload_transfer_size) * [`payload_transfer_count`](Self::payload_transfer_count) + [`payload_final_transfer1_size`](Self::payload_final_transfer1_size) + [`payload_final_transfer2_size`](Self::payload_final_transfer2_size).
+    pub fn set_payload_transfer_size(&self, size: u32) -> DeviceResult<()> {
+        self.write_register(sirm::PAYLOAD_TRANSFER_SIZE, size)
+    }
+
+    /// Payload transfer count.
+    ///
+    /// Total Payload size = [`payload_transfer_size`](Self::payload_transfer_size) * [`payload_transfer_count`](Self::payload_transfer_count) + [`payload_final_transfer1_size`](Self::payload_final_transfer1_size) + [`payload_final_transfer2_size`](Self::payload_final_transfer2_size).
+    pub fn payload_transfer_count(&self) -> DeviceResult<u32> {
+        self.read_register(sirm::PAYLOAD_TRANSFER_COUNT)
+    }
+
+    /// Set payload transfer count.
+    ///
+    /// Total Payload size = [`payload_transfer_size`](Self::payload_transfer_size) * [`payload_transfer_count`](Self::payload_transfer_count) + [`payload_final_transfer1_size`](Self::payload_final_transfer1_size) + [`payload_final_transfer2_size`](Self::payload_final_transfer2_size).
+    pub fn set_payload_transfer_count(&self, size: u32) -> DeviceResult<()> {
+        self.write_register(sirm::PAYLOAD_TRANSFER_COUNT, size)
+    }
+
+    /// Payload final transfer1 size.
+    ///
+    /// Total Payload size = [`payload_transfer_size`](Self::payload_transfer_size) * [`payload_transfer_count`](Self::payload_transfer_count) + [`payload_final_transfer1_size`](Self::payload_final_transfer1_size) + [`payload_final_transfer2_size`](Self::payload_final_transfer2_size).
+    pub fn payload_final_transfer1_size(&self) -> DeviceResult<u32> {
+        self.read_register(sirm::PAYLOAD_FINAL_TRANSFER1_SIZE)
+    }
+
+    /// Set payload final transfer1 size.
+    ///
+    /// Total Payload size = [`payload_transfer_size`](Self::payload_transfer_size) * [`payload_transfer_count`](Self::payload_transfer_count) + [`payload_final_transfer1_size`](Self::payload_final_transfer1_size) + [`payload_final_transfer2_size`](Self::payload_final_transfer2_size).
+    pub fn set_payload_final_transfer1_size(&self, size: u32) -> DeviceResult<()> {
+        self.write_register(sirm::PAYLOAD_FINAL_TRANSFER1_SIZE, size)
+    }
+
+    /// Payload final transfer1 size.
+    ///
+    /// Total Payload size = [`payload_transfer_size`](Self::payload_transfer_size) * [`payload_transfer_count`](Self::payload_transfer_count) + [`payload_final_transfer1_size`](Self::payload_final_transfer1_size) + [`payload_final_transfer2_size`](Self::payload_final_transfer2_size).
+    pub fn payload_final_transfer2_size(&self) -> DeviceResult<u32> {
+        self.read_register(sirm::PAYLOAD_FINAL_TRANSFER2_SIZE)
+    }
+
+    /// Set payload final transfer1 size.
+    ///
+    /// Total Payload size = [`payload_transfer_size`](Self::payload_transfer_size) * [`payload_transfer_count`](Self::payload_transfer_count) + [`payload_final_transfer1_size`](Self::payload_final_transfer1_size) + [`payload_final_transfer2_size`](Self::payload_final_transfer2_size).
+    pub fn set_payload_final_transfer2_size(&self, size: u32) -> DeviceResult<()> {
+        self.write_register(sirm::PAYLOAD_FINAL_TRANSFER2_SIZE, size)
+    }
+
+    /// Maximum trailer size in any device configuration.
+    pub fn maximum_trailer_size(&self) -> DeviceResult<u32> {
+        self.read_register(sirm::MAXIMUM_TRAILER_SIZE)
+    }
+
+    /// Set maximum trailer size in any device configuration.
+    ///
+    /// A trailer must be fit within one bulk transfer, so `maximum_trailer_size` is restricted by the
+    /// maximum size that one bulk transfer can contain.
+    /// If the trailer size is greater than this value in the current configuration, then device can't
+    /// start streaming.
+    pub fn set_maximum_trailer_size(&self, size: u32) -> DeviceResult<()> {
+        self.write_register(sirm::MAXIMUM_TRAILER_SIZE, size)
+    }
+
+    fn read_register<T>(&self, register: (u64, u16)) -> DeviceResult<T>
+    where
+        T: ParseBytes,
+    {
+        let (offset, len) = register;
+        let addr = offset + self.sirm_addr;
+        read_register(self.handle, addr, len)
+    }
+
+    fn write_register(&self, register: (u64, u16), data: impl DumpBytes) -> DeviceResult<()> {
+        let (offset, len) = register;
+        let addr = self.sirm_addr + offset;
+        let mut buf = vec![0; len as usize];
+        data.dump_bytes(&mut buf)?;
+        self.handle.write_mem(addr, &buf)
     }
 }
 
