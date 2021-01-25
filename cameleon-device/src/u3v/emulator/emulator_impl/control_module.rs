@@ -1,7 +1,7 @@
 use std::sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    };
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
 use async_std::{
     channel::{self, Receiver, Sender},
@@ -10,18 +10,19 @@ use async_std::{
     task,
 };
 
-use cameleon_impl::memory::{prelude::*, MemoryError, MemoryObserver};
+use cameleon_impl::memory::{prelude::*, MemoryError};
 
 use super::{
     device::Timestamp,
     interface::IfaceState,
-    memory::{Memory, ABRM, SBRM},
+    memory::{Memory, SBRM},
     shared_queue::SharedQueue,
     signal::*,
+    memory_event_handler::MemoryEventHandler,
     IfaceKind,
 };
 
-use super::control_protocol::{*, ack::AckSerialize};
+use super::control_protocol::{ack::AckSerialize, *};
 
 pub(super) struct ControlModule {
     iface_state: IfaceState,
@@ -30,7 +31,6 @@ pub(super) struct ControlModule {
     queue: SharedQueue<Vec<u8>>,
 }
 
-const MEMORY_EVENT_CHANNEL_CAPACITY: usize = 100;
 
 impl ControlModule {
     pub(super) fn new(
@@ -52,7 +52,7 @@ impl ControlModule {
         signal_tx: Sender<InterfaceSignal>,
         mut signal_rx: Receiver<ControlSignal>,
     ) {
-        let event_handler = self.register_observers().await;
+        let event_handler = MemoryEventHandler::new(&mut *self.memory.lock().await).await;
 
         let mut worker_manager = WorkerManager::new(
             self.iface_state.clone(),
@@ -91,13 +91,6 @@ impl ControlModule {
         }
     }
 
-    async fn register_observers(&self) -> MemoryEventHandler {
-        let mut memory = self.memory.lock().await;
-        let (tx, rx) = channel::bounded(MEMORY_EVENT_CHANNEL_CAPACITY);
-        memory.register_observer::<ABRM::TimestampLatch, _>(TimestampLatchObserver { sender: tx });
-
-        MemoryEventHandler { rx }
-    }
 }
 
 struct WorkerManager {
@@ -336,9 +329,14 @@ impl Worker {
                 // Explicitly drop memory to avoid race condition.
                 drop(memory);
 
-                self.memory_event_handler.handle_events(self).await;
-                let ack = ack::WriteMem::new(scd.data.len() as u16).finalize(req_id);
-                self.enqueue_or_halt(ack);
+                let error_ack = self.memory_event_handler.handle_events(self, scd_kind).await;
+                if let Some(error_ack) = error_ack {
+                    self.enqueue_or_halt(error_ack.finalize(req_id));
+                } else {
+                    let ack = ack::WriteMem::new(scd.data.len() as u16).finalize(req_id);
+                    self.enqueue_or_halt(ack);
+
+                }
             }
 
             Err(MemoryError::InvalidAddress) => {
@@ -437,59 +435,6 @@ impl Worker {
             Err(_) => {
                 log::error!("Control module -> Interface channel is full");
             }
-        }
-    }
-}
-
-enum MemoryEvent {
-    TimestampLatch,
-}
-
-#[derive(Clone)]
-struct MemoryEventHandler {
-    rx: Receiver<MemoryEvent>,
-}
-
-impl MemoryEventHandler {
-    async fn handle_events(&self, worker: &Worker) {
-        while let Ok(event) = self.rx.try_recv() {
-            match event {
-                MemoryEvent::TimestampLatch => self.handle_timestamp_latch(worker).await,
-            }
-        }
-    }
-
-    async fn handle_timestamp_latch(&self, worker: &Worker) {
-        let mut memory = worker.memory.lock().await;
-        match memory.read::<ABRM::TimestampLatch>() {
-            Ok(value) => {
-                if value != 1 {
-                    return;
-                }
-            }
-            Err(e) => {
-                log::warn!("failed to read ABRM::TimestampLatch {}", e);
-                return;
-            }
-        }
-
-        let timestamp_ns = worker.timestamp.as_nanos().await;
-        let signal = EventSignal::UpdateTimestamp(timestamp_ns);
-        worker.try_send_signal(signal);
-        if let Err(e) = memory.write::<ABRM::Timestamp>(timestamp_ns) {
-            log::warn!("failed to write to ABRM::Timestamp register {}", e)
-        }
-    }
-}
-
-struct TimestampLatchObserver {
-    sender: Sender<MemoryEvent>,
-}
-
-impl MemoryObserver for TimestampLatchObserver {
-    fn update(&self) {
-        if let Err(e) = self.sender.try_send(MemoryEvent::TimestampLatch) {
-            log::warn!("memory observer error: {}", e);
         }
     }
 }

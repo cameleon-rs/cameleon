@@ -9,6 +9,7 @@ mod fake_protocol;
 mod genapi;
 mod interface;
 mod memory;
+mod memory_event_handler;
 mod shared_queue;
 mod signal;
 mod stream_module;
