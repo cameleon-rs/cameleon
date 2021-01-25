@@ -1,4 +1,5 @@
 mod control_module;
+mod control_protocol;
 mod device;
 mod device_handle;
 mod device_pool;
