@@ -205,9 +205,9 @@ impl Interface {
     /// Handle a interface signal sent from modules.
     async fn handle_signal(&self, signal: InterfaceSignal, signal_tx: &ModuleSignalTx) {
         match signal {
-            InterfaceSignal::_ToControl(signal) => signal_tx.send_ctrl(signal),
+            InterfaceSignal::ToControl(signal) => signal_tx.send_ctrl(signal),
             InterfaceSignal::ToEvent(signal) => signal_tx.send_event(signal),
-            InterfaceSignal::_ToStream(signal) => signal_tx.send_stream(signal),
+            InterfaceSignal::ToStream(signal) => signal_tx.send_stream(signal),
             InterfaceSignal::Halt(iface) => self.set_halt(iface, signal_tx).await,
         }
     }

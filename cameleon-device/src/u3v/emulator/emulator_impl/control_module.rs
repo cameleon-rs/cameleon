@@ -435,8 +435,8 @@ impl Worker {
         }
     }
 
-    fn try_send_signal(&self, signal: InterfaceSignal) {
-        match self.signal_tx.try_send(signal) {
+    fn try_send_signal(&self, signal: impl Into<InterfaceSignal>) {
+        match self.signal_tx.try_send(signal.into()) {
             Ok(()) => {}
             Err(_) => {
                 log::error!("Control module -> Interface channel is full");
@@ -478,7 +478,7 @@ impl MemoryEventHandler {
         }
 
         let timestamp_ns = worker.timestamp.as_nanos().await;
-        let signal = InterfaceSignal::ToEvent(EventSignal::UpdateTimestamp(timestamp_ns));
+        let signal = EventSignal::UpdateTimestamp(timestamp_ns);
         worker.try_send_signal(signal);
         if let Err(e) = memory.write::<ABRM::Timestamp>(timestamp_ns) {
             log::warn!("failed to write to ABRM::Timestamp register {}", e)
