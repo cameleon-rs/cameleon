@@ -6,7 +6,7 @@ const ABRM_ADDRESS: usize = 0;
 const SBRM_ADDRESS: usize = 0xffff;
 const SIRM_ADDRESS: usize = SBRM::base() + SBRM::size();
 const MANIFEST_TABLE_ADDRESS: usize = SIRM::base() + SIRM::size();
-const GENAPI_XML_ADDRESS: usize = ManifestTable::base() + ManifestTable::size();
+pub(super) const GENAPI_XML_ADDRESS: usize = ManifestTable::base() + ManifestTable::size();
 const GENAPI_XML_LENGTH: usize = genapi::GENAPI_XML.len();
 
 /// Offset | Value | Description.
