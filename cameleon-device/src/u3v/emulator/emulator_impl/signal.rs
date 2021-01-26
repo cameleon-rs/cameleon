@@ -45,7 +45,7 @@ pub(super) enum EventSignal {
 /// Signal sent to stream module.
 pub(super) enum StreamSignal {
     /// Signal to enable stream module.
-    _Enable,
+    Enable,
 
     /// Signal to disable stream module.
     Disable(oneshot::Sender<()>),

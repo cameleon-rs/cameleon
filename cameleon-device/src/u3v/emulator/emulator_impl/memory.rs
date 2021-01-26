@@ -188,8 +188,8 @@ pub(super) enum SBRM {
     CurrentSpeed = 0b1000,
 }
 
-pub(super) const PAYLOAD_ALIGNMENT: u8 = 4;
-/// Exp of payload alignment is in Upper 8bits of SI Info.
+pub(super) const SIRM_ALIGNMENT: u8 = 4;
+/// Exponent of alignment is in Upper 8bits of SI Info.
 /// TODO: Use integer::log2 when it's stabilized. See https://github.com/rust-lang/rust/issues/70887.
 const SI_INFO: u32 = 2 << 24;
 

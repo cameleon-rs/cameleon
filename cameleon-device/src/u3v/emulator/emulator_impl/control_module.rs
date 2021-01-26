@@ -16,9 +16,9 @@ use super::{
     device::Timestamp,
     interface::IfaceState,
     memory::{Memory, SBRM},
+    memory_event_handler::MemoryEventHandler,
     shared_queue::SharedQueue,
     signal::*,
-    memory_event_handler::MemoryEventHandler,
     IfaceKind,
 };
 
@@ -30,7 +30,6 @@ pub(super) struct ControlModule {
     timestamp: Timestamp,
     queue: SharedQueue<Vec<u8>>,
 }
-
 
 impl ControlModule {
     pub(super) fn new(
@@ -90,7 +89,6 @@ impl ControlModule {
             }
         }
     }
-
 }
 
 struct WorkerManager {
@@ -329,13 +327,15 @@ impl Worker {
                 // Explicitly drop memory to avoid race condition.
                 drop(memory);
 
-                let error_ack = self.memory_event_handler.handle_events(self, scd_kind).await;
-                if let Some(error_ack) = error_ack {
+                let error_ack = self
+                    .memory_event_handler
+                    .handle_events(self, scd_kind)
+                    .await;
+                if let Err(error_ack) = error_ack {
                     self.enqueue_or_halt(error_ack.finalize(req_id));
                 } else {
                     let ack = ack::WriteMem::new(scd.data.len() as u16).finalize(req_id);
                     self.enqueue_or_halt(ack);
-
                 }
             }
 
@@ -438,4 +438,3 @@ impl Worker {
         }
     }
 }
-
