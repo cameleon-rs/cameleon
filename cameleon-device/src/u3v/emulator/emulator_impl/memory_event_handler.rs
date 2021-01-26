@@ -87,7 +87,7 @@ define_handler!(
     MemoryEvent::TimestampLatch
 );
 impl TimestampLatchHandler {
-    /// Handle events caused by writes to `TiemStampLatch` regsiter.
+    /// Handle `MemoryEvent::TimestampLatch`.
     ///
     /// If 1 is written to `TiemStampLatch`, `TimeStamp` register must be updated with current device time stamp.
     async fn handle_events(worker: &Worker, scd_kind: cmd::ScdKind) -> Result<(), ack::ErrorAck> {
@@ -114,6 +114,7 @@ impl TimestampLatchHandler {
 
 define_handler!(SiControlHandler, SIRM::Control, MemoryEvent::SiControl);
 impl SiControlHandler {
+    /// Handle `MemoryEvent::SiControl`
     async fn handle_events(worker: &Worker, scd_kind: cmd::ScdKind) -> Result<(), ack::ErrorAck> {
         let value = Self::read(&*worker.memory.lock().await, scd_kind)?;
 
@@ -127,7 +128,7 @@ impl SiControlHandler {
         }
     }
 
-    /// Handle events caused by `SIRM::Control` is set to 1.
+    /// Handle the situation where `SIRM::Control` is set to 1.
     async fn enable_sirm(worker: &Worker, scd_kind: cmd::ScdKind) -> Result<(), ack::ErrorAck> {
         // 1. Verify SIRM integrity.
 
@@ -143,14 +144,14 @@ impl SiControlHandler {
             return res;
         }
 
-        // Send signal to [`super::stream_module::StreamModule`] to enable it.
+        // 2. Send signal to [`super::stream_module::StreamModule`] to enable it.
         let signal = StreamSignal::Enable;
         worker.try_send_signal(signal);
 
         Ok(())
     }
 
-    /// Handle events caused by `SIRM::Control` is set to 0.
+    /// Handle the situation where `SIRM::Control` is set to 0.
     async fn disable_sirm(worker: &Worker, _: cmd::ScdKind) {
             let (completed_tx, completed_rx) = oneshot::channel();
         let signal = StreamSignal::Disable(completed_tx);
@@ -224,9 +225,43 @@ impl SiControlHandler {
     }
 }
 
+/// This macro defines handler for registers of SIRM which are related to streaming data size.
+///
+/// A handler defined by this macro works as a verifier which verify the written size has correct
+/// alignment.
+macro_rules! define_handler_for_sirm {
+    ($handler_name:ident, $reg:path, $event:path) => {
+        define_handler!($handler_name, $reg, $event);
+
+        impl $handler_name {
+            async fn handle_events(worker: &Worker, scd_kind: cmd::ScdKind) -> Result<(), ack::ErrorAck> {
+                let value = Self::read(&*worker.memory.lock().await, scd_kind)?;
+                // Verify alignment.
+                if value % SIRM_ALIGNMENT as u32 != 0 {
+                    Err(ack::ErrorAck::new(ack::UsbSpecificStatus::PayloadSizeNotAligned, scd_kind))
+                } else {
+                    Ok(())
+                }
+            }
+        }
+    }
+}
+
+// Define handlers related to SIRM size registers.
+define_handler_for_sirm!(MaximumLeaderSizeHandler, SIRM::MaximumLeaderSize, MemoryEvent::MaximumLeaderSize);
+define_handler_for_sirm!(PayloadTransferSizeHandler, SIRM::PayloadTransferSize, MemoryEvent::PayloadTransferSize);
+define_handler_for_sirm!(PayloadFinalTransferSize1Handler, SIRM::PayloadFinalTransferSize1, MemoryEvent::PayloadFinalTransferSize1);
+define_handler_for_sirm!(PayloadFinalTransferSize2Handler, SIRM::PayloadFinalTransferSize2, MemoryEvent::PayloadFinalTransferSize2);
+define_handler_for_sirm!(MaximumTrailerSizeHandler, SIRM::MaximumTrailerSize, MemoryEvent::MaximumTrailerSize);
+
 enum MemoryEvent {
     TimestampLatch,
     SiControl,
+    MaximumLeaderSize,
+    PayloadTransferSize,
+    PayloadFinalTransferSize1,
+    PayloadFinalTransferSize2,
+    MaximumTrailerSize,
 }
 
 impl MemoryEvent {
@@ -235,12 +270,22 @@ impl MemoryEvent {
         match self {
             TimestampLatch => TimestampLatchHandler::handle_events(worker, scd_kind).await,
             SiControl => SiControlHandler::handle_events(worker, scd_kind).await,
+            MaximumLeaderSize => MaximumLeaderSizeHandler::handle_events(worker, scd_kind).await,
+            PayloadTransferSize => PayloadTransferSizeHandler::handle_events(worker, scd_kind).await,
+            PayloadFinalTransferSize1 => PayloadFinalTransferSize1Handler::handle_events(worker, scd_kind).await,
+            PayloadFinalTransferSize2 => PayloadFinalTransferSize2Handler::handle_events(worker, scd_kind).await,
+            MaximumTrailerSize => MaximumTrailerSizeHandler::handle_events(worker, scd_kind).await,
         }
     }
 
     fn register_events(memory: &mut Memory, sender: &Sender<Self>) {
         TimestampLatchHandler::register(memory, sender);
         SiControlHandler::register(memory, sender);
+        MaximumLeaderSizeHandler::register(memory, sender);
+        PayloadTransferSizeHandler::register(memory, sender);
+        PayloadFinalTransferSize1Handler::register(memory, sender);
+        PayloadFinalTransferSize2Handler::register(memory, sender);
+        MaximumTrailerSizeHandler::register(memory, sender);
     }
 }
 
