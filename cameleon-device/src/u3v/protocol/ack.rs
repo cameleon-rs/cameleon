@@ -15,7 +15,6 @@ pub struct AckPacket<'a> {
 impl<'a> AckPacket<'a> {
     const PREFIX_MAGIC: u32 = 0x43563355;
 
-    //pub fn parse(buf: &'a (impl AsRef<[u8]> + ?Sized)) -> Result<Self> {
     pub fn parse(buf: &'a (impl AsRef<[u8]> + ?Sized)) -> Result<Self> {
         let mut cursor = Cursor::new(buf.as_ref());
 
