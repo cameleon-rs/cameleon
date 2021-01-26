@@ -1,4 +1,5 @@
 use async_std::channel::{self, Receiver, Sender};
+use futures::channel::oneshot;
 
 use cameleon_impl::memory::{prelude::*, MemoryObserver};
 
@@ -119,12 +120,14 @@ impl SiControlHandler {
         if value == 1 {
             Self::enable_sirm(worker, scd_kind).await
         } else if value == 0 {
-            Self::disable_sirm(worker, scd_kind).await
+            Self::disable_sirm(worker, scd_kind).await;
+            Ok(())
         } else {
             Err(ack::ErrorAck::new(ack::GenCpStatus::GenericError, scd_kind).into())
         }
     }
 
+    /// Handle events caused by `SIRM::Control` is set to 1.
     async fn enable_sirm(worker: &Worker, scd_kind: cmd::ScdKind) -> Result<(), ack::ErrorAck> {
         // 1. Verify SIRM integrity.
 
@@ -147,8 +150,12 @@ impl SiControlHandler {
         Ok(())
     }
 
-    async fn disable_sirm(worker: &Worker, scd_kind: cmd::ScdKind) -> Result<(), ack::ErrorAck> {
-        todo!()
+    /// Handle events caused by `SIRM::Control` is set to 0.
+    async fn disable_sirm(worker: &Worker, _: cmd::ScdKind) {
+            let (completed_tx, completed_rx) = oneshot::channel();
+        let signal = StreamSignal::Disable(completed_tx);
+        worker.try_send_signal(signal);
+        completed_rx.await.ok();
     }
 
     /// Verify specified sizes of writable registers have correct alignment.
