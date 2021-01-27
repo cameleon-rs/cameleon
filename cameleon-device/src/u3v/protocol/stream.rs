@@ -5,12 +5,12 @@ use std::{
     time,
 };
 
-use byteorder::{ReadBytesExt, LE};
-
 use crate::{
     u3v::{Error, Result},
     PixelFormat,
 };
+
+use super::parse_util::ReadBytes;
 
 /// Leader of stream packet.
 pub struct Leader<'a> {
@@ -72,11 +72,11 @@ impl GenericLeader {
 
     fn parse(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
         Self::parse_prefix(cursor)?;
-        let _reserved = cursor.read_u16::<LE>()?;
-        let leader_size = cursor.read_u16::<LE>()?;
-        let block_id = cursor.read_u64::<LE>()?;
-        let _reserved = cursor.read_u16::<LE>()?;
-        let payload_type = cursor.read_u16::<LE>()?.try_into()?;
+        let _reserved: u16 = cursor.read_bytes()?;
+        let leader_size = cursor.read_bytes()?;
+        let block_id = cursor.read_bytes()?;
+        let _reserved: u16 = cursor.read_bytes()?;
+        let payload_type = cursor.read_bytes::<u16>()?.try_into()?;
 
         Ok(Self {
             leader_size,
@@ -86,7 +86,7 @@ impl GenericLeader {
     }
 
     fn parse_prefix(cursor: &mut Cursor<&[u8]>) -> Result<()> {
-        let magic = cursor.read_u32::<LE>()?;
+        let magic: u32 = cursor.read_bytes()?;
         if magic == Self::LEADER_MAGIC {
             Ok(())
         } else {
@@ -158,17 +158,17 @@ impl ImageLeader {
 impl SpecificLeader for ImageLeader {
     fn from_bytes(buf: &[u8]) -> Result<Self> {
         let mut cursor = Cursor::new(buf);
-        let timestamp = cursor.read_u64::<LE>()?;
+        let timestamp = cursor.read_bytes()?;
         let pixel_format = cursor
-            .read_u32::<LE>()?
+            .read_bytes::<u32>()?
             .try_into()
             .map_err(|e: String| Error::InvalidPacket(e.into()))?;
-        let width = cursor.read_u32::<LE>()?;
-        let height = cursor.read_u32::<LE>()?;
-        let x_offset = cursor.read_u32::<LE>()?;
-        let y_offset = cursor.read_u32::<LE>()?;
-        let x_padding = cursor.read_u16::<LE>()?;
-        let _reserved = cursor.read_u16::<LE>()?;
+        let width = cursor.read_bytes()?;
+        let height = cursor.read_bytes()?;
+        let x_offset = cursor.read_bytes()?;
+        let y_offset = cursor.read_bytes()?;
+        let x_padding = cursor.read_bytes()?;
+        let _reserved: u16 = cursor.read_bytes()?;
 
         Ok(Self {
             timestamp,
@@ -199,8 +199,7 @@ impl TryFrom<u16> for PayloadType {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use byteorder::WriteBytesExt;
+    use super::{super::parse_util::WriteBytes, *};
 
     /// Return bytes represnts generic leader.
     fn generic_leader_bytes(payload_type: PayloadType) -> Vec<u8> {
@@ -211,17 +210,17 @@ mod tests {
             PayloadType::Chunk => (0x4000, 20),
         };
         // Leader magic.
-        buf.write_u32::<LE>(0x4C563355).unwrap();
+        buf.write_bytes(0x4C563355u32).unwrap();
         // Reserved.
-        buf.write_u16::<LE>(0).unwrap();
+        buf.write_bytes(0u16).unwrap();
         // Leader size.
-        buf.write_u16::<LE>(size).unwrap();
+        buf.write_bytes(size as u16).unwrap();
         // Block_id
-        buf.write_u64::<LE>(51).unwrap();
+        buf.write_bytes(51u64).unwrap();
         // Reserved.
-        buf.write_u16::<LE>(0).unwrap();
+        buf.write_bytes(0u16).unwrap();
         // Payload type.
-        buf.write_u16::<LE>(payload_num).unwrap();
+        buf.write_bytes(payload_num as u16).unwrap();
         buf
     }
 
@@ -229,17 +228,17 @@ mod tests {
     fn test_parse_generic_leader() {
         let mut buf = vec![];
         // Leader magic.
-        buf.write_u32::<LE>(0x4C563355).unwrap();
+        buf.write_bytes(0x4C563355u32).unwrap();
         // Reserved.
-        buf.write_u16::<LE>(0).unwrap();
+        buf.write_bytes(0u16).unwrap();
         // Leader size.
-        buf.write_u16::<LE>(20).unwrap();
+        buf.write_bytes(20u16).unwrap();
         // Block ID.
-        buf.write_u64::<LE>(51).unwrap();
+        buf.write_bytes(51u64).unwrap();
         // Reserved.
-        buf.write_u16::<LE>(0).unwrap();
+        buf.write_bytes(0u16).unwrap();
         // Payload type, Image.
-        buf.write_u16::<LE>(0x0001).unwrap();
+        buf.write_bytes(0x0001u16).unwrap();
 
         let leader = Leader::parse(&buf).unwrap();
         assert_eq!(leader.leader_size(), 20);
@@ -251,21 +250,21 @@ mod tests {
     fn test_parse_image_leader() {
         let mut buf = generic_leader_bytes(PayloadType::Image);
         // Time stamp.
-        buf.write_u64::<LE>(100).unwrap();
+        buf.write_bytes(100u64).unwrap();
         // Pixel Format.
-        buf.write_u32::<LE>(PixelFormat::Mono8s.into()).unwrap();
+        buf.write_bytes::<u32>(PixelFormat::Mono8s.into()).unwrap();
         // Width.
-        buf.write_u32::<LE>(3840).unwrap();
+        buf.write_bytes(3840u32).unwrap();
         // Height.
-        buf.write_u32::<LE>(2160).unwrap();
+        buf.write_bytes(2160u32).unwrap();
         // X offset.
-        buf.write_u32::<LE>(0).unwrap();
+        buf.write_bytes(0u32).unwrap();
         // Y offset.
-        buf.write_u32::<LE>(0).unwrap();
+        buf.write_bytes(0u32).unwrap();
         // X padding.
-        buf.write_u16::<LE>(0).unwrap();
+        buf.write_bytes(0u16).unwrap();
         // Reserved.
-        buf.write_u16::<LE>(0).unwrap();
+        buf.write_bytes(0u16).unwrap();
 
         let leader = Leader::parse(&buf).unwrap();
         assert_eq!(leader.payload_type(), PayloadType::Image);

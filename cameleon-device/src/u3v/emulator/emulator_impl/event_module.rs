@@ -110,14 +110,16 @@ impl EventModule {
 }
 
 mod event_packet {
+    pub(super) use crate::u3v::protocol::event::EventScd;
+
     use std::borrow::Cow;
     use std::convert::TryInto;
     use std::io::Write;
 
-    use byteorder::{WriteBytesExt, LE};
     use thiserror::Error;
 
-    pub(super) use crate::u3v::protocol::event::EventScd;
+    use crate::u3v::protocol::parse_util::WriteBytes;
+
 
     #[derive(Debug, Error)]
     pub(super) enum ProtocolError {
@@ -151,11 +153,11 @@ mod event_packet {
 
         pub(super) fn serialize(&self, mut buf: impl Write) -> ProtocolResult<()> {
             // Serialize CCD.
-            buf.write_u32::<LE>(Self::PREFIX_MAGIC)?;
-            buf.write_u16::<LE>(Self::COMMAND_FLAG)?;
-            buf.write_u16::<LE>(Self::COMMAND_ID)?;
-            buf.write_u16::<LE>(self.scd.scd_len_unchecked())?;
-            buf.write_u16::<LE>(self.request_id)?;
+            buf.write_bytes(Self::PREFIX_MAGIC)?;
+            buf.write_bytes(Self::COMMAND_FLAG)?;
+            buf.write_bytes(Self::COMMAND_ID)?;
+            buf.write_bytes(self.scd.scd_len_unchecked())?;
+            buf.write_bytes(self.request_id)?;
 
             // Serialize SCD.
             self.scd.serialize(buf)?;
@@ -185,9 +187,9 @@ mod event_packet {
         }
 
         fn serialize(&self, mut buf: impl Write) -> ProtocolResult<()> {
-            buf.write_u16::<LE>(self.event_size)?;
-            buf.write_u16::<LE>(self.event_id)?;
-            buf.write_u64::<LE>(self.timestamp)?;
+            buf.write_bytes(self.event_size)?;
+            buf.write_bytes(self.event_id)?;
+            buf.write_bytes(self.timestamp)?;
             buf.write_all(self.data)?;
             Ok(())
         }

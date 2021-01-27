@@ -1,8 +1,8 @@
 use std::{convert::TryInto, io::Write};
 
-use byteorder::{WriteBytesExt, LE};
-
 use crate::u3v::{Error, Result};
+
+use super::parse_util::WriteBytes;
 
 #[derive(Debug)]
 pub struct CommandPacket<T> {
@@ -23,7 +23,7 @@ where
     const MINIMUM_ACK_SCD_LENGTH: u16 = 4;
 
     pub fn serialize(&self, mut buf: impl Write) -> Result<()> {
-        buf.write_u32::<LE>(Self::PREFIX_MAGIC)?;
+        buf.write_bytes(Self::PREFIX_MAGIC)?;
         self.ccd.serialize(&mut buf)?;
         self.scd.serialize(&mut buf)?;
 
@@ -312,9 +312,9 @@ impl CommandCcd {
     fn serialize(&self, mut buf: impl Write) -> Result<()> {
         self.flag.serialize(&mut buf)?;
         self.scd_kind.serialize(&mut buf)?;
-        buf.write_u16::<LE>(self.scd_len as u16)?;
+        buf.write_bytes(self.scd_len)?;
 
-        buf.write_u16::<LE>(self.request_id)?;
+        buf.write_bytes(self.request_id)?;
         Ok(())
     }
 
@@ -332,11 +332,11 @@ pub enum CommandFlag {
 
 impl CommandFlag {
     fn serialize(&self, mut buf: impl Write) -> Result<()> {
-        let flag_id = match self {
+        let flag_id: u16 = match self {
             Self::RequestAck => 1 << 14,
             Self::CommandResend => 1 << 15,
         };
-        Ok(buf.write_u16::<LE>(flag_id)?)
+        Ok(buf.write_bytes(flag_id)?)
     }
 }
 
@@ -350,14 +350,14 @@ pub enum ScdKind {
 
 impl ScdKind {
     fn serialize(self, mut buf: impl Write) -> Result<()> {
-        let kind_id = match self {
+        let kind_id: u16 = match self {
             Self::ReadMem => 0x0800,
             Self::WriteMem => 0x0802,
             Self::ReadMemStacked => 0x0806,
             Self::WriteMemStacked => 0x0808,
         };
 
-        Ok(buf.write_u16::<LE>(kind_id)?)
+        Ok(buf.write_bytes(kind_id)?)
     }
 }
 
@@ -392,9 +392,9 @@ impl CommandScd for ReadMem {
     }
 
     fn serialize(&self, mut buf: impl Write) -> Result<()> {
-        buf.write_u64::<LE>(self.address)?;
-        buf.write_u16::<LE>(0)?; // 2bytes reserved.
-        buf.write_u16::<LE>(self.read_length)?;
+        buf.write_bytes(self.address)?;
+        buf.write_bytes(0u16)?; // 2bytes reserved.
+        buf.write_bytes(self.read_length)?;
         Ok(())
     }
 
@@ -417,7 +417,7 @@ impl<'a> CommandScd for WriteMem<'a> {
     }
 
     fn serialize(&self, mut buf: impl Write) -> Result<()> {
-        buf.write_u64::<LE>(self.address)?;
+        buf.write_bytes(self.address)?;
         buf.write_all(self.data)?;
         Ok(())
     }
@@ -469,9 +469,9 @@ impl<'a> CommandScd for WriteMemStacked<'a> {
 
     fn serialize(&self, mut buf: impl Write) -> Result<()> {
         for ent in &self.entries {
-            buf.write_u64::<LE>(ent.address)?;
-            buf.write_u16::<LE>(0)?; // 2bytes reserved.
-            buf.write_u16::<LE>(ent.data_len)?;
+            buf.write_bytes(ent.address)?;
+            buf.write_bytes(0u16)?; // 2bytes reserved.
+            buf.write_bytes(ent.data_len)?;
             buf.write_all(ent.data)?;
         }
         Ok(())
@@ -495,7 +495,7 @@ mod tests {
 
     fn serialize_header(command_id: &[u8; 2], scd_len: &[u8; 2], req_id: &[u8; 2]) -> Vec<u8> {
         let mut ccd = vec![];
-        ccd.write_u32::<LE>(0x43563355).unwrap(); // Magic.
+        ccd.write_bytes(0x43563355u32).unwrap(); // Magic.
         ccd.extend(&[0x00, 0x40]); // Packet flag: Request Ack.
         ccd.extend(command_id);
         ccd.extend(scd_len);

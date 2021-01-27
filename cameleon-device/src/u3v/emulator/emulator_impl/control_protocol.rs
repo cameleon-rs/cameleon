@@ -21,11 +21,11 @@ pub(super) mod cmd {
 
     use std::io::Cursor;
 
-    use byteorder::{ReadBytesExt, LE};
-
     use crate::u3v::protocol::{cmd::*, parse_util};
 
     use super::{ProtocolError, ProtocolResult};
+
+    use crate::u3v::protocol::parse_util::ReadBytes;
 
     pub(in super::super) struct CommandPacket<'a> {
         ccd: CommandCcd,
@@ -55,7 +55,7 @@ pub(super) mod cmd {
         }
 
         fn parse_prefix(cursor: &mut Cursor<&[u8]>) -> ProtocolResult<()> {
-            let magic = cursor.read_u32::<LE>()?;
+            let magic: u32 = cursor.read_bytes()?;
             if magic == Self::PREFIX_MAGIC {
                 Ok(())
             } else {
@@ -68,8 +68,8 @@ pub(super) mod cmd {
         fn parse(cursor: &mut Cursor<&[u8]>) -> ProtocolResult<Self> {
             let flag = CommandFlag::parse(cursor)?;
             let scd_kind = ScdKind::parse(cursor)?;
-            let scd_len = cursor.read_u16::<LE>()?;
-            let request_id = cursor.read_u16::<LE>()?;
+            let scd_len = cursor.read_bytes()?;
+            let request_id = cursor.read_bytes()?;
 
             Ok(Self::new(flag, scd_kind, scd_len, request_id))
         }
@@ -77,7 +77,7 @@ pub(super) mod cmd {
 
     impl CommandFlag {
         fn parse(cursor: &mut Cursor<&[u8]>) -> ProtocolResult<Self> {
-            let raw = cursor.read_u16::<LE>()?;
+            let raw: u16 = cursor.read_bytes()?;
             if raw == 1 << 14 {
                 Ok(Self::RequestAck)
             } else if raw == 1 << 15 {
@@ -90,7 +90,7 @@ pub(super) mod cmd {
 
     impl ScdKind {
         fn parse(cursor: &mut Cursor<&[u8]>) -> ProtocolResult<Self> {
-            let raw = cursor.read_u16::<LE>()?;
+            let raw: u16 = cursor.read_bytes()?;
             match raw {
                 0x0800 => Ok(Self::ReadMem),
                 0x0802 => Ok(Self::WriteMem),
@@ -108,14 +108,14 @@ pub(super) mod cmd {
     impl<'a> ParseScd<'a> for ReadMem {
         fn parse(buf: &'a [u8], _ccd: &CommandCcd) -> ProtocolResult<Self> {
             let mut cursor = Cursor::new(buf);
-            let address = cursor.read_u64::<LE>()?;
-            let reserved = cursor.read_u16::<LE>()?;
+            let address = cursor.read_bytes()?;
+            let reserved: u16 = cursor.read_bytes()?;
             if reserved != 0 {
                 return Err(ProtocolError::InvalidPacket(
                     "the reserved field of Read command must be zero".into(),
                 ));
             }
-            let read_length = cursor.read_u16::<LE>()?;
+            let read_length = cursor.read_bytes()?;
             Ok(Self::new(address, read_length))
         }
     }
@@ -123,7 +123,7 @@ pub(super) mod cmd {
     impl<'a> ParseScd<'a> for WriteMem<'a> {
         fn parse(buf: &'a [u8], ccd: &CommandCcd) -> ProtocolResult<Self> {
             let mut cursor = Cursor::new(buf);
-            let address = cursor.read_u64::<LE>()?;
+            let address = cursor.read_bytes()?;
             let data = parse_util::read_bytes(&mut cursor, ccd.scd_len() - 8)?;
             Self::new(address, data)
                 .map_err(|err| ProtocolError::InvalidPacket(err.to_string().into()))
@@ -136,14 +136,14 @@ pub(super) mod cmd {
             let mut len = ccd.scd_len();
             let mut entries = Vec::with_capacity(len as usize / 12);
             while len > 0 {
-                let address = cursor.read_u64::<LE>()?;
-                let reserved = cursor.read_u16::<LE>()?;
+                let address = cursor.read_bytes()?;
+                let reserved: u16 = cursor.read_bytes()?;
                 if reserved != 0 {
                     return Err(ProtocolError::InvalidPacket(
                         "the reserved field of ReadMemStacked command must be zero".into(),
                     ));
                 }
-                let read_length = cursor.read_u16::<LE>()?;
+                let read_length = cursor.read_bytes()?;
                 entries.push(ReadMem::new(address, read_length));
 
                 len -= 12;
@@ -160,14 +160,14 @@ pub(super) mod cmd {
             let mut len = ccd.scd_len();
 
             while len > 0 {
-                let address = cursor.read_u64::<LE>()?;
-                let reserved = cursor.read_u16::<LE>()?;
+                let address = cursor.read_bytes()?;
+                let reserved: u16 = cursor.read_bytes()?;
                 if reserved != 0 {
                     return Err(ProtocolError::InvalidPacket(
                         "the reserved field of WriteMemStacked command must be zero".into(),
                     ));
                 }
-                let data_length = cursor.read_u16::<LE>()?;
+                let data_length = cursor.read_bytes()?;
                 let data = parse_util::read_bytes(&mut cursor, data_length)?;
                 regs.push(
                     WriteMem::new(address, data)
@@ -270,11 +270,10 @@ pub(super) mod ack {
     use std::io::Write;
     use std::time;
 
-    use byteorder::{WriteBytesExt, LE};
-
     use crate::u3v::protocol::{
         ack::{AckCcd, Status, StatusKind},
         cmd,
+        parse_util::WriteBytes,
     };
 
     use super::ProtocolResult;
@@ -295,7 +294,7 @@ pub(super) mod ack {
         const PREFIX_MAGIC: u32 = 0x43563355;
 
         pub(in super::super) fn serialize(&self, mut buf: impl Write) -> ProtocolResult<()> {
-            buf.write_u32::<LE>(Self::PREFIX_MAGIC)?;
+            buf.write_bytes(Self::PREFIX_MAGIC)?;
             self.ccd.serialize(&mut buf)?;
             self.scd.serialize(&mut buf)?;
             Ok(())
@@ -318,17 +317,17 @@ pub(super) mod ack {
         }
 
         fn serialize(&self, mut buf: impl Write) -> ProtocolResult<()> {
-            buf.write_u16::<LE>(self.status().code())?;
+            buf.write_bytes(self.status().code())?;
             self.scd_kind().serialize(&mut buf)?;
-            buf.write_u16::<LE>(self.scd_len())?;
-            buf.write_u16::<LE>(self.request_id())?;
+            buf.write_bytes(self.scd_len())?;
+            buf.write_bytes(self.request_id())?;
             Ok(())
         }
     }
 
     impl ScdKind {
         fn serialize(self, mut buf: impl Write) -> ProtocolResult<()> {
-            let raw = match self {
+            let raw: u16 = match self {
                 Self::ReadMem => 0x0801,
                 Self::WriteMem => 0x0803,
                 Self::Pending => 0x0805,
@@ -336,7 +335,7 @@ pub(super) mod ack {
                 Self::WriteMemStacked => 0x0809,
             };
 
-            buf.write_u16::<LE>(raw)?;
+            buf.write_bytes(raw)?;
             Ok(())
         }
     }
@@ -385,8 +384,8 @@ pub(super) mod ack {
 
     impl<'a> AckSerialize for WriteMem {
         fn serialize(&self, mut buf: impl Write) -> ProtocolResult<()> {
-            buf.write_u16::<LE>(0)?;
-            buf.write_u16::<LE>(self.length)?;
+            buf.write_bytes(0u16)?;
+            buf.write_bytes(self.length)?;
             Ok(())
         }
 
@@ -408,8 +407,8 @@ pub(super) mod ack {
 
     impl AckSerialize for Pending {
         fn serialize(&self, mut buf: impl Write) -> ProtocolResult<()> {
-            buf.write_u16::<LE>(0)?;
-            buf.write_u16::<LE>(self.timeout.as_millis() as u16)?;
+            buf.write_bytes(0u16)?;
+            buf.write_bytes(self.timeout.as_millis() as u16)?;
             Ok(())
         }
 
@@ -458,8 +457,8 @@ pub(super) mod ack {
     impl AckSerialize for WriteMemStacked {
         fn serialize(&self, mut buf: impl Write) -> ProtocolResult<()> {
             for len in &self.lengths {
-                buf.write_u16::<LE>(0)?;
-                buf.write_u16::<LE>(*len)?;
+                buf.write_bytes(0u16)?;
+                buf.write_bytes(*len)?;
             }
 
             Ok(())

@@ -1,7 +1,6 @@
-use byteorder::{ReadBytesExt, LE};
 use semver::Version;
 
-use crate::u3v::{BusSpeed, DeviceInfo, Error, Result};
+use crate::u3v::{protocol::parse_util::ReadBytes, BusSpeed, DeviceInfo, Error, Result};
 
 use super::{
     channel::{ControlIfaceInfo, ReceiveIfaceInfo},
@@ -278,9 +277,9 @@ impl DeviceInfoDescriptor {
             return Err(Error::InvalidDevice);
         }
 
-        let length = bytes.read_u8()?;
-        let descriptor_type = bytes.read_u8()?;
-        let descriptor_subtype = bytes.read_u8()?;
+        let length: u8 = bytes.read_bytes()?;
+        let descriptor_type = bytes.read_bytes()?;
+        let descriptor_subtype = bytes.read_bytes()?;
 
         if length < Self::MINIMUM_DESC_LENGTH
             || descriptor_type != Self::DESCRIPTOR_TYPE
@@ -289,19 +288,19 @@ impl DeviceInfoDescriptor {
             return Err(Error::InvalidDevice);
         }
 
-        let gencp_version_minor = bytes.read_u16::<LE>()?;
-        let gencp_version_major = bytes.read_u16::<LE>()?;
-        let u3v_version_minor = bytes.read_u16::<LE>()?;
-        let u3v_version_major = bytes.read_u16::<LE>()?;
-        let guid_idx = bytes.read_u8()?;
-        let vendor_name_idx = bytes.read_u8()?;
-        let model_name_idx = bytes.read_u8()?;
-        let family_name_idx = bytes.read_u8()?;
-        let device_version_idx = bytes.read_u8()?;
-        let manufacturer_info_idx = bytes.read_u8()?;
-        let serial_number_idx = bytes.read_u8()?;
-        let user_defined_name_idx = bytes.read_u8()?;
-        let supported_speed_mask = bytes.read_u8()?;
+        let gencp_version_minor = bytes.read_bytes()?;
+        let gencp_version_major = bytes.read_bytes()?;
+        let u3v_version_minor = bytes.read_bytes()?;
+        let u3v_version_major = bytes.read_bytes()?;
+        let guid_idx = bytes.read_bytes()?;
+        let vendor_name_idx = bytes.read_bytes()?;
+        let model_name_idx = bytes.read_bytes()?;
+        let family_name_idx = bytes.read_bytes()?;
+        let device_version_idx = bytes.read_bytes()?;
+        let manufacturer_info_idx = bytes.read_bytes()?;
+        let serial_number_idx = bytes.read_bytes()?;
+        let user_defined_name_idx = bytes.read_bytes()?;
+        let supported_speed_mask = bytes.read_bytes()?;
 
         Ok(Self {
             length,
