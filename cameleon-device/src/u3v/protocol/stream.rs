@@ -283,6 +283,31 @@ impl TryFrom<u16> for PayloadType {
     }
 }
 
+/// Chunk leader is a specific leader part of stream leader.
+///
+/// When [`Leader::payload_type`] returns [`PayloadType::Chunk`], then the leader contains
+/// [`ChunkLeader`] in a specific leader part.
+pub struct ChunkLeader {
+    timestamp: u64,
+}
+
+impl ChunkLeader {
+    /// Timestamp when the chunk payload data is created.
+    /// Timestamp represents duration since the device starts running.
+    pub fn timestamp(&self) -> time::Duration {
+        time::Duration::from_nanos(self.timestamp)
+    }
+}
+
+impl SpecificLeader for ChunkLeader {
+    fn from_bytes(buf: &[u8]) -> Result<Self> {
+        let mut cursor = Cursor::new(buf);
+        let timestamp = cursor.read_bytes()?;
+
+        Ok(Self { timestamp })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{super::util::WriteBytes, *};
@@ -387,7 +412,7 @@ mod tests {
 
         let leader = Leader::parse(&buf).unwrap();
         assert_eq!(leader.payload_type(), PayloadType::ImageExtendedChunk);
-        let image_leader: ImageLeader = leader.specific_leader_as().unwrap();
+        let image_leader: ImageExtendedChunkLeader = leader.specific_leader_as().unwrap();
         assert_eq!(image_leader.timestamp(), time::Duration::from_nanos(100));
         assert_eq!(image_leader.pixel_format(), PixelFormat::BayerGR10);
         assert_eq!(image_leader.width(), 3840);
@@ -395,5 +420,17 @@ mod tests {
         assert_eq!(image_leader.x_offset(), 0);
         assert_eq!(image_leader.y_offset(), 0);
         assert_eq!(image_leader.x_padding(), 0);
+    }
+
+    #[test]
+    fn test_parse_chunk_leader() {
+        let mut buf = generic_leader_bytes(PayloadType::Chunk);
+        // Time stamp.
+        buf.write_bytes(100u64).unwrap();
+
+        let leader = Leader::parse(&buf).unwrap();
+        assert_eq!(leader.payload_type(), PayloadType::Chunk);
+        let image_leader: ChunkLeader = leader.specific_leader_as().unwrap();
+        assert_eq!(image_leader.timestamp(), time::Duration::from_nanos(100));
     }
 }
