@@ -12,7 +12,39 @@ use crate::{
 
 use super::util::ReadBytes;
 
-/// Leader of stream packet.
+/// Leader of stream protocol.
+///
+/// # Example
+/// ```no_run
+/// use cameleon_device::u3v::protocol::stream::{Leader, PayloadType, ImageLeader,
+///                                             ImageExtendedChunkLeader, ChunkLeader};
+///
+/// // Buffer for leader bytes.
+/// let mut buf = Vec::new();
+///
+/// // Fill buffer using [`cameleon_device::u3v::Device`].
+/// // ..
+///
+/// // Parse leader. In this point, only the generic part of the leader is parsed.
+/// let leader = Leader::parse(&buf).unwrap();
+///
+/// // Parse specific part of the leader.
+/// match leader.payload_type() {
+///     PayloadType::Image => {
+///         // Try parsing specific part as Image Leader.
+///         let image_leader: ImageLeader = leader.specific_leader_as().unwrap();
+///     }
+///     PayloadType::ImageExtendedChunk => {
+///         // Try parsing specific part as Image Extended Chunk Leader.
+///         let image_leader: ImageExtendedChunkLeader = leader.specific_leader_as().unwrap();
+///     }
+///
+///     PayloadType::Chunk => {
+///         // Try parsing specific part as Image Extended Chunk Leader.
+///         let image_leader: ChunkLeader = leader.specific_leader_as().unwrap();
+///     }
+/// }
+/// ```
 pub struct Leader<'a> {
     /// Generic leader.
     generic_leader: GenericLeader,
@@ -46,7 +78,7 @@ impl<'a> Leader<'a> {
         self.generic_leader.payload_type
     }
 
-    /// ID of data block
+    /// ID of data block.
     pub fn block_id(&self) -> u64 {
         self.generic_leader.block_id
     }
