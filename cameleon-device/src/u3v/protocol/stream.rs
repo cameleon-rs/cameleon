@@ -46,75 +46,56 @@ use super::util::ReadBytes;
 /// }
 /// ```
 pub struct Leader<'a> {
-    /// Generic leader.
-    generic_leader: GenericLeader,
+    leader_size: u16,
+    block_id: u64,
+    payload_type: PayloadType,
 
     /// The raw bytes represents specific leader.
     raw_specfic_leader: &'a [u8],
 }
 
 impl<'a> Leader<'a> {
-    pub fn parse(buf: &'a (impl AsRef<[u8]> + ?Sized)) -> Result<Self> {
-        let mut cursor = Cursor::new(buf.as_ref());
-        let generic_leader = GenericLeader::parse(&mut cursor)?;
-        let raw_specfic_leader = &cursor.get_ref()[cursor.position() as usize..];
-        Ok(Self {
-            generic_leader,
-            raw_specfic_leader,
-        })
-    }
-
-    pub fn specific_leader_as<T: SpecificLeader>(&self) -> Result<T> {
-        T::from_bytes(self.raw_specfic_leader)
-    }
-
-    /// Total size of leader, this size contains specific leader.
-    pub fn leader_size(&self) -> u16 {
-        self.generic_leader.leader_size
-    }
-
-    /// Type of the payload type the leader is followed by.
-    pub fn payload_type(&self) -> PayloadType {
-        self.generic_leader.payload_type
-    }
-
-    /// ID of data block.
-    pub fn block_id(&self) -> u64 {
-        self.generic_leader.block_id
-    }
-}
-
-pub trait SpecificLeader {
-    fn from_bytes(buf: &[u8]) -> Result<Self>
-    where
-        Self: Sized;
-}
-
-/// Generic leader of stream protocol.
-///
-/// All specific leader follows generic leader.
-struct GenericLeader {
-    leader_size: u16,
-    block_id: u64,
-    payload_type: PayloadType,
-}
-
-impl GenericLeader {
     const LEADER_MAGIC: u32 = 0x4C563355;
 
-    fn parse(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
-        Self::parse_prefix(cursor)?;
+    /// Parse bytes as Leader.
+    pub fn parse(buf: &'a (impl AsRef<[u8]> + ?Sized)) -> Result<Self> {
+        let mut cursor = Cursor::new(buf.as_ref());
+
+        Self::parse_prefix(&mut cursor)?;
         let _reserved: u16 = cursor.read_bytes()?;
         let leader_size = cursor.read_bytes()?;
         let block_id = cursor.read_bytes()?;
         let _reserved: u16 = cursor.read_bytes()?;
         let payload_type = cursor.read_bytes::<u16>()?.try_into()?;
 
+        let raw_specfic_leader = &cursor.get_ref()[cursor.position() as usize..];
+
         Ok(Self {
             leader_size,
             block_id,
             payload_type,
+            raw_specfic_leader,
         })
+    }
+
+    /// Parse a specific part of leader.
+    pub fn specific_leader_as<T: SpecificLeader>(&self) -> Result<T> {
+        T::from_bytes(self.raw_specfic_leader)
+    }
+
+    /// Total size of leader, this size contains a specific leader part.
+    pub fn leader_size(&self) -> u16 {
+        self.leader_size
+    }
+
+    /// Type of the payload type the leader is followed by.
+    pub fn payload_type(&self) -> PayloadType {
+        self.payload_type
+    }
+
+    /// ID of data block.
+    pub fn block_id(&self) -> u64 {
+        self.block_id
     }
 
     fn parse_prefix(cursor: &mut Cursor<&[u8]>) -> Result<()> {
@@ -125,6 +106,12 @@ impl GenericLeader {
             Err(Error::InvalidPacket("invalid prefix magic".into()))
         }
     }
+}
+
+pub trait SpecificLeader {
+    fn from_bytes(buf: &[u8]) -> Result<Self>
+    where
+        Self: Sized;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -340,6 +327,101 @@ impl SpecificLeader for ChunkLeader {
     }
 }
 
+/// Trailer part of stream containing auxiliary information of payload data, which is sent after
+/// the payload data.
+pub struct Trailer<'a> {
+    trailer_size: u16,
+    block_id: u64,
+    payload_status: PayloadStatus,
+    valid_payload_size: u64,
+    raw_specfic_trailer: &'a [u8],
+}
+
+impl<'a> Trailer<'a> {
+    const TRAILER_MAGIC: u32 = 0x54563355;
+
+    /// Parse bytes as Leader.
+    pub fn parse(buf: &'a (impl AsRef<[u8]> + ?Sized)) -> Result<Self> {
+        let mut cursor = Cursor::new(buf.as_ref());
+
+        Self::parse_prefix(&mut cursor)?;
+        let _reserved: u16 = cursor.read_bytes()?;
+        let trailer_size = cursor.read_bytes()?;
+        let block_id = cursor.read_bytes()?;
+        let payload_status = cursor.read_bytes::<u16>()?.try_into()?;
+        let _reserved: u16 = cursor.read_bytes()?;
+        let valid_payload_size = cursor.read_bytes()?;
+
+        let raw_specfic_trailer = &cursor.get_ref()[cursor.position() as usize..];
+
+        Ok(Self {
+            trailer_size,
+            block_id,
+            payload_status,
+            valid_payload_size,
+            raw_specfic_trailer,
+        })
+    }
+
+    /// Total size of trailer, this size contains a specific trailer part.
+    pub fn trailer_size(&self) -> u16 {
+        self.trailer_size
+    }
+
+    /// ID of the block.
+    pub fn block_id(&self) -> u64 {
+        self.block_id
+    }
+
+    /// Status of payload data of the block.
+    pub fn payload_status(&self) -> PayloadStatus {
+        self.payload_status
+    }
+
+    /// Size of valid payload data.
+    /// In case that the device send additional bytes, the additional bytes must be ignored.
+    pub fn valid_payload_size(&self) -> u64 {
+        self.valid_payload_size
+    }
+
+    fn parse_prefix(cursor: &mut Cursor<&[u8]>) -> Result<()> {
+        let magic: u32 = cursor.read_bytes()?;
+        if magic == Self::TRAILER_MAGIC {
+            Ok(())
+        } else {
+            Err(Error::InvalidPacket("invalid prefix magic".into()))
+        }
+    }
+}
+
+/// Status of payload transfer,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PayloadStatus {
+    /// Transfer succeed.
+    Success,
+
+    /// Some payload data is discarded.
+    DataDiscarded,
+
+    /// Some data is missed while transferring data due to inappropriate `SIRM` register settings.
+    DataOverrun,
+}
+
+impl TryFrom<u16> for PayloadStatus {
+    type Error = Error;
+
+    fn try_from(val: u16) -> Result<Self> {
+        match val {
+            0x0000 => Ok(PayloadStatus::Success),
+            0xA100 => Ok(PayloadStatus::DataDiscarded),
+            0xA101 => Ok(PayloadStatus::DataOverrun),
+            otherwise => Err(Error::InvalidPacket(
+                format!("{} is invalid value for stream payload status", otherwise,).into(),
+            )),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{super::util::WriteBytes, *};
@@ -464,5 +546,33 @@ mod tests {
         assert_eq!(leader.payload_type(), PayloadType::Chunk);
         let image_leader: ChunkLeader = leader.specific_leader_as().unwrap();
         assert_eq!(image_leader.timestamp(), time::Duration::from_nanos(100));
+    }
+
+    #[test]
+    fn test_parse_generic_trailer() {
+        let mut buf = vec![];
+        let trailer_size: u16 = 28;
+        let block_id: u64 = 51;
+        let valid_payload_size: u64 = 4096 * 2160;
+        // Trailer magic.
+        buf.write_bytes(0x54563355u32).unwrap();
+        // Reserved.
+        buf.write_bytes(0u16).unwrap();
+        // Trailer size.
+        buf.write_bytes(trailer_size).unwrap();
+        // Block ID.
+        buf.write_bytes(block_id).unwrap();
+        // Status.
+        buf.write_bytes(0xa100u16).unwrap();
+        // Reserved.
+        buf.write_bytes(0u16).unwrap();
+        // Valid paylaod size.
+        buf.write_bytes(valid_payload_size).unwrap();
+
+        let trailer = Trailer::parse(&buf).unwrap();
+        assert_eq!(trailer.trailer_size(), trailer_size);
+        assert_eq!(trailer.block_id(), block_id);
+        assert_eq!(trailer.payload_status(), PayloadStatus::DataDiscarded);
+        assert_eq!(trailer.valid_payload_size(), valid_payload_size);
     }
 }
