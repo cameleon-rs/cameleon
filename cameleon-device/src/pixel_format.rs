@@ -3,802 +3,802 @@ use std::convert::TryFrom;
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PixelFormat {
-    /// Monochrome 8-bit
+    /// Monochrome 8-bit.
     Mono8,
 
-    /// Monochrome 8-bit signed
+    /// Monochrome 8-bit signed.
     Mono8s,
 
-    /// Monochrome 10-bit unpacked
+    /// Monochrome 10-bit unpacked.
     Mono10,
 
-    /// Monochrome 10-bit packed
+    /// Monochrome 10-bit packed.
     Mono10Packed,
 
-    /// Monochrome 12-bit unpacked
+    /// Monochrome 12-bit unpacked.
     Mono12,
 
-    /// Monochrome 12-bit packed
+    /// Monochrome 12-bit packed.
     Mono12Packed,
 
-    /// Monochrome 16-bit
+    /// Monochrome 16-bit.
     Mono16,
 
-    /// Bayer Green-Red 8-bit
+    /// Bayer Green-Red 8-bit.
     BayerGR8,
 
-    /// Bayer Red-Green 8-bit
+    /// Bayer Red-Green 8-bit.
     BayerRG8,
 
-    /// Bayer Green-Blue 8-bit
+    /// Bayer Green-Blue 8-bit.
     BayerGB8,
 
-    /// Bayer Blue-Green 8-bit
+    /// Bayer Blue-Green 8-bit.
     BayerBG8,
 
-    /// Bayer Green-Red 10-bit unpacked
+    /// Bayer Green-Red 10-bit unpacked.
     BayerGR10,
 
-    /// Bayer Red-Green 10-bit unpacked
+    /// Bayer Red-Green 10-bit unpacked.
     BayerRG10,
 
-    /// Bayer Green-Blue 10-bit unpacked
+    /// Bayer Green-Blue 10-bit unpacked.
     BayerGB10,
 
-    /// Bayer Blue-Green 10-bit unpacked
+    /// Bayer Blue-Green 10-bit unpacked.
     BayerBG10,
 
-    /// Bayer Green-Red 12-bit unpacked
+    /// Bayer Green-Red 12-bit unpacked.
     BayerGR12,
 
-    /// Bayer Red-Green 12-bit unpacked
+    /// Bayer Red-Green 12-bit unpacked.
     BayerRG12,
 
-    /// Bayer Green-Blue 12-bit unpacked
+    /// Bayer Green-Blue 12-bit unpacked.
     BayerGB12,
 
-    /// Bayer Blue-Green 12-bit unpacked
+    /// Bayer Blue-Green 12-bit unpacked.
     BayerBG12,
 
-    /// Red-Green-Blue 8-bit
+    /// Red-Green-Blue 8-bit.
     RGB8,
 
-    /// Blue-Green-Red 8-bit
+    /// Blue-Green-Red 8-bit.
     BGR8,
 
-    /// Red-Green-Blue-alpha 8-bit
+    /// Red-Green-Blue-alpha 8-bit.
     RGBa8,
 
-    /// Blue-Green-Red-alpha 8-bit
+    /// Blue-Green-Red-alpha 8-bit.
     BGRa8,
 
-    /// Red-Green-Blue 10-bit unpacked
+    /// Red-Green-Blue 10-bit unpacked.
     RGB10,
 
-    /// Blue-Green-Red 10-bit unpacked
+    /// Blue-Green-Red 10-bit unpacked.
     BGR10,
 
-    /// Red-Green-Blue 12-bit unpacked
+    /// Red-Green-Blue 12-bit unpacked.
     RGB12,
 
-    /// Blue-Green-Red 12-bit unpacked
+    /// Blue-Green-Red 12-bit unpacked.
     BGR12,
 
-    /// YUV 4:4:4 8-bit
+    /// YUV 4:4:4 8-bit.
     YUV8_UYV,
 
-    /// Red-Green-Blue 8-bit planar
+    /// Red-Green-Blue 8-bit planar.
     RGB8_Planar,
 
-    /// Red-Green-Blue 10-bit unpacked planar
+    /// Red-Green-Blue 10-bit unpacked planar.
     RGB10_Planar,
 
-    /// Red-Green-Blue 12-bit unpacked planar
+    /// Red-Green-Blue 12-bit unpacked planar.
     RGB12_Planar,
 
-    /// Red-Green-Blue 16-bit planar
+    /// Red-Green-Blue 16-bit planar.
     RGB16_Planar,
 
-    /// Monochrome 14-bit unpacked
+    /// Monochrome 14-bit unpacked.
     Mono14,
 
-    /// Bayer Green-Red 10-bit packed
+    /// Bayer Green-Red 10-bit packed.
     BayerGR10Packed,
 
-    /// Bayer Red-Green 10-bit packed
+    /// Bayer Red-Green 10-bit packed.
     BayerRG10Packed,
 
-    /// Bayer Green-Blue 10-bit packed
+    /// Bayer Green-Blue 10-bit packed.
     BayerGB10Packed,
 
-    /// Bayer Blue-Green 10-bit packed
+    /// Bayer Blue-Green 10-bit packed.
     BayerBG10Packed,
 
-    /// Bayer Green-Red 12-bit packed
+    /// Bayer Green-Red 12-bit packed.
     BayerGR12Packed,
 
-    /// Bayer Red-Green 12-bit packed
+    /// Bayer Red-Green 12-bit packed.
     BayerRG12Packed,
 
-    /// Bayer Green-Blue 12-bit packed
+    /// Bayer Green-Blue 12-bit packed.
     BayerGB12Packed,
 
-    /// Bayer Blue-Green 12-bit packed
+    /// Bayer Blue-Green 12-bit packed.
     BayerBG12Packed,
 
-    /// Bayer Green-Red 16-bit
+    /// Bayer Green-Red 16-bit.
     BayerGR16,
 
-    /// Bayer Red-Green 16-bit
+    /// Bayer Red-Green 16-bit.
     BayerRG16,
 
-    /// Bayer Green-Blue 16-bit
+    /// Bayer Green-Blue 16-bit.
     BayerGB16,
 
-    /// Bayer Blue-Green 16-bit
+    /// Bayer Blue-Green 16-bit.
     BayerBG16,
 
-    /// YUV 4:2:2 8-bit
+    /// YUV 4:2:2 8-bit.
     YUV422_8,
 
-    /// Red-Green-Blue 16-bit
+    /// Red-Green-Blue 16-bit.
     RGB16,
 
-    /// Red-Green-Blue 12-bit packed - variant 1
+    /// Red-Green-Blue 12-bit packed - variant 1.
     RGB12V1Packed,
 
-    /// Red-Green-Blue 5/6/5-bit packed
+    /// Red-Green-Blue 5/6/5-bit packed.
     RGB565p,
 
-    /// Blue-Green-Red 5/6/5-bit packed
+    /// Blue-Green-Red 5/6/5-bit packed.
     BGR565p,
 
-    /// Monochrome 1-bit packed
+    /// Monochrome 1-bit packed.
     Mono1p,
 
-    /// Monochrome 2-bit packed
+    /// Monochrome 2-bit packed.
     Mono2p,
 
-    /// Monochrome 4-bit packed
+    /// Monochrome 4-bit packed.
     Mono4p,
 
-    /// YCbCr 4:4:4 8-bit
+    /// YCbCr 4:4:4 8-bit.
     YCbCr8_CbYCr,
 
-    /// YCbCr 4:2:2 8-bit
+    /// YCbCr 4:2:2 8-bit.
     YCbCr422_8,
 
-    /// YCbCr 4:1:1 8-bit
+    /// YCbCr 4:1:1 8-bit.
     YCbCr411_8_CbYYCrYY,
 
-    /// YCbCr 4:4:4 8-bit BT.601
+    /// YCbCr 4:4:4 8-bit BT.601.
     YCbCr601_8_CbYCr,
 
-    /// YCbCr 4:2:2 8-bit BT.601
+    /// YCbCr 4:2:2 8-bit BT.601.
     YCbCr601_422_8,
 
-    /// YCbCr 4:1:1 8-bit BT.601
+    /// YCbCr 4:1:1 8-bit BT.601.
     YCbCr601_411_8_CbYYCrYY,
 
-    /// YCbCr 4:4:4 8-bit BT.709
+    /// YCbCr 4:4:4 8-bit BT.709.
     YCbCr709_8_CbYCr,
 
-    /// YCbCr 4:2:2 8-bit BT.709
+    /// YCbCr 4:2:2 8-bit BT.709.
     YCbCr709_422_8,
 
-    /// YCbCr 4:1:1 8-bit BT.709
+    /// YCbCr 4:1:1 8-bit BT.709.
     YCbCr709_411_8_CbYYCrYY,
 
-    /// YCbCr 4:2:2 8-bit
+    /// YCbCr 4:2:2 8-bit.
     YCbCr422_8_CbYCrY,
 
-    /// YCbCr 4:2:2 8-bit BT.601
+    /// YCbCr 4:2:2 8-bit BT.601.
     YCbCr601_422_8_CbYCrY,
 
-    /// YCbCr 4:2:2 8-bit BT.709
+    /// YCbCr 4:2:2 8-bit BT.709.
     YCbCr709_422_8_CbYCrY,
 
-    /// Monochrome 10-bit packed
+    /// Monochrome 10-bit packed.
     Mono10p,
 
-    /// Monochrome 12-bit packed
+    /// Monochrome 12-bit packed.
     Mono12p,
 
-    /// Blue-Green-Red 10-bit packed
+    /// Blue-Green-Red 10-bit packed.
     BGR10p,
 
-    /// Blue-Green-Red 12-bit packed
+    /// Blue-Green-Red 12-bit packed.
     BGR12p,
 
-    /// Blue-Green-Red 14-bit unpacked
+    /// Blue-Green-Red 14-bit unpacked.
     BGR14,
 
-    /// Blue-Green-Red 16-bit
+    /// Blue-Green-Red 16-bit.
     BGR16,
 
-    /// Blue-Green-Red-alpha 10-bit unpacked
+    /// Blue-Green-Red-alpha 10-bit unpacked.
     BGRa10,
 
-    /// Blue-Green-Red-alpha 10-bit packed
+    /// Blue-Green-Red-alpha 10-bit packed.
     BGRa10p,
 
-    /// Blue-Green-Red-alpha 12-bit unpacked
+    /// Blue-Green-Red-alpha 12-bit unpacked.
     BGRa12,
 
-    /// Blue-Green-Red-alpha 12-bit packed
+    /// Blue-Green-Red-alpha 12-bit packed.
     BGRa12p,
 
-    /// Blue-Green-Red-alpha 14-bit unpacked
+    /// Blue-Green-Red-alpha 14-bit unpacked.
     BGRa14,
 
-    /// Blue-Green-Red-alpha 16-bit
+    /// Blue-Green-Red-alpha 16-bit.
     BGRa16,
 
-    /// Bayer Blue-Green 10-bit packed
+    /// Bayer Blue-Green 10-bit packed.
     BayerBG10p,
 
-    /// Bayer Blue-Green 12-bit packed
+    /// Bayer Blue-Green 12-bit packed.
     BayerBG12p,
 
-    /// Bayer Green-Blue 10-bit packed
+    /// Bayer Green-Blue 10-bit packed.
     BayerGB10p,
 
-    /// Bayer Green-Blue 12-bit packed
+    /// Bayer Green-Blue 12-bit packed.
     BayerGB12p,
 
-    /// Bayer Green-Red 10-bit packed
+    /// Bayer Green-Red 10-bit packed.
     BayerGR10p,
 
-    /// Bayer Green-Red 12-bit packed
+    /// Bayer Green-Red 12-bit packed.
     BayerGR12p,
 
-    /// Bayer Red-Green 10-bit packed
+    /// Bayer Red-Green 10-bit packed.
     BayerRG10p,
 
-    /// Bayer Red-Green 12-bit packed
+    /// Bayer Red-Green 12-bit packed.
     BayerRG12p,
 
-    /// YCbCr 4:1:1 8-bit
+    /// YCbCr 4:1:1 8-bit.
     YCbCr411_8,
 
-    /// YCbCr 4:4:4 8-bit
+    /// YCbCr 4:4:4 8-bit.
     YCbCr8,
 
-    /// Red-Green-Blue 10-bit packed
+    /// Red-Green-Blue 10-bit packed.
     RGB10p,
 
-    /// Red-Green-Blue 12-bit packed
+    /// Red-Green-Blue 12-bit packed.
     RGB12p,
 
-    /// Red-Green-Blue 14-bit unpacked
+    /// Red-Green-Blue 14-bit unpacked.
     RGB14,
 
-    /// Red-Green-Blue-alpha 10-bit unpacked
+    /// Red-Green-Blue-alpha 10-bit unpacked.
     RGBa10,
 
-    /// Red-Green-Blue-alpha 10-bit packed
+    /// Red-Green-Blue-alpha 10-bit packed.
     RGBa10p,
 
-    /// Red-Green-Blue-alpha 12-bit unpacked
+    /// Red-Green-Blue-alpha 12-bit unpacked.
     RGBa12,
 
-    /// Red-Green-Blue-alpha 12-bit packed
+    /// Red-Green-Blue-alpha 12-bit packed.
     RGBa12p,
 
-    /// Red-Green-Blue-alpha 14-bit unpacked
+    /// Red-Green-Blue-alpha 14-bit unpacked.
     RGBa14,
 
-    /// Red-Green-Blue-alpha 16-bit
+    /// Red-Green-Blue-alpha 16-bit.
     RGBa16,
 
-    /// YCbCr 4:2:2 10-bit unpacked
+    /// YCbCr 4:2:2 10-bit unpacked.
     YCbCr422_10,
 
-    /// YCbCr 4:2:2 12-bit unpacked
+    /// YCbCr 4:2:2 12-bit unpacked.
     YCbCr422_12,
 
-    /// Sparse Color Filter #1 White-Blue-White-Green 8-bit
+    /// Sparse Color Filter #1 White-Blue-White-Green 8-bit.
     SCF1WBWG8,
 
-    /// Sparse Color Filter #1 White-Blue-White-Green 10-bit unpacked
+    /// Sparse Color Filter #1 White-Blue-White-Green 10-bit unpacked.
     SCF1WBWG10,
 
-    /// Sparse Color Filter #1 White-Blue-White-Green 10-bit packed
+    /// Sparse Color Filter #1 White-Blue-White-Green 10-bit packed.
     SCF1WBWG10p,
 
-    /// Sparse Color Filter #1 White-Blue-White-Green 12-bit unpacked
+    /// Sparse Color Filter #1 White-Blue-White-Green 12-bit unpacked.
     SCF1WBWG12,
 
-    /// Sparse Color Filter #1 White-Blue-White-Green 12-bit packed
+    /// Sparse Color Filter #1 White-Blue-White-Green 12-bit packed.
     SCF1WBWG12p,
 
-    /// Sparse Color Filter #1 White-Blue-White-Green 14-bit unpacked
+    /// Sparse Color Filter #1 White-Blue-White-Green 14-bit unpacked.
     SCF1WBWG14,
 
-    /// Sparse Color Filter #1 White-Blue-White-Green 16-bit unpacked
+    /// Sparse Color Filter #1 White-Blue-White-Green 16-bit unpacked.
     SCF1WBWG16,
 
-    /// Sparse Color Filter #1 White-Green-White-Blue 8-bit
+    /// Sparse Color Filter #1 White-Green-White-Blue 8-bit.
     SCF1WGWB8,
 
-    /// Sparse Color Filter #1 White-Green-White-Blue 10-bit unpacked
+    /// Sparse Color Filter #1 White-Green-White-Blue 10-bit unpacked.
     SCF1WGWB10,
 
-    /// Sparse Color Filter #1 White-Green-White-Blue 10-bit packed
+    /// Sparse Color Filter #1 White-Green-White-Blue 10-bit packed.
     SCF1WGWB10p,
 
-    /// Sparse Color Filter #1 White-Green-White-Blue 12-bit unpacked
+    /// Sparse Color Filter #1 White-Green-White-Blue 12-bit unpacked.
     SCF1WGWB12,
 
-    /// Sparse Color Filter #1 White-Green-White-Blue 12-bit packed
+    /// Sparse Color Filter #1 White-Green-White-Blue 12-bit packed.
     SCF1WGWB12p,
 
-    /// Sparse Color Filter #1 White-Green-White-Blue 14-bit unpacked
+    /// Sparse Color Filter #1 White-Green-White-Blue 14-bit unpacked.
     SCF1WGWB14,
 
-    /// Sparse Color Filter #1 White-Green-White-Blue 16-bit
+    /// Sparse Color Filter #1 White-Green-White-Blue 16-bit.
     SCF1WGWB16,
 
-    /// Sparse Color Filter #1 White-Green-White-Red 8-bit
+    /// Sparse Color Filter #1 White-Green-White-Red 8-bit.
     SCF1WGWR8,
 
-    /// Sparse Color Filter #1 White-Green-White-Red 10-bit unpacked
+    /// Sparse Color Filter #1 White-Green-White-Red 10-bit unpacked.
     SCF1WGWR10,
 
-    /// Sparse Color Filter #1 White-Green-White-Red 10-bit packed
+    /// Sparse Color Filter #1 White-Green-White-Red 10-bit packed.
     SCF1WGWR10p,
 
-    /// Sparse Color Filter #1 White-Green-White-Red 12-bit unpacked
+    /// Sparse Color Filter #1 White-Green-White-Red 12-bit unpacked.
     SCF1WGWR12,
 
-    /// Sparse Color Filter #1 White-Green-White-Red 12-bit packed
+    /// Sparse Color Filter #1 White-Green-White-Red 12-bit packed.
     SCF1WGWR12p,
 
-    /// Sparse Color Filter #1 White-Green-White-Red 14-bit unpacked
+    /// Sparse Color Filter #1 White-Green-White-Red 14-bit unpacked.
     SCF1WGWR14,
 
-    /// Sparse Color Filter #1 White-Green-White-Red 16-bit
+    /// Sparse Color Filter #1 White-Green-White-Red 16-bit.
     SCF1WGWR16,
 
-    /// Sparse Color Filter #1 White-Red-White-Green 8-bit
+    /// Sparse Color Filter #1 White-Red-White-Green 8-bit.
     SCF1WRWG8,
 
-    /// Sparse Color Filter #1 White-Red-White-Green 10-bit unpacked
+    /// Sparse Color Filter #1 White-Red-White-Green 10-bit unpacked.
     SCF1WRWG10,
 
-    /// Sparse Color Filter #1 White-Red-White-Green 10-bit packed
+    /// Sparse Color Filter #1 White-Red-White-Green 10-bit packed.
     SCF1WRWG10p,
 
-    /// Sparse Color Filter #1 White-Red-White-Green 12-bit unpacked
+    /// Sparse Color Filter #1 White-Red-White-Green 12-bit unpacked.
     SCF1WRWG12,
 
-    /// Sparse Color Filter #1 White-Red-White-Green 12-bit packed
+    /// Sparse Color Filter #1 White-Red-White-Green 12-bit packed.
     SCF1WRWG12p,
 
-    /// Sparse Color Filter #1 White-Red-White-Green 14-bit unpacked
+    /// Sparse Color Filter #1 White-Red-White-Green 14-bit unpacked.
     SCF1WRWG14,
 
-    /// Sparse Color Filter #1 White-Red-White-Green 16-bit
+    /// Sparse Color Filter #1 White-Red-White-Green 16-bit.
     SCF1WRWG16,
 
-    /// YCbCr 4:4:4 10-bit unpacked
+    /// YCbCr 4:4:4 10-bit unpacked.
     YCbCr10_CbYCr,
 
-    /// YCbCr 4:4:4 10-bit packed
+    /// YCbCr 4:4:4 10-bit packed.
     YCbCr10p_CbYCr,
 
-    /// YCbCr 4:4:4 12-bit unpacked
+    /// YCbCr 4:4:4 12-bit unpacked.
     YCbCr12_CbYCr,
 
-    /// YCbCr 4:4:4 12-bit packed
+    /// YCbCr 4:4:4 12-bit packed.
     YCbCr12p_CbYCr,
 
-    /// YCbCr 4:2:2 10-bit packed
+    /// YCbCr 4:2:2 10-bit packed.
     YCbCr422_10p,
 
-    /// YCbCr 4:2:2 12-bit packed
+    /// YCbCr 4:2:2 12-bit packed.
     YCbCr422_12p,
 
-    /// YCbCr 4:4:4 10-bit unpacked BT.601
+    /// YCbCr 4:4:4 10-bit unpacked BT.601.
     YCbCr601_10_CbYCr,
 
-    /// YCbCr 4:4:4 10-bit packed BT.601
+    /// YCbCr 4:4:4 10-bit packed BT.601.
     YCbCr601_10p_CbYCr,
 
-    /// YCbCr 4:4:4 12-bit unpacked BT.601
+    /// YCbCr 4:4:4 12-bit unpacked BT.601.
     YCbCr601_12_CbYCr,
 
-    /// YCbCr 4:4:4 12-bit packed BT.601
+    /// YCbCr 4:4:4 12-bit packed BT.601.
     YCbCr601_12p_CbYCr,
 
-    /// YCbCr 4:2:2 10-bit unpacked BT.601
+    /// YCbCr 4:2:2 10-bit unpacked BT.601.
     YCbCr601_422_10,
 
-    /// YCbCr 4:2:2 10-bit packed BT.601
+    /// YCbCr 4:2:2 10-bit packed BT.601.
     YCbCr601_422_10p,
 
-    /// YCbCr 4:2:2 12-bit unpacked BT.601
+    /// YCbCr 4:2:2 12-bit unpacked BT.601.
     YCbCr601_422_12,
 
-    /// YCbCr 4:2:2 12-bit packed BT.601
+    /// YCbCr 4:2:2 12-bit packed BT.601.
     YCbCr601_422_12p,
 
-    /// YCbCr 4:4:4 10-bit unpacked BT.709
+    /// YCbCr 4:4:4 10-bit unpacked BT.709.
     YCbCr709_10_CbYCr,
 
-    /// YCbCr 4:4:4 10-bit packed BT.709
+    /// YCbCr 4:4:4 10-bit packed BT.709.
     YCbCr709_10p_CbYCr,
 
-    /// YCbCr 4:4:4 12-bit unpacked BT.709
+    /// YCbCr 4:4:4 12-bit unpacked BT.709.
     YCbCr709_12_CbYCr,
 
-    /// YCbCr 4:4:4 12-bit packed BT.709
+    /// YCbCr 4:4:4 12-bit packed BT.709.
     YCbCr709_12p_CbYCr,
 
-    /// YCbCr 4:2:2 10-bit unpacked BT.709
+    /// YCbCr 4:2:2 10-bit unpacked BT.709.
     YCbCr709_422_10,
 
-    /// YCbCr 4:2:2 10-bit packed BT.709
+    /// YCbCr 4:2:2 10-bit packed BT.709.
     YCbCr709_422_10p,
 
-    /// YCbCr 4:2:2 12-bit unpacked BT.709
+    /// YCbCr 4:2:2 12-bit unpacked BT.709.
     YCbCr709_422_12,
 
-    /// YCbCr 4:2:2 12-bit packed BT.709
+    /// YCbCr 4:2:2 12-bit packed BT.709.
     YCbCr709_422_12p,
 
-    /// YCbCr 4:2:2 10-bit unpacked
+    /// YCbCr 4:2:2 10-bit unpacked.
     YCbCr422_10_CbYCrY,
 
-    /// YCbCr 4:2:2 10-bit packed
+    /// YCbCr 4:2:2 10-bit packed.
     YCbCr422_10p_CbYCrY,
 
-    /// YCbCr 4:2:2 12-bit unpacked
+    /// YCbCr 4:2:2 12-bit unpacked.
     YCbCr422_12_CbYCrY,
 
-    /// YCbCr 4:2:2 12-bit packed
+    /// YCbCr 4:2:2 12-bit packed.
     YCbCr422_12p_CbYCrY,
 
-    /// YCbCr 4:2:2 10-bit unpacked BT.601
+    /// YCbCr 4:2:2 10-bit unpacked BT.601.
     YCbCr601_422_10_CbYCrY,
 
-    /// YCbCr 4:2:2 10-bit packed BT.601
+    /// YCbCr 4:2:2 10-bit packed BT.601.
     YCbCr601_422_10p_CbYCrY,
 
-    /// YCbCr 4:2:2 12-bit unpacked BT.601
+    /// YCbCr 4:2:2 12-bit unpacked BT.601.
     YCbCr601_422_12_CbYCrY,
 
-    /// YCbCr 4:2:2 12-bit packed BT.601
+    /// YCbCr 4:2:2 12-bit packed BT.601.
     YCbCr601_422_12p_CbYCrY,
 
-    /// YCbCr 4:2:2 10-bit unpacked BT.709
+    /// YCbCr 4:2:2 10-bit unpacked BT.709.
     YCbCr709_422_10_CbYCrY,
 
-    /// YCbCr 4:2:2 10-bit packed BT.709
+    /// YCbCr 4:2:2 10-bit packed BT.709.
     YCbCr709_422_10p_CbYCrY,
 
-    /// YCbCr 4:2:2 12-bit unpacked BT.709
+    /// YCbCr 4:2:2 12-bit unpacked BT.709.
     YCbCr709_422_12_CbYCrY,
 
-    /// YCbCr 4:2:2 12-bit packed BT.709
+    /// YCbCr 4:2:2 12-bit packed BT.709.
     YCbCr709_422_12p_CbYCrY,
 
-    /// Bi-color Red/Green - Blue/Green 8-bit
+    /// Bi-color Red/Green - Blue/Green 8-bit.
     BiColorRGBG8,
 
-    /// Bi-color Blue/Green - Red/Green 8-bit
+    /// Bi-color Blue/Green - Red/Green 8-bit.
     BiColorBGRG8,
 
-    /// Bi-color Red/Green - Blue/Green 10-bit unpacked
+    /// Bi-color Red/Green - Blue/Green 10-bit unpacked.
     BiColorRGBG10,
 
-    /// Bi-color Red/Green - Blue/Green 10-bit packed
+    /// Bi-color Red/Green - Blue/Green 10-bit packed.
     BiColorRGBG10p,
 
-    /// Bi-color Blue/Green - Red/Green 10-bit unpacked
+    /// Bi-color Blue/Green - Red/Green 10-bit unpacked.
     BiColorBGRG10,
 
-    /// Bi-color Blue/Green - Red/Green 10-bit packed
+    /// Bi-color Blue/Green - Red/Green 10-bit packed.
     BiColorBGRG10p,
 
-    /// Bi-color Red/Green - Blue/Green 12-bit unpacked
+    /// Bi-color Red/Green - Blue/Green 12-bit unpacked.
     BiColorRGBG12,
 
-    /// Bi-color Red/Green - Blue/Green 12-bit packed
+    /// Bi-color Red/Green - Blue/Green 12-bit packed.
     BiColorRGBG12p,
 
-    /// Bi-color Blue/Green - Red/Green 12-bit unpacked
+    /// Bi-color Blue/Green - Red/Green 12-bit unpacked.
     BiColorBGRG12,
 
-    /// Bi-color Blue/Green - Red/Green 12-bit packed
+    /// Bi-color Blue/Green - Red/Green 12-bit packed.
     BiColorBGRG12p,
 
-    /// 3D coordinate A 8-bit
+    /// 3D coordinate A 8-bit.
     Coord3D_A8,
 
-    /// 3D coordinate B 8-bit
+    /// 3D coordinate B 8-bit.
     Coord3D_B8,
 
-    /// 3D coordinate C 8-bit
+    /// 3D coordinate C 8-bit.
     Coord3D_C8,
 
-    /// 3D coordinate A-B-C 8-bit
+    /// 3D coordinate A-B-C 8-bit.
     Coord3D_ABC8,
 
-    /// 3D coordinate A-B-C 8-bit planar
+    /// 3D coordinate A-B-C 8-bit planar.
     Coord3D_ABC8_Planar,
 
-    /// 3D coordinate A-C 8-bit
+    /// 3D coordinate A-C 8-bit.
     Coord3D_AC8,
 
-    /// 3D coordinate A-C 8-bit planar
+    /// 3D coordinate A-C 8-bit planar.
     Coord3D_AC8_Planar,
 
-    /// 3D coordinate A 16-bit
+    /// 3D coordinate A 16-bit.
     Coord3D_A16,
 
-    /// 3D coordinate B 16-bit
+    /// 3D coordinate B 16-bit.
     Coord3D_B16,
 
-    /// 3D coordinate C 16-bit
+    /// 3D coordinate C 16-bit.
     Coord3D_C16,
 
-    /// 3D coordinate A-B-C 16-bit
+    /// 3D coordinate A-B-C 16-bit.
     Coord3D_ABC16,
 
-    /// 3D coordinate A-B-C 16-bit planar
+    /// 3D coordinate A-B-C 16-bit planar.
     Coord3D_ABC16_Planar,
 
-    /// 3D coordinate A-C 16-bit
+    /// 3D coordinate A-C 16-bit.
     Coord3D_AC16,
 
-    /// 3D coordinate A-C 16-bit planar
+    /// 3D coordinate A-C 16-bit planar.
     Coord3D_AC16_Planar,
 
-    /// 3D coordinate A 32-bit floating point
+    /// 3D coordinate A 32-bit floating point.
     Coord3D_A32f,
 
-    /// 3D coordinate B 32-bit floating point
+    /// 3D coordinate B 32-bit floating point.
     Coord3D_B32f,
 
-    /// 3D coordinate C 32-bit floating point
+    /// 3D coordinate C 32-bit floating point.
     Coord3D_C32f,
 
-    /// 3D coordinate A-B-C 32-bit floating point
+    /// 3D coordinate A-B-C 32-bit floating point.
     Coord3D_ABC32f,
 
-    /// 3D coordinate A-B-C 32-bit floating point planar
+    /// 3D coordinate A-B-C 32-bit floating point planar.
     Coord3D_ABC32f_Planar,
 
-    /// 3D coordinate A-C 32-bit floating point
+    /// 3D coordinate A-C 32-bit floating point.
     Coord3D_AC32f,
 
-    /// 3D coordinate A-C 32-bit floating point planar
+    /// 3D coordinate A-C 32-bit floating point planar.
     Coord3D_AC32f_Planar,
 
-    /// Confidence 1-bit unpacked
+    /// Confidence 1-bit unpacked.
     Confidence1,
 
-    /// Confidence 1-bit packed
+    /// Confidence 1-bit packed.
     Confidence1p,
 
-    /// Confidence 8-bit
+    /// Confidence 8-bit.
     Confidence8,
 
-    /// Confidence 16-bit
+    /// Confidence 16-bit.
     Confidence16,
 
-    /// Confidence 32-bit floating point
+    /// Confidence 32-bit floating point.
     Confidence32f,
 
-    /// Red 8-bit
+    /// Red 8-bit.
     R8,
 
-    /// Red 10-bit
+    /// Red 10-bit.
     R10,
 
-    /// Red 12-bit
+    /// Red 12-bit.
     R12,
 
-    /// Red 16-bit
+    /// Red 16-bit.
     R16,
 
-    /// Green 8-bit
+    /// Green 8-bit.
     G8,
 
-    /// Green 10-bit
+    /// Green 10-bit.
     G10,
 
-    /// Green 12-bit
+    /// Green 12-bit.
     G12,
 
-    /// Green 16-bit
+    /// Green 16-bit.
     G16,
 
-    /// Blue 8-bit
+    /// Blue 8-bit.
     B8,
 
-    /// Blue 10-bit
+    /// Blue 10-bit.
     B10,
 
-    /// Blue 12-bit
+    /// Blue 12-bit.
     B12,
 
-    /// Blue 16-bit
+    /// Blue 16-bit.
     B16,
 
-    /// 3D coordinate A 10-bit packed
+    /// 3D coordinate A 10-bit packed.
     Coord3D_A10p,
 
-    /// 3D coordinate B 10-bit packed
+    /// 3D coordinate B 10-bit packed.
     Coord3D_B10p,
 
-    /// 3D coordinate C 10-bit packed
+    /// 3D coordinate C 10-bit packed.
     Coord3D_C10p,
 
-    /// 3D coordinate A 12-bit packed
+    /// 3D coordinate A 12-bit packed.
     Coord3D_A12p,
 
-    /// 3D coordinate B 12-bit packed
+    /// 3D coordinate B 12-bit packed.
     Coord3D_B12p,
 
-    /// 3D coordinate C 12-bit packed
+    /// 3D coordinate C 12-bit packed.
     Coord3D_C12p,
 
-    /// 3D coordinate A-B-C 10-bit packed
+    /// 3D coordinate A-B-C 10-bit packed.
     Coord3D_ABC10p,
 
-    /// 3D coordinate A-B-C 10-bit packed planar
+    /// 3D coordinate A-B-C 10-bit packed planar.
     Coord3D_ABC10p_Planar,
 
-    /// 3D coordinate A-B-C 12-bit packed
+    /// 3D coordinate A-B-C 12-bit packed.
     Coord3D_ABC12p,
 
-    /// 3D coordinate A-B-C 12-bit packed planar
+    /// 3D coordinate A-B-C 12-bit packed planar.
     Coord3D_ABC12p_Planar,
 
-    /// 3D coordinate A-C 10-bit packed
+    /// 3D coordinate A-C 10-bit packed.
     Coord3D_AC10p,
 
-    /// 3D coordinate A-C 10-bit packed planar
+    /// 3D coordinate A-C 10-bit packed planar.
     Coord3D_AC10p_Planar,
 
-    /// 3D coordinate A-C 12-bit packed
+    /// 3D coordinate A-C 12-bit packed.
     Coord3D_AC12p,
 
-    /// 3D coordinate A-C 12-bit packed planar
+    /// 3D coordinate A-C 12-bit packed planar.
     Coord3D_AC12p_Planar,
 
-    /// YCbCr 4:4:4 8-bit BT.2020
+    /// YCbCr 4:4:4 8-bit BT.2020.
     YCbCr2020_8_CbYCr,
 
-    /// YCbCr 4:4:4 10-bit unpacked BT.2020
+    /// YCbCr 4:4:4 10-bit unpacked BT.2020.
     YCbCr2020_10_CbYCr,
 
-    /// YCbCr 4:4:4 10-bit packed BT.2020
+    /// YCbCr 4:4:4 10-bit packed BT.2020.
     YCbCr2020_10p_CbYCr,
 
-    /// YCbCr 4:4:4 12-bit unpacked BT.2020
+    /// YCbCr 4:4:4 12-bit unpacked BT.2020.
     YCbCr2020_12_CbYCr,
 
-    /// YCbCr 4:4:4 12-bit packed BT.2020
+    /// YCbCr 4:4:4 12-bit packed BT.2020.
     YCbCr2020_12p_CbYCr,
 
-    /// YCbCr 4:1:1 8-bit BT.2020
+    /// YCbCr 4:1:1 8-bit BT.2020.
     YCbCr2020_411_8_CbYYCrYY,
 
-    /// YCbCr 4:2:2 8-bit BT.2020
+    /// YCbCr 4:2:2 8-bit BT.2020.
     YCbCr2020_422_8,
 
-    /// YCbCr 4:2:2 8-bit BT.2020
+    /// YCbCr 4:2:2 8-bit BT.2020.
     YCbCr2020_422_8_CbYCrY,
 
-    /// YCbCr 4:2:2 10-bit unpacked BT.2020
+    /// YCbCr 4:2:2 10-bit unpacked BT.2020.
     YCbCr2020_422_10,
 
-    /// YCbCr 4:2:2 10-bit unpacked BT.2020
+    /// YCbCr 4:2:2 10-bit unpacked BT.2020.
     YCbCr2020_422_10_CbYCrY,
 
-    /// YCbCr 4:2:2 10-bit packed BT.2020
+    /// YCbCr 4:2:2 10-bit packed BT.2020.
     YCbCr2020_422_10p,
 
-    /// YCbCr 4:2:2 10-bit packed BT.2020
+    /// YCbCr 4:2:2 10-bit packed BT.2020.
     YCbCr2020_422_10p_CbYCrY,
 
-    /// YCbCr 4:2:2 12-bit unpacked BT.2020
+    /// YCbCr 4:2:2 12-bit unpacked BT.2020.
     YCbCr2020_422_12,
 
-    /// YCbCr 4:2:2 12-bit unpacked BT.2020
+    /// YCbCr 4:2:2 12-bit unpacked BT.2020.
     YCbCr2020_422_12_CbYCrY,
 
-    /// YCbCr 4:2:2 12-bit packed BT.2020
+    /// YCbCr 4:2:2 12-bit packed BT.2020.
     YCbCr2020_422_12p,
 
-    /// YCbCr 4:2:2 12-bit packed BT.2020
+    /// YCbCr 4:2:2 12-bit packed BT.2020.
     YCbCr2020_422_12p_CbYCrY,
 
-    /// Monochrome 14-bit packed
+    /// Monochrome 14-bit packed.
     Mono14p,
 
-    /// Bayer Green-Red 14-bit packed
+    /// Bayer Green-Red 14-bit packed.
     BayerGR14p,
 
-    /// Bayer Red-Green 14-bit packed
+    /// Bayer Red-Green 14-bit packed.
     BayerRG14p,
 
-    /// Bayer Green-Blue 14-bit packed
+    /// Bayer Green-Blue 14-bit packed.
     BayerGB14p,
 
-    /// Bayer Blue-Green 14-bit packed
+    /// Bayer Blue-Green 14-bit packed.
     BayerBG14p,
 
-    /// Bayer Green-Red 14-bit
+    /// Bayer Green-Red 14-bit.
     BayerGR14,
 
-    /// Bayer Red-Green 14-bit
+    /// Bayer Red-Green 14-bit.
     BayerRG14,
 
-    /// Bayer Green-Blue 14-bit
+    /// Bayer Green-Blue 14-bit.
     BayerGB14,
 
-    /// Bayer Blue-Green 14-bit
+    /// Bayer Blue-Green 14-bit.
     BayerBG14,
 
-    /// Bayer Green-Red 4-bit packed
+    /// Bayer Green-Red 4-bit packed.
     BayerGR4p,
 
-    /// Bayer Red-Green 4-bit packed
+    /// Bayer Red-Green 4-bit packed.
     BayerRG4p,
 
-    /// Bayer Green-Blue 4-bit packed
+    /// Bayer Green-Blue 4-bit packed.
     BayerGB4p,
 
-    /// Bayer Blue-Green 4-bit packed
+    /// Bayer Blue-Green 4-bit packed.
     BayerBG4p,
 
-    /// Monochrome 32-bit
+    /// Monochrome 32-bit.
     Mono32,
 
-    /// YCbCr 4:2:0 8-bit YY/CbCr Semiplanar
+    /// YCbCr 4:2:0 8-bit YY/CbCr Semiplanar.
     YCbCr420_8_YY_CbCr_Semiplanar,
 
-    /// YCbCr 4:2:2 8-bit YY/CbCr Semiplanar
+    /// YCbCr 4:2:2 8-bit YY/CbCr Semiplanar.
     YCbCr422_8_YY_CbCr_Semiplanar,
 
-    /// YCbCr 4:2:0 8-bit YY/CrCb Semiplanar
+    /// YCbCr 4:2:0 8-bit YY/CrCb Semiplanar.
     YCbCr420_8_YY_CrCb_Semiplanar,
 
-    /// YCbCr 4:2:2 8-bit YY/CrCb Semiplanar
+    /// YCbCr 4:2:2 8-bit YY/CrCb Semiplanar.
     YCbCr422_8_YY_CrCb_Semiplanar,
 
-    /// Data 8-bit
+    /// Data 8-bit.
     Data8,
 
-    /// Data 8-bit signed
+    /// Data 8-bit signed.
     Data8s,
 
-    /// Data 16-bit
+    /// Data 16-bit.
     Data16,
 
-    /// Data 16-bit signed
+    /// Data 16-bit signed.
     Data16s,
 
-    /// Data 32-bit
+    /// Data 32-bit.
     Data32,
 
-    /// Data 32-bit signed
+    /// Data 32-bit signed.
     Data32s,
 
-    /// Data 32-bit floating point
+    /// Data 32-bit floating point.
     Data32f,
 
-    /// Data 64-bit
+    /// Data 64-bit.
     Data64,
 
-    /// Data 64-bit signed
+    /// Data 64-bit signed.
     Data64s,
 
-    /// Data 64-bit floating point
+    /// Data 64-bit floating point.
     Data64f,
 }
 
