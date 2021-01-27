@@ -61,7 +61,7 @@ pub trait SpecificLeader {
 /// Generic leader of stream protocol.
 ///
 /// All specific leader follows generic leader.
-pub struct GenericLeader {
+struct GenericLeader {
     leader_size: u16,
     block_id: u64,
     payload_type: PayloadType,
@@ -107,6 +107,10 @@ pub enum PayloadType {
     Chunk,
 }
 
+/// Image leader is a specific leader part of stream leader.
+///
+/// When [`Leader::payload_type`] returns [`PayloadType::Image`], then the leader contains
+/// [`ImageLeader`] in a specific leader part.
 pub struct ImageLeader {
     timestamp: u64,
     pixel_format: PixelFormat,
@@ -156,6 +160,88 @@ impl ImageLeader {
 }
 
 impl SpecificLeader for ImageLeader {
+    fn from_bytes(buf: &[u8]) -> Result<Self> {
+        let mut cursor = Cursor::new(buf);
+        let timestamp = cursor.read_bytes()?;
+        let pixel_format = cursor
+            .read_bytes::<u32>()?
+            .try_into()
+            .map_err(|e: String| Error::InvalidPacket(e.into()))?;
+        let width = cursor.read_bytes()?;
+        let height = cursor.read_bytes()?;
+        let x_offset = cursor.read_bytes()?;
+        let y_offset = cursor.read_bytes()?;
+        let x_padding = cursor.read_bytes()?;
+        let _reserved: u16 = cursor.read_bytes()?;
+
+        Ok(Self {
+            timestamp,
+            pixel_format,
+            width,
+            height,
+            x_offset,
+            y_offset,
+            x_padding,
+        })
+    }
+}
+
+/// Image extended chunk leader is a specific leader part of stream leader.
+///
+/// When [`Leader::payload_type`] returns [`PayloadType::ImageExtendedChunk`], then the leader contains
+/// [`ImageExtendedChunkLeader`] in a specific leader part.
+///
+/// Currently, [`ImageExtendedChunkLeader`] has the same layout as [`ImageLeader`], but we
+/// define this type for future changes and ergonomic design.
+pub struct ImageExtendedChunkLeader {
+    timestamp: u64,
+    pixel_format: PixelFormat,
+    width: u32,
+    height: u32,
+    x_offset: u32,
+    y_offset: u32,
+    x_padding: u16,
+}
+
+impl ImageExtendedChunkLeader {
+    /// Timestamp when the image is captured.
+    /// Timestamp represents duration since the device starts running.
+    pub fn timestamp(&self) -> time::Duration {
+        time::Duration::from_nanos(self.timestamp)
+    }
+
+    /// Pixel format of the payload image.
+    pub fn pixel_format(&self) -> PixelFormat {
+        self.pixel_format
+    }
+
+    /// Width of the payload image.
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    /// Height of the payload image.
+    pub fn height(&self) -> u32 {
+        self.height
+    }
+
+    /// X-axis offset from the image origin.
+    pub fn x_offset(&self) -> u32 {
+        self.x_offset
+    }
+
+    /// Y-axis offset from the image origin.
+    pub fn y_offset(&self) -> u32 {
+        self.y_offset
+    }
+
+    /// Number of padding bytes added to the end of each line.
+    pub fn x_padding(&self) -> u16 {
+        self.x_padding
+    }
+}
+
+impl SpecificLeader for ImageExtendedChunkLeader {
     fn from_bytes(buf: &[u8]) -> Result<Self> {
         let mut cursor = Cursor::new(buf);
         let timestamp = cursor.read_bytes()?;
@@ -271,6 +357,39 @@ mod tests {
         let image_leader: ImageLeader = leader.specific_leader_as().unwrap();
         assert_eq!(image_leader.timestamp(), time::Duration::from_nanos(100));
         assert_eq!(image_leader.pixel_format(), PixelFormat::Mono8s);
+        assert_eq!(image_leader.width(), 3840);
+        assert_eq!(image_leader.height(), 2160);
+        assert_eq!(image_leader.x_offset(), 0);
+        assert_eq!(image_leader.y_offset(), 0);
+        assert_eq!(image_leader.x_padding(), 0);
+    }
+
+    #[test]
+    fn test_parse_image_extended_chunk_leader() {
+        let mut buf = generic_leader_bytes(PayloadType::ImageExtendedChunk);
+        // Time stamp.
+        buf.write_bytes(100u64).unwrap();
+        // Pixel Format.
+        buf.write_bytes::<u32>(PixelFormat::BayerGR10.into())
+            .unwrap();
+        // Width.
+        buf.write_bytes(3840u32).unwrap();
+        // Height.
+        buf.write_bytes(2160u32).unwrap();
+        // X offset.
+        buf.write_bytes(0u32).unwrap();
+        // Y offset.
+        buf.write_bytes(0u32).unwrap();
+        // X padding.
+        buf.write_bytes(0u16).unwrap();
+        // Reserved.
+        buf.write_bytes(0u16).unwrap();
+
+        let leader = Leader::parse(&buf).unwrap();
+        assert_eq!(leader.payload_type(), PayloadType::ImageExtendedChunk);
+        let image_leader: ImageLeader = leader.specific_leader_as().unwrap();
+        assert_eq!(image_leader.timestamp(), time::Duration::from_nanos(100));
+        assert_eq!(image_leader.pixel_format(), PixelFormat::BayerGR10);
         assert_eq!(image_leader.width(), 3840);
         assert_eq!(image_leader.height(), 2160);
         assert_eq!(image_leader.x_offset(), 0);
