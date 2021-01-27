@@ -10,7 +10,7 @@ use crate::{
     PixelFormat,
 };
 
-use super::parse_util::ReadBytes;
+use super::util::ReadBytes;
 
 /// Leader of stream packet.
 pub struct Leader<'a> {
@@ -199,7 +199,7 @@ impl TryFrom<u16> for PayloadType {
 
 #[cfg(test)]
 mod tests {
-    use super::{super::parse_util::WriteBytes, *};
+    use super::{super::util::WriteBytes, *};
 
     /// Return bytes represnts generic leader.
     fn generic_leader_bytes(payload_type: PayloadType) -> Vec<u8> {

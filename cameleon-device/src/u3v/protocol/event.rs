@@ -2,7 +2,7 @@ use std::io::Cursor;
 
 use crate::u3v::{Error, Result};
 
-use super::parse_util::{self, ReadBytes};
+use super::util::{self, ReadBytes};
 
 pub struct EventPacket<'a> {
     ccd: EventCcd,
@@ -92,7 +92,7 @@ impl<'a> EventScd<'a> {
                 remained = remained.checked_sub(12).ok_or_else(|| {
                     Error::InvalidPacket("SCD length in CCD is inconsistent with SCD".into())
                 })?;
-                let data = parse_util::read_bytes(cursor, remained)?;
+                let data = util::read_bytes(cursor, remained)?;
                 remained = 0;
                 data
             } else {
@@ -102,7 +102,7 @@ impl<'a> EventScd<'a> {
                 remained = remained.checked_sub(event_size).ok_or_else(|| {
                     Error::InvalidPacket("SCD length in CCD is inconsistent with SCD".into())
                 })?;
-                parse_util::read_bytes(cursor, data_len)?
+                util::read_bytes(cursor, data_len)?
             };
 
             events.push(EventScd {
@@ -120,7 +120,7 @@ impl<'a> EventScd<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use parse_util::WriteBytes;
+    use util::WriteBytes;
 
     fn serialize_header(scd_len: u16, request_id: u16) -> Vec<u8> {
         let mut ccd = vec![];

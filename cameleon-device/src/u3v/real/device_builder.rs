@@ -1,6 +1,6 @@
 use semver::Version;
 
-use crate::u3v::{protocol::parse_util::ReadBytes, BusSpeed, DeviceInfo, Error, Result};
+use crate::u3v::{protocol::util::ReadBytes, BusSpeed, DeviceInfo, Error, Result};
 
 use super::{
     channel::{ControlIfaceInfo, ReceiveIfaceInfo},

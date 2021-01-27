@@ -2,7 +2,7 @@ use std::{convert::TryInto, io::Write};
 
 use crate::u3v::{Error, Result};
 
-use super::parse_util::WriteBytes;
+use super::util::WriteBytes;
 
 #[derive(Debug)]
 pub struct CommandPacket<T> {

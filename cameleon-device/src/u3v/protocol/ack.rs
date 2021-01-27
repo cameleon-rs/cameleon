@@ -2,7 +2,7 @@ use std::{io::Cursor, time};
 
 use crate::u3v::{Error, Result};
 
-use super::parse_util::{self, ReadBytes};
+use super::util::{self, ReadBytes};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AckPacket<'a> {
@@ -314,7 +314,7 @@ pub struct CustomAck<'a> {
 
 impl<'a> ParseScd<'a> for ReadMem<'a> {
     fn parse(buf: &'a [u8], ccd: &AckCcd) -> Result<Self> {
-        let data = parse_util::read_bytes(&mut Cursor::new(buf), ccd.scd_len)?;
+        let data = util::read_bytes(&mut Cursor::new(buf), ccd.scd_len)?;
         Ok(Self { data })
     }
 }
@@ -352,7 +352,7 @@ impl<'a> ParseScd<'a> for Pending {
 
 impl<'a> ParseScd<'a> for ReadMemStacked<'a> {
     fn parse(buf: &'a [u8], ccd: &AckCcd) -> Result<Self> {
-        let data = parse_util::read_bytes(&mut Cursor::new(buf), ccd.scd_len)?;
+        let data = util::read_bytes(&mut Cursor::new(buf), ccd.scd_len)?;
 
         Ok(Self { data })
     }
@@ -384,7 +384,7 @@ impl<'a> ParseScd<'a> for WriteMemStacked {
 mod tests {
     use super::*;
 
-    use parse_util::WriteBytes;
+    use util::WriteBytes;
 
     fn serialize_header(
         status_code: u16,

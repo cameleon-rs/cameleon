@@ -21,11 +21,11 @@ pub(super) mod cmd {
 
     use std::io::Cursor;
 
-    use crate::u3v::protocol::{cmd::*, parse_util};
+    use crate::u3v::protocol::{cmd::*, util};
 
     use super::{ProtocolError, ProtocolResult};
 
-    use crate::u3v::protocol::parse_util::ReadBytes;
+    use crate::u3v::protocol::util::ReadBytes;
 
     pub(in super::super) struct CommandPacket<'a> {
         ccd: CommandCcd,
@@ -124,7 +124,7 @@ pub(super) mod cmd {
         fn parse(buf: &'a [u8], ccd: &CommandCcd) -> ProtocolResult<Self> {
             let mut cursor = Cursor::new(buf);
             let address = cursor.read_bytes()?;
-            let data = parse_util::read_bytes(&mut cursor, ccd.scd_len() - 8)?;
+            let data = util::read_bytes(&mut cursor, ccd.scd_len() - 8)?;
             Self::new(address, data)
                 .map_err(|err| ProtocolError::InvalidPacket(err.to_string().into()))
         }
@@ -168,7 +168,7 @@ pub(super) mod cmd {
                     ));
                 }
                 let data_length = cursor.read_bytes()?;
-                let data = parse_util::read_bytes(&mut cursor, data_length)?;
+                let data = util::read_bytes(&mut cursor, data_length)?;
                 regs.push(
                     WriteMem::new(address, data)
                         .map_err(|err| ProtocolError::InvalidPacket(err.to_string().into()))?,
@@ -273,7 +273,7 @@ pub(super) mod ack {
     use crate::u3v::protocol::{
         ack::{AckCcd, Status, StatusKind},
         cmd,
-        parse_util::WriteBytes,
+        util::WriteBytes,
     };
 
     use super::ProtocolResult;

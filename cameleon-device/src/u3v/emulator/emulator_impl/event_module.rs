@@ -118,7 +118,7 @@ mod event_packet {
 
     use thiserror::Error;
 
-    use crate::u3v::protocol::parse_util::WriteBytes;
+    use crate::u3v::protocol::util::WriteBytes;
 
 
     #[derive(Debug, Error)]
