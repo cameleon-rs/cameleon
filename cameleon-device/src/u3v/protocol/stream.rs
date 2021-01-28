@@ -112,7 +112,7 @@ impl<'a> Leader<'a> {
         self.leader_size
     }
 
-    /// Type of the payload type the leader is followed by.
+    /// Type of the payload the leader is followed by.
     pub fn payload_type(&self) -> PayloadType {
         self.payload_type
     }
@@ -132,18 +132,21 @@ impl<'a> Leader<'a> {
     }
 }
 
+/// Types that are specific leader.
 pub trait SpecificLeader {
+    /// Construct Specific leader from bytes.
     fn from_bytes(buf: &[u8]) -> Result<Self>
     where
         Self: Sized;
 }
 
+/// Indicate stream payload type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PayloadType {
     /// Type representing uncompressed image date.
     Image,
 
-    /// Type representing uncompressed image data followed by chunk data.
+    /// Type representing uncompressed image data followed oher chunks.
     ImageExtendedChunk,
 
     /// Type representing chunk data.
@@ -422,6 +425,10 @@ impl<'a> Trailer<'a> {
     }
 }
 
+/// A specific trailer part when the payload type is [`PayloadType::Image`].
+///
+/// When [`Leader::payload_type`] returns [`PayloadType::Image`], then the trailer
+/// contains [`ImageTrailer`] in a specific trailer part.
 pub struct ImageTrailer {
     actual_height: u32,
 }
@@ -443,6 +450,10 @@ impl SpecificTrailer for ImageTrailer {
     }
 }
 
+/// A specific trailer part when payload type is [`PayloadType::ImageExtendedChunk`].
+///
+/// When [`Leader::payload_type`] returns [`PayloadType::ImageExtendedChunk`], then the trailer
+/// contains [`ImageExtendedChunkTrailer`] in a specific trailer part.
 pub struct ImageExtendedChunkTrailer {
     actual_height: u32,
     chunk_layout_id: u32,
@@ -476,7 +487,33 @@ impl SpecificTrailer for ImageExtendedChunkTrailer {
     }
 }
 
+/// A specific trailer part when payload type is [`PayloadType::Chunk`].
+///
+/// When [`Leader::payload_type`] returns [`PayloadType::Chunk`], then the trailer
+/// contains [`ImageExtendedChunkTrailer`] in a specific trailer part.
+pub struct ChunkTrailer {
+    chunk_layout_id: u32,
+}
+
+impl ChunkTrailer {
+    /// Id used to report chunk layout changes.
+    ///
+    /// Id changes means that the chunk layout has changed from the previous layout.
+    pub fn chunk_layout_id(&self) -> u32 {
+        self.chunk_layout_id
+    }
+}
+
+impl SpecificTrailer for ChunkTrailer {
+    fn from_bytes(mut buf: &[u8]) -> Result<Self> {
+        let chunk_layout_id = buf.read_bytes()?;
+        Ok(Self { chunk_layout_id })
+    }
+}
+
+/// Types that are specific trailer.
 pub trait SpecificTrailer {
+    /// Construct Specific trailer from bytes.
     fn from_bytes(buf: &[u8]) -> Result<Self>
     where
         Self: Sized;
@@ -707,7 +744,7 @@ mod tests {
 
     #[test]
     fn test_parse_image_extended_chunk_trailer() {
-        let mut buf = generic_trailer_bytes(PayloadType::Image);
+        let mut buf = generic_trailer_bytes(PayloadType::ImageExtendedChunk);
 
         let actual_height: u32 = 1024;
         let chunk_layout_id: u32 = 20;
@@ -717,6 +754,18 @@ mod tests {
         let trailer = Trailer::parse(&buf).unwrap();
         let specific_trailer: ImageExtendedChunkTrailer = trailer.specific_trailer_as().unwrap();
         assert_eq!(specific_trailer.actual_height(), actual_height);
+        assert_eq!(specific_trailer.chunk_layout_id(), chunk_layout_id);
+    }
+
+    #[test]
+    fn test_parse_chunk_trailer() {
+        let mut buf = generic_trailer_bytes(PayloadType::Chunk);
+
+        let chunk_layout_id: u32 = 20;
+        buf.write_bytes(chunk_layout_id).unwrap();
+
+        let trailer = Trailer::parse(&buf).unwrap();
+        let specific_trailer: ChunkTrailer = trailer.specific_trailer_as().unwrap();
         assert_eq!(specific_trailer.chunk_layout_id(), chunk_layout_id);
     }
 }

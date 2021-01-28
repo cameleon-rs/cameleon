@@ -133,7 +133,7 @@ impl_parse_bytes!(u32, read_u32, write_u32);
 impl_parse_bytes!(u64, read_u64, write_u64);
 impl_parse_bytes!(i8, read_i8, write_i8);
 impl_parse_bytes!(i16, read_i16, write_i16);
-// To avoid default link fall back, we decided not to implement `BytesConvertible` for now.
+// To avoid default int fall back, we decided not to implement `BytesConvertible` for now.
 // Below line will be uncommented when linter supports this problem, see `https://github.com/rust-lang/rust-clippy/issues/6064`.
 // impl_parse_bytes!(i32, read_i32, write_i32);
 impl_parse_bytes!(i64, read_i64, write_i64);
