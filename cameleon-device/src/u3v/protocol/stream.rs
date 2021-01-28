@@ -82,17 +82,10 @@ impl<'a> Leader<'a> {
     ///
     /// # Example
     /// ```no_run
-    /// #use cameleon_device::u3v::protocol::stream::{Leader, PayloadType, ImageLeader,
+    /// # use cameleon_device::u3v::protocol::stream::{Leader, PayloadType, ImageLeader,
     ///                                             ImageExtendedChunkLeader, ChunkLeader};
-    ///
-    /// #// Buffer for leader bytes.
-    /// #let mut buf = Vec::new();
-    ///
-    /// #// Fill buffer using [`cameleon_device::u3v::Device`].
-    /// #// ..
-    ///
-    /// #// Parse leader. In this point, only the generic part of the leader is parsed.
-    /// #let leader = Leader::parse(&buf).unwrap();
+    /// # let mut buf = Vec::new();
+    /// let leader = Leader::parse(&buf).unwrap();
     /// // Parse a specific part of the leader.
     /// match leader.payload_type() {
     ///     PayloadType::Image => {
@@ -450,6 +443,39 @@ impl SpecificTrailer for ImageTrailer {
     }
 }
 
+pub struct ImageExtendedChunkTrailer {
+    actual_height: u32,
+    chunk_layout_id: u32,
+}
+
+impl ImageExtendedChunkTrailer {
+    /// Return the actual height of the payload image.
+    ///
+    /// Some U3V cameras support variable frame size, in that case, the height of the image may
+    /// be less than or equal to the height reported in the leader.
+    pub fn actual_height(&self) -> u32 {
+        self.actual_height
+    }
+
+    /// Id used to report chunk layout changes.
+    ///
+    /// Id changes means that the chunk layout has changed from the previous layout.
+    pub fn chunk_layout_id(&self) -> u32 {
+        self.chunk_layout_id
+    }
+}
+
+impl SpecificTrailer for ImageExtendedChunkTrailer {
+    fn from_bytes(mut buf: &[u8]) -> Result<Self> {
+        let actual_height = buf.read_bytes()?;
+        let chunk_layout_id = buf.read_bytes()?;
+        Ok(Self {
+            actual_height,
+            chunk_layout_id,
+        })
+    }
+}
+
 pub trait SpecificTrailer {
     fn from_bytes(buf: &[u8]) -> Result<Self>
     where
@@ -675,7 +701,22 @@ mod tests {
         buf.write_bytes(actual_height).unwrap();
 
         let trailer = Trailer::parse(&buf).unwrap();
-        let image_trailer: ImageTrailer = trailer.specific_trailer_as().unwrap();
-        assert_eq!(image_trailer.actual_height(), actual_height);
+        let specific_trailer: ImageTrailer = trailer.specific_trailer_as().unwrap();
+        assert_eq!(specific_trailer.actual_height(), actual_height);
+    }
+
+    #[test]
+    fn test_parse_image_extended_chunk_trailer() {
+        let mut buf = generic_trailer_bytes(PayloadType::Image);
+
+        let actual_height: u32 = 1024;
+        let chunk_layout_id: u32 = 20;
+        buf.write_bytes(actual_height).unwrap();
+        buf.write_bytes(chunk_layout_id).unwrap();
+
+        let trailer = Trailer::parse(&buf).unwrap();
+        let specific_trailer: ImageExtendedChunkTrailer = trailer.specific_trailer_as().unwrap();
+        assert_eq!(specific_trailer.actual_height(), actual_height);
+        assert_eq!(specific_trailer.chunk_layout_id(), chunk_layout_id);
     }
 }
