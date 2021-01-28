@@ -28,7 +28,7 @@ use super::util::ReadBytes;
 /// // Parse leader. In this point, only the generic part of the leader is parsed.
 /// let leader = Leader::parse(&buf).unwrap();
 ///
-/// // Parse specific part of the leader.
+/// // Parse a specific part of the leader.
 /// match leader.payload_type() {
 ///     PayloadType::Image => {
 ///         // Try parsing specific part as Image Leader.
@@ -78,7 +78,38 @@ impl<'a> Leader<'a> {
         })
     }
 
-    /// Parse a specific part of leader.
+    /// Return a specific part of leader.
+    ///
+    /// # Example
+    /// ```no_run
+    /// #use cameleon_device::u3v::protocol::stream::{Leader, PayloadType, ImageLeader,
+    ///                                             ImageExtendedChunkLeader, ChunkLeader};
+    ///
+    /// #// Buffer for leader bytes.
+    /// #let mut buf = Vec::new();
+    ///
+    /// #// Fill buffer using [`cameleon_device::u3v::Device`].
+    /// #// ..
+    ///
+    /// #// Parse leader. In this point, only the generic part of the leader is parsed.
+    /// #let leader = Leader::parse(&buf).unwrap();
+    /// // Parse a specific part of the leader.
+    /// match leader.payload_type() {
+    ///     PayloadType::Image => {
+    ///         // Try parsing specific part as Image Leader.
+    ///         let image_leader: ImageLeader = leader.specific_leader_as().unwrap();
+    ///     }
+    ///     PayloadType::ImageExtendedChunk => {
+    ///         // Try parsing specific part as Image Extended Chunk Leader.
+    ///         let image_leader: ImageExtendedChunkLeader = leader.specific_leader_as().unwrap();
+    ///     }
+    ///
+    ///     PayloadType::Chunk => {
+    ///         // Try parsing specific part as Image Extended Chunk Leader.
+    ///         let image_leader: ChunkLeader = leader.specific_leader_as().unwrap();
+    ///     }
+    /// }
+    /// ```
     pub fn specific_leader_as<T: SpecificLeader>(&self) -> Result<T> {
         T::from_bytes(self.raw_specfic_leader)
     }
@@ -224,7 +255,6 @@ pub struct ImageExtendedChunkLeader {
 
 impl ImageExtendedChunkLeader {
     /// Timestamp when the image is captured.
-    /// Timestamp represents duration since the device starts running.
     pub fn timestamp(&self) -> time::Duration {
         time::Duration::from_nanos(self.timestamp)
     }
@@ -363,6 +393,11 @@ impl<'a> Trailer<'a> {
         })
     }
 
+    /// Return a specific part of trailer.
+    pub fn specific_trailer_as<T: SpecificTrailer>(&self) -> Result<T> {
+        T::from_bytes(self.raw_specfic_trailer)
+    }
+
     /// Total size of trailer, this size contains a specific trailer part.
     pub fn trailer_size(&self) -> u16 {
         self.trailer_size
@@ -392,6 +427,33 @@ impl<'a> Trailer<'a> {
             Err(Error::InvalidPacket("invalid prefix magic".into()))
         }
     }
+}
+
+pub struct ImageTrailer {
+    actual_height: u32,
+}
+
+impl ImageTrailer {
+    /// Return the actual height of the payload image.
+    ///
+    /// Some U3V cameras support variable frame size, in that case, the height of the image may
+    /// be less than or equal to the height reported in the leader.
+    pub fn actual_height(&self) -> u32 {
+        self.actual_height
+    }
+}
+
+impl SpecificTrailer for ImageTrailer {
+    fn from_bytes(mut buf: &[u8]) -> Result<Self> {
+        let actual_height = buf.read_bytes()?;
+        Ok(Self { actual_height })
+    }
+}
+
+pub trait SpecificTrailer {
+    fn from_bytes(buf: &[u8]) -> Result<Self>
+    where
+        Self: Sized;
 }
 
 /// Status of payload transfer,
@@ -446,6 +508,35 @@ mod tests {
         buf.write_bytes(0u16).unwrap();
         // Payload type.
         buf.write_bytes(payload_num as u16).unwrap();
+        buf
+    }
+
+    /// Return bytes represnts generic trailer.
+    fn generic_trailer_bytes(payload_type: PayloadType) -> Vec<u8> {
+        let mut buf = vec![];
+        let trailer_size: u16 = match payload_type {
+            PayloadType::Image => 32,
+            PayloadType::ImageExtendedChunk => 36,
+            PayloadType::Chunk => 32,
+        };
+
+        let valid_payload_size: u64 = 4096 * 2160;
+        let block_id: u64 = 51;
+        // Trailer magic.
+        buf.write_bytes(0x54563355u32).unwrap();
+        // Reserved.
+        buf.write_bytes(0u16).unwrap();
+        // Trailer size.
+        buf.write_bytes(trailer_size).unwrap();
+        // Block ID.
+        buf.write_bytes(block_id).unwrap();
+        // Status.
+        buf.write_bytes(0xa100u16).unwrap();
+        // Reserved.
+        buf.write_bytes(0u16).unwrap();
+        // Valid paylaod size.
+        buf.write_bytes(valid_payload_size).unwrap();
+
         buf
     }
 
@@ -574,5 +665,17 @@ mod tests {
         assert_eq!(trailer.block_id(), block_id);
         assert_eq!(trailer.payload_status(), PayloadStatus::DataDiscarded);
         assert_eq!(trailer.valid_payload_size(), valid_payload_size);
+    }
+
+    #[test]
+    fn test_parse_image_trailer() {
+        let mut buf = generic_trailer_bytes(PayloadType::Image);
+
+        let actual_height: u32 = 1024;
+        buf.write_bytes(actual_height).unwrap();
+
+        let trailer = Trailer::parse(&buf).unwrap();
+        let image_trailer: ImageTrailer = trailer.specific_trailer_as().unwrap();
+        assert_eq!(image_trailer.actual_height(), actual_height);
     }
 }
