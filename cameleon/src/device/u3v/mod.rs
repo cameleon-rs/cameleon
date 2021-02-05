@@ -44,7 +44,7 @@ mod stream_handle;
 
 pub use control_handle::ControlHandle;
 pub use device::{enumerate_devices, Device, DeviceInfo};
-pub use stream_handle::StreamParams;
+pub use stream_handle::{StreamHandle, StreamParams};
 
 use cameleon_device::u3v;
 

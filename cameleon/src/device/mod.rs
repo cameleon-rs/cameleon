@@ -62,6 +62,10 @@ pub enum DeviceError {
     #[error("device internal error: {}", 0)]
     InternalError(Box<dyn std::error::Error>),
 
+    /// Buffer is too small to receive data.
+    #[error("buffer is too small to recive data")]
+    BufferTooSmall,
+
     /// Try to write invalid data to the device.
     /// e.g. try to write too large data that will overrun register.
     #[error("try to write invalid data to the device: {}", 0)]

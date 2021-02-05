@@ -2,7 +2,11 @@ use cameleon_device::u3v;
 
 use crate::device::{DeviceError, DeviceResult};
 
-use super::{control_handle::ControlHandle, register_map::Abrm};
+use super::{
+    control_handle::ControlHandle,
+    register_map::Abrm,
+    stream_handle::{StreamHandle, StreamParams},
+};
 
 /// Basic device information that is obtained without opening the device.
 pub type DeviceInfo = u3v::DeviceInfo;
@@ -37,8 +41,9 @@ pub type DeviceInfo = u3v::DeviceInfo;
 pub struct Device {
     device: u3v::Device,
 
-    // TODO: Stream and event handles.
+    // TODO: Add Event handles.
     ctrl_handle: ControlHandle,
+    strm_handle: Option<StreamHandle>,
 }
 
 impl Device {
@@ -57,7 +62,8 @@ impl Device {
     /// After closing the device all handles of the device can't communicate with device.  
     /// This method is automatically called inside `Drop::drop`.
     pub fn close(&mut self) -> DeviceResult<()> {
-        self.ctrl_handle.close()
+        let result = self.ctrl_handle.close();
+        result
     }
 
     /// Return control handle of the device.
@@ -65,6 +71,11 @@ impl Device {
         self.assert_open()?;
 
         Ok(&self.ctrl_handle)
+    }
+
+    /// Return stream handle of the device.
+    pub fn stream_handle(&self) -> Option<&StreamHandle> {
+        self.strm_handle.as_ref()
     }
 
     /// Return `true` if device is opened.
@@ -108,10 +119,12 @@ impl Device {
     /// In normal use case, use [`enumerate_devices`] to construct devices.
     pub fn new(device: u3v::Device) -> DeviceResult<Self> {
         let ctrl_handle = ControlHandle::new(&device)?;
+        let strm_handle = StreamHandle::new(&device)?;
 
         Ok(Self {
             device,
             ctrl_handle,
+            strm_handle,
         })
     }
 
