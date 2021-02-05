@@ -120,7 +120,6 @@ mod event_packet {
 
     use crate::u3v::protocol::util::WriteBytes;
 
-
     #[derive(Debug, Error)]
     pub(super) enum ProtocolError {
         #[error("packet is broken: {}", 0)]

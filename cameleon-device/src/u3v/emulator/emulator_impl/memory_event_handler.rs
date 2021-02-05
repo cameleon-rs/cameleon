@@ -153,7 +153,7 @@ impl SiControlHandler {
 
     /// Handle the situation where `SIRM::Control` is set to 0.
     async fn disable_sirm(worker: &Worker, _: cmd::ScdKind) {
-            let (completed_tx, completed_rx) = oneshot::channel();
+        let (completed_tx, completed_rx) = oneshot::channel();
         let signal = StreamSignal::Disable(completed_tx);
         worker.try_send_signal(signal);
         completed_rx.await.ok();
@@ -234,25 +234,51 @@ macro_rules! define_handler_for_sirm {
         define_handler!($handler_name, $reg, $event);
 
         impl $handler_name {
-            async fn handle_events(worker: &Worker, scd_kind: cmd::ScdKind) -> Result<(), ack::ErrorAck> {
+            async fn handle_events(
+                worker: &Worker,
+                scd_kind: cmd::ScdKind,
+            ) -> Result<(), ack::ErrorAck> {
                 let value = Self::read(&*worker.memory.lock().await, scd_kind)?;
                 // Verify alignment.
                 if value % SIRM_ALIGNMENT as u32 != 0 {
-                    Err(ack::ErrorAck::new(ack::UsbSpecificStatus::PayloadSizeNotAligned, scd_kind))
+                    Err(ack::ErrorAck::new(
+                        ack::UsbSpecificStatus::PayloadSizeNotAligned,
+                        scd_kind,
+                    ))
                 } else {
                     Ok(())
                 }
             }
         }
-    }
+    };
 }
 
 // Define handlers related to SIRM size registers.
-define_handler_for_sirm!(MaximumLeaderSizeHandler, SIRM::MaximumLeaderSize, MemoryEvent::MaximumLeaderSize);
-define_handler_for_sirm!(PayloadTransferSizeHandler, SIRM::PayloadTransferSize, MemoryEvent::PayloadTransferSize);
-define_handler_for_sirm!(PayloadFinalTransferSize1Handler, SIRM::PayloadFinalTransferSize1, MemoryEvent::PayloadFinalTransferSize1);
-define_handler_for_sirm!(PayloadFinalTransferSize2Handler, SIRM::PayloadFinalTransferSize2, MemoryEvent::PayloadFinalTransferSize2);
-define_handler_for_sirm!(MaximumTrailerSizeHandler, SIRM::MaximumTrailerSize, MemoryEvent::MaximumTrailerSize);
+define_handler_for_sirm!(
+    MaximumLeaderSizeHandler,
+    SIRM::MaximumLeaderSize,
+    MemoryEvent::MaximumLeaderSize
+);
+define_handler_for_sirm!(
+    PayloadTransferSizeHandler,
+    SIRM::PayloadTransferSize,
+    MemoryEvent::PayloadTransferSize
+);
+define_handler_for_sirm!(
+    PayloadFinalTransferSize1Handler,
+    SIRM::PayloadFinalTransferSize1,
+    MemoryEvent::PayloadFinalTransferSize1
+);
+define_handler_for_sirm!(
+    PayloadFinalTransferSize2Handler,
+    SIRM::PayloadFinalTransferSize2,
+    MemoryEvent::PayloadFinalTransferSize2
+);
+define_handler_for_sirm!(
+    MaximumTrailerSizeHandler,
+    SIRM::MaximumTrailerSize,
+    MemoryEvent::MaximumTrailerSize
+);
 
 enum MemoryEvent {
     TimestampLatch,
@@ -271,9 +297,15 @@ impl MemoryEvent {
             TimestampLatch => TimestampLatchHandler::handle_events(worker, scd_kind).await,
             SiControl => SiControlHandler::handle_events(worker, scd_kind).await,
             MaximumLeaderSize => MaximumLeaderSizeHandler::handle_events(worker, scd_kind).await,
-            PayloadTransferSize => PayloadTransferSizeHandler::handle_events(worker, scd_kind).await,
-            PayloadFinalTransferSize1 => PayloadFinalTransferSize1Handler::handle_events(worker, scd_kind).await,
-            PayloadFinalTransferSize2 => PayloadFinalTransferSize2Handler::handle_events(worker, scd_kind).await,
+            PayloadTransferSize => {
+                PayloadTransferSizeHandler::handle_events(worker, scd_kind).await
+            }
+            PayloadFinalTransferSize1 => {
+                PayloadFinalTransferSize1Handler::handle_events(worker, scd_kind).await
+            }
+            PayloadFinalTransferSize2 => {
+                PayloadFinalTransferSize2Handler::handle_events(worker, scd_kind).await
+            }
             MaximumTrailerSize => MaximumTrailerSizeHandler::handle_events(worker, scd_kind).await,
         }
     }
