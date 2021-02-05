@@ -40,9 +40,11 @@ pub mod register_map;
 
 mod control_handle;
 mod device;
+mod stream_handle;
 
 pub use control_handle::ControlHandle;
 pub use device::{enumerate_devices, Device, DeviceInfo};
+pub use stream_handle::StreamParams;
 
 use cameleon_device::u3v;
 
