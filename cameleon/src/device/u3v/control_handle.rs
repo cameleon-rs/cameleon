@@ -62,6 +62,17 @@ pub struct ControlHandle {
 }
 
 impl ControlHandle {
+    /// Open the handle.
+    pub fn open(&self) -> DeviceResult<()> {
+        self.inner.lock().unwrap().open()?;
+        self.initialize_config()
+    }
+
+    /// Close the handle.
+    pub fn close(&self) -> DeviceResult<()> {
+        self.inner.lock().unwrap().close()
+    }
+
     /// Read data from the device's memory.  
     /// Read length is same as `buf.len()`.
     ///
@@ -170,11 +181,6 @@ impl ControlHandle {
         self.inner.lock().unwrap().config.retry_count = count;
     }
 
-    pub(super) fn open(&self) -> DeviceResult<()> {
-        self.inner.lock().unwrap().open()?;
-        self.initialize_config()
-    }
-
     fn initialize_config(&self) -> DeviceResult<()> {
         let abrm = self.abrm()?;
         let sbrm = abrm.sbrm()?;
@@ -189,10 +195,6 @@ impl ControlHandle {
         inner.config.maximum_ack_length = maximum_ack_length;
 
         Ok(())
-    }
-
-    pub(super) fn close(&self) -> DeviceResult<()> {
-        self.inner.lock().unwrap().close()
     }
 
     pub(super) fn new(device: &u3v::Device) -> DeviceResult<Self> {

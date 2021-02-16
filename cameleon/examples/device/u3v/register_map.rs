@@ -19,12 +19,13 @@ fn main() {
     }
 
     // Open the first device.
-    let mut device = devices.pop().unwrap();
-    device.open().unwrap();
+    let device = devices.pop().unwrap();
+    let control_handle = device.control_handle();
+    control_handle.open().unwrap();
 
     //  Read ABRM.
     println!("\n### Technology Agnostic Boot Register Map ###\n");
-    let abrm = device.abrm().unwrap();
+    let abrm = control_handle.abrm().unwrap();
 
     println!("gencp_version: {}", abrm.gencp_version().unwrap());
     println!("manufacturer_name: {}", abrm.manufacturer_name().unwrap());

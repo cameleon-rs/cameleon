@@ -23,6 +23,21 @@ pub struct StreamHandle {
 }
 
 impl StreamHandle {
+    /// Open the handle.
+    pub fn open(&self) -> DeviceResult<()> {
+        Ok(self.channel.lock().unwrap().open()?)
+    }
+
+    /// Close the handle.
+    pub fn close(&self) -> DeviceResult<()> {
+        Ok(self.channel.lock().unwrap().close()?)
+    }
+
+    /// Return `true` if the handle is opened.
+    pub fn is_opened(&self) -> bool {
+        self.channel.lock().unwrap().is_opened()
+    }
+
     /// Read leader of a stream packet.
     ///
     /// Buffer size must be equal or larger than [`StreamParams::leader_size`].
@@ -105,18 +120,6 @@ impl StreamHandle {
         } else {
             Ok(None)
         }
-    }
-
-    pub(super) fn open(&self) -> DeviceResult<()> {
-        Ok(self.channel.lock().unwrap().open()?)
-    }
-
-    pub(super) fn close(&self) -> DeviceResult<()> {
-        Ok(self.channel.lock().unwrap().close()?)
-    }
-
-    pub(super) fn is_opened(&self) -> bool {
-        self.channel.lock().unwrap().is_opened()
     }
 
     fn recv(

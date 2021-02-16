@@ -1,12 +1,8 @@
 use cameleon_device::u3v;
 
-use crate::device::{DeviceError, DeviceResult};
+use crate::device::DeviceResult;
 
-use super::{
-    control_handle::ControlHandle,
-    register_map::Abrm,
-    stream_handle::{StreamHandle, StreamParams},
-};
+use super::{control_handle::ControlHandle, stream_handle::StreamHandle};
 
 /// Basic device information that is obtained without opening the device.
 pub type DeviceInfo = u3v::DeviceInfo;
@@ -47,47 +43,14 @@ pub struct Device {
 }
 
 impl Device {
-    /// Open the device to obtain access.
-    pub fn open(&mut self) -> DeviceResult<()> {
-        if self.is_opened() {
-            return Ok(());
-        }
-
-        self.ctrl_handle.open()?;
-        Ok(())
-    }
-
-    /// Close the device.
-    ///
-    /// After closing the device all handles of the device can't communicate with device.  
-    /// This method is automatically called inside `Drop::drop`.
-    pub fn close(&mut self) -> DeviceResult<()> {
-        let result = self.ctrl_handle.close();
-        result
-    }
-
     /// Return control handle of the device.
-    pub fn control_handle(&self) -> DeviceResult<&ControlHandle> {
-        self.assert_open()?;
-
-        Ok(&self.ctrl_handle)
+    pub fn control_handle(&self) -> &ControlHandle {
+        &self.ctrl_handle
     }
 
     /// Return stream handle of the device.
     pub fn stream_handle(&self) -> Option<&StreamHandle> {
         self.strm_handle.as_ref()
-    }
-
-    /// Return `true` if device is opened.
-    pub fn is_opened(&self) -> bool {
-        self.ctrl_handle.is_opened()
-    }
-
-    /// Return Technology Agnostic Boot Register Map of the device.
-    pub fn abrm(&self) -> DeviceResult<Abrm> {
-        self.assert_open()?;
-
-        self.ctrl_handle.abrm()
     }
 
     /// Basic information of the device. No need to call [`Device::open`] to obtain the
@@ -127,14 +90,6 @@ impl Device {
             strm_handle,
         })
     }
-
-    fn assert_open(&self) -> DeviceResult<()> {
-        if self.is_opened() {
-            Ok(())
-        } else {
-            Err(DeviceError::NotOpened)
-        }
-    }
 }
 
 /// Enumerate all U3V compatible devices connected to the host.
@@ -154,11 +109,4 @@ pub fn enumerate_devices() -> DeviceResult<Vec<Device>> {
         .map(Device::new)
         .filter_map(|d| d.ok())
         .collect())
-}
-
-impl Drop for Device {
-    fn drop(&mut self) {
-        // TODO: log.
-        let _ = self.close();
-    }
 }
