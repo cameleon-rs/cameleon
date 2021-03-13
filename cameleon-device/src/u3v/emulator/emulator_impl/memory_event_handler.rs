@@ -95,7 +95,7 @@ impl TimestampLatchHandler {
         let value = Self::read(&memory, scd_kind)?;
         // Write any number other than 1 cause error.
         if value != 1 {
-            return Err(ack::ErrorAck::new(ack::GenCpStatus::GenericError, scd_kind).into());
+            return Err(ack::ErrorAck::new(ack::GenCpStatus::GenericError, scd_kind));
         }
 
         // Write current time stamp to `TimeStamp` register.
@@ -124,7 +124,7 @@ impl SiControlHandler {
             Self::disable_sirm(worker, scd_kind).await;
             Ok(())
         } else {
-            Err(ack::ErrorAck::new(ack::GenCpStatus::GenericError, scd_kind).into())
+            Err(ack::ErrorAck::new(ack::GenCpStatus::GenericError, scd_kind))
         }
     }
 

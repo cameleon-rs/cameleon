@@ -125,7 +125,7 @@ impl DeviceBuilder {
 
         for config_index in 0..num_config_desc {
             let config_desc = device.config_descriptor(config_index)?;
-            if let Some(u3v_iad) = Self::find_u3v_iad_in_config_desc(&config_desc)? {
+            if let Some(u3v_iad) = Self::find_u3v_iad_in_config_desc(&config_desc) {
                 return Ok(Some((u3v_iad, config_desc)));
             }
         }
@@ -133,54 +133,54 @@ impl DeviceBuilder {
         Ok(None)
     }
 
-    fn find_u3v_iad_in_config_desc(desc: &rusb::ConfigDescriptor) -> Result<Option<IAD>> {
+    fn find_u3v_iad_in_config_desc(desc: &rusb::ConfigDescriptor) -> Option<IAD> {
         if let Some(extra) = desc.extra() {
             if let Some(iad) = IAD::from_bytes(extra) {
                 if Self::is_u3v_iad(&iad) {
-                    return Ok(Some(iad));
+                    return Some(iad);
                 }
             }
         }
 
         for iface in desc.interfaces() {
             for if_desc in iface.descriptors() {
-                if let Some(u3v_iad) = Self::find_u3v_iad_in_if_desc(&if_desc)? {
-                    return Ok(Some(u3v_iad));
+                if let Some(u3v_iad) = Self::find_u3v_iad_in_if_desc(&if_desc) {
+                    return Some(u3v_iad);
                 }
             }
         }
 
-        Ok(None)
+        None
     }
 
-    fn find_u3v_iad_in_if_desc(desc: &rusb::InterfaceDescriptor) -> Result<Option<IAD>> {
+    fn find_u3v_iad_in_if_desc(desc: &rusb::InterfaceDescriptor) -> Option<IAD> {
         if let Some(extra) = desc.extra() {
             if let Some(iad) = IAD::from_bytes(extra) {
                 if Self::is_u3v_iad(&iad) {
-                    return Ok(Some(iad));
+                    return Some(iad);
                 }
             }
         }
 
         for ep_desc in desc.endpoint_descriptors() {
-            if let Some(u3v_iad) = Self::find_u3v_iad_in_ep_desc(&ep_desc)? {
-                return Ok(Some(u3v_iad));
+            if let Some(u3v_iad) = Self::find_u3v_iad_in_ep_desc(&ep_desc) {
+                return Some(u3v_iad);
             }
         }
 
-        Ok(None)
+        None
     }
 
-    fn find_u3v_iad_in_ep_desc(desc: &rusb::EndpointDescriptor) -> Result<Option<IAD>> {
+    fn find_u3v_iad_in_ep_desc(desc: &rusb::EndpointDescriptor) -> Option<IAD> {
         if let Some(extra) = desc.extra() {
             if let Some(iad) = IAD::from_bytes(extra) {
                 if Self::is_u3v_iad(&iad) {
-                    return Ok(Some(iad));
+                    return Some(iad);
                 }
             }
         }
 
-        Ok(None)
+        None
     }
 
     fn is_u3v_iad(iad: &IAD) -> bool {

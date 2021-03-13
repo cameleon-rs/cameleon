@@ -454,10 +454,7 @@ gentl_api!(
     ) -> GenTlResult<()> {
         let code = match LAST_ERROR.with(|err| {
             let err = err.borrow();
-            match &err.err {
-                Some(err) => Some((err.into(), format!("{}", err))),
-                _ => None,
-            }
+            err.err.as_ref().map(|err| (err.into(), format!("{}", err)))
         }) {
             Some((code, text)) => {
                 text.as_str().copy_to(sErrorText, piSize)?;
