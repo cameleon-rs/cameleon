@@ -52,7 +52,7 @@ impl StreamHandle {
         Ok(Leader::parse(buf)?)
     }
 
-    /// Read payload of a  stream packet.
+    /// Read payload of a stream packet.
     pub fn read_payload(&self, buf: &mut [u8], timeout: time::Duration) -> DeviceResult<usize> {
         let guard = self.channel.lock().unwrap();
         let mut read_len = 0;
