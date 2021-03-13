@@ -240,7 +240,8 @@ impl Worker {
         // If another thread is processing command simultaneously, return busy error ack.
         if self
             .on_processing
-            .compare_and_swap(false, true, Ordering::Relaxed)
+            .compare_exchange(true, false, Ordering::Relaxed, Ordering::Relaxed)
+            .is_ok()
         {
             let ack = ack::ErrorAck::new(ack::GenCpStatus::Busy, ccd.scd_kind())
                 .finalize(ccd.request_id());
