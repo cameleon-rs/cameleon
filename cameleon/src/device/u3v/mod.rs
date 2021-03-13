@@ -12,12 +12,14 @@
 //!     return;
 //! }
 //!
-//! let mut device = devices.pop().unwrap();
-//! // Open device.
-//! device.open().unwrap();
+//! let device = devices.pop().unwrap();
+//!
+//! // Obtain and open the handle.
+//! let handle = device.control_handle();
+//! handle.open().unwrap();
 //!
 //! // Get Abrm.
-//! let abrm = device.abrm().unwrap();
+//! let abrm = handle.abrm().unwrap();
 //!
 //! // Read serial number from ABRM.
 //! let serial_number = abrm.serial_number().unwrap();

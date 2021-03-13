@@ -44,12 +44,11 @@ const INITIAL_MAXIMUM_ACK_LENGTH: u32 = 128;
 ///     return;
 /// }
 ///
-/// // Make sure to open the device to obtain control handle.
-/// let mut device = devices.pop().unwrap();
-/// device.open().unwrap();
+/// let device = devices.pop().unwrap();
 ///
-/// // Obtain control handle.
-/// let handle = device.control_handle().unwrap();
+/// // Obtain and open control handle.
+/// let handle = device.control_handle();
+/// handle.open().unwrap();
 ///
 /// // Read 64bytes from address 0x0184.
 /// let address = 0x0184;
@@ -87,9 +86,9 @@ impl ControlHandle {
     /// # if devices.is_empty() {
     /// #     return;
     /// # }
-    /// # let mut device = devices.pop().unwrap();
-    /// # device.open().unwrap();
-    /// let handle = device.control_handle().unwrap();
+    /// # let device = devices.pop().unwrap();
+    /// let handle = device.control_handle();
+    /// handle.open().unwrap();
     /// // Read 64bytes from address 0x0184.
     /// let address = 0x0184;
     /// let mut buffer = vec![0; 64];
@@ -115,10 +114,10 @@ impl ControlHandle {
     /// # if devices.is_empty() {
     /// #     return;
     /// # }
-    /// # // Make sure to open the device to obtain control handle.
-    /// # let mut device = devices.pop().unwrap();
-    /// # device.open().unwrap();
-    /// let handle = device.control_handle().unwrap();
+    /// # let device = devices.pop().unwrap();
+    /// let handle = device.control_handle();
+    /// handle.open().unwrap();
+    /// // Read 64bytes from address 0x0184.
     ///
     /// // Write b"Hello\0" to the address 0x0184.
     /// let address = 0x0184;

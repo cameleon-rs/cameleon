@@ -26,13 +26,11 @@ pub type DeviceInfo = u3v::DeviceInfo;
 ///     return;
 /// }
 ///
-/// let mut device = devices.pop().unwrap();
+/// let device = devices.pop().unwrap();
 ///
-/// // Open the device to obtain exclusive access to the device.
-/// device.open().unwrap();
-///
-/// // Get control handle to manipulate the device.
-/// let handle = device.control_handle().unwrap();
+/// // Obtain and open the control handle to manipulate the device.
+/// let handle = device.control_handle();
+/// handle.open().unwrap();
 /// ```
 pub struct Device {
     device: u3v::Device,

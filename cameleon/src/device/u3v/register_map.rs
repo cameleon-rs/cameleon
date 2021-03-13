@@ -15,12 +15,13 @@
 //!     return;
 //! }
 //!
-//! let mut device = devices.pop().unwrap();
-//! // Open device.
-//! device.open().unwrap();
+//! let device = devices.pop().unwrap();
+//! // Get and open handle.
+//! let handle = device.control_handle();
+//! handle.open().unwrap();
 //!
 //! // Get Abrm.
-//! let abrm = device.abrm().unwrap();
+//! let abrm = handle.abrm().unwrap();
 //!
 //! // Read serial number from ABRM.
 //! let serial_number = abrm.serial_number().unwrap();
@@ -65,12 +66,13 @@ use super::control_handle::ControlHandle;
 ///     return;
 /// }
 ///
-/// let mut device = devices.pop().unwrap();
-/// // Open device.
-/// device.open().unwrap();
+/// let device = devices.pop().unwrap();
+/// // Get and open handle.
+/// let handle = device.control_handle();
+/// handle.open().unwrap();
 ///
 /// // Get Abrm.
-/// let abrm = device.abrm().unwrap();
+/// let abrm = handle.abrm().unwrap();
 ///
 /// // Read serial number from ABRM.
 /// let serial_number = abrm.serial_number().unwrap();
@@ -102,16 +104,16 @@ impl<'a> Abrm<'a> {
     /// ```no_run
     /// # use cameleon::device::u3v;
     /// # let mut devices = u3v::enumerate_devices().unwrap();
-    /// # let mut device = devices.pop().unwrap();
-    /// # device.open().unwrap();
+    /// # let device = devices.pop().unwrap();
     /// use cameleon::device::u3v::register_map::Abrm;
     ///
     /// // Construct `Abrm` from control handle of the device directly.
-    /// let control_handle = device.control_handle().unwrap();
+    /// let control_handle = device.control_handle();
+    /// control_handle.open().unwrap();
     /// let abrm = Abrm::new(&control_handle).unwrap();
     ///
     /// // Or `Device::abrm` can be used to construct it.
-    /// let abrm = device.abrm().unwrap();
+    /// let abrm = control_handle.abrm().unwrap();
     /// ```
     pub fn new(handle: &'a ControlHandle) -> DeviceResult<Self> {
         let (capability_addr, capability_len) = abrm::DEVICE_CAPABILITY;
@@ -196,9 +198,10 @@ impl<'a> Abrm<'a> {
     /// ```no_run
     /// # use cameleon::device::u3v;
     /// # let mut devices = u3v::enumerate_devices().unwrap();
-    /// # let mut device = devices.pop().unwrap();
-    /// # device.open().unwrap();
-    /// let abrm = device.abrm().unwrap();
+    /// # let device = devices.pop().unwrap();
+    /// # let handle = device.control_handle();
+    /// # handle.open().unwrap();
+    /// let abrm = handle.abrm().unwrap();
     ///
     /// // Check user defined name is supported.
     /// let device_capability = abrm.device_capability().unwrap();
@@ -233,9 +236,10 @@ impl<'a> Abrm<'a> {
     /// ```no_run
     /// # use cameleon::device::u3v;
     /// # let mut devices = u3v::enumerate_devices().unwrap();
-    /// # let mut device = devices.pop().unwrap();
-    /// # device.open().unwrap();
-    /// let abrm = device.abrm().unwrap();
+    /// # let device = devices.pop().unwrap();
+    /// # let handle = device.control_handle();
+    /// # handle.open().unwrap();
+    /// let abrm = handle.abrm().unwrap();
     ///
     /// // Check user defined name is supported.
     /// let device_capability = abrm.device_capability().unwrap();
@@ -278,9 +282,10 @@ impl<'a> Abrm<'a> {
     /// ```no_run
     /// # use cameleon::device::u3v;
     /// # let mut devices = u3v::enumerate_devices().unwrap();
-    /// # let mut device = devices.pop().unwrap();
-    /// # device.open().unwrap();
-    /// let abrm = device.abrm().unwrap();
+    /// # let device = devices.pop().unwrap();
+    /// # let handle = device.control_handle();
+    /// # handle.open().unwrap();
+    /// let abrm = handle.abrm().unwrap();
     ///
     /// // In order to obtain current device internal clock,
     /// // make sure to call `set_timestamp_latch_bit` to
@@ -338,9 +343,10 @@ impl<'a> Abrm<'a> {
     /// ```no_run
     /// # use cameleon::device::u3v;
     /// # let mut devices = u3v::enumerate_devices().unwrap();
-    /// # let mut device = devices.pop().unwrap();
-    /// # device.open().unwrap();
-    /// let abrm = device.abrm().unwrap();
+    /// # let device = devices.pop().unwrap();
+    /// # let handle = device.control_handle();
+    /// # handle.open().unwrap();
+    /// let abrm = handle.abrm().unwrap();
     ///
     /// let configuration = abrm.device_configuration().unwrap();
     /// if configuration.is_multi_event_enabled() {
@@ -360,9 +366,10 @@ impl<'a> Abrm<'a> {
     /// ```no_run
     /// # use cameleon::device::u3v;
     /// # let mut devices = u3v::enumerate_devices().unwrap();
-    /// # let mut device = devices.pop().unwrap();
-    /// # device.open().unwrap();
-    /// let abrm = device.abrm().unwrap();
+    /// # let device = devices.pop().unwrap();
+    /// # let handle = device.control_handle();
+    /// # handle.open().unwrap();
+    /// let abrm = handle.abrm().unwrap();
     ///
     /// // Check multi event feature is supported.
     /// let capability = abrm.device_capability().unwrap();
@@ -412,12 +419,13 @@ impl<'a> Abrm<'a> {
 ///     return;
 /// }
 ///
-/// let mut device = devices.pop().unwrap();
-/// // Open device.
-/// device.open().unwrap();
+/// let device = devices.pop().unwrap();
+/// // Get and open the handle.
+/// let handle = device.control_handle();
+/// handle.open().unwrap();
 ///
 /// // Get Abrm.
-/// let abrm = device.abrm().unwrap();
+/// let abrm = handle.abrm().unwrap();
 ///
 /// // Get Sbrm from Abrm.
 /// let sbrm = abrm.sbrm().unwrap();
@@ -588,12 +596,13 @@ impl<'a> Sbrm<'a> {
 ///     return;
 /// }
 ///
-/// let mut device = devices.pop().unwrap();
-/// // Open device.
-/// device.open().unwrap();
+/// let device = devices.pop().unwrap();
+/// // Obtain and open the handle.
+/// let handle = device.control_handle();
+/// handle.open().unwrap();
 ///
 /// // Get Sirm.
-/// let abrm = device.abrm().unwrap();
+/// let abrm = handle.abrm().unwrap();
 /// let sbrm = abrm.sbrm().unwrap();
 /// if !sbrm.u3v_capability().unwrap().is_sirm_available() {
 ///    return;
@@ -786,10 +795,11 @@ impl<'a> Sirm<'a> {
 /// ```no_run
 /// # use cameleon::device::u3v;
 /// # let mut devices = u3v::enumerate_devices().unwrap();
-/// # let mut device = devices.pop().unwrap();
-/// # device.open().unwrap();
+/// # let device = devices.pop().unwrap();
+/// # let handle = device.control_handle();
+/// # handle.open().unwrap();
 /// // Get Abrm.
-/// let abrm = device.abrm().unwrap();
+/// let abrm = handle.abrm().unwrap();
 ///
 /// // Get manifest table.
 /// let manifest_table = abrm.manifest_table().unwrap();
@@ -840,10 +850,11 @@ impl<'a> ManifestTable<'a> {
 /// ```no_run
 /// # use cameleon::device::u3v;
 /// # let mut devices = u3v::enumerate_devices().unwrap();
-/// # let mut device = devices.pop().unwrap();
-/// # device.open().unwrap();
+/// # let device = devices.pop().unwrap();
+/// # let handle = device.control_handle();
+/// # handle.open().unwrap();
 /// // Get Abrm.
-/// let abrm = device.abrm().unwrap();
+/// let abrm = handle.abrm().unwrap();
 ///
 /// // Get first manifest entry.
 /// let manifest_table = abrm.manifest_table().unwrap();
@@ -957,9 +968,11 @@ macro_rules! unset_bit {
 /// ```no_run
 /// # use cameleon::device::u3v;
 /// # let mut devices = u3v::enumerate_devices().unwrap();
-/// # let mut device = devices.pop().unwrap();
-/// # device.open().unwrap();
-/// let abrm = device.abrm().unwrap();
+/// # let device = devices.pop().unwrap();
+/// # let handle = device.control_handle();
+/// # handle.open().unwrap();
+/// // Get Abrm.
+/// let abrm = handle.abrm().unwrap();
 ///
 /// // Check multi event feature is supported.
 /// let capability = abrm.device_capability().unwrap();
@@ -1000,10 +1013,11 @@ impl DeviceConfiguration {
 /// ```no_run
 /// # use cameleon::device::u3v;
 /// # let mut devices = u3v::enumerate_devices().unwrap();
-/// # let mut device = devices.pop().unwrap();
-/// # device.open().unwrap();
+/// # let device = devices.pop().unwrap();
+/// # let handle = device.control_handle();
+/// # handle.open().unwrap();
 /// // Get Abrm.
-/// let abrm = device.abrm().unwrap();
+/// let abrm = handle.abrm().unwrap();
 ///
 /// // Get Device Capability of the device.
 /// let device_capability = abrm.device_capability().unwrap();
@@ -1057,11 +1071,11 @@ impl DeviceCapability {
 /// ```no_run
 /// # use cameleon::device::u3v;
 /// # let mut devices = u3v::enumerate_devices().unwrap();
-/// # let mut device = devices.pop().unwrap();
-/// # device.open().unwrap();
+/// # let device = devices.pop().unwrap();
+/// # let handle = device.control_handle();
+/// # handle.open().unwrap();
 /// // Get Sbrm.
-/// let sbrm = device.abrm().unwrap().sbrm().unwrap();
-/// let u3v_capability = sbrm.u3v_capability().unwrap();
+/// let sbrm = handle.abrm().unwrap().sbrm().unwrap();
 ///
 /// // Get U3V Capability of the device.
 /// let device_capability = sbrm.u3v_capability().unwrap();
@@ -1103,10 +1117,11 @@ impl U3VCapablitiy {
 /// ```no_run
 /// # use cameleon::device::u3v;
 /// # let mut devices = u3v::enumerate_devices().unwrap();
-/// # let mut device = devices.pop().unwrap();
-/// # device.open().unwrap();
+/// # let device = devices.pop().unwrap();
+/// # let handle = device.control_handle();
+/// # handle.open().unwrap();
 /// // Get Abrm.
-/// let abrm = device.abrm().unwrap();
+/// let abrm = handle.abrm().unwrap();
 ///
 /// // Get first manifest entry.
 /// let manifest_table = abrm.manifest_table().unwrap();
