@@ -32,6 +32,7 @@ impl From<DeviceError> for GenTlError {
             DeviceError::NotOpened => NotInitialized,
             DeviceError::InvalidData(..) => InvalidValue(format!("{}", err).into()),
             DeviceError::Timeout => Timeout,
+            DeviceError::BufferTooSmall => BufferTooSmall,
         }
     }
 }

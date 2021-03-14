@@ -33,11 +33,11 @@ impl ControlChannel {
     }
 
     pub fn send(&self, buf: &[u8], timeout: time::Duration) -> Result<usize> {
-        Ok(self.device_handle.write_bulk(buf, timeout)?)
+        self.device_handle.write_bulk(buf, timeout)
     }
 
     pub fn recv(&self, buf: &mut [u8], timeout: time::Duration) -> Result<usize> {
-        Ok(self.device_handle.read_bulk(buf, timeout)?)
+        self.device_handle.read_bulk(buf, timeout)
     }
 
     pub fn set_halt(&self, _timeout: time::Duration) -> Result<()> {
@@ -93,7 +93,7 @@ impl ReceiveChannel {
     }
 
     pub fn recv(&self, buf: &mut [u8], timeout: time::Duration) -> Result<usize> {
-        Ok(self.device_handle.read_bulk(buf, timeout)?)
+        self.device_handle.read_bulk(buf, timeout)
     }
 
     pub fn set_halt(&self, _timeout: time::Duration) -> Result<()> {

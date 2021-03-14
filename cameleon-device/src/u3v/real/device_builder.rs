@@ -1,7 +1,6 @@
-use byteorder::{ReadBytesExt, LE};
 use semver::Version;
 
-use crate::u3v::{BusSpeed, DeviceInfo, Error, Result};
+use crate::u3v::{protocol::util::ReadBytes, BusSpeed, DeviceInfo, Error, Result};
 
 use super::{
     channel::{ControlIfaceInfo, ReceiveIfaceInfo},
@@ -126,7 +125,7 @@ impl DeviceBuilder {
 
         for config_index in 0..num_config_desc {
             let config_desc = device.config_descriptor(config_index)?;
-            if let Some(u3v_iad) = Self::find_u3v_iad_in_config_desc(&config_desc)? {
+            if let Some(u3v_iad) = Self::find_u3v_iad_in_config_desc(&config_desc) {
                 return Ok(Some((u3v_iad, config_desc)));
             }
         }
@@ -134,54 +133,54 @@ impl DeviceBuilder {
         Ok(None)
     }
 
-    fn find_u3v_iad_in_config_desc(desc: &rusb::ConfigDescriptor) -> Result<Option<IAD>> {
+    fn find_u3v_iad_in_config_desc(desc: &rusb::ConfigDescriptor) -> Option<IAD> {
         if let Some(extra) = desc.extra() {
             if let Some(iad) = IAD::from_bytes(extra) {
                 if Self::is_u3v_iad(&iad) {
-                    return Ok(Some(iad));
+                    return Some(iad);
                 }
             }
         }
 
         for iface in desc.interfaces() {
             for if_desc in iface.descriptors() {
-                if let Some(u3v_iad) = Self::find_u3v_iad_in_if_desc(&if_desc)? {
-                    return Ok(Some(u3v_iad));
+                if let Some(u3v_iad) = Self::find_u3v_iad_in_if_desc(&if_desc) {
+                    return Some(u3v_iad);
                 }
             }
         }
 
-        Ok(None)
+        None
     }
 
-    fn find_u3v_iad_in_if_desc(desc: &rusb::InterfaceDescriptor) -> Result<Option<IAD>> {
+    fn find_u3v_iad_in_if_desc(desc: &rusb::InterfaceDescriptor) -> Option<IAD> {
         if let Some(extra) = desc.extra() {
             if let Some(iad) = IAD::from_bytes(extra) {
                 if Self::is_u3v_iad(&iad) {
-                    return Ok(Some(iad));
+                    return Some(iad);
                 }
             }
         }
 
         for ep_desc in desc.endpoint_descriptors() {
-            if let Some(u3v_iad) = Self::find_u3v_iad_in_ep_desc(&ep_desc)? {
-                return Ok(Some(u3v_iad));
+            if let Some(u3v_iad) = Self::find_u3v_iad_in_ep_desc(&ep_desc) {
+                return Some(u3v_iad);
             }
         }
 
-        Ok(None)
+        None
     }
 
-    fn find_u3v_iad_in_ep_desc(desc: &rusb::EndpointDescriptor) -> Result<Option<IAD>> {
+    fn find_u3v_iad_in_ep_desc(desc: &rusb::EndpointDescriptor) -> Option<IAD> {
         if let Some(extra) = desc.extra() {
             if let Some(iad) = IAD::from_bytes(extra) {
                 if Self::is_u3v_iad(&iad) {
-                    return Ok(Some(iad));
+                    return Some(iad);
                 }
             }
         }
 
-        Ok(None)
+        None
     }
 
     fn is_u3v_iad(iad: &IAD) -> bool {
@@ -278,9 +277,9 @@ impl DeviceInfoDescriptor {
             return Err(Error::InvalidDevice);
         }
 
-        let length = bytes.read_u8()?;
-        let descriptor_type = bytes.read_u8()?;
-        let descriptor_subtype = bytes.read_u8()?;
+        let length: u8 = bytes.read_bytes()?;
+        let descriptor_type = bytes.read_bytes()?;
+        let descriptor_subtype = bytes.read_bytes()?;
 
         if length < Self::MINIMUM_DESC_LENGTH
             || descriptor_type != Self::DESCRIPTOR_TYPE
@@ -289,19 +288,19 @@ impl DeviceInfoDescriptor {
             return Err(Error::InvalidDevice);
         }
 
-        let gencp_version_minor = bytes.read_u16::<LE>()?;
-        let gencp_version_major = bytes.read_u16::<LE>()?;
-        let u3v_version_minor = bytes.read_u16::<LE>()?;
-        let u3v_version_major = bytes.read_u16::<LE>()?;
-        let guid_idx = bytes.read_u8()?;
-        let vendor_name_idx = bytes.read_u8()?;
-        let model_name_idx = bytes.read_u8()?;
-        let family_name_idx = bytes.read_u8()?;
-        let device_version_idx = bytes.read_u8()?;
-        let manufacturer_info_idx = bytes.read_u8()?;
-        let serial_number_idx = bytes.read_u8()?;
-        let user_defined_name_idx = bytes.read_u8()?;
-        let supported_speed_mask = bytes.read_u8()?;
+        let gencp_version_minor = bytes.read_bytes()?;
+        let gencp_version_major = bytes.read_bytes()?;
+        let u3v_version_minor = bytes.read_bytes()?;
+        let u3v_version_major = bytes.read_bytes()?;
+        let guid_idx = bytes.read_bytes()?;
+        let vendor_name_idx = bytes.read_bytes()?;
+        let model_name_idx = bytes.read_bytes()?;
+        let family_name_idx = bytes.read_bytes()?;
+        let device_version_idx = bytes.read_bytes()?;
+        let manufacturer_info_idx = bytes.read_bytes()?;
+        let serial_number_idx = bytes.read_bytes()?;
+        let user_defined_name_idx = bytes.read_bytes()?;
+        let supported_speed_mask = bytes.read_bytes()?;
 
         Ok(Self {
             length,

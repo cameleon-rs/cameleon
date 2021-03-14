@@ -44,12 +44,11 @@ const INITIAL_MAXIMUM_ACK_LENGTH: u32 = 128;
 ///     return;
 /// }
 ///
-/// // Make sure to open the device to obtain control handle.
-/// let mut device = devices.pop().unwrap();
-/// device.open().unwrap();
+/// let device = devices.pop().unwrap();
 ///
-/// // Obtain control handle.
-/// let handle = device.control_handle().unwrap();
+/// // Obtain and open control handle.
+/// let handle = device.control_handle();
+/// handle.open().unwrap();
 ///
 /// // Read 64bytes from address 0x0184.
 /// let address = 0x0184;
@@ -62,6 +61,17 @@ pub struct ControlHandle {
 }
 
 impl ControlHandle {
+    /// Open the handle.
+    pub fn open(&self) -> DeviceResult<()> {
+        self.inner.lock().unwrap().open()?;
+        self.initialize_config()
+    }
+
+    /// Close the handle.
+    pub fn close(&self) -> DeviceResult<()> {
+        self.inner.lock().unwrap().close()
+    }
+
     /// Read data from the device's memory.  
     /// Read length is same as `buf.len()`.
     ///
@@ -76,9 +86,9 @@ impl ControlHandle {
     /// # if devices.is_empty() {
     /// #     return;
     /// # }
-    /// # let mut device = devices.pop().unwrap();
-    /// # device.open().unwrap();
-    /// let handle = device.control_handle().unwrap();
+    /// # let device = devices.pop().unwrap();
+    /// let handle = device.control_handle();
+    /// handle.open().unwrap();
     /// // Read 64bytes from address 0x0184.
     /// let address = 0x0184;
     /// let mut buffer = vec![0; 64];
@@ -104,10 +114,10 @@ impl ControlHandle {
     /// # if devices.is_empty() {
     /// #     return;
     /// # }
-    /// # // Make sure to open the device to obtain control handle.
-    /// # let mut device = devices.pop().unwrap();
-    /// # device.open().unwrap();
-    /// let handle = device.control_handle().unwrap();
+    /// # let device = devices.pop().unwrap();
+    /// let handle = device.control_handle();
+    /// handle.open().unwrap();
+    /// // Read 64bytes from address 0x0184.
     ///
     /// // Write b"Hello\0" to the address 0x0184.
     /// let address = 0x0184;
@@ -170,11 +180,6 @@ impl ControlHandle {
         self.inner.lock().unwrap().config.retry_count = count;
     }
 
-    pub(super) fn open(&self) -> DeviceResult<()> {
-        self.inner.lock().unwrap().open()?;
-        self.initialize_config()
-    }
-
     fn initialize_config(&self) -> DeviceResult<()> {
         let abrm = self.abrm()?;
         let sbrm = abrm.sbrm()?;
@@ -189,10 +194,6 @@ impl ControlHandle {
         inner.config.maximum_ack_length = maximum_ack_length;
 
         Ok(())
-    }
-
-    pub(super) fn close(&self) -> DeviceResult<()> {
-        self.inner.lock().unwrap().close()
     }
 
     pub(super) fn new(device: &u3v::Device) -> DeviceResult<Self> {

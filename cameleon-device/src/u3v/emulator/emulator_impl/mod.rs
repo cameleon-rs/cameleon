@@ -1,4 +1,5 @@
 mod control_module;
+mod control_protocol;
 mod device;
 mod device_handle;
 mod device_pool;
@@ -8,6 +9,7 @@ mod fake_protocol;
 mod genapi;
 mod interface;
 mod memory;
+mod memory_event_handler;
 mod shared_queue;
 mod signal;
 mod stream_module;

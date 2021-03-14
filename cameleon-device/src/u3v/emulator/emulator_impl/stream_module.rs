@@ -33,21 +33,21 @@ impl StreamModule {
     ) {
         while let Some(signal) = signal_rx.next().await {
             match signal {
-                StreamSignal::_Enable => {
+                StreamSignal::Enable => {
                     if self.enabled {
-                        log::warn! {"receive event enable signal, but event module is already enabled"}
+                        log::warn! {"receive stream enable signal, but stream module is already enabled"}
                     } else {
                         self.enabled = true;
-                        log::info! {"event module is enabled"};
+                        log::info! {"stream module is enabled"};
                     }
                 }
 
                 StreamSignal::Disable(_completed) => {
                     if self.enabled {
                         self.enabled = false;
-                        log::info! {"event module is disenabled"};
+                        log::info! {"stream module is disabled"};
                     } else {
-                        log::warn! {"receive event disable signal, but event module is already disabled"}
+                        log::warn! {"receive stream disable signal, but stream module is already disabled"}
                     }
                 }
 

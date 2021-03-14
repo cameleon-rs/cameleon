@@ -206,8 +206,8 @@ impl Device for U3VDeviceModule {
             return Err(GenTlError::ResourceInUse);
         }
 
-        let res: GenTlResult<()> = self.device.open().map_err(Into::into);
-        let ctrl_handle = self.device.control_handle()?.clone();
+        let ctrl_handle = self.device.control_handle().clone();
+        let res: GenTlResult<()> = ctrl_handle.open().map_err(Into::into);
         self.remote_device = Some(Mutex::new(U3VRemoteDevice::new(ctrl_handle)?).into());
 
         self.current_status = match &res {
@@ -221,7 +221,7 @@ impl Device for U3VDeviceModule {
     }
 
     fn close(&mut self) -> GenTlResult<()> {
-        let res: GenTlResult<()> = self.device.close().map_err(Into::into);
+        let res: GenTlResult<()> = self.device.control_handle().close().map_err(Into::into);
         self.current_status = match res {
             Ok(()) => super::DeviceAccessStatus::ReadWrite,
             Err(GenTlError::Io(..)) => super::DeviceAccessStatus::NoAccess,
@@ -266,7 +266,7 @@ impl Device for U3VDeviceModule {
     }
 
     fn user_defined_name(&self) -> GenTlResult<String> {
-        let abrm = self.device.abrm()?;
+        let abrm = self.device.control_handle().abrm()?;
         let user_defined_name = abrm.user_defined_name()?;
         user_defined_name.ok_or(GenTlError::NotAvailable)
     }
@@ -276,12 +276,12 @@ impl Device for U3VDeviceModule {
     }
 
     fn device_version(&self) -> GenTlResult<String> {
-        let abrm = self.device.abrm()?;
+        let abrm = self.device.control_handle().abrm()?;
         Ok(abrm.device_version()?)
     }
 
     fn timespamp_frequency(&self) -> GenTlResult<u64> {
-        let abrm = self.device.abrm()?;
+        let abrm = self.device.control_handle().abrm()?;
 
         //  U3V's Timestamp increment represents ns / tick.
         let timestamp_increment = abrm.timestamp_increment()?;

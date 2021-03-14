@@ -1,10 +1,8 @@
 use std::io::Cursor;
 
-use byteorder::{ReadBytesExt, LE};
-
 use crate::u3v::{Error, Result};
 
-use super::parse_util;
+use super::util::{self, ReadBytes};
 
 pub struct EventPacket<'a> {
     ccd: EventCcd,
@@ -31,7 +29,7 @@ impl<'a> EventPacket<'a> {
     }
 
     fn parse_prefix(cursor: &mut Cursor<&[u8]>) -> Result<()> {
-        let magic = cursor.read_u32::<LE>()?;
+        let magic: u32 = cursor.read_bytes()?;
         if magic == Self::PREFIX_MAGIC {
             Ok(())
         } else {
@@ -53,13 +51,13 @@ impl EventCcd {
     const EVENT_COMMAND_ID: u16 = 0x0c00;
 
     fn parse(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
-        let flag = cursor.read_u16::<LE>()?;
-        let command_id = cursor.read_u16::<LE>()?;
+        let flag = cursor.read_bytes()?;
+        let command_id = cursor.read_bytes()?;
         if command_id != Self::EVENT_COMMAND_ID {
             return Err(Error::InvalidPacket("invalid event command id".into()));
         }
-        let scd_len = cursor.read_u16::<LE>()?;
-        let request_id = cursor.read_u16::<LE>()?;
+        let scd_len = cursor.read_bytes()?;
+        let request_id = cursor.read_bytes()?;
         Ok({
             Self {
                 flag,
@@ -85,16 +83,16 @@ impl<'a> EventScd<'a> {
         let mut remained = ccd.scd_len;
 
         while remained > 0 {
-            let event_size = cursor.read_u16::<LE>()?;
-            let event_id = cursor.read_u16::<LE>()?;
-            let timestamp = cursor.read_u64::<LE>()?;
+            let event_size: u16 = cursor.read_bytes()?;
+            let event_id = cursor.read_bytes()?;
+            let timestamp = cursor.read_bytes()?;
 
             // MultiEvent isn't enabled.
             let data = if event_size == 0 {
                 remained = remained.checked_sub(12).ok_or_else(|| {
                     Error::InvalidPacket("SCD length in CCD is inconsistent with SCD".into())
                 })?;
-                let data = parse_util::read_bytes(cursor, remained)?;
+                let data = util::read_bytes(cursor, remained)?;
                 remained = 0;
                 data
             } else {
@@ -104,7 +102,7 @@ impl<'a> EventScd<'a> {
                 remained = remained.checked_sub(event_size).ok_or_else(|| {
                     Error::InvalidPacket("SCD length in CCD is inconsistent with SCD".into())
                 })?;
-                parse_util::read_bytes(cursor, data_len)?
+                util::read_bytes(cursor, data_len)?
             };
 
             events.push(EventScd {
@@ -121,27 +119,26 @@ impl<'a> EventScd<'a> {
 
 #[cfg(test)]
 mod tests {
-    use byteorder::WriteBytesExt;
-
     use super::*;
+    use util::WriteBytes;
 
     fn serialize_header(scd_len: u16, request_id: u16) -> Vec<u8> {
         let mut ccd = vec![];
-        ccd.write_u32::<LE>(0x45563355).unwrap(); // Magic.
-        ccd.write_u16::<LE>(1 << 14).unwrap(); // Request ack for now.
-        ccd.write_u16::<LE>(0x0c00).unwrap();
-        ccd.write_u16::<LE>(scd_len).unwrap();
-        ccd.write_u16::<LE>(request_id).unwrap();
+        ccd.write_bytes(0x45563355u32).unwrap(); // Magic.
+        ccd.write_bytes(1u16 << 14).unwrap(); // Request ack for now.
+        ccd.write_bytes(0x0c00u16).unwrap();
+        ccd.write_bytes(scd_len).unwrap();
+        ccd.write_bytes(request_id).unwrap();
         ccd
     }
 
     #[test]
     fn test_single_event() {
         let mut scd = vec![];
-        scd.write_u16::<LE>(0).unwrap(); // Single event.
-        scd.write_u16::<LE>(0x10).unwrap(); // Dummy event ID.
-        let timestamp = 0x123456789abcdef;
-        scd.write_u64::<LE>(timestamp).unwrap();
+        scd.write_bytes(0u16).unwrap(); // Single event.
+        scd.write_bytes(0x10u16).unwrap(); // Dummy event ID.
+        let timestamp = 0x123456789abcdefu64;
+        scd.write_bytes(timestamp).unwrap();
         let data = &[0x12, 0x34];
         scd.extend(data);
 
@@ -160,17 +157,17 @@ mod tests {
     #[test]
     fn test_multi_event() {
         let mut scd = vec![];
-        scd.write_u16::<LE>(14).unwrap(); // Multi event 1.
-        scd.write_u16::<LE>(0x10).unwrap(); // Dummy event ID.
-        let timestamp = 0x123456789abcdef;
-        scd.write_u64::<LE>(timestamp).unwrap();
+        scd.write_bytes(14u16).unwrap(); // Multi event 1.
+        scd.write_bytes(0x10u16).unwrap(); // Dummy event ID.
+        let timestamp = 0x123456789abcdefu64;
+        scd.write_bytes(timestamp).unwrap();
         let data = &[0x12, 0x34];
         scd.extend(data);
 
-        scd.write_u16::<LE>(12).unwrap(); // Multi event 2.
-        scd.write_u16::<LE>(0x11).unwrap(); // Dummy event ID.
-        let timestamp = 0x1;
-        scd.write_u64::<LE>(timestamp).unwrap();
+        scd.write_bytes(12u16).unwrap(); // Multi event 2.
+        scd.write_bytes(0x11u16).unwrap(); // Dummy event ID.
+        let timestamp = 0x1u64;
+        scd.write_bytes(timestamp).unwrap();
 
         let mut raw_packet = serialize_header(scd.len() as u16, 1);
         raw_packet.extend(scd);

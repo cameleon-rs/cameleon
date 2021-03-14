@@ -13,11 +13,12 @@
 //! }
 //!
 //! let mut device = devices.pop().unwrap();
-//! // Open device.
-//! device.open().unwrap();
+//! // Get control handle of the device.
+//! let control_handle = device.control_handle();
+//! control_handle.open().unwrap();
 //!
 //! // Get Abrm.
-//! let abrm = device.abrm().unwrap();
+//! let abrm = control_handle.abrm().unwrap();
 //!
 //! // Read serial number from ABRM.
 //! let serial_number = abrm.serial_number().unwrap();
@@ -61,6 +62,10 @@ pub enum DeviceError {
     /// Device internal error.
     #[error("device internal error: {}", 0)]
     InternalError(Box<dyn std::error::Error>),
+
+    /// Buffer is too small to receive data.
+    #[error("buffer is too small to recive data")]
+    BufferTooSmall,
 
     /// Try to write invalid data to the device.
     /// e.g. try to write too large data that will overrun register.

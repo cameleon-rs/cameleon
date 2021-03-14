@@ -1,10 +1,8 @@
 use std::{io::Cursor, time};
 
-use byteorder::{ReadBytesExt, LE};
-
 use crate::u3v::{Error, Result};
 
-use super::parse_util;
+use super::util::{self, ReadBytes};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AckPacket<'a> {
@@ -15,7 +13,6 @@ pub struct AckPacket<'a> {
 impl<'a> AckPacket<'a> {
     const PREFIX_MAGIC: u32 = 0x43563355;
 
-    //pub fn parse(buf: &'a (impl AsRef<[u8]> + ?Sized)) -> Result<Self> {
     pub fn parse(buf: &'a (impl AsRef<[u8]> + ?Sized)) -> Result<Self> {
         let mut cursor = Cursor::new(buf.as_ref());
 
@@ -52,7 +49,7 @@ impl<'a> AckPacket<'a> {
     }
 
     fn parse_prefix(cursor: &mut Cursor<&[u8]>) -> Result<()> {
-        let magic = cursor.read_u32::<LE>()?;
+        let magic: u32 = cursor.read_bytes()?;
         if magic == Self::PREFIX_MAGIC {
             Ok(())
         } else {
@@ -89,8 +86,8 @@ impl AckCcd {
     fn parse(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
         let status = Status::parse(cursor)?;
         let scd_kind = ScdKind::parse(cursor)?;
-        let scd_len = cursor.read_u16::<LE>()?;
-        let request_id = cursor.read_u16::<LE>()?;
+        let scd_len = cursor.read_bytes()?;
+        let request_id = cursor.read_bytes()?;
 
         Ok(Self {
             status,
@@ -190,7 +187,7 @@ impl Status {
     }
 
     fn parse(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
-        let code = cursor.read_u16::<LE>()?;
+        let code: u16 = cursor.read_bytes()?;
 
         let namespace = (code >> 13) & 0x11;
         match namespace {
@@ -273,7 +270,7 @@ pub enum ScdKind {
 
 impl ScdKind {
     fn parse(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
-        let id = cursor.read_u16::<LE>()?;
+        let id: u16 = cursor.read_bytes()?;
         match id {
             0x0801 => Ok(ScdKind::ReadMem),
             0x0803 => Ok(ScdKind::WriteMem),
@@ -317,7 +314,7 @@ pub struct CustomAck<'a> {
 
 impl<'a> ParseScd<'a> for ReadMem<'a> {
     fn parse(buf: &'a [u8], ccd: &AckCcd) -> Result<Self> {
-        let data = parse_util::read_bytes(&mut Cursor::new(buf), ccd.scd_len)?;
+        let data = util::read_bytes(&mut Cursor::new(buf), ccd.scd_len)?;
         Ok(Self { data })
     }
 }
@@ -325,14 +322,14 @@ impl<'a> ParseScd<'a> for ReadMem<'a> {
 impl<'a> ParseScd<'a> for WriteMem {
     fn parse(buf: &'a [u8], _ccd: &AckCcd) -> Result<Self> {
         let mut cursor = Cursor::new(buf);
-        let reserved = cursor.read_u16::<LE>()?;
+        let reserved: u16 = cursor.read_bytes()?;
         if reserved != 0 {
             return Err(Error::InvalidPacket(
                 "the first two bytes of WriteMemAck scd must be set to zero".into(),
             ));
         }
 
-        let length = cursor.read_u16::<LE>()?;
+        let length = cursor.read_bytes()?;
         Ok(Self { length })
     }
 }
@@ -340,14 +337,14 @@ impl<'a> ParseScd<'a> for WriteMem {
 impl<'a> ParseScd<'a> for Pending {
     fn parse(buf: &'a [u8], _ccd: &AckCcd) -> Result<Self> {
         let mut cursor = Cursor::new(buf);
-        let reserved = cursor.read_u16::<LE>()?;
+        let reserved: u16 = cursor.read_bytes()?;
         if reserved != 0 {
             return Err(Error::InvalidPacket(
                 "the first two bytes of PendingAck scd must be set to zero".into(),
             ));
         }
 
-        let timeout_ms = cursor.read_u16::<LE>()?;
+        let timeout_ms: u16 = cursor.read_bytes()?;
         let timeout = time::Duration::from_millis(timeout_ms.into());
         Ok(Self { timeout })
     }
@@ -355,7 +352,7 @@ impl<'a> ParseScd<'a> for Pending {
 
 impl<'a> ParseScd<'a> for ReadMemStacked<'a> {
     fn parse(buf: &'a [u8], ccd: &AckCcd) -> Result<Self> {
-        let data = parse_util::read_bytes(&mut Cursor::new(buf), ccd.scd_len)?;
+        let data = util::read_bytes(&mut Cursor::new(buf), ccd.scd_len)?;
 
         Ok(Self { data })
     }
@@ -368,13 +365,13 @@ impl<'a> ParseScd<'a> for WriteMemStacked {
         let mut lengths = Vec::with_capacity(to_read as usize / 4);
 
         while to_read > 0 {
-            let reserved = cursor.read_u16::<LE>()?;
+            let reserved: u16 = cursor.read_bytes()?;
             if reserved != 0 {
                 return Err(Error::InvalidPacket(
                     "the first two bytes of each WriteMemStackedAck SCD must be set to zero".into(),
                 ));
             }
-            let length = cursor.read_u16::<LE>()?;
+            let length = cursor.read_bytes()?;
             lengths.push(length);
             to_read -= 4;
         }
@@ -386,7 +383,8 @@ impl<'a> ParseScd<'a> for WriteMemStacked {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use byteorder::WriteBytesExt;
+
+    use util::WriteBytes;
 
     fn serialize_header(
         status_code: u16,
@@ -395,11 +393,11 @@ mod tests {
         request_id: u16,
     ) -> Vec<u8> {
         let mut ccd = vec![];
-        ccd.write_u32::<LE>(0x43563355).unwrap();
-        ccd.write_u16::<LE>(status_code).unwrap();
-        ccd.write_u16::<LE>(command_id).unwrap();
-        ccd.write_u16::<LE>(scd_len).unwrap();
-        ccd.write_u16::<LE>(request_id).unwrap();
+        ccd.write_bytes(0x43563355u32).unwrap();
+        ccd.write_bytes(status_code).unwrap();
+        ccd.write_bytes(command_id).unwrap();
+        ccd.write_bytes(scd_len).unwrap();
+        ccd.write_bytes(request_id).unwrap();
         ccd
     }
 
@@ -489,7 +487,7 @@ mod tests {
     fn test_gencp_error_status() {
         let mut code_buf = vec![0; 2];
 
-        code_buf.as_mut_slice().write_u16::<LE>(0x800F).unwrap();
+        code_buf.as_mut_slice().write_bytes(0x800Fu16).unwrap();
         let mut code = Cursor::new(code_buf.as_slice());
         let status = Status::parse(&mut code).unwrap();
         assert!(!status.is_success());
@@ -500,7 +498,7 @@ mod tests {
     fn test_usb_error_status() {
         let mut code_buf = vec![0; 2];
 
-        code_buf.as_mut_slice().write_u16::<LE>(0xA001).unwrap();
+        code_buf.as_mut_slice().write_bytes(0xA001u16).unwrap();
         let mut code = Cursor::new(code_buf.as_slice());
         let status = Status::parse(&mut code).unwrap();
         assert!(!status.is_success());
