@@ -51,8 +51,7 @@ impl Device {
         self.strm_handle.as_ref()
     }
 
-    /// Basic information of the device. No need to call [`Device::open`] to obtain the
-    /// information.
+    /// Basic information of the device.
     ///
     /// # Examples
     /// ```no_run
