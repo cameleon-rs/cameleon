@@ -1,6 +1,6 @@
 extern crate cameleon_device;
 
-use cameleon_device::u3v::*;
+use cameleon_device::u3v::{enumerate_devices, EmulatorBuilder};
 
 fn main() {
     // Need to build emulator in case libusb is not supported.

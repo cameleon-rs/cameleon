@@ -26,6 +26,7 @@ impl Device {
         Ok(Some(ReceiveChannel::new(handle)))
     }
 
+    #[must_use]
     pub fn device_info(&self) -> &DeviceInfo {
         &self.device_info
     }

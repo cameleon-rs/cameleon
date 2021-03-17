@@ -9,8 +9,14 @@ use async_std::{
 use futures::{channel::oneshot, select, FutureExt};
 
 use super::{
-    control_module::ControlModule, device::Timestamp, event_module::EventModule, fake_protocol::*,
-    memory::Memory, shared_queue::SharedQueue, signal::*, stream_module::StreamModule,
+    control_module::ControlModule,
+    device::Timestamp,
+    event_module::EventModule,
+    fake_protocol::{FakeAckKind, FakeAckPacket, FakeReqKind, FakeReqPacket, IfaceKind},
+    memory::Memory,
+    shared_queue::SharedQueue,
+    signal::{ControlSignal, EventSignal, InterfaceSignal, StreamSignal},
+    stream_module::StreamModule,
 };
 
 pub(super) struct Interface {
@@ -39,6 +45,8 @@ impl Interface {
         }
     }
 
+    // FIXME: Remove this when <https://github.com/rust-lang/rust-clippy/issues/6922> is fixed.
+    #[allow(clippy::mut_mut)]
     pub(super) async fn run(
         self,
         fake_ack_tx: Sender<FakeAckPacket>,
@@ -65,26 +73,20 @@ impl Interface {
         loop {
             select! {
                 packet = fake_req_rx.next().fuse() => {
-                    match packet {
-                        Some(packet) => {
-                            self.handle_packet(packet, &fake_ack_tx, &signal_tx).await
-                        }
-                        None => {
-                            log::error!("host side sender is dropped");
-                            break
-                        }
+                    if let Some(packet) = packet {
+                        self.handle_packet(packet, &fake_ack_tx, &signal_tx).await
+                    } else {
+                        log::error!("host side sender is dropped");
+                        break
                     }
                 },
 
                 signal = signal_rx.next().fuse() => {
-                    match signal {
-                        Some(signal) => {
-                            self.handle_signal(signal, &signal_tx).await
-                        }
-                        None => {
-                            log::error!("all modules are dropped");
-                            break
-                        }
+                    if let Some(signal) = signal {
+                        self.handle_signal(signal, &signal_tx).await
+                    } else{
+                        log::error!("all modules are dropped");
+                        break
                     }
                 }
 
@@ -263,7 +265,7 @@ pub(super) struct IfaceState {
 
 impl IfaceState {
     fn new() -> Self {
-        use IfaceStateKind::*;
+        use IfaceStateKind::Ready;
         Self {
             ctrl_state: Arc::new(RwLock::new(Ready)),
             event_state: Arc::new(RwLock::new(Ready)),

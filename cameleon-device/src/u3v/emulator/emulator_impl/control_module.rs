@@ -18,11 +18,11 @@ use super::{
     memory::{Memory, SBRM},
     memory_event_handler::MemoryEventHandler,
     shared_queue::SharedQueue,
-    signal::*,
+    signal::{ControlSignal, InterfaceSignal},
     IfaceKind,
 };
 
-use super::control_protocol::{ack::AckSerialize, *};
+use super::control_protocol::{ack, ack::AckSerialize, cmd};
 
 pub(super) struct ControlModule {
     iface_state: IfaceState,
@@ -72,12 +72,7 @@ impl ControlModule {
 
                 ControlSignal::CancelJobs(_completed) => worker_manager.wait_completion().await,
 
-                ControlSignal::ClearSiRegister => {
-                    // TODO:
-                    todo!()
-                }
-
-                ControlSignal::ClearEiRegister => {
+                ControlSignal::ClearSiRegister | ControlSignal::ClearEiRegister => {
                     // TODO:
                     todo!()
                 }
@@ -218,7 +213,7 @@ impl Worker {
         if (self.maximum_cmd_length) < command.len() {
             let ack = ack::ErrorAck::new(ack::GenCpStatus::InvalidParameter, ccd.scd_kind())
                 .finalize(ccd.request_id());
-            self.enqueue_or_halt(ack);
+            self.enqueue_or_halt(&ack);
             return;
         }
 
@@ -227,13 +222,13 @@ impl Worker {
             let ack =
                 ack::ErrorAck::new(ack::UsbSpecificStatus::EventEndpointHalted, ccd.scd_kind())
                     .finalize(ccd.request_id());
-            self.enqueue_or_halt(ack);
+            self.enqueue_or_halt(&ack);
             return;
         } else if self.iface_state.is_halt(IfaceKind::Stream).await {
             let ack =
                 ack::ErrorAck::new(ack::UsbSpecificStatus::StreamEndpointHalted, ccd.scd_kind())
                     .finalize(ccd.request_id());
-            self.enqueue_or_halt(ack);
+            self.enqueue_or_halt(&ack);
             return;
         }
 
@@ -245,7 +240,7 @@ impl Worker {
         {
             let ack = ack::ErrorAck::new(ack::GenCpStatus::Busy, ccd.scd_kind())
                 .finalize(ccd.request_id());
-            self.enqueue_or_halt(ack);
+            self.enqueue_or_halt(&ack);
             return;
         }
 
@@ -269,7 +264,7 @@ impl Worker {
                 let ack =
                     ack::ErrorAck::new(ack::GenCpStatus::InvalidParameter, ack::ScdKind::ReadMem)
                         .finalize(0);
-                self.enqueue_or_halt(ack);
+                self.enqueue_or_halt(&ack);
 
                 None
             }
@@ -292,19 +287,19 @@ impl Worker {
         match memory.read_raw(address..address + read_length) {
             Ok(data) => {
                 let ack = ack::ReadMem::new(data).finalize(req_id);
-                self.enqueue_or_halt(ack);
+                self.enqueue_or_halt(&ack);
             }
 
             Err(MemoryError::InvalidAddress) => {
                 let ack =
                     ack::ErrorAck::new(ack::GenCpStatus::InvalidAddress, scd_kind).finalize(req_id);
-                self.enqueue_or_halt(ack);
+                self.enqueue_or_halt(&ack);
             }
 
             Err(MemoryError::AddressNotReadable) => {
                 let ack =
                     ack::ErrorAck::new(ack::GenCpStatus::AccessDenied, scd_kind).finalize(req_id);
-                self.enqueue_or_halt(ack);
+                self.enqueue_or_halt(&ack);
             }
 
             Err(MemoryError::AddressNotWritable) | Err(MemoryError::InvalidRegisterData(..)) => {
@@ -333,23 +328,23 @@ impl Worker {
                     .handle_events(self, scd_kind)
                     .await;
                 if let Err(error_ack) = error_ack {
-                    self.enqueue_or_halt(error_ack.finalize(req_id));
+                    self.enqueue_or_halt(&error_ack.finalize(req_id));
                 } else {
                     let ack = ack::WriteMem::new(scd.data.len() as u16).finalize(req_id);
-                    self.enqueue_or_halt(ack);
+                    self.enqueue_or_halt(&ack);
                 }
             }
 
             Err(MemoryError::InvalidAddress) => {
                 let ack =
                     ack::ErrorAck::new(ack::GenCpStatus::InvalidAddress, scd_kind).finalize(req_id);
-                self.enqueue_or_halt(ack);
+                self.enqueue_or_halt(&ack);
             }
 
             Err(MemoryError::AddressNotWritable) => {
                 let ack =
                     ack::ErrorAck::new(ack::GenCpStatus::WriteProtect, scd_kind).finalize(req_id);
-                self.enqueue_or_halt(ack);
+                self.enqueue_or_halt(&ack);
             }
 
             Err(MemoryError::AddressNotReadable) | Err(MemoryError::InvalidRegisterData(..)) => {
@@ -369,7 +364,7 @@ impl Worker {
 
         // TODO: Should we implement this command?
         let ack = ack::ErrorAck::new(ack::GenCpStatus::NotImplemented, scd_kind).finalize(req_id);
-        self.enqueue_or_halt(ack);
+        self.enqueue_or_halt(&ack);
     }
 
     async fn process_write_mem_stacked(&self, command: cmd::CommandPacket<'_>) {
@@ -383,26 +378,25 @@ impl Worker {
 
         // TODO: Should we implement this command?
         let ack = ack::ErrorAck::new(ack::GenCpStatus::NotImplemented, scd_kind).finalize(req_id);
-        self.enqueue_or_halt(ack);
+        self.enqueue_or_halt(&ack);
     }
 
     fn try_extract_scd<'a, T>(&self, command: &cmd::CommandPacket<'a>) -> Option<T>
     where
         T: cmd::ParseScd<'a>,
     {
-        match command.scd_as::<T>() {
-            Ok(scd) => Some(scd),
-            Err(_) => {
-                let ccd = command.ccd();
-                let ack = ack::ErrorAck::new(ack::GenCpStatus::InvalidParameter, ccd.scd_kind())
-                    .finalize(ccd.request_id());
-                self.enqueue_or_halt(ack);
-                None
-            }
+        if let Ok(scd) = command.scd_as::<T>() {
+            Some(scd)
+        } else {
+            let ccd = command.ccd();
+            let ack = ack::ErrorAck::new(ack::GenCpStatus::InvalidParameter, ccd.scd_kind())
+                .finalize(ccd.request_id());
+            self.enqueue_or_halt(&ack);
+            None
         }
     }
 
-    fn enqueue_or_halt<T>(&self, ack: ack::AckPacket<T>)
+    fn enqueue_or_halt<T>(&self, ack: &ack::AckPacket<T>)
     where
         T: AckSerialize,
     {

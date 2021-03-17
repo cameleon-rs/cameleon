@@ -4,7 +4,12 @@ use std::time::Duration;
 extern crate byteorder;
 extern crate cameleon_device;
 
-use cameleon_device::u3v::{prelude::*, protocol::*, *};
+use cameleon_device::u3v::{
+    enumerate_devices,
+    prelude::*,
+    protocol::{ack, cmd},
+    register_map, Device, EmulatorBuilder,
+};
 
 fn main() {
     // Need to build emulator in case libusb is not supported.
@@ -65,7 +70,7 @@ fn main() {
     let scd = ack.scd_as::<ack::ReadMem>().unwrap();
 
     let string_len = scd.data.iter().position(|c| *c == 0).unwrap();
-    let serial_number = CStr::from_bytes_with_nul(&scd.data[..string_len + 1]).unwrap();
+    let serial_number = CStr::from_bytes_with_nul(&scd.data[..=string_len]).unwrap();
 
     println!(
         "Serial number received! {}",

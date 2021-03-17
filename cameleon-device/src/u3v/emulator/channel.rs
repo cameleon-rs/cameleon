@@ -28,6 +28,7 @@ impl ControlChannel {
         Ok(())
     }
 
+    #[must_use]
     pub fn is_opened(&self) -> bool {
         self.is_opened
     }
@@ -88,6 +89,7 @@ impl ReceiveChannel {
         Ok(())
     }
 
+    #[must_use]
     pub fn is_opened(&self) -> bool {
         self.is_opened
     }

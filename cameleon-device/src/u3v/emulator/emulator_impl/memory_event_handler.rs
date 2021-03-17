@@ -5,9 +5,9 @@ use cameleon_impl::memory::{prelude::*, MemoryObserver};
 
 use super::{
     control_module::Worker,
-    control_protocol::*,
+    control_protocol::{ack, cmd},
     memory::{Memory, ABRM, SIRM, SIRM_ALIGNMENT},
-    signal::*,
+    signal::{EventSignal, StreamSignal},
 };
 
 const MEMORY_EVENT_CHANNEL_CAPACITY: usize = 100;
@@ -26,7 +26,7 @@ impl MemoryEventHandler {
         MemoryEventHandler { rx }
     }
 
-    /// Handle write events, return Some(error_ack) if an error occurs while handling write events.
+    /// Handle write events, return `Some(error_ack)` if an error occurs while handling write events.
     pub(super) async fn handle_events(
         &self,
         worker: &Worker,
@@ -164,10 +164,13 @@ impl SiControlHandler {
         worker: &Worker,
         scd_kind: cmd::ScdKind,
     ) -> Result<(), ack::ErrorAck> {
-        use SIRM::*;
+        use SIRM::{
+            MaximumLeaderSize, MaximumTrailerSize, PayloadFinalTransferSize1,
+            PayloadFinalTransferSize2, PayloadTransferSize,
+        };
 
         let memory = worker.memory.lock().await;
-        let alignement = SIRM_ALIGNMENT as u32;
+        let alignement = u32::from(SIRM_ALIGNMENT);
         if read_memory::<MaximumLeaderSize>(&memory, scd_kind)? % alignement != 0
             || read_memory::<PayloadTransferSize>(&memory, scd_kind)? % alignement != 0
             || read_memory::<PayloadFinalTransferSize1>(&memory, scd_kind)? % alignement != 0
@@ -185,7 +188,11 @@ impl SiControlHandler {
 
     /// Verify specified sizes of writable registers are greater than required sizes.
     async fn verify_size(worker: &Worker, scd_kind: cmd::ScdKind) -> Result<(), ack::ErrorAck> {
-        use SIRM::*;
+        use SIRM::{
+            MaximumLeaderSize, MaximumTrailerSize, PayloadFinalTransferSize1,
+            PayloadFinalTransferSize2, PayloadTransferCount, PayloadTransferSize,
+            RequiredLeaderSize, RequiredPayloadSize, RequiredTrailerSize,
+        };
 
         let memory = worker.memory.lock().await;
         // Verify leader size.
@@ -209,10 +216,11 @@ impl SiControlHandler {
         }
 
         // Verify payload size.
-        let specified_payload_size = read_memory::<PayloadTransferSize>(&memory, scd_kind)? as u64
-            * read_memory::<PayloadTransferCount>(&memory, scd_kind)? as u64
-            + read_memory::<PayloadFinalTransferSize1>(&memory, scd_kind)? as u64
-            + read_memory::<PayloadFinalTransferSize2>(&memory, scd_kind)? as u64;
+        let specified_payload_size =
+            u64::from(read_memory::<PayloadTransferSize>(&memory, scd_kind)?)
+                * u64::from(read_memory::<PayloadTransferCount>(&memory, scd_kind)?)
+                + u64::from(read_memory::<PayloadFinalTransferSize1>(&memory, scd_kind)?)
+                + u64::from(read_memory::<PayloadFinalTransferSize2>(&memory, scd_kind)?);
 
         if specified_payload_size < read_memory::<RequiredPayloadSize>(&memory, scd_kind)? {
             return Err(ack::ErrorAck::new(
@@ -240,13 +248,13 @@ macro_rules! define_handler_for_sirm {
             ) -> Result<(), ack::ErrorAck> {
                 let value = Self::read(&*worker.memory.lock().await, scd_kind)?;
                 // Verify alignment.
-                if value % SIRM_ALIGNMENT as u32 != 0 {
+                if value % SIRM_ALIGNMENT as u32 == 0 {
+                    Ok(())
+                } else {
                     Err(ack::ErrorAck::new(
                         ack::UsbSpecificStatus::PayloadSizeNotAligned,
                         scd_kind,
                     ))
-                } else {
-                    Ok(())
                 }
             }
         }
@@ -292,7 +300,10 @@ enum MemoryEvent {
 
 impl MemoryEvent {
     async fn process(self, worker: &Worker, scd_kind: cmd::ScdKind) -> Result<(), ack::ErrorAck> {
-        use MemoryEvent::*;
+        use MemoryEvent::{
+            MaximumLeaderSize, MaximumTrailerSize, PayloadFinalTransferSize1,
+            PayloadFinalTransferSize2, PayloadTransferSize, SiControl, TimestampLatch,
+        };
         match self {
             TimestampLatch => TimestampLatchHandler::handle_events(worker, scd_kind).await,
             SiControl => SiControlHandler::handle_events(worker, scd_kind).await,

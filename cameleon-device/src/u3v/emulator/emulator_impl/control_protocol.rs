@@ -21,7 +21,10 @@ pub(super) mod cmd {
 
     use std::io::Cursor;
 
-    use crate::u3v::protocol::{cmd::*, util};
+    use crate::u3v::protocol::{
+        cmd::{CommandCcd, CommandFlag},
+        util,
+    };
 
     use super::{ProtocolError, ProtocolResult};
 
@@ -33,7 +36,7 @@ pub(super) mod cmd {
     }
 
     impl<'a> CommandPacket<'a> {
-        const PREFIX_MAGIC: u32 = 0x43563355;
+        const PREFIX_MAGIC: u32 = 0x4356_3355;
 
         pub(in super::super) fn parse(
             buf: &'a (impl AsRef<[u8]> + ?Sized),
@@ -184,6 +187,7 @@ pub(super) mod cmd {
     #[cfg(test)]
     mod tests {
         use super::*;
+        use crate::u3v::protocol::cmd::CommandScd;
 
         #[test]
         fn test_read_mem() {
@@ -267,8 +271,7 @@ pub(super) mod cmd {
 
 /// Acknowledge packet serializer implementaion.
 pub(super) mod ack {
-    use std::io::Write;
-    use std::time;
+    use std::{convert::TryFrom, io::Write, time};
 
     use crate::u3v::protocol::{
         ack::{AckCcd, Status, StatusKind},
@@ -291,7 +294,7 @@ pub(super) mod ack {
     where
         T: AckSerialize,
     {
-        const PREFIX_MAGIC: u32 = 0x43563355;
+        const PREFIX_MAGIC: u32 = 0x4356_3355;
 
         pub(in super::super) fn serialize(&self, mut buf: impl Write) -> ProtocolResult<()> {
             buf.write_bytes(Self::PREFIX_MAGIC)?;
@@ -356,7 +359,7 @@ pub(super) mod ack {
 
     impl<'a> ReadMem<'a> {
         pub(in super::super) fn new(data: &'a [u8]) -> Self {
-            debug_assert!(data.len() <= u16::MAX as usize);
+            debug_assert!(u16::try_from(data.len()).is_ok());
             Self { data }
         }
     }
@@ -384,7 +387,7 @@ pub(super) mod ack {
 
     impl<'a> AckSerialize for WriteMem {
         fn serialize(&self, mut buf: impl Write) -> ProtocolResult<()> {
-            buf.write_bytes(0u16)?;
+            buf.write_bytes(0_u16)?;
             buf.write_bytes(self.length)?;
             Ok(())
         }
@@ -400,14 +403,14 @@ pub(super) mod ack {
 
     impl Pending {
         pub(in super::super) fn _new(timeout: time::Duration) -> Self {
-            debug_assert!(timeout.as_millis() <= std::u16::MAX as u128);
+            debug_assert!(timeout.as_millis() <= u128::from(std::u16::MAX));
             Self { timeout }
         }
     }
 
     impl AckSerialize for Pending {
         fn serialize(&self, mut buf: impl Write) -> ProtocolResult<()> {
-            buf.write_bytes(0u16)?;
+            buf.write_bytes(0_u16)?;
             buf.write_bytes(self.timeout.as_millis() as u16)?;
             Ok(())
         }
@@ -423,7 +426,7 @@ pub(super) mod ack {
 
     impl<'a> ReadMemStacked<'a> {
         pub(in super::super) fn _new(data: &'a [u8]) -> Self {
-            debug_assert!(data.len() <= u16::MAX as usize);
+            debug_assert!(u16::try_from(data.len()).is_ok());
             Self { data }
         }
     }
@@ -445,7 +448,7 @@ pub(super) mod ack {
 
     impl WriteMemStacked {
         pub(in super::super) fn _new(lengths: Vec<u16>) -> Self {
-            debug_assert!(Self::scd_len(&lengths) <= u16::MAX as usize);
+            debug_assert!(u16::try_from(Self::scd_len(&lengths)).is_ok());
             Self { lengths }
         }
 
@@ -457,7 +460,7 @@ pub(super) mod ack {
     impl AckSerialize for WriteMemStacked {
         fn serialize(&self, mut buf: impl Write) -> ProtocolResult<()> {
             for len in &self.lengths {
-                buf.write_bytes(0u16)?;
+                buf.write_bytes(0_u16)?;
                 buf.write_bytes(*len)?;
             }
 
@@ -510,7 +513,10 @@ pub(super) mod ack {
 
     impl GenCpStatus {
         fn as_code(self) -> u16 {
-            use GenCpStatus::*;
+            use GenCpStatus::{
+                AccessDenied, BadAlignment, Busy, GenericError, InvalidAddress, InvalidHeader,
+                InvalidParameter, NotImplemented, Success, Timeout, WriteProtect, WrongConfig,
+            };
             match self {
                 Success => 0x0000,
                 NotImplemented => 0x8001,
@@ -530,7 +536,10 @@ pub(super) mod ack {
 
     impl UsbSpecificStatus {
         fn as_code(self) -> u16 {
-            use UsbSpecificStatus::*;
+            use UsbSpecificStatus::{
+                EventEndpointHalted, InvalidSiState, PayloadSizeNotAligned, ResendNotSupported,
+                StreamEndpointHalted,
+            };
             match self {
                 ResendNotSupported => 0xA001,
                 StreamEndpointHalted => 0xA002,

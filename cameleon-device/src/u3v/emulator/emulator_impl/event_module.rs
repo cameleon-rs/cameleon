@@ -138,7 +138,7 @@ mod event_packet {
     }
 
     impl<'a> EventPacket<'a> {
-        const PREFIX_MAGIC: u32 = 0x45563355;
+        const PREFIX_MAGIC: u32 = 0x4556_3355;
         const COMMAND_FLAG: u16 = 0b1 << 14;
         const COMMAND_ID: u16 = 0x0C00;
 
@@ -202,9 +202,11 @@ mod event_packet {
             let data_len: u16 = self.data.len().try_into().map_err(|_| {
                 ProtocolError::InvalidPacket("event data size is larger than u16::MAX".into())
             })?;
-            (2u16 + 2u16 + 8u16).checked_add(data_len).ok_or_else(|| {
-                ProtocolError::InvalidPacket("scd size is larger than u16::MAX".into())
-            })
+            (2_u16 + 2_u16 + 8_u16)
+                .checked_add(data_len)
+                .ok_or_else(|| {
+                    ProtocolError::InvalidPacket("scd size is larger than u16::MAX".into())
+                })
         }
     }
 
@@ -216,7 +218,7 @@ mod event_packet {
         #[test]
         fn test_single_event() {
             let data = &[1, 2, 3];
-            let timestamp = 123456789;
+            let timestamp = 123_456_789;
             let event_id = 0xff;
             let event_pacekt = EventScd::single_event(event_id, data, timestamp)
                 .unwrap()
@@ -305,7 +307,7 @@ mod tests {
         assert_eq!(&event_packet.scd[0].data, &data.as_slice());
 
         // Test UpdateTimestamp signal.
-        let timestamp = 123456789;
+        let timestamp = 123_456_789;
         signal_tx
             .try_send(EventSignal::UpdateTimestamp(timestamp))
             .unwrap();

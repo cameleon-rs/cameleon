@@ -11,7 +11,10 @@ use crate::u3v::{LibUsbError, Result};
 
 use super::{
     device_pool::{DevicePipe, DevicePool},
-    fake_protocol::{FakeAckKind::*, FakeAckPacket, FakeReqKind, FakeReqPacket},
+    fake_protocol::{
+        FakeAckKind::{ClearHaltAck, IfaceHalted, RecvAck, RecvNak, SendAck, SetHaltAck},
+        FakeAckPacket, FakeReqKind, FakeReqPacket,
+    },
 };
 
 pub(crate) struct DeviceHandle {
