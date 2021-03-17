@@ -8,11 +8,13 @@ use cameleon_device::u3v::{
     enumerate_devices,
     prelude::*,
     protocol::{ack, cmd},
-    register_map, Device, EmulatorBuilder,
+    register_map, Device,
 };
 
 fn main() {
     // Need to build emulator in case libusb is not supported.
+    #[cfg(not(feature = "libusb"))]
+    use cameleon_device::u3v::EmulatorBuilder;
     #[cfg(not(feature = "libusb"))]
     EmulatorBuilder::new()
         .user_defined_name("emu")

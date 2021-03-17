@@ -1,9 +1,11 @@
 extern crate cameleon_device;
 
-use cameleon_device::u3v::{enumerate_devices, EmulatorBuilder};
+use cameleon_device::u3v::enumerate_devices;
 
 fn main() {
     // Need to build emulator in case libusb is not supported.
+    #[cfg(not(feature = "libusb"))]
+    use cameleon_device::u3v::EmulatorBuilder;
     #[cfg(not(feature = "libusb"))]
     EmulatorBuilder::new()
         .user_defined_name("emu")

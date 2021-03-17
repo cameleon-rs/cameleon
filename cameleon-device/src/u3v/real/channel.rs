@@ -31,6 +31,7 @@ impl ControlChannel {
         Ok(())
     }
 
+    #[must_use]
     pub fn is_opened(&self) -> bool {
         self.is_opened
     }
@@ -96,6 +97,7 @@ impl ReceiveChannel {
         Ok(())
     }
 
+    #[must_use]
     pub fn is_opened(&self) -> bool {
         self.is_opened
     }
@@ -153,7 +155,7 @@ fn set_halt(handle: &RusbDevHandle, endpoint_number: u8, timeout: time::Duration
         request_type,
         request,
         value,
-        endpoint_number as u16,
+        u16::from(endpoint_number),
         &buf,
         timeout,
     )?;
