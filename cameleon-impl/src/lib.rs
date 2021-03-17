@@ -1,3 +1,9 @@
+#![allow(
+    clippy::module_name_repetitions,
+    clippy::clippy::similar_names,
+    clippy::clippy::missing_errors_doc
+)]
+
 pub mod memory;
 
 pub use cameleon_impl_genapi_parser as genapi_parser;
