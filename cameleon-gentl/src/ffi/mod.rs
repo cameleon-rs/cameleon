@@ -206,6 +206,7 @@ fn save_last_error<T>(res: GenTlResult<T>) {
     }
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn copy_info<T: CopyTo>(
     src: T,
     dst: *mut libc::c_void,
@@ -453,18 +454,15 @@ gentl_api!(
         sErrorText: *mut libc::c_char,
         piSize: *mut libc::size_t,
     ) -> GenTlResult<()> {
-        let code = match LAST_ERROR.with(|err| {
+        let code = if let Some((code, text)) = LAST_ERROR.with(|err| {
             let err = err.borrow();
             err.err.as_ref().map(|err| (err.into(), format!("{}", err)))
         }) {
-            Some((code, text)) => {
-                text.as_str().copy_to(sErrorText, piSize)?;
-                code
-            }
-            None => {
-                "No Error".copy_to(sErrorText, piSize)?;
-                Ok(()).into()
-            }
+            text.as_str().copy_to(sErrorText, piSize)?;
+            code
+        } else {
+            "No Error".copy_to(sErrorText, piSize)?;
+            Ok(()).into()
         };
 
         unsafe {

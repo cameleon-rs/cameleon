@@ -28,6 +28,6 @@ impl From<rusb::Error> for Error {
             rusb::Error::Other => Other,
         };
 
-        Error::LibUsbError(kind)
+        Error::LibUsb(kind)
     }
 }

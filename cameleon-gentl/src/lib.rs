@@ -1,7 +1,10 @@
 #![allow(
     clippy::module_name_repetitions,
-    clippy::clippy::similar_names,
-    clippy::clippy::missing_errors_doc
+    clippy::similar_names,
+    clippy::missing_errors_doc,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::doc_markdown
 )]
 
 // TODO: Remove #[allow(unused)]

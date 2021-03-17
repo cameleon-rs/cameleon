@@ -137,6 +137,7 @@ impl U3VDeviceModule {
         current_status.is_opened()
     }
 
+    #[allow(clippy::unused_self)]
     fn handle_events(&mut self) {
         // TODO: Handle stream related events.
     }

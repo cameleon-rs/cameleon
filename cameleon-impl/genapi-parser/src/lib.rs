@@ -1,7 +1,7 @@
 #![allow(
     clippy::module_name_repetitions,
-    clippy::clippy::similar_names,
-    clippy::clippy::missing_errors_doc
+    clippy::similar_names,
+    clippy::missing_errors_doc
 )]
 
 mod boolean;
