@@ -383,7 +383,7 @@ impl<'a> Abrm<'a> {
     /// // Enable multi event.
     /// let mut configuration = abrm.device_configuration().unwrap();
     /// configuration.set_multi_event_enable_bit();
-    /// abrm.write_device_configuration(&configuration).unwrap();
+    /// abrm.write_device_configuration(configuration).unwrap();
     /// ```
     pub fn write_device_configuration(&self, config: DeviceConfiguration) -> DeviceResult<()> {
         self.write_register(abrm::DEVICE_CONFIGURATION, config)
@@ -989,7 +989,7 @@ macro_rules! unset_bit {
 /// // Enable multi event by setting configuration.
 /// let mut configuration = abrm.device_configuration().unwrap();
 /// configuration.set_multi_event_enable_bit();
-/// abrm.write_device_configuration(&configuration).unwrap();
+/// abrm.write_device_configuration(configuration).unwrap();
 /// ```
 #[derive(Clone, Copy)]
 pub struct DeviceConfiguration(u64);
