@@ -1,4 +1,13 @@
-use super::{elem_name::*, elem_type::*, xml, Parse};
+use super::{
+    elem_name::{
+        DESCRIPTION, DISPLAY_NAME, DOCU_URL, EVENT_ID, EXPOSE_STATIC, EXTENSION,
+        IMPOSED_ACCESS_MODE, IS_DEPRECATED, MERGE_PRIORITY, NAME, NAME_SPACE, P_ALIAS,
+        P_BLOCK_POLLING, P_CAST_ALIAS, P_ERROR, P_IS_AVAILABLE, P_IS_IMPLEMENTED, P_IS_LOCKED,
+        TOOL_TIP, VISIBILITY,
+    },
+    elem_type::{convert_to_bool, AccessMode, MergePriority, NameSpace, Visibility},
+    xml, Parse,
+};
 
 pub struct NodeBase<'a> {
     attr: &'a NodeAttributeBase,
@@ -11,7 +20,7 @@ macro_rules! optional_string_elem_getter {
         $name:ident
     ) => {
         $(#[$meta])*
-        pub fn $name(&self) -> Option<&'a str> {
+        #[must_use] pub fn $name(&self) -> Option<&'a str> {
             self.elem.$name.as_deref()
         }
     };
@@ -22,46 +31,55 @@ impl<'a> NodeBase<'a> {
         Self { attr, elem }
     }
 
+    #[must_use]
     pub fn name(&self) -> &'a str {
         &self.attr.name
     }
 
+    #[must_use]
     pub fn name_space(&self) -> NameSpace {
         self.attr.name_space
     }
 
+    #[must_use]
     pub fn merge_priority(&self) -> MergePriority {
         self.attr.merge_priority
     }
 
+    #[must_use]
     pub fn expose_static(&self) -> Option<bool> {
         self.attr.expose_static
     }
 
+    #[must_use]
     pub fn display_name(&self) -> &str {
-        if let Some(ref display_name) = self.elem.display_name {
-            display_name
-        } else {
-            self.name()
-        }
+        self.elem
+            .display_name
+            .as_ref()
+            .map_or_else(|| self.name(), |display_name| &display_name)
     }
 
+    #[must_use]
     pub fn visibility(&self) -> Visibility {
         self.elem.visibility
     }
 
+    #[must_use]
     pub fn is_deprecated(&self) -> bool {
         self.elem.is_deprecated
     }
 
+    #[must_use]
     pub fn imposed_access_mode(&self) -> AccessMode {
         self.elem.imposed_access_mode
     }
 
+    #[must_use]
     pub fn p_errors(&self) -> &'a [String] {
         &self.elem.p_errors
     }
 
+    #[must_use]
     pub fn event_id(&self) -> Option<u64> {
         self.elem.event_id
     }

@@ -1,6 +1,8 @@
 use std::{convert::TryInto, ops::Deref, sync::Mutex};
 
-use super::*;
+use super::{
+    copy_info, imp, interface, GenTlError, GenTlResult, ModuleHandle, GC_ERROR, INFO_DATATYPE,
+};
 
 pub(super) type DEV_HANDLE = *mut libc::c_void;
 pub(super) type PORT_HANDLE = *mut libc::c_void;
@@ -142,7 +144,7 @@ impl TryInto<imp::device::DeviceAccessFlag> for DEVICE_ACCESS_FLAGS {
     type Error = GenTlError;
 
     fn try_into(self) -> GenTlResult<imp::device::DeviceAccessFlag> {
-        use imp::device::DeviceAccessFlag::*;
+        use imp::device::DeviceAccessFlag::{Control, Exclusive, ReadOnly};
         match self {
             DEVICE_ACCESS_FLAGS::DEVICE_ACCESS_READONLY => Ok(ReadOnly),
             DEVICE_ACCESS_FLAGS::DEVICE_ACCESS_CONTROL => Ok(Control),

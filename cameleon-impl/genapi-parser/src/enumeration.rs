@@ -1,4 +1,12 @@
-use super::{elem_name::*, elem_type::*, node_base::*, xml, Parse};
+use super::{
+    elem_name::{
+        ENUMERATION, ENUM_ENTRY, IS_SELF_CLEARING, NUMERIC_VALUE, POLLING_TIME, P_INVALIDATOR,
+        P_SELECTED, STREAMABLE, SYMBOLIC,
+    },
+    elem_type::ImmOrPNode,
+    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    xml, Parse,
+};
 
 #[derive(Debug, Clone)]
 pub struct EnumerationNode {
@@ -14,30 +22,37 @@ pub struct EnumerationNode {
 }
 
 impl EnumerationNode {
+    #[must_use]
     pub fn node_base(&self) -> NodeBase<'_> {
         NodeBase::new(&self.attr_base, &self.elem_base)
     }
 
+    #[must_use]
     pub fn p_invalidators(&self) -> &[String] {
         &self.p_invalidators
     }
 
+    #[must_use]
     pub fn streamable(&self) -> bool {
         self.streamable
     }
 
+    #[must_use]
     pub fn entries(&self) -> &[EnumEntryNode] {
         &self.entries
     }
 
+    #[must_use]
     pub fn value(&self) -> &ImmOrPNode<i64> {
         &self.value
     }
 
+    #[must_use]
     pub fn p_selected(&self) -> &[String] {
         &self.p_selected
     }
 
+    #[must_use]
     pub fn polling_time(&self) -> Option<u64> {
         self.polling_time
     }
@@ -86,22 +101,27 @@ pub struct EnumEntryNode {
 }
 
 impl EnumEntryNode {
+    #[must_use]
     pub fn node_base(&self) -> NodeBase<'_> {
         NodeBase::new(&self.attr_base, &self.elem_base)
     }
 
+    #[must_use]
     pub fn p_invalidators(&self) -> &[String] {
         &self.p_invalidators
     }
 
+    #[must_use]
     pub fn value(&self) -> i64 {
         self.value
     }
 
+    #[must_use]
     pub fn numeric_values(&self) -> &[f64] {
         &self.numeric_values
     }
 
+    #[must_use]
     pub fn symbolic(&self) -> Option<&str> {
         self.symbolic.as_deref()
     }
@@ -110,6 +130,7 @@ impl EnumEntryNode {
         self.symbolic = Some(s)
     }
 
+    #[must_use]
     pub fn is_self_clearing(&self) -> bool {
         self.is_self_clearing
     }

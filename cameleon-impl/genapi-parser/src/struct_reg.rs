@@ -1,5 +1,12 @@
 use super::{
-    elem_name::*, elem_type::*, node_base::*, register_base::*, xml, MaskedIntRegNode, Parse,
+    elem_name::{
+        ACCESS_MODE, CACHEABLE, COMMENT, ENDIANNESS, POLLING_TIME, P_INVALIDATOR, P_SELECTED,
+        REPRESENTATION, SIGN, STREAMABLE, STRUCT_ENTRY, STRUCT_REG, UNIT,
+    },
+    elem_type::{register_node_elem, AccessMode, CachingMode, IntegerRepresentation},
+    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    register_base::RegisterBase,
+    xml, MaskedIntRegNode, Parse,
 };
 
 #[derive(Debug, Clone)]
@@ -12,22 +19,27 @@ pub struct StructRegNode {
 }
 
 impl StructRegNode {
+    #[must_use]
     pub fn comment(&self) -> &str {
         &self.comment
     }
 
+    #[must_use]
     pub fn register_base(&self) -> &RegisterBase {
         &self.register_base
     }
 
+    #[must_use]
     pub fn endianness(&self) -> register_node_elem::Endianness {
         self.endianness
     }
 
+    #[must_use]
     pub fn entries(&self) -> &[StructEntryNode] {
         &self.entries
     }
 
+    #[must_use]
     pub fn to_masked_int_regs<T>(&self) -> T
     where
         T: std::iter::FromIterator<MaskedIntRegNode>,
@@ -88,6 +100,7 @@ macro_rules! merge_impl {
     };
 
     ($lhs:ident, $rhs:ident, $name:ident, default) => {
+        #[allow(clippy::default_trait_access)]
         if $rhs.$name != Default::default() {
             $lhs.$name = $rhs.$name;
         }
@@ -101,46 +114,57 @@ macro_rules! merge_impl {
 }
 
 impl StructEntryNode {
+    #[must_use]
     pub fn node_base(&self) -> NodeBase {
         NodeBase::new(&self.attr_base, &self.elem_base)
     }
 
+    #[must_use]
     pub fn p_invalidators(&self) -> &[String] {
         &self.p_invalidators
     }
 
+    #[must_use]
     pub fn access_mode(&self) -> AccessMode {
         self.access_mode
     }
 
+    #[must_use]
     pub fn cacheable(&self) -> CachingMode {
         self.cacheable
     }
 
+    #[must_use]
     pub fn polling_time(&self) -> Option<u64> {
         self.polling_time
     }
 
+    #[must_use]
     pub fn streamable(&self) -> bool {
         self.streamable
     }
 
+    #[must_use]
     pub fn bit_mask(&self) -> register_node_elem::BitMask {
         self.bit_mask
     }
 
+    #[must_use]
     pub fn sign(&self) -> register_node_elem::Sign {
         self.sign
     }
 
+    #[must_use]
     pub fn unit(&self) -> Option<&str> {
         self.unit.as_deref()
     }
 
+    #[must_use]
     pub fn representation(&self) -> IntegerRepresentation {
         self.representation
     }
 
+    #[must_use]
     pub fn p_selected(&self) -> &[String] {
         &self.p_selected
     }
@@ -239,7 +263,7 @@ impl Parse for StructEntryNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::elem_type::register_node_elem::*;
+    use crate::elem_type::register_node_elem::{BitMask, Endianness, Sign};
 
     use super::*;
 

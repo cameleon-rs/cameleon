@@ -4,7 +4,7 @@ pub mod prelude {
     pub use protocol::ack::ParseScd;
     pub use protocol::cmd::CommandScd;
 
-    use super::*;
+    use super::protocol;
 }
 
 mod device_info;
@@ -30,13 +30,13 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("libusb error: {}", 0)]
-    LibUsbError(#[from] LibUsbError),
+    LibUsb(#[from] LibUsbError),
 
     #[error("packet is broken: {}", 0)]
     InvalidPacket(Cow<'static, str>),
 
     #[error("buffer io error: {}", 0)]
-    BufferIoError(#[from] std::io::Error),
+    BufferIo(#[from] std::io::Error),
 
     #[error("device doesn't follow specification")]
     InvalidDevice,

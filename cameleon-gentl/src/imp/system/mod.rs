@@ -15,7 +15,10 @@ use crate::{
     GenTlResult,
 };
 
-use super::{port::*, *};
+use super::{
+    port::{Endianness, ModuleType, Port, PortAccess, PortInfo, TlType, XmlInfo, XmlLocation},
+    CharEncoding, GenTlError,
+};
 
 mod genapi;
 
@@ -126,7 +129,7 @@ impl SystemModule {
     }
 
     pub(crate) fn interfaces(&self) -> impl Iterator<Item = &Mutex<dyn Interface + Send>> {
-        self.interfaces.iter().map(|iface| iface.as_ref())
+        self.interfaces.iter().map(std::convert::AsRef::as_ref)
     }
 
     pub(crate) fn interface_of(&self, id: &str) -> Option<&Mutex<dyn Interface + Send>> {

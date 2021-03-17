@@ -22,7 +22,9 @@ impl From<MemoryError> for GenTlError {
 
 impl From<DeviceError> for GenTlError {
     fn from(err: DeviceError) -> Self {
-        use GenTlError::*;
+        use GenTlError::{
+            BufferTooSmall, InvalidValue, Io, NotInitialized, ResourceInUse, Timeout,
+        };
 
         match err {
             DeviceError::Busy => ResourceInUse,

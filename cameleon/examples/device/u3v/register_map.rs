@@ -1,7 +1,9 @@
+#![allow(clippy::similar_names, clippy::too_many_lines)]
+
 extern crate cameleon;
 extern crate cameleon_device;
 
-use cameleon::device::u3v::*;
+use cameleon::device::u3v::enumerate_devices;
 
 fn main() {
     // Build emulator in case libusb is not supported.

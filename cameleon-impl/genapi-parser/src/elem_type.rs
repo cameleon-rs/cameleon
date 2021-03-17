@@ -1,4 +1,10 @@
-use super::{elem_name::*, xml, Parse};
+use super::{
+    elem_name::{
+        ADDRESS, BIT, INDEX, INT_SWISS_KNIFE, NAME, OFFSET, P_ADDRESS, P_INDEX, P_OFFSET, P_VALUE,
+        P_VALUE_COPY, P_VALUE_INDEXED, VALUE, VALUE_INDEXED,
+    },
+    xml, Parse,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NameSpace {
@@ -194,8 +200,10 @@ pub enum IntegerRepresentation {
 
 impl IntegerRepresentation {
     /// Deduce defalut value of min element.
-    pub(super) fn deduce_min(&self) -> i64 {
-        use IntegerRepresentation::*;
+    pub(super) fn deduce_min(self) -> i64 {
+        use IntegerRepresentation::{
+            Boolean, HexNumber, IpV4Address, Linear, Logarithmic, MacAddress, PureNumber,
+        };
         match self {
             Linear | Logarithmic | Boolean | PureNumber | HexNumber => i64::MIN,
             IpV4Address | MacAddress => 0,
@@ -203,8 +211,10 @@ impl IntegerRepresentation {
     }
 
     /// Deduce defalut value of max element.
-    pub(super) fn deduce_max(&self) -> i64 {
-        use IntegerRepresentation::*;
+    pub(super) fn deduce_max(self) -> i64 {
+        use IntegerRepresentation::{
+            Boolean, HexNumber, IpV4Address, Linear, Logarithmic, MacAddress, PureNumber,
+        };
         match self {
             Linear | Logarithmic | Boolean | PureNumber | HexNumber => i64::MAX,
             IpV4Address => 0xffff_ffff,
@@ -221,7 +231,9 @@ impl Default for IntegerRepresentation {
 
 impl Parse for IntegerRepresentation {
     fn parse(node: &mut xml::Node) -> Self {
-        use IntegerRepresentation::*;
+        use IntegerRepresentation::{
+            Boolean, HexNumber, IpV4Address, Linear, Logarithmic, MacAddress, PureNumber,
+        };
 
         let value = node.next_text().unwrap();
         match value {
@@ -469,7 +481,10 @@ impl Parse for String {
 }
 
 pub mod numeric_node_elem {
-    use super::*;
+    use super::{
+        convert_to_int, xml, ImmOrPNode, Parse, INDEX, P_INDEX, P_VALUE, P_VALUE_COPY,
+        P_VALUE_INDEXED, VALUE, VALUE_INDEXED,
+    };
 
     #[derive(Debug, Clone)]
     pub enum ValueKind<T>
@@ -586,7 +601,10 @@ pub mod numeric_node_elem {
 pub mod register_node_elem {
     use crate::IntSwissKnifeNode;
 
-    use super::*;
+    use super::{
+        convert_to_int, xml, ImmOrPNode, Parse, ADDRESS, BIT, INT_SWISS_KNIFE, OFFSET, P_ADDRESS,
+        P_INDEX, P_OFFSET,
+    };
 
     #[derive(Debug, Clone)]
     pub enum AddressKind {
@@ -614,10 +632,12 @@ pub mod register_node_elem {
     }
 
     impl PIndex {
+        #[must_use]
         pub fn offset(&self) -> Option<&ImmOrPNode<i64>> {
             self.offset.as_ref()
         }
 
+        #[must_use]
         pub fn p_index(&self) -> &str {
             &self.p_index
         }
@@ -693,13 +713,14 @@ pub mod register_node_elem {
 
     impl Parse for BitMask {
         fn parse(node: &mut xml::Node) -> Self {
-            if let Some(single_bit) = node.parse_if(BIT) {
-                Self::SingleBit(single_bit)
-            } else {
-                let lsb = node.parse();
-                let msb = node.parse();
-                Self::Range { lsb, msb }
-            }
+            node.parse_if(BIT).map_or_else(
+                || {
+                    let lsb = node.parse();
+                    let msb = node.parse();
+                    Self::Range { lsb, msb }
+                },
+                Self::SingleBit,
+            )
         }
     }
 }

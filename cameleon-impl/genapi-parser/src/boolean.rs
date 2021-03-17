@@ -1,4 +1,9 @@
-use super::{elem_name::*, elem_type::*, node_base::*, xml, Parse};
+use super::{
+    elem_name::{BOOLEAN, OFF_VALUE, ON_VALUE, P_INVALIDATOR, P_SELECTED, STREAMABLE},
+    elem_type::ImmOrPNode,
+    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    xml, Parse,
+};
 
 #[derive(Debug, Clone)]
 pub struct BooleanNode {
@@ -14,30 +19,37 @@ pub struct BooleanNode {
 }
 
 impl BooleanNode {
+    #[must_use]
     pub fn node_base(&self) -> NodeBase<'_> {
         NodeBase::new(&self.attr_base, &self.elem_base)
     }
 
+    #[must_use]
     pub fn p_invalidators(&self) -> &[String] {
         &self.p_invalidators
     }
 
+    #[must_use]
     pub fn streamable(&self) -> bool {
         self.streamable
     }
 
+    #[must_use]
     pub fn value(&self) -> &ImmOrPNode<bool> {
         &self.value
     }
 
+    #[must_use]
     pub fn on_value(&self) -> Option<i64> {
         self.on_value
     }
 
+    #[must_use]
     pub fn off_value(&self) -> Option<i64> {
         self.off_value
     }
 
+    #[must_use]
     pub fn p_selected(&self) -> &[String] {
         &self.p_selected
     }
@@ -92,22 +104,22 @@ mod tests {
 
     #[test]
     fn test_boolean_node_with_imm() {
-        let xml = r#"
+        let xml1 = r#"
             <Boolean Name="TestNode">
                 <Value>true</Value>
             </Boolean>
             "#;
 
-        let node: BooleanNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
+        let node: BooleanNode = xml::Document::from_str(&xml1).unwrap().root_node().parse();
         assert_eq!(node.value(), &ImmOrPNode::Imm(true));
 
-        let xml = r#"
+        let xml2 = r#"
             <Boolean Name="TestNode">
                 <Value>false</Value>
             </Boolean>
             "#;
 
-        let node: BooleanNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
+        let node: BooleanNode = xml::Document::from_str(&xml2).unwrap().root_node().parse();
         assert_eq!(node.value(), &ImmOrPNode::Imm(false));
     }
 }

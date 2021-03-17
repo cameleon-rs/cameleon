@@ -1,13 +1,46 @@
+#![allow(
+    clippy::module_name_repetitions,
+    clippy::similar_names,
+    clippy::missing_errors_doc
+)]
+
 #[cfg(not(feature = "libusb"))]
 #[test]
 fn test_normal_scenario() {
+    fn bytes_as_u64_le(mut bytes: &[u8]) -> u64 {
+        bytes.read_u64::<LE>().unwrap()
+    }
+
+    fn u32_as_le_bytes(num: u32) -> Vec<u8> {
+        let mut bytes = vec![];
+        bytes.write_u32::<LE>(num).unwrap();
+        bytes
+    }
+
+    fn write_cmd(addr: u64, data: &[u8], req_id: u16) -> (Vec<u8>, usize) {
+        let cmd = cmd::WriteMem::new(addr, &data).unwrap().finalize(req_id);
+
+        let mut bytes = Vec::new();
+        cmd.serialize(&mut bytes).unwrap();
+        (bytes, cmd.maximum_ack_len())
+    }
+
+    fn read_cmd(addr: u64, len: u16, req_id: u16) -> (Vec<u8>, usize) {
+        let cmd = cmd::ReadMem::new(addr, len).finalize(req_id);
+
+        let mut bytes = Vec::new();
+        cmd.serialize(&mut bytes).unwrap();
+        (bytes, cmd.maximum_ack_len())
+    }
+
     use std::time::Duration;
 
     use byteorder::{ReadBytesExt, WriteBytesExt, LE};
     use cameleon_device::u3v::{
+        enumerate_devices,
         prelude::*,
         protocol::{ack, cmd},
-        *,
+        register_map, EmulatorBuilder, Error, LibUsbError,
     };
 
     const TIME_OUT: Duration = Duration::from_millis(100);
@@ -38,11 +71,11 @@ fn test_normal_scenario() {
     // device.
     let (tsl_addr, _) = register_map::abrm::TIMESTAMP_LATCH;
     let cmd_data = u32_as_le_bytes(1);
-    let (write_cmd, ack_len) = write_cmd(tsl_addr, &cmd_data, req_id);
-    assert!(control_channel.send(&write_cmd, TIME_OUT).is_ok());
+    let (write_cmd1, ack_len1) = write_cmd(tsl_addr, &cmd_data, req_id);
+    assert!(control_channel.send(&write_cmd1, TIME_OUT).is_ok());
 
     // Receive acknowledge packet corresponding to WriteMem command sent above.
-    let mut ack_bytes = vec![0; ack_len];
+    let mut ack_bytes = vec![0; ack_len1];
     assert!(control_channel.recv(&mut ack_bytes, TIME_OUT).is_ok());
     let ack_command = ack::AckPacket::parse(&ack_bytes).unwrap();
 
@@ -56,11 +89,11 @@ fn test_normal_scenario() {
 
     // Send ReadMem command to time stamp register.
     let (ts_addr, ts_len) = register_map::abrm::TIMESTAMP;
-    let (cmd, ack_len) = read_cmd(ts_addr, ts_len, req_id);
-    assert!(control_channel.send(&cmd, TIME_OUT).is_ok());
+    let (write_cmd2, ack_len2) = read_cmd(ts_addr, ts_len, req_id);
+    assert!(control_channel.send(&write_cmd2, TIME_OUT).is_ok());
 
     // Receive acknowledge packet corresponding to ReadMem command sent above.
-    let mut ack_bytes = vec![0; ack_len];
+    let mut ack_bytes = vec![0; ack_len2];
     assert!(control_channel.recv(&mut ack_bytes, TIME_OUT).is_ok());
     let ack_command = ack::AckPacket::parse(&ack_bytes).unwrap();
 
@@ -77,7 +110,6 @@ fn test_normal_scenario() {
     req_id += 1;
 
     // Send ReadMem command to time stamp register.
-    let (ts_addr, ts_len) = register_map::abrm::TIMESTAMP;
     let (cmd, _) = read_cmd(ts_addr, ts_len, req_id);
     assert!(control_channel.send(&cmd, TIME_OUT).is_ok());
 
@@ -87,32 +119,6 @@ fn test_normal_scenario() {
 
     // Assert control channel is empty after halt.
     assert!(
-        matches! { control_channel.recv(&mut [], TIME_OUT), Err(Error::LibUsbError(LibUsbError::Timeout)) }
+        matches! { control_channel.recv(&mut [], TIME_OUT), Err(Error::LibUsb(LibUsbError::Timeout)) }
     );
-
-    fn bytes_as_u64_le(mut bytes: &[u8]) -> u64 {
-        bytes.read_u64::<LE>().unwrap()
-    }
-
-    fn u32_as_le_bytes(num: u32) -> Vec<u8> {
-        let mut bytes = vec![];
-        bytes.write_u32::<LE>(num).unwrap();
-        bytes
-    }
-
-    fn write_cmd(addr: u64, data: &[u8], req_id: u16) -> (Vec<u8>, usize) {
-        let cmd = cmd::WriteMem::new(addr, &data).unwrap().finalize(req_id);
-
-        let mut bytes = Vec::new();
-        cmd.serialize(&mut bytes).unwrap();
-        (bytes, cmd.maximum_ack_len())
-    }
-
-    fn read_cmd(addr: u64, len: u16, req_id: u16) -> (Vec<u8>, usize) {
-        let cmd = cmd::ReadMem::new(addr, len).finalize(req_id);
-
-        let mut bytes = Vec::new();
-        cmd.serialize(&mut bytes).unwrap();
-        (bytes, cmd.maximum_ack_len())
-    }
 }

@@ -1,6 +1,6 @@
 use crate::u3v::{DeviceInfo, Result};
 
-use super::channel::*;
+use super::channel::{ControlChannel, ControlIfaceInfo, ReceiveChannel, ReceiveIfaceInfo};
 
 pub(super) type RusbDevHandle = rusb::DeviceHandle<rusb::GlobalContext>;
 pub(super) type RusbDevice = rusb::Device<rusb::GlobalContext>;
@@ -49,6 +49,7 @@ impl Device {
         }
     }
 
+    #[must_use]
     pub fn device_info(&self) -> &DeviceInfo {
         &self.device_info
     }

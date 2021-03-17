@@ -14,7 +14,7 @@ impl<T> CommandPacket<T>
 where
     T: CommandScd,
 {
-    const PREFIX_MAGIC: u32 = 0x43563355;
+    const PREFIX_MAGIC: u32 = 0x4356_3355;
 
     // Magic + CCD length.
     const ACK_HEADER_LENGTH: usize = 4 + 8;
@@ -99,6 +99,7 @@ impl std::iter::Iterator for ReadMemChunks {
 }
 
 impl ReadMem {
+    #[must_use]
     pub fn new(address: u64, read_length: u16) -> Self {
         Self {
             address,
@@ -125,6 +126,7 @@ impl ReadMem {
         })
     }
 
+    #[must_use]
     pub fn read_length(&self) -> u16 {
         self.read_length
     }
@@ -184,6 +186,7 @@ impl<'a> WriteMem<'a> {
     }
 
     /// Data length of the
+    #[must_use]
     pub fn data_len(&self) -> usize {
         self.data.len()
     }
@@ -280,18 +283,22 @@ pub struct CommandCcd {
 }
 
 impl CommandCcd {
+    #[must_use]
     pub fn flag(&self) -> CommandFlag {
         self.flag
     }
 
+    #[must_use]
     pub fn scd_kind(&self) -> ScdKind {
         self.scd_kind
     }
 
+    #[must_use]
     pub fn scd_len(&self) -> u16 {
         self.scd_len
     }
 
+    #[must_use]
     pub fn request_id(&self) -> u16 {
         self.request_id
     }
@@ -318,6 +325,7 @@ impl CommandCcd {
         Ok(())
     }
 
+    #[must_use]
     pub const fn len() -> u16 {
         // flags(2bytes) + command_id(2bytes) + scd_len(2bytes) + request_id(2bytes)
         8
@@ -331,7 +339,7 @@ pub enum CommandFlag {
 }
 
 impl CommandFlag {
-    fn serialize(&self, mut buf: impl Write) -> Result<()> {
+    fn serialize(self, mut buf: impl Write) -> Result<()> {
         let flag_id: u16 = match self {
             Self::RequestAck => 1 << 14,
             Self::CommandResend => 1 << 15,
@@ -393,7 +401,7 @@ impl CommandScd for ReadMem {
 
     fn serialize(&self, mut buf: impl Write) -> Result<()> {
         buf.write_bytes(self.address)?;
-        buf.write_bytes(0u16)?; // 2bytes reserved.
+        buf.write_bytes(0_u16)?; // 2bytes reserved.
         buf.write_bytes(self.read_length)?;
         Ok(())
     }
@@ -470,7 +478,7 @@ impl<'a> CommandScd for WriteMemStacked<'a> {
     fn serialize(&self, mut buf: impl Write) -> Result<()> {
         for ent in &self.entries {
             buf.write_bytes(ent.address)?;
-            buf.write_bytes(0u16)?; // 2bytes reserved.
+            buf.write_bytes(0_u16)?; // 2bytes reserved.
             buf.write_bytes(ent.data_len)?;
             buf.write_all(ent.data)?;
         }
@@ -493,13 +501,13 @@ mod tests {
 
     const HEADER_LEN: u8 = 4 + 8; // Magic + CCD.
 
-    fn serialize_header(command_id: &[u8; 2], scd_len: &[u8; 2], req_id: &[u8; 2]) -> Vec<u8> {
+    fn serialize_header(command_id: [u8; 2], scd_len: [u8; 2], req_id: [u8; 2]) -> Vec<u8> {
         let mut ccd = vec![];
-        ccd.write_bytes(0x43563355u32).unwrap(); // Magic.
+        ccd.write_bytes(0x4356_3355_u32).unwrap(); // Magic.
         ccd.extend(&[0x00, 0x40]); // Packet flag: Request Ack.
-        ccd.extend(command_id);
-        ccd.extend(scd_len);
-        ccd.extend(req_id);
+        ccd.extend(&command_id);
+        ccd.extend(&scd_len);
+        ccd.extend(&req_id);
         ccd
     }
 
@@ -513,7 +521,7 @@ mod tests {
 
         let mut buf = vec![];
         command.serialize(&mut buf).unwrap();
-        let mut expected = serialize_header(&[0x00, 0x08], &[scd_len, 0x00], &[0x01, 0x00]);
+        let mut expected = serialize_header([0x00, 0x08], [scd_len, 0x00], [0x01, 0x00]);
         expected.extend(vec![0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]); // Address.
         expected.extend(vec![0x00, 0x00]); // Reserved.
         expected.extend(vec![64, 0x00]); // Read length.
@@ -533,7 +541,7 @@ mod tests {
 
         let mut buf = vec![];
         command.serialize(&mut buf).unwrap();
-        let mut expected = serialize_header(&[0x02, 0x08], &[scd_len, 0x00], &[0x01, 0x00]);
+        let mut expected = serialize_header([0x02, 0x08], [scd_len, 0x00], [0x01, 0x00]);
         expected.extend(vec![0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]); // Address.
         expected.extend(vec![0x01, 0x02, 0x03]); // Data.
 
@@ -554,7 +562,7 @@ mod tests {
 
         let mut buf = vec![];
         command.serialize(&mut buf).unwrap();
-        let mut expected = serialize_header(&[0x06, 0x08], &[12 * 2, 0x00], &[0x01, 0x00]);
+        let mut expected = serialize_header([0x06, 0x08], [12 * 2, 0x00], [0x01, 0x00]);
         expected.extend(vec![0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]); // Address 0.
         expected.extend(vec![0x00, 0x00]); // Reserved 0.
         expected.extend(vec![4, 0x00]); // Read length 0.
@@ -579,7 +587,7 @@ mod tests {
 
         let mut buf = vec![];
         command.serialize(&mut buf).unwrap();
-        let mut expected = serialize_header(&[0x08, 0x08], &[scd_len, 0x00], &[0x01, 0x00]);
+        let mut expected = serialize_header([0x08, 0x08], [scd_len, 0x00], [0x01, 0x00]);
         expected.extend(vec![0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]); // Address 0.
         expected.extend(vec![0x00, 0x00]); // Reserved 0.
         expected.extend(vec![4, 0x00]); // Length data block 0.
@@ -601,7 +609,7 @@ mod tests {
         let mut read_len = 0;
         for (i, chunk) in chunks.iter().enumerate().take(chunks.len() - 1) {
             assert_eq!(chunk.address, expected_addr);
-            expected_addr += chunk.read_length as u64;
+            expected_addr += u64::from(chunk.read_length);
             read_len += chunk.read_length;
             assert_eq!(chunk.clone().finalize(i as u16).maximum_ack_len(), 24);
         }
@@ -623,7 +631,7 @@ mod tests {
 
         for (i, chunk) in chunks.iter().enumerate().take(chunks.len() - 1) {
             assert_eq!(chunk.address, expected_addr);
-            expected_addr += chunk.data_len as u64;
+            expected_addr += u64::from(chunk.data_len);
             sent_data_len += chunk.data_len;
 
             assert_eq!(chunk.clone().finalize(i as u16).cmd_len(), 24);

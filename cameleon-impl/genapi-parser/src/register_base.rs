@@ -1,4 +1,12 @@
-use super::{elem_name::*, elem_type::*, node_base::*, xml, Parse};
+use super::{
+    elem_name::{
+        ACCESS_MODE, ADDRESS, CACHEABLE, INT_SWISS_KNIFE, POLLING_TIME, P_ADDRESS, P_INDEX,
+        P_INVALIDATOR, STREAMABLE,
+    },
+    elem_type::{register_node_elem, AccessMode, CachingMode, ImmOrPNode},
+    node_base::NodeElementBase,
+    xml, Parse,
+};
 
 #[derive(Debug, Clone)]
 pub struct RegisterBase {
@@ -15,34 +23,42 @@ pub struct RegisterBase {
 }
 
 impl RegisterBase {
+    #[must_use]
     pub fn streamable(&self) -> bool {
         self.streamable
     }
 
+    #[must_use]
     pub fn address_kinds(&self) -> &[register_node_elem::AddressKind] {
         &self.address_kinds
     }
 
+    #[must_use]
     pub fn length(&self) -> &ImmOrPNode<i64> {
         &self.length
     }
 
+    #[must_use]
     pub fn access_mode(&self) -> AccessMode {
         self.access_mode
     }
 
+    #[must_use]
     pub fn p_port(&self) -> &str {
         &self.p_port
     }
 
+    #[must_use]
     pub fn cacheable(&self) -> CachingMode {
         self.cacheable
     }
 
+    #[must_use]
     pub fn polling_time(&self) -> Option<u64> {
         self.polling_time
     }
 
+    #[must_use]
     pub fn p_invalidators(&self) -> &[String] {
         &self.p_invalidators
     }

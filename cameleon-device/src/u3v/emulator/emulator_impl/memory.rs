@@ -52,7 +52,7 @@ const U3V_CAPABILITY: &[u8] = &[
 
 /// Offset | Value | Description.
 ///      0 |     0 | Heartbeat is not used.
-///      1 |     0 | MultiEvent is not enabled.
+///      1 |     0 | Multievent is not enabled.
 ///   2-63 |     0 | Reserved. All remained bits are set to 0.
 const DEVICE_CONFIGURATION: &[u8] = &[
     0b0000_0000,
@@ -190,7 +190,7 @@ pub(super) enum SBRM {
 
 pub(super) const SIRM_ALIGNMENT: u8 = 4;
 /// Exponent of alignment is in Upper 8bits of SI Info.
-/// TODO: Use integer::log2 when it's stabilized. See https://github.com/rust-lang/rust/issues/70887.
+/// TODO: Use `{integer}::log2` when it's stabilized. See <https://github.com/rust-lang/rust/issues/70887>.
 const SI_INFO: u32 = 2 << 24;
 
 #[register_map(base = SIRM_ADDRESS, endianness = LE)]
@@ -202,7 +202,7 @@ pub(super) enum SIRM {
     Control = 0,
 
     #[register(len = 8, access = RO, ty = u64)]
-    RequiredPayloadSize = 15151104,
+    RequiredPayloadSize = 15_151_104,
 
     #[register(len = 4, access = RO, ty = u32)]
     RequiredLeaderSize = 1024,

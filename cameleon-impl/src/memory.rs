@@ -66,14 +66,17 @@ pub enum AccessRight {
 }
 
 impl AccessRight {
+    #[must_use]
     pub const fn is_readable(self) -> bool {
         self.as_num() & 0b1 == 1
     }
 
+    #[must_use]
     pub const fn is_writable(self) -> bool {
         self.as_num() >> 1 == 1
     }
 
+    #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::NA => "NA",
@@ -84,6 +87,7 @@ impl AccessRight {
     }
 
     #[doc(hidden)]
+    #[must_use]
     pub const fn as_num(self) -> u8 {
         match self {
             Self::NA => 0b00,
@@ -94,8 +98,9 @@ impl AccessRight {
     }
 
     #[doc(hidden)]
+    #[must_use]
     pub fn meet(self, rhs: Self) -> Self {
-        use AccessRight::*;
+        use AccessRight::{NA, RO, RW, WO};
         match self {
             RW => {
                 if rhs == RW {
@@ -123,6 +128,7 @@ impl AccessRight {
     }
 
     #[doc(hidden)]
+    #[must_use]
     pub fn from_num(num: u8) -> Self {
         debug_assert!(num >> 2 == 0);
         match num {
@@ -142,6 +148,7 @@ pub struct MemoryProtection {
 }
 
 impl MemoryProtection {
+    #[must_use]
     pub fn new(memory_size: usize) -> Self {
         let len = if memory_size == 0 {
             0
@@ -159,6 +166,7 @@ impl MemoryProtection {
         *block = (*block & mask) | access_right.as_num() << offset;
     }
 
+    #[must_use]
     pub fn access_right(&self, address: usize) -> AccessRight {
         let block = self.inner[address / 4];
         let offset = address % 4 * 2;
@@ -223,6 +231,7 @@ pub trait Register {
         Self::parse(&memory[range])
     }
 
+    #[must_use]
     fn range() -> std::ops::Range<usize> {
         Self::ADDRESS..Self::ADDRESS + Self::LENGTH
     }
@@ -230,7 +239,7 @@ pub trait Register {
 
 #[cfg(test)]
 mod tests {
-    use super::AccessRight::*;
+    use super::AccessRight::{NA, RO, RW, WO};
     use super::*;
 
     #[test]

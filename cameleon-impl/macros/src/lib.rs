@@ -1,3 +1,9 @@
+#![allow(
+    clippy::module_name_repetitions,
+    clippy::similar_names,
+    clippy::missing_errors_doc
+)]
+
 mod memory;
 mod register_map;
 mod util;
@@ -15,10 +21,10 @@ pub fn register_map(
 
 #[proc_macro_attribute]
 pub fn memory(
-    args: proc_macro::TokenStream,
+    _args: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    match memory::expand(args, input) {
+    match memory::expand(input) {
         Ok(ts) => ts,
         Err(e) => e.to_compile_error().into(),
     }

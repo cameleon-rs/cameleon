@@ -1,4 +1,9 @@
-use super::{elem_name::*, elem_type::*, node_base::*, xml, Parse};
+use super::{
+    elem_name::{COMMAND, POLLING_TIME, P_INVALIDATOR},
+    elem_type::ImmOrPNode,
+    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    xml, Parse,
+};
 
 #[derive(Debug, Clone)]
 pub struct CommandNode {
@@ -12,22 +17,27 @@ pub struct CommandNode {
 }
 
 impl CommandNode {
+    #[must_use]
     pub fn node_base(&self) -> NodeBase<'_> {
         NodeBase::new(&self.attr_base, &self.elem_base)
     }
 
+    #[must_use]
     pub fn p_invalidators(&self) -> &[String] {
         &self.p_invalidators
     }
 
+    #[must_use]
     pub fn value(&self) -> &ImmOrPNode<i64> {
         &self.value
     }
 
+    #[must_use]
     pub fn command_value(&self) -> &ImmOrPNode<i64> {
         &self.command_value
     }
 
+    #[must_use]
     pub fn polling_time(&self) -> Option<u64> {
         self.polling_time
     }

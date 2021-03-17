@@ -96,14 +96,14 @@ impl DeviceBuilder {
                     (Some(event_iface), Some(stream_iface))
                 }
                 None => (Some(event_iface), None),
-                _ => return Err(Error::InvalidDevice),
+                Some(_) => return Err(Error::InvalidDevice),
             },
             Some((stream_iface, ReceiveIfaceKind::Stream)) => match receive_ifaces.pop() {
                 Some((event_iface, ReceiveIfaceKind::Event)) => {
                     (Some(event_iface), Some(stream_iface))
                 }
                 None => (None, Some(stream_iface)),
-                _ => return Err(Error::InvalidDevice),
+                Some(_) => return Err(Error::InvalidDevice),
             },
             None => (None, None),
         };

@@ -55,17 +55,17 @@ pub struct Leader<'a> {
 }
 
 impl<'a> Leader<'a> {
-    const LEADER_MAGIC: u32 = 0x4C563355;
+    const LEADER_MAGIC: u32 = 0x4C56_3355;
 
     /// Parse bytes as Leader.
     pub fn parse(buf: &'a (impl AsRef<[u8]> + ?Sized)) -> Result<Self> {
         let mut cursor = Cursor::new(buf.as_ref());
 
         Self::parse_prefix(&mut cursor)?;
-        let _reserved: u16 = cursor.read_bytes()?;
+        let _reserved1: u16 = cursor.read_bytes()?;
         let leader_size = cursor.read_bytes()?;
         let block_id = cursor.read_bytes()?;
-        let _reserved: u16 = cursor.read_bytes()?;
+        let _reserved2: u16 = cursor.read_bytes()?;
         let payload_type = cursor.read_bytes::<u16>()?.try_into()?;
 
         let raw_specfic_leader = &cursor.get_ref()[cursor.position() as usize..];
@@ -108,16 +108,19 @@ impl<'a> Leader<'a> {
     }
 
     /// Total size of leader, this size contains a specific leader part.
+    #[must_use]
     pub fn leader_size(&self) -> u16 {
         self.leader_size
     }
 
     /// Type of the payload the leader is followed by.
+    #[must_use]
     pub fn payload_type(&self) -> PayloadType {
         self.payload_type
     }
 
     /// ID of data block.
+    #[must_use]
     pub fn block_id(&self) -> u64 {
         self.block_id
     }
@@ -170,36 +173,43 @@ pub struct ImageLeader {
 impl ImageLeader {
     /// Timestamp when the image is captured.
     /// Timestamp represents duration since the device starts running.
+    #[must_use]
     pub fn timestamp(&self) -> time::Duration {
         time::Duration::from_nanos(self.timestamp)
     }
 
     /// Pixel format of the payload image.
+    #[must_use]
     pub fn pixel_format(&self) -> PixelFormat {
         self.pixel_format
     }
 
     /// Width of the payload image.
+    #[must_use]
     pub fn width(&self) -> u32 {
         self.width
     }
 
     /// Height of the payload image.
+    #[must_use]
     pub fn height(&self) -> u32 {
         self.height
     }
 
     /// X-axis offset from the image origin.
+    #[must_use]
     pub fn x_offset(&self) -> u32 {
         self.x_offset
     }
 
     /// Y-axis offset from the image origin.
+    #[must_use]
     pub fn y_offset(&self) -> u32 {
         self.y_offset
     }
 
     /// Number of padding bytes added to the end of each line.
+    #[must_use]
     pub fn x_padding(&self) -> u16 {
         self.x_padding
     }
@@ -251,36 +261,43 @@ pub struct ImageExtendedChunkLeader {
 
 impl ImageExtendedChunkLeader {
     /// Timestamp when the image is captured.
+    #[must_use]
     pub fn timestamp(&self) -> time::Duration {
         time::Duration::from_nanos(self.timestamp)
     }
 
     /// Pixel format of the payload image.
+    #[must_use]
     pub fn pixel_format(&self) -> PixelFormat {
         self.pixel_format
     }
 
     /// Width of the payload image.
+    #[must_use]
     pub fn width(&self) -> u32 {
         self.width
     }
 
     /// Height of the payload image.
+    #[must_use]
     pub fn height(&self) -> u32 {
         self.height
     }
 
     /// X-axis offset from the image origin.
+    #[must_use]
     pub fn x_offset(&self) -> u32 {
         self.x_offset
     }
 
     /// Y-axis offset from the image origin.
+    #[must_use]
     pub fn y_offset(&self) -> u32 {
         self.y_offset
     }
 
     /// Number of padding bytes added to the end of each line.
+    #[must_use]
     pub fn x_padding(&self) -> u16 {
         self.x_padding
     }
@@ -339,6 +356,7 @@ pub struct ChunkLeader {
 impl ChunkLeader {
     /// Timestamp when the chunk payload data is created.
     /// Timestamp represents duration since the device starts running.
+    #[must_use]
     pub fn timestamp(&self) -> time::Duration {
         time::Duration::from_nanos(self.timestamp)
     }
@@ -364,18 +382,18 @@ pub struct Trailer<'a> {
 }
 
 impl<'a> Trailer<'a> {
-    const TRAILER_MAGIC: u32 = 0x54563355;
+    const TRAILER_MAGIC: u32 = 0x5456_3355;
 
     /// Parse bytes as Leader.
     pub fn parse(buf: &'a (impl AsRef<[u8]> + ?Sized)) -> Result<Self> {
         let mut cursor = Cursor::new(buf.as_ref());
 
         Self::parse_prefix(&mut cursor)?;
-        let _reserved: u16 = cursor.read_bytes()?;
+        let _reserved1: u16 = cursor.read_bytes()?;
         let trailer_size = cursor.read_bytes()?;
         let block_id = cursor.read_bytes()?;
         let payload_status = cursor.read_bytes::<u16>()?.try_into()?;
-        let _reserved: u16 = cursor.read_bytes()?;
+        let _reserved2: u16 = cursor.read_bytes()?;
         let valid_payload_size = cursor.read_bytes()?;
 
         let raw_specfic_trailer = &cursor.get_ref()[cursor.position() as usize..];
@@ -395,22 +413,26 @@ impl<'a> Trailer<'a> {
     }
 
     /// Total size of trailer, this size contains a specific trailer part.
+    #[must_use]
     pub fn trailer_size(&self) -> u16 {
         self.trailer_size
     }
 
     /// ID of the block.
+    #[must_use]
     pub fn block_id(&self) -> u64 {
         self.block_id
     }
 
     /// Status of payload data of the block.
+    #[must_use]
     pub fn payload_status(&self) -> PayloadStatus {
         self.payload_status
     }
 
     /// Size of valid payload data.
     /// In case that the device send additional bytes, the additional bytes must be ignored.
+    #[must_use]
     pub fn valid_payload_size(&self) -> u64 {
         self.valid_payload_size
     }
@@ -438,6 +460,7 @@ impl ImageTrailer {
     ///
     /// Some U3V cameras support variable frame size, in that case, the height of the image may
     /// be less than or equal to the height reported in the leader.
+    #[must_use]
     pub fn actual_height(&self) -> u32 {
         self.actual_height
     }
@@ -464,6 +487,7 @@ impl ImageExtendedChunkTrailer {
     ///
     /// Some U3V cameras support variable frame size, in that case, the height of the image may
     /// be less than or equal to the height reported in the leader.
+    #[must_use]
     pub fn actual_height(&self) -> u32 {
         self.actual_height
     }
@@ -471,6 +495,7 @@ impl ImageExtendedChunkTrailer {
     /// Id used to report chunk layout changes.
     ///
     /// Id changes means that the chunk layout has changed from the previous layout.
+    #[must_use]
     pub fn chunk_layout_id(&self) -> u32 {
         self.chunk_layout_id
     }
@@ -499,6 +524,7 @@ impl ChunkTrailer {
     /// Id used to report chunk layout changes.
     ///
     /// Id changes means that the chunk layout has changed from the previous layout.
+    #[must_use]
     pub fn chunk_layout_id(&self) -> u32 {
         self.chunk_layout_id
     }
@@ -554,23 +580,23 @@ mod tests {
     /// Return bytes represnts generic leader.
     fn generic_leader_bytes(payload_type: PayloadType) -> Vec<u8> {
         let mut buf = vec![];
-        let (payload_num, size) = match payload_type {
+        let (payload_num, size): (u16, u16) = match payload_type {
             PayloadType::Image => (0x0001, 50),
             PayloadType::ImageExtendedChunk => (0x4001, 50),
             PayloadType::Chunk => (0x4000, 20),
         };
         // Leader magic.
-        buf.write_bytes(0x4C563355u32).unwrap();
+        buf.write_bytes(0x4C56_3355_u32).unwrap();
         // Reserved.
-        buf.write_bytes(0u16).unwrap();
+        buf.write_bytes(0_u16).unwrap();
         // Leader size.
-        buf.write_bytes(size as u16).unwrap();
+        buf.write_bytes(size).unwrap();
         // Block_id
-        buf.write_bytes(51u64).unwrap();
+        buf.write_bytes(51_u64).unwrap();
         // Reserved.
-        buf.write_bytes(0u16).unwrap();
+        buf.write_bytes(0_u16).unwrap();
         // Payload type.
-        buf.write_bytes(payload_num as u16).unwrap();
+        buf.write_bytes(payload_num).unwrap();
         buf
     }
 
@@ -578,25 +604,24 @@ mod tests {
     fn generic_trailer_bytes(payload_type: PayloadType) -> Vec<u8> {
         let mut buf = vec![];
         let trailer_size: u16 = match payload_type {
-            PayloadType::Image => 32,
+            PayloadType::Image | PayloadType::Chunk => 32,
             PayloadType::ImageExtendedChunk => 36,
-            PayloadType::Chunk => 32,
         };
 
         let valid_payload_size: u64 = 4096 * 2160;
         let block_id: u64 = 51;
         // Trailer magic.
-        buf.write_bytes(0x54563355u32).unwrap();
+        buf.write_bytes(0x5456_3355_u32).unwrap();
         // Reserved.
-        buf.write_bytes(0u16).unwrap();
+        buf.write_bytes(0_u16).unwrap();
         // Trailer size.
         buf.write_bytes(trailer_size).unwrap();
         // Block ID.
         buf.write_bytes(block_id).unwrap();
         // Status.
-        buf.write_bytes(0xa100u16).unwrap();
+        buf.write_bytes(0xa100_u16).unwrap();
         // Reserved.
-        buf.write_bytes(0u16).unwrap();
+        buf.write_bytes(0_u16).unwrap();
         // Valid paylaod size.
         buf.write_bytes(valid_payload_size).unwrap();
 
@@ -607,17 +632,17 @@ mod tests {
     fn test_parse_generic_leader() {
         let mut buf = vec![];
         // Leader magic.
-        buf.write_bytes(0x4C563355u32).unwrap();
+        buf.write_bytes(0x4C56_3355_u32).unwrap();
         // Reserved.
-        buf.write_bytes(0u16).unwrap();
+        buf.write_bytes(0_u16).unwrap();
         // Leader size.
-        buf.write_bytes(20u16).unwrap();
+        buf.write_bytes(20_u16).unwrap();
         // Block ID.
-        buf.write_bytes(51u64).unwrap();
+        buf.write_bytes(51_u64).unwrap();
         // Reserved.
-        buf.write_bytes(0u16).unwrap();
+        buf.write_bytes(0_u16).unwrap();
         // Payload type, Image.
-        buf.write_bytes(0x0001u16).unwrap();
+        buf.write_bytes(0x0001_u16).unwrap();
 
         let leader = Leader::parse(&buf).unwrap();
         assert_eq!(leader.leader_size(), 20);
@@ -629,21 +654,21 @@ mod tests {
     fn test_parse_image_leader() {
         let mut buf = generic_leader_bytes(PayloadType::Image);
         // Time stamp.
-        buf.write_bytes(100u64).unwrap();
+        buf.write_bytes(100_u64).unwrap();
         // Pixel Format.
         buf.write_bytes::<u32>(PixelFormat::Mono8s.into()).unwrap();
         // Width.
-        buf.write_bytes(3840u32).unwrap();
+        buf.write_bytes(3840_u32).unwrap();
         // Height.
-        buf.write_bytes(2160u32).unwrap();
+        buf.write_bytes(2160_u32).unwrap();
         // X offset.
-        buf.write_bytes(0u32).unwrap();
+        buf.write_bytes(0_u32).unwrap();
         // Y offset.
-        buf.write_bytes(0u32).unwrap();
+        buf.write_bytes(0_u32).unwrap();
         // X padding.
-        buf.write_bytes(0u16).unwrap();
+        buf.write_bytes(0_u16).unwrap();
         // Reserved.
-        buf.write_bytes(0u16).unwrap();
+        buf.write_bytes(0_u16).unwrap();
 
         let leader = Leader::parse(&buf).unwrap();
         assert_eq!(leader.payload_type(), PayloadType::Image);
@@ -661,22 +686,22 @@ mod tests {
     fn test_parse_image_extended_chunk_leader() {
         let mut buf = generic_leader_bytes(PayloadType::ImageExtendedChunk);
         // Time stamp.
-        buf.write_bytes(100u64).unwrap();
+        buf.write_bytes(100_u64).unwrap();
         // Pixel Format.
         buf.write_bytes::<u32>(PixelFormat::BayerGR10.into())
             .unwrap();
         // Width.
-        buf.write_bytes(3840u32).unwrap();
+        buf.write_bytes(3840_u32).unwrap();
         // Height.
-        buf.write_bytes(2160u32).unwrap();
+        buf.write_bytes(2160_u32).unwrap();
         // X offset.
-        buf.write_bytes(0u32).unwrap();
+        buf.write_bytes(0_u32).unwrap();
         // Y offset.
-        buf.write_bytes(0u32).unwrap();
+        buf.write_bytes(0_u32).unwrap();
         // X padding.
-        buf.write_bytes(0u16).unwrap();
+        buf.write_bytes(0_u16).unwrap();
         // Reserved.
-        buf.write_bytes(0u16).unwrap();
+        buf.write_bytes(0_u16).unwrap();
 
         let leader = Leader::parse(&buf).unwrap();
         assert_eq!(leader.payload_type(), PayloadType::ImageExtendedChunk);
@@ -694,7 +719,7 @@ mod tests {
     fn test_parse_chunk_leader() {
         let mut buf = generic_leader_bytes(PayloadType::Chunk);
         // Time stamp.
-        buf.write_bytes(100u64).unwrap();
+        buf.write_bytes(100_u64).unwrap();
 
         let leader = Leader::parse(&buf).unwrap();
         assert_eq!(leader.payload_type(), PayloadType::Chunk);
@@ -709,17 +734,17 @@ mod tests {
         let block_id: u64 = 51;
         let valid_payload_size: u64 = 4096 * 2160;
         // Trailer magic.
-        buf.write_bytes(0x54563355u32).unwrap();
+        buf.write_bytes(0x5456_3355_u32).unwrap();
         // Reserved.
-        buf.write_bytes(0u16).unwrap();
+        buf.write_bytes(0_u16).unwrap();
         // Trailer size.
         buf.write_bytes(trailer_size).unwrap();
         // Block ID.
         buf.write_bytes(block_id).unwrap();
         // Status.
-        buf.write_bytes(0xa100u16).unwrap();
+        buf.write_bytes(0xa100_u16).unwrap();
         // Reserved.
-        buf.write_bytes(0u16).unwrap();
+        buf.write_bytes(0_u16).unwrap();
         // Valid paylaod size.
         buf.write_bytes(valid_payload_size).unwrap();
 

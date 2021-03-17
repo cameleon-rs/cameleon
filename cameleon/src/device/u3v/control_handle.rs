@@ -1,4 +1,5 @@
 use std::{
+    convert::TryInto,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -130,6 +131,7 @@ impl ControlHandle {
 
     /// Capacity of internal buffer which is used for serializing/deserializing packet.  
     /// This buffer automatically extend according to packet length.
+    #[must_use]
     pub fn buffer_capacity(&self) -> usize {
         self.inner.lock().unwrap().buffer_capacity()
     }
@@ -141,6 +143,7 @@ impl ControlHandle {
     }
 
     /// Return `true` if the device is opened.
+    #[must_use]
     pub fn is_opened(&self) -> bool {
         self.inner.lock().unwrap().is_opened()
     }
@@ -149,6 +152,7 @@ impl ControlHandle {
     ///
     /// NOTE: [`ControlHandle::read_mem`] and [`ControlHandle::write_mem`] may send multiple
     /// requests in a single call. In that case, Timeout is reflected to each request.
+    #[must_use]
     pub fn timeout_duration(&self) -> Duration {
         self.inner.lock().unwrap().config.timeout_duration
     }
@@ -165,6 +169,7 @@ impl ControlHandle {
 
     /// The value determines how many times to retry when pending acknowledge is returned from the
     /// device.
+    #[must_use]
     pub fn retry_count(&self) -> u16 {
         self.inner.lock().unwrap().config.retry_count
     }
@@ -245,7 +250,7 @@ impl ControlHandleImpl {
         // Chunks buffer if buffer length is larger than u16::MAX.
         for buf_chunk in buf.chunks_mut(std::u16::MAX as usize) {
             // Create command for buffer chunk.
-            let cmd = cmd::ReadMem::new(address, buf_chunk.len() as u16);
+            let cmd = cmd::ReadMem::new(address, buf_chunk.len().try_into().unwrap());
             let maximum_ack_length = self.config.maximum_ack_length;
 
             // Chunks command so that each acknowledge packet length fits to maximum_ack_length.
@@ -293,18 +298,18 @@ impl ControlHandleImpl {
     }
 
     fn assert_open(&self) -> DeviceResult<()> {
-        if !self.is_opened() {
-            Err(DeviceError::NotOpened)
-        } else {
+        if self.is_opened() {
             Ok(())
+        } else {
+            Err(DeviceError::NotOpened)
         }
     }
 
     fn close(&mut self) -> DeviceResult<()> {
-        if !self.is_opened() {
-            Ok(())
-        } else {
+        if self.is_opened() {
             Ok(self.inner.close()?)
+        } else {
+            Ok(())
         }
     }
 
@@ -340,11 +345,7 @@ impl ControlHandleImpl {
         self.inner
             .send(&self.buffer[..cmd_len], self.config.timeout_duration)?;
 
-        // Receive ack.
-        // If ack status is invalid, return error.
-        // If ack status is valid and ack kind is pending, retry to receive ack up to retry count.
-        // If ack status is valid and ack kind is not pending, try to interpret scd and return the
-        // result.
+        // Receive ack and interpret the packet.
         let mut retry_count = self.config.retry_count;
         let mut ok = None;
         while retry_count > 0 {
@@ -355,16 +356,17 @@ impl ControlHandleImpl {
             let ack = ack::AckPacket::parse(&self.buffer[0..recv_len])?;
             self.verify_ack(&ack)?;
 
+            // Retry up to retry count.
             if ack.scd_kind() == ack::ScdKind::Pending {
                 let pending_ack: ack::Pending = ack.scd_as()?;
                 std::thread::sleep(pending_ack.timeout);
                 retry_count -= 1;
                 continue;
-            } else {
-                self.next_req_id += 1;
-                ok = Some(recv_len);
-                break;
             }
+
+            self.next_req_id += 1;
+            ok = Some(recv_len);
+            break;
         }
 
         // This codes seems weird due to a lifetime problem.

@@ -43,7 +43,7 @@ pub mod sbrm {
 
 /// (Offset, Length, Access Right) of registers in Event Interface Register Map (EIRM).
 /// SIRM base address can be obtained by
-/// sbrm::EIRM_ADDRESS.
+/// [`sbrm::EIRM_ADDRESS`].
 pub mod eirm {
     pub const EI_CONTROL: (u64, u16) = (0x0000, 4);
     pub const MAXIMUM_EVENT_TRANSFER_LENGTH: (u64, u16) = (0x0004, 4);

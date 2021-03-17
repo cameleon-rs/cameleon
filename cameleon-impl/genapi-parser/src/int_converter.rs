@@ -1,4 +1,12 @@
-use super::{elem_name::*, elem_type::*, node_base::*, xml, Parse};
+use super::{
+    elem_name::{
+        CONSTANT, EXPRESSION, INT_CONVERTER, P_INVALIDATOR, P_VARIABLE, REPRESENTATION, SLOPE,
+        STREAMABLE, UNIT,
+    },
+    elem_type::{IntegerRepresentation, NamedValue, Slope},
+    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    xml, Parse,
+};
 
 #[derive(Debug, Clone)]
 pub struct IntConverterNode {
@@ -19,50 +27,62 @@ pub struct IntConverterNode {
 }
 
 impl IntConverterNode {
+    #[must_use]
     pub fn node_base(&self) -> NodeBase<'_> {
         NodeBase::new(&self.attr_base, &self.elem_base)
     }
 
+    #[must_use]
     pub fn p_invalidators(&self) -> &[String] {
         &self.p_invalidators
     }
 
+    #[must_use]
     pub fn streamable(&self) -> bool {
         self.streamable
     }
 
+    #[must_use]
     pub fn p_variables(&self) -> &[NamedValue<String>] {
         &self.p_variables
     }
 
+    #[must_use]
     pub fn constants(&self) -> &[NamedValue<i64>] {
         &self.constants
     }
 
+    #[must_use]
     pub fn expressions(&self) -> &[NamedValue<String>] {
         &self.expressions
     }
 
+    #[must_use]
     pub fn formula_to(&self) -> &str {
         &self.formula_to
     }
 
+    #[must_use]
     pub fn formula_from(&self) -> &str {
         &self.formula_from
     }
 
+    #[must_use]
     pub fn p_value(&self) -> &str {
         &self.p_value
     }
 
+    #[must_use]
     pub fn unit(&self) -> Option<&str> {
         self.unit.as_deref()
     }
 
+    #[must_use]
     pub fn representation(&self) -> IntegerRepresentation {
         self.representation
     }
 
+    #[must_use]
     pub fn slope(&self) -> Slope {
         self.slope
     }

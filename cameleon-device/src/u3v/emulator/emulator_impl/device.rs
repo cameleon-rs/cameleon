@@ -9,7 +9,11 @@ use futures::channel::oneshot;
 
 use crate::u3v::DeviceInfo;
 
-use super::{fake_protocol::*, interface::Interface, memory::Memory};
+use super::{
+    fake_protocol::{FakeAckPacket, FakeReqPacket},
+    interface::Interface,
+    memory::Memory,
+};
 
 const REQ_PACKET_CHANNEL_CAPACITY: usize = 1;
 const ACK_PACKET_CHANNEL_CAPACITY: usize = 1;
@@ -87,12 +91,11 @@ impl Timestamp {
 
     pub(super) async fn as_nanos(&self) -> u64 {
         let mut inner = self.0.lock().await;
-        let ns: u64 = match inner.elapsed().as_nanos().try_into() {
-            Ok(time) => time,
-            Err(_) => {
-                *inner = time::Instant::now();
-                inner.elapsed().as_nanos() as u64
-            }
+        let ns: u64 = if let Ok(time) = inner.elapsed().as_nanos().try_into() {
+            time
+        } else {
+            *inner = time::Instant::now();
+            inner.elapsed().as_nanos() as u64
         };
         ns
     }

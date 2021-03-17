@@ -10,7 +10,7 @@ pub struct EventPacket<'a> {
 }
 
 impl<'a> EventPacket<'a> {
-    const PREFIX_MAGIC: u32 = 0x45563355;
+    const PREFIX_MAGIC: u32 = 0x4556_3355;
 
     pub fn parse(buf: &'a (impl AsRef<[u8]> + ?Sized)) -> Result<Self> {
         let mut cursor = Cursor::new(buf.as_ref());
@@ -24,6 +24,7 @@ impl<'a> EventPacket<'a> {
         Ok(Self { ccd, scd })
     }
 
+    #[must_use]
     pub fn request_id(&self) -> u16 {
         self.ccd.request_id
     }
@@ -124,9 +125,9 @@ mod tests {
 
     fn serialize_header(scd_len: u16, request_id: u16) -> Vec<u8> {
         let mut ccd = vec![];
-        ccd.write_bytes(0x45563355u32).unwrap(); // Magic.
-        ccd.write_bytes(1u16 << 14).unwrap(); // Request ack for now.
-        ccd.write_bytes(0x0c00u16).unwrap();
+        ccd.write_bytes(0x4556_3355_u32).unwrap(); // Magic.
+        ccd.write_bytes(1_u16 << 14).unwrap(); // Request ack for now.
+        ccd.write_bytes(0x0c00_u16).unwrap();
         ccd.write_bytes(scd_len).unwrap();
         ccd.write_bytes(request_id).unwrap();
         ccd
@@ -135,9 +136,9 @@ mod tests {
     #[test]
     fn test_single_event() {
         let mut scd = vec![];
-        scd.write_bytes(0u16).unwrap(); // Single event.
-        scd.write_bytes(0x10u16).unwrap(); // Dummy event ID.
-        let timestamp = 0x123456789abcdefu64;
+        scd.write_bytes(0_u16).unwrap(); // Single event.
+        scd.write_bytes(0x10_u16).unwrap(); // Dummy event ID.
+        let timestamp = 0x0123_4567_89ab_cdef_u64;
         scd.write_bytes(timestamp).unwrap();
         let data = &[0x12, 0x34];
         scd.extend(data);
@@ -150,24 +151,24 @@ mod tests {
         assert_eq!(event_packet.request_id(), 1);
         assert_eq!(event_packet.scd.len(), 1);
         assert_eq!(event_packet.scd[0].event_id, 0x10);
-        assert_eq!(event_packet.scd[0].timestamp, 0x123456789abcdef);
+        assert_eq!(event_packet.scd[0].timestamp, 0x0123_4567_89ab_cdef);
         assert_eq!(event_packet.scd[0].data, data);
     }
 
     #[test]
     fn test_multi_event() {
         let mut scd = vec![];
-        scd.write_bytes(14u16).unwrap(); // Multi event 1.
-        scd.write_bytes(0x10u16).unwrap(); // Dummy event ID.
-        let timestamp = 0x123456789abcdefu64;
-        scd.write_bytes(timestamp).unwrap();
+        scd.write_bytes(14_u16).unwrap(); // Multi event 1.
+        scd.write_bytes(0x10_u16).unwrap(); // Dummy event ID.
+        let timestamp1 = 0x0123_4567_89ab_cdef_u64;
+        scd.write_bytes(timestamp1).unwrap();
         let data = &[0x12, 0x34];
         scd.extend(data);
 
-        scd.write_bytes(12u16).unwrap(); // Multi event 2.
-        scd.write_bytes(0x11u16).unwrap(); // Dummy event ID.
-        let timestamp = 0x1u64;
-        scd.write_bytes(timestamp).unwrap();
+        scd.write_bytes(12_u16).unwrap(); // Multi event 2.
+        scd.write_bytes(0x11_u16).unwrap(); // Dummy event ID.
+        let timestamp2 = 0x1_u64;
+        scd.write_bytes(timestamp2).unwrap();
 
         let mut raw_packet = serialize_header(scd.len() as u16, 1);
         raw_packet.extend(scd);
@@ -177,11 +178,11 @@ mod tests {
         assert_eq!(event_packet.request_id(), 1);
         assert_eq!(event_packet.scd.len(), 2);
         assert_eq!(event_packet.scd[0].event_id, 0x10);
-        assert_eq!(event_packet.scd[0].timestamp, 0x123456789abcdef);
+        assert_eq!(event_packet.scd[0].timestamp, timestamp1);
         assert_eq!(event_packet.scd[0].data, data);
 
         assert_eq!(event_packet.scd[1].event_id, 0x11);
-        assert_eq!(event_packet.scd[1].timestamp, 0x1);
+        assert_eq!(event_packet.scd[1].timestamp, timestamp2);
         assert_eq!(event_packet.scd[1].data, &[]);
     }
 }

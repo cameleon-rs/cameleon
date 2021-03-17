@@ -54,6 +54,7 @@ pub struct EmulatorBuilder {
 }
 
 impl EmulatorBuilder {
+    #[must_use]
     pub fn new() -> Self {
         let mut memory = Memory::new();
 
@@ -147,11 +148,18 @@ impl EmulatorBuilder {
     }
 
     fn build_device_info(&self) -> DeviceInfo {
-        use ABRM::*;
+        use ABRM::{
+            DeviceVersion, FamilyName, GenCpVersionMajor, GenCpVersionMinor, ManufacturerInfo,
+            ManufacturerName, ModelName, SerialNumber, UserDefinedName,
+        };
 
         let gencp_version_major = self.memory.read::<GenCpVersionMajor>().unwrap();
         let gencp_version_minor = self.memory.read::<GenCpVersionMinor>().unwrap();
-        let gencp_version = Version::new(gencp_version_major as u64, gencp_version_minor as u64, 0);
+        let gencp_version = Version::new(
+            u64::from(gencp_version_major),
+            u64::from(gencp_version_minor),
+            0,
+        );
 
         let vendor_name = self.memory.read::<ManufacturerName>().unwrap();
         let model_name = self.memory.read::<ModelName>().unwrap();
@@ -192,7 +200,7 @@ impl EmulatorBuilder {
     }
 
     fn current_speed(&self) -> BusSpeed {
-        use BusSpeed::*;
+        use BusSpeed::{FullSpeed, HighSpeed, LowSpeed, SuperSpeed, SuperSpeedPlus};
         match self.memory.read::<SBRM::CurrentSpeed>().unwrap() {
             0b00001 => LowSpeed,
             0b00010 => FullSpeed,

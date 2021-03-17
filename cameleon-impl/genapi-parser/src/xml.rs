@@ -75,11 +75,10 @@ impl<'a, 'input> Node<'a, 'input> {
         let mut inner;
         loop {
             inner = self.children.peek()?;
-            if inner.node_type() != roxmltree::NodeType::Element {
-                self.children.next();
-            } else {
+            if inner.node_type() == roxmltree::NodeType::Element {
                 break;
             }
+            self.children.next();
         }
         let node = Self::from_xmltree_node(*inner);
 
@@ -121,9 +120,12 @@ impl<'a, 'input> Attributes<'a, 'input> {
     }
 
     fn attribute_of(&self, name: &str) -> Option<&str> {
-        self.attrs
-            .iter()
-            .find(|attr| attr.name() == name)
-            .map(|attr| attr.value())
+        self.attrs.iter().find_map(|attr| {
+            if attr.name() == name {
+                Some(roxmltree::Attribute::value(attr))
+            } else {
+                None
+            }
+        })
     }
 }

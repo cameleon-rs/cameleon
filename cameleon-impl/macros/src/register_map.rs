@@ -42,7 +42,7 @@ impl RegisterMap {
 
         let mut offset = quote! {0};
         let mut regs = vec![];
-        for variant in input_enum.variants.into_iter() {
+        for variant in input_enum.variants {
             let reg = Register::parse(variant, &mut offset)?;
             reg.verify(args.endianness)?;
             regs.push(reg);
@@ -510,14 +510,7 @@ impl Register {
             }
         }
 
-        if let Some(reg_attr) = reg_attr {
-            Ok(reg_attr)
-        } else {
-            Err(Error::new_spanned(
-                variant,
-                "register attributes must exist",
-            ))
-        }
+        reg_attr.ok_or_else(|| Error::new_spanned(variant, "register attributes must exist"))
     }
 }
 
@@ -601,7 +594,7 @@ impl AccessRight {
 
 impl quote::ToTokens for AccessRight {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        use AccessRight::*;
+        use AccessRight::{NA, RO, RW, WO};
         match self {
             NA => format_ident!("NA").to_tokens(tokens),
             RO => format_ident!("RO").to_tokens(tokens),
@@ -684,12 +677,12 @@ enum RegisterType {
 
 impl RegisterType {
     fn is_integral(&self) -> bool {
-        use RegisterType::*;
+        use RegisterType::{BitField, Bytes, Str, F32, F64};
         !matches!(self, Str | Bytes | BitField(..) | F32 | F64)
     }
 
     fn is_signed(&self) -> bool {
-        use RegisterType::*;
+        use RegisterType::{I16, I32, I64, I8, U16, U32, U64, U8};
         match self {
             I8 | I16 | I32 | I64 => true,
             U8 | U16 | U32 | U64 => false,
@@ -698,7 +691,7 @@ impl RegisterType {
     }
 
     fn integral_bits(&self) -> usize {
-        use RegisterType::*;
+        use RegisterType::{I16, I32, I64, I8, U16, U32, U64, U8};
         match self {
             U8 | I8 => 8,
             U16 | I16 => 16,
@@ -709,7 +702,7 @@ impl RegisterType {
     }
 
     fn numerical_bits(&self) -> usize {
-        use RegisterType::*;
+        use RegisterType::{F32, F64, I16, I32, I64, I8, U16, U32, U64, U8};
         match self {
             U8 | I8 => 8,
             U16 | I16 => 16,
@@ -720,7 +713,7 @@ impl RegisterType {
     }
 
     fn associated_ty(&self) -> &str {
-        use RegisterType::*;
+        use RegisterType::{BitField, Bytes, Str, F32, F64, I16, I32, I64, I8, U16, U32, U64, U8};
         match self {
             Str => "std::string::String",
             Bytes => "Vec<u8>",
@@ -741,7 +734,7 @@ impl RegisterType {
 
 impl syn::parse::Parse for RegisterType {
     fn parse(input: syn::parse::ParseStream) -> Result<Self> {
-        use RegisterType::*;
+        use RegisterType::{BitField, Bytes, Str, F32, F64, I16, I32, I64, I8, U16, U32, U64, U8};
 
         let ident = input.parse::<syn::Ident>()?;
         let err_msg =

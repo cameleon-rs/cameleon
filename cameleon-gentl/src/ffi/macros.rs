@@ -50,7 +50,7 @@ macro_rules! newtype_enum {
     }
     ) => {
 
-        #[derive(PartialEq, Eq)]
+        #[derive(PartialEq, Eq, Clone, Copy)]
         #[repr(transparent)]
         pub struct $name(i32);
 

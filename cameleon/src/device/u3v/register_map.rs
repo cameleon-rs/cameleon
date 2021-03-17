@@ -41,7 +41,10 @@
 //! ```
 use std::{convert::TryInto, time::Duration};
 
-use cameleon_device::u3v::{self, register_map::*};
+use cameleon_device::u3v::{
+    self,
+    register_map::{abrm, manifest_entry, sbrm, sirm},
+};
 
 use crate::device::{CompressionType, DeviceError, DeviceResult, GenICamFileType};
 
@@ -138,14 +141,14 @@ impl<'a> Abrm<'a> {
         ))
     }
 
-    /// GenCP version of the device.
+    /// `GenCP` version of the device.
     pub fn gencp_version(&self) -> DeviceResult<semver::Version> {
         let gencp_version: u32 = self.read_register(abrm::GENCP_VERSION)?;
         let gencp_version_minor = gencp_version & 0xff;
         let gencp_version_major = (gencp_version >> 16) & 0xff;
         Ok(semver::Version::new(
-            gencp_version_major as u64,
-            gencp_version_minor as u64,
+            u64::from(gencp_version_major),
+            u64::from(gencp_version_minor),
             0,
         ))
     }
@@ -300,7 +303,7 @@ impl<'a> Abrm<'a> {
 
     /// Update timestamp register by set 1 to `timestamp_latch`.
     pub fn set_timestamp_latch_bit(&self) -> DeviceResult<()> {
-        self.write_register(abrm::TIMESTAMP_LATCH, 1u32)
+        self.write_register(abrm::TIMESTAMP_LATCH, 1_u32)
     }
 
     /// Time stamp increment that indicates the ns/tick of the device internal clock.
@@ -380,9 +383,9 @@ impl<'a> Abrm<'a> {
     /// // Enable multi event.
     /// let mut configuration = abrm.device_configuration().unwrap();
     /// configuration.set_multi_event_enable_bit();
-    /// abrm.write_device_configuration(&configuration).unwrap();
+    /// abrm.write_device_configuration(configuration).unwrap();
     /// ```
-    pub fn write_device_configuration(&self, config: &DeviceConfiguration) -> DeviceResult<()> {
+    pub fn write_device_configuration(&self, config: DeviceConfiguration) -> DeviceResult<()> {
         self.write_register(abrm::DEVICE_CONFIGURATION, config)
     }
 
@@ -443,7 +446,7 @@ pub struct Sbrm<'a> {
 impl<'a> Sbrm<'a> {
     /// Construct new `Sbrm`.
     ///
-    /// To construct `Sbrm`, it is easier to call [`Abrm::sbrm].
+    /// To construct `Sbrm`, it is easier to call [`Abrm::sbrm`].
     pub fn new(handle: &'a ControlHandle, sbrm_addr: u64) -> DeviceResult<Self> {
         let (capability_offset, capability_len) = sbrm::U3VCP_CAPABILITY_REGISTER;
         let capability_addr = capability_offset + sbrm_addr;
@@ -463,8 +466,8 @@ impl<'a> Sbrm<'a> {
         let u3v_version_major = (u3v_version >> 16) & 0xff;
 
         Ok(semver::Version::new(
-            u3v_version_major as u64,
-            u3v_version_minor as u64,
+            u64::from(u3v_version_major),
+            u64::from(u3v_version_minor),
             0,
         ))
     }
@@ -621,6 +624,7 @@ impl<'a> Sirm<'a> {
     /// Construct new `Sirm`.
     ///
     /// To construct `Sirm`, it's easier to call [`Sbrm::sirm`].
+    #[must_use]
     pub fn new(handle: &'a ControlHandle, sirm_addr: u64) -> Self {
         Self { handle, sirm_addr }
     }
@@ -633,14 +637,14 @@ impl<'a> Sirm<'a> {
         let si_info: u32 = self.read_register(sirm::SI_INFO)?;
         // Upper 8 bites specifies the exp of the alignment.
         let exp = si_info >> 24;
-        Ok(2usize.pow(exp))
+        Ok(2_usize.pow(exp))
     }
 
     /// Enable stream.
     ///
     /// It's forbidden to write to SIRM registers while stream is enabled.
     pub fn enable_stream(&self) -> DeviceResult<()> {
-        let value = 1u32;
+        let value = 1_u32;
         self.write_register(sirm::SI_CONTROL, value)
     }
 
@@ -648,7 +652,7 @@ impl<'a> Sirm<'a> {
     ///
     /// It's forbidden to write to SIRM registers while stream is enabled.
     pub fn disable_stream(&self) -> DeviceResult<()> {
-        let value = 0u32;
+        let value = 0_u32;
         self.write_register(sirm::SI_CONTROL, value)
     }
 
@@ -817,6 +821,7 @@ pub struct ManifestTable<'a> {
 impl<'a> ManifestTable<'a> {
     /// Construct `ManifestTable` from its initial address. It may be easier to call
     /// [`Abrm::manifest_table`]
+    #[must_use]
     pub fn new(handle: &'a ControlHandle, manifest_address: u64) -> Self {
         Self {
             handle,
@@ -844,7 +849,7 @@ impl<'a> ManifestTable<'a> {
     }
 }
 
-/// Manifest entry describes GenApi XML properties.
+/// Manifest entry describes `GenApi` XML properties.
 /// # Examples
 ///
 /// ```no_run
@@ -874,11 +879,12 @@ pub struct ManifestEntry<'a> {
 impl<'a> ManifestEntry<'a> {
     /// Construct `ManifestEntry` from its initial address.
     /// Using [`ManifestTable::entries`] is recommended to obtain `ManifestEntry`.
+    #[must_use]
     pub fn new(entry_addr: u64, handle: &'a ControlHandle) -> Self {
         Self { entry_addr, handle }
     }
 
-    /// GenICam file version.
+    /// `GenICam` file version.
     pub fn genicam_file_version(&self) -> DeviceResult<semver::Version> {
         let file_version: u32 = self.read_register(manifest_entry::GENICAM_FILE_VERSION)?;
         let subminor = file_version & 0xff;
@@ -886,23 +892,23 @@ impl<'a> ManifestEntry<'a> {
         let major = (file_version >> 24) & 0xff;
 
         Ok(semver::Version::new(
-            major as u64,
-            minor as u64,
-            subminor as u64,
+            u64::from(major),
+            u64::from(minor),
+            u64::from(subminor),
         ))
     }
 
-    /// Register address where GenApi XML file is located.
+    /// Register address where `GenApi` XML file is located.
     pub fn file_address(&self) -> DeviceResult<u64> {
         self.read_register(manifest_entry::REGISTER_ADDRESS)
     }
 
-    /// GenApi XML file size in bytes.
+    /// `GenApi` XML file size in bytes.
     pub fn file_size(&self) -> DeviceResult<u64> {
         self.read_register(manifest_entry::FILE_SIZE)
     }
 
-    /// GenApi XML file info.
+    /// `GenApi` XML file info.
     pub fn file_info(&self) -> DeviceResult<GenICamFileInfo> {
         self.read_register(manifest_entry::FILE_FORMAT_INFO)
     }
@@ -983,14 +989,15 @@ macro_rules! unset_bit {
 /// // Enable multi event by setting configuration.
 /// let mut configuration = abrm.device_configuration().unwrap();
 /// configuration.set_multi_event_enable_bit();
-/// abrm.write_device_configuration(&configuration).unwrap();
+/// abrm.write_device_configuration(configuration).unwrap();
 /// ```
 #[derive(Clone, Copy)]
 pub struct DeviceConfiguration(u64);
 impl DeviceConfiguration {
     /// Indicate multi event is enabled on the device.
-    pub fn is_multi_event_enabled(&self) -> bool {
-        is_bit_set!(&self.0, 1)
+    #[must_use]
+    pub fn is_multi_event_enabled(self) -> bool {
+        is_bit_set!(self.0, 1)
     }
 
     /// Set multi event enable bit.
@@ -1039,28 +1046,33 @@ pub struct DeviceCapability(u64);
 
 impl DeviceCapability {
     /// Indicate whether use defined name is supported or not.
-    pub fn is_user_defined_name_supported(&self) -> bool {
-        is_bit_set!(&self.0, 0)
+    #[must_use]
+    pub fn is_user_defined_name_supported(self) -> bool {
+        is_bit_set!(self.0, 0)
     }
 
     /// Indicate whether family name is supported or not.
-    pub fn is_family_name_supported(&self) -> bool {
-        is_bit_set!(&self.0, 8)
+    #[must_use]
+    pub fn is_family_name_supported(self) -> bool {
+        is_bit_set!(self.0, 8)
     }
 
     /// Indicate whether the device supports multiple events in a single event command packet.
-    pub fn is_multi_event_supported(&self) -> bool {
-        is_bit_set!(&self.0, 12)
+    #[must_use]
+    pub fn is_multi_event_supported(self) -> bool {
+        is_bit_set!(self.0, 12)
     }
 
-    /// Indicate whether the device supports stacked commands (ReadMemStacked and WriteMemStacked).
-    pub fn is_stacked_commands_supported(&self) -> bool {
-        is_bit_set!(&self.0, 13)
+    /// Indicate whether the device supports stacked commands (`ReadMemStacked` and `WriteMemStacked`).
+    #[must_use]
+    pub fn is_stacked_commands_supported(self) -> bool {
+        is_bit_set!(self.0, 13)
     }
 
     /// Indicate whether the device supports software interface version is supported.
-    pub fn is_device_software_interface_version_supported(&self) -> bool {
-        is_bit_set!(&self.0, 14)
+    #[must_use]
+    pub fn is_device_software_interface_version_supported(self) -> bool {
+        is_bit_set!(self.0, 14)
     }
 }
 
@@ -1095,17 +1107,20 @@ pub struct U3VCapablitiy(u64);
 
 impl U3VCapablitiy {
     /// Indicate whether SIRM is available or not.
-    pub fn is_sirm_available(&self) -> bool {
+    #[must_use]
+    pub fn is_sirm_available(self) -> bool {
         is_bit_set!(&self.0, 0)
     }
 
     /// Indicate whether EIRM is available or not.
-    pub fn is_eirm_available(&self) -> bool {
+    #[must_use]
+    pub fn is_eirm_available(self) -> bool {
         is_bit_set!(&self.0, 1)
     }
 
     /// Indicate whether IIDC2 is available or not.
-    pub fn is_iidc2_available(&self) -> bool {
+    #[must_use]
+    pub fn is_iidc2_available(self) -> bool {
         is_bit_set!(&self.0, 2)
     }
 }
@@ -1151,7 +1166,7 @@ impl GenICamFileInfo {
 
     /// Compression type of the XML File.
     pub fn compression_type(&self) -> DeviceResult<CompressionType> {
-        let raw = (self.0 >> 10) & 0b111111;
+        let raw = (self.0 >> 10) & 0b11_1111;
         match raw {
             0 => Ok(CompressionType::Uncompressed),
             1 => Ok(CompressionType::Zip),
@@ -1161,11 +1176,12 @@ impl GenICamFileInfo {
         }
     }
 
-    /// GenICam schema version of the XML file compiles with.
+    /// `GenICam` schema version of the XML file compiles with.
+    #[must_use]
     pub fn schema_version(&self) -> semver::Version {
         let major = (self.0 >> 24) & 0xff;
         let minor = (self.0 >> 16) & 0xff;
-        semver::Version::new(major as u64, minor as u64, 0)
+        semver::Version::new(u64::from(major), u64::from(minor), 0)
     }
 }
 
@@ -1195,11 +1211,10 @@ impl ParseBytes for String {
     fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
         // The string may be zero-terminated.
         let len = bytes.iter().position(|&b| b == 0);
-        let s = if let Some(len) = len {
-            std::str::from_utf8(&bytes[..len])
-        } else {
-            std::str::from_utf8(bytes)
-        };
+        let s = len.map_or_else(
+            || std::str::from_utf8(bytes),
+            |len| std::str::from_utf8(&bytes[..len]),
+        );
 
         let s = s.map_err(|_| {
             DeviceError::InternalError("device's string register value is broken".into())
@@ -1212,7 +1227,7 @@ impl ParseBytes for String {
 impl ParseBytes for Duration {
     fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
         let raw = u32::parse_bytes(bytes)?;
-        Ok(Duration::from_millis(raw as u64))
+        Ok(Duration::from_millis(u64::from(raw)))
     }
 }
 
@@ -1224,7 +1239,7 @@ impl ParseBytes for U3VCapablitiy {
 
 impl ParseBytes for u3v::BusSpeed {
     fn parse_bytes(bytes: &[u8]) -> DeviceResult<Self> {
-        use u3v::BusSpeed::*;
+        use u3v::BusSpeed::{FullSpeed, HighSpeed, LowSpeed, SuperSpeed, SuperSpeedPlus};
 
         let raw = u32::parse_bytes(bytes)?;
         let speed = match raw {

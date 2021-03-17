@@ -11,7 +11,7 @@ pub struct AckPacket<'a> {
 }
 
 impl<'a> AckPacket<'a> {
-    const PREFIX_MAGIC: u32 = 0x43563355;
+    const PREFIX_MAGIC: u32 = 0x4356_3355;
 
     pub fn parse(buf: &'a (impl AsRef<[u8]> + ?Sized)) -> Result<Self> {
         let mut cursor = Cursor::new(buf.as_ref());
@@ -24,14 +24,17 @@ impl<'a> AckPacket<'a> {
         Ok(Self { ccd, raw_scd })
     }
 
+    #[must_use]
     pub fn scd_kind(&self) -> ScdKind {
         self.ccd.scd_kind
     }
 
+    #[must_use]
     pub fn ccd(&self) -> &AckCcd {
         &self.ccd
     }
 
+    #[must_use]
     pub fn raw_scd(&self) -> &'a [u8] {
         self.raw_scd
     }
@@ -40,10 +43,12 @@ impl<'a> AckPacket<'a> {
         T::parse(self.raw_scd, &self.ccd)
     }
 
+    #[must_use]
     pub fn status(&self) -> &Status {
         &self.ccd.status
     }
 
+    #[must_use]
     pub fn request_id(&self) -> u16 {
         self.ccd.request_id
     }
@@ -67,18 +72,22 @@ pub struct AckCcd {
 }
 
 impl AckCcd {
+    #[must_use]
     pub fn status(&self) -> Status {
         self.status
     }
 
+    #[must_use]
     pub fn scd_kind(&self) -> ScdKind {
         self.scd_kind
     }
 
+    #[must_use]
     pub fn request_id(&self) -> u16 {
         self.request_id
     }
 
+    #[must_use]
     pub fn scd_len(&self) -> u16 {
         self.scd_len
     }
@@ -92,8 +101,8 @@ impl AckCcd {
         Ok(Self {
             status,
             scd_kind,
-            scd_len,
             request_id,
+            scd_len,
         })
     }
 }
@@ -170,19 +179,23 @@ pub enum UsbSpecificStatus {
 }
 
 impl Status {
-    pub fn is_success(&self) -> bool {
+    #[must_use]
+    pub fn is_success(self) -> bool {
         matches!(self.kind, StatusKind::GenCp(GenCpStatus::Success))
     }
 
-    pub fn is_fatal(&self) -> bool {
+    #[must_use]
+    pub fn is_fatal(self) -> bool {
         self.code >> 15 == 1
     }
 
-    pub fn code(&self) -> u16 {
+    #[must_use]
+    pub fn code(self) -> u16 {
         self.code
     }
 
-    pub fn kind(&self) -> StatusKind {
+    #[must_use]
+    pub fn kind(self) -> StatusKind {
         self.kind
     }
 
@@ -204,7 +217,10 @@ impl Status {
     }
 
     fn parse_gencp_status(code: u16) -> Result<Self> {
-        use GenCpStatus::*;
+        use GenCpStatus::{
+            AccessDenied, BadAlignment, Busy, GenericError, InvalidAddress, InvalidHeader,
+            InvalidParameter, NotImplemented, Success, Timeout, WriteProtect, WrongConfig,
+        };
 
         debug_assert!((code >> 13).trailing_zeros() >= 2);
 
@@ -235,7 +251,10 @@ impl Status {
     }
 
     fn parse_usb_status(code: u16) -> Result<Self> {
-        use UsbSpecificStatus::*;
+        use UsbSpecificStatus::{
+            EventEndpointHalted, InvalidSiState, PayloadSizeNotAligned, ResendNotSupported,
+            StreamEndpointHalted,
+        };
 
         debug_assert!(code >> 13 & 0b11 == 0b01);
 
@@ -393,7 +412,7 @@ mod tests {
         request_id: u16,
     ) -> Vec<u8> {
         let mut ccd = vec![];
-        ccd.write_bytes(0x43563355u32).unwrap();
+        ccd.write_bytes(0x4356_3355_u32).unwrap();
         ccd.write_bytes(status_code).unwrap();
         ccd.write_bytes(command_id).unwrap();
         ccd.write_bytes(scd_len).unwrap();
@@ -487,7 +506,7 @@ mod tests {
     fn test_gencp_error_status() {
         let mut code_buf = vec![0; 2];
 
-        code_buf.as_mut_slice().write_bytes(0x800Fu16).unwrap();
+        code_buf.as_mut_slice().write_bytes(0x800F_u16).unwrap();
         let mut code = Cursor::new(code_buf.as_slice());
         let status = Status::parse(&mut code).unwrap();
         assert!(!status.is_success());
@@ -498,7 +517,7 @@ mod tests {
     fn test_usb_error_status() {
         let mut code_buf = vec![0; 2];
 
-        code_buf.as_mut_slice().write_bytes(0xA001u16).unwrap();
+        code_buf.as_mut_slice().write_bytes(0xA001_u16).unwrap();
         let mut code = Cursor::new(code_buf.as_slice());
         let status = Status::parse(&mut code).unwrap();
         assert!(!status.is_success());
