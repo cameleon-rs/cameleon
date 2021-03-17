@@ -34,6 +34,7 @@ impl StreamHandle {
     }
 
     /// Return `true` if the handle is opened.
+    #[must_use]
     pub fn is_opened(&self) -> bool {
         self.channel.lock().unwrap().is_opened()
     }
@@ -101,6 +102,7 @@ impl StreamHandle {
     }
 
     /// Return params.
+    #[must_use]
     pub fn params(&self) -> &StreamParams {
         &self.params
     }
@@ -112,14 +114,10 @@ impl StreamHandle {
 
     pub(super) fn new(device: &u3v::Device) -> DeviceResult<Option<Self>> {
         let channel = device.stream_channel()?;
-        if let Some(channel) = channel {
-            Ok(Some(Self {
-                channel: Arc::new(Mutex::new(channel)),
-                params: Default::default(),
-            }))
-        } else {
-            Ok(None)
-        }
+        Ok(channel.map(|channel| Self {
+            channel: Arc::new(Mutex::new(channel)),
+            params: StreamParams::default(),
+        }))
     }
 
     fn recv(
@@ -166,6 +164,7 @@ pub struct StreamParams {
 
 impl StreamParams {
     /// Constructor of `StreamParams`.
+    #[must_use]
     pub fn new(
         leader_size: usize,
         trailer_size: usize,

@@ -54,11 +54,14 @@ use super::DeviceError;
 
 impl From<u3v::Error> for DeviceError {
     fn from(err: u3v::Error) -> DeviceError {
-        use u3v::Error::*;
+        use u3v::Error::{BufferIoError, InvalidDevice, InvalidPacket, LibUsbError};
 
         match &err {
             LibUsbError(libusb_error) => {
-                use u3v::LibUsbError::*;
+                use u3v::LibUsbError::{
+                    Access, BadDescriptor, Busy, Interrupted, InvalidParam, Io, NoDevice, NoMem,
+                    NotFound, NotSupported, Other, Overflow, Pipe, Timeout,
+                };
                 match libusb_error {
                     Io | InvalidParam | Access | Overflow | Pipe | Interrupted | NoMem
                     | NotSupported | BadDescriptor | Other => DeviceError::Io(err.into()),

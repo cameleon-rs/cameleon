@@ -42,11 +42,13 @@ pub struct Device {
 
 impl Device {
     /// Return control handle of the device.
+    #[must_use]
     pub fn control_handle(&self) -> &ControlHandle {
         &self.ctrl_handle
     }
 
     /// Return stream handle of the device.
+    #[must_use]
     pub fn stream_handle(&self) -> Option<&StreamHandle> {
         self.strm_handle.as_ref()
     }
@@ -70,6 +72,7 @@ impl Device {
     /// let device_info = device.device_info();
     ///
     /// ```
+    #[must_use]
     pub fn device_info(&self) -> &DeviceInfo {
         self.device.device_info()
     }
@@ -104,6 +107,6 @@ pub fn enumerate_devices() -> DeviceResult<Vec<Device>> {
     Ok(devices
         .into_iter()
         .map(Device::new)
-        .filter_map(|d| d.ok())
+        .filter_map(std::result::Result::ok)
         .collect())
 }

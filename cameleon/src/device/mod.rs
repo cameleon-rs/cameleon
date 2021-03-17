@@ -1,4 +1,4 @@
-//! This module provides low level API for manipulating GenICam compatible devices.
+//! This module provides low level API for manipulating `GenICam` compatible devices.
 //!
 //! # Examples
 //!
@@ -80,20 +80,20 @@ pub enum DeviceError {
 /// A specialized `Result` type for device manipulation.
 pub type DeviceResult<T> = std::result::Result<T, DeviceError>;
 
-/// Represent file type of GenICam XML file on the device's memory.
+/// Represent file type of `GenICam` XML file on the device's memory.
 #[derive(Debug, Clone, Copy)]
 pub enum GenICamFileType {
-    /// This is the “normal” GenICam device XML containing all device features.
+    /// This is the “normal” `GenICam` device XML containing all device features.
     DeviceXml,
     /// This is optional XML-file that contains only the chunkdata related nodes.
     BufferXml,
 }
 
-/// Represent CompressionType of GenICam XML file on the device's memory.
+/// Represent `CompressionType` of `GenICam` XML file on the device's memory.
 #[derive(Debug, Clone, Copy)]
 pub enum CompressionType {
-    /// Uncompressed GenICam XML file.
+    /// Uncompressed `GenICam` XML file.
     Uncompressed,
-    /// ZIP containing a single GenICam XML file.
+    /// ZIP containing a single `GenICam` XML file.
     Zip,
 }
