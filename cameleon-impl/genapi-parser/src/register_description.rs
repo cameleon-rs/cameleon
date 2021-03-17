@@ -209,6 +209,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn test_register_description() {
         let xml = r#"
         <RegisterDescription

@@ -104,22 +104,22 @@ mod tests {
 
     #[test]
     fn test_boolean_node_with_imm() {
-        let xml = r#"
+        let xml1 = r#"
             <Boolean Name="TestNode">
                 <Value>true</Value>
             </Boolean>
             "#;
 
-        let node: BooleanNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
+        let node: BooleanNode = xml::Document::from_str(&xml1).unwrap().root_node().parse();
         assert_eq!(node.value(), &ImmOrPNode::Imm(true));
 
-        let xml = r#"
+        let xml2 = r#"
             <Boolean Name="TestNode">
                 <Value>false</Value>
             </Boolean>
             "#;
 
-        let node: BooleanNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
+        let node: BooleanNode = xml::Document::from_str(&xml2).unwrap().root_node().parse();
         assert_eq!(node.value(), &ImmOrPNode::Imm(false));
     }
 }
