@@ -1,3 +1,9 @@
+#![allow(
+    clippy::module_name_repetitions,
+    clippy::clippy::similar_names,
+    clippy::clippy::missing_errors_doc
+)]
+
 // TODO: Remove #[allow(unused)]
 #[allow(non_snake_case, non_camel_case_types, unused)]
 pub mod ffi;

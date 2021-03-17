@@ -2,7 +2,10 @@ use std::{ffi::CStr, sync::Mutex};
 
 use crate::{imp, GenTlError, GenTlResult};
 
-use super::{interface::InterfaceModuleRef, *};
+use super::{
+    bool8_t, copy_info, interface, interface::InterfaceModuleRef, CopyTo, ModuleHandle, GC_ERROR,
+    INFO_DATATYPE,
+};
 
 pub(super) type TL_HANDLE = *mut libc::c_void;
 

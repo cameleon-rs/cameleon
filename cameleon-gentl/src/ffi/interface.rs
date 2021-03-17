@@ -2,7 +2,10 @@ use std::{convert::TryInto, ffi::CStr, sync::Mutex, time::Duration};
 
 use crate::imp;
 
-use super::{device::DeviceModuleRef, *};
+use super::{
+    bool8_t, copy_info, device, device::DeviceModuleRef, system, CopyTo, GenTlError, GenTlResult,
+    ModuleHandle, GC_ERROR, INFO_DATATYPE,
+};
 
 pub(super) type IF_HANDLE = *mut libc::c_void;
 

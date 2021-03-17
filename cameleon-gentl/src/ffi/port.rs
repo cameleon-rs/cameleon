@@ -2,7 +2,9 @@ use std::slice;
 
 use imp::port::Port as _;
 
-use super::*;
+use super::{
+    bool8_t, copy_info, imp, GenTlError, GenTlResult, ModuleHandle, GC_ERROR, INFO_DATATYPE,
+};
 
 pub(super) type PORT_HANDLE = *mut libc::c_void;
 
@@ -230,7 +232,7 @@ gentl_api! {
             file_location_to_url(xml_info, port.port_info()?)
         });
 
-        copy_info(url.as_str(), sURL as *mut libc::c_void, piSize)?;
+        copy_info(url.as_str(), sURL.cast::<libc::c_void>(), piSize)?;
         Ok(())
     }
 }
@@ -372,7 +374,7 @@ gentl_api! {
     ) -> GenTlResult<()> {
         unsafe {
             let handle = ModuleHandle::from_raw_manually_drop(hPort)?;
-            let buffer = std::slice::from_raw_parts_mut(pBuffer as *mut u8, *piSize);
+            let buffer = std::slice::from_raw_parts_mut(pBuffer.cast::<u8>(), *piSize);
 
             let read_len = with_port!(handle, |port| {
                 port.read(iAddress, buffer)
@@ -394,7 +396,7 @@ gentl_api! {
     ) -> GenTlResult<()> {
         unsafe {
             let handle = ModuleHandle::from_raw_manually_drop(hPort)?;
-            let data = std::slice::from_raw_parts(pBuffer as *const u8, *piSize);
+            let data = std::slice::from_raw_parts(pBuffer.cast::<u8>(), *piSize);
 
             let written_len = with_port!(handle, |port| {
                 port.write(iAddress, data)?
@@ -420,7 +422,7 @@ gentl_api! {
                     let raw_ent = *pEntries.add(i);
                     (
                         raw_ent.Address,
-                        slice::from_raw_parts_mut(raw_ent.pBuffer as *mut u8, raw_ent.Size),
+                        slice::from_raw_parts_mut(raw_ent.pBuffer.cast::<u8>(), raw_ent.Size),
                     )
                 })
                 .collect();
@@ -446,7 +448,7 @@ gentl_api! {
                     let raw_ent = *pEntries.add(i);
                     (
                         raw_ent.Address,
-                        slice::from_raw_parts(raw_ent.pBuffer as *mut u8, raw_ent.Size),
+                        slice::from_raw_parts(raw_ent.pBuffer.cast::<u8>(), raw_ent.Size),
                     )
                 })
                 .collect();

@@ -4,7 +4,7 @@ use crate::{GenTlError, GenTlResult};
 
 pub(crate) mod u3v;
 
-use crate::imp::port::*;
+use crate::imp::port::{Port, TlType};
 
 mod u3v_genapi;
 
@@ -80,7 +80,7 @@ pub(crate) enum DeviceAccessFlag {
 
 impl DeviceAccessStatus {
     pub(crate) fn is_opened(self) -> bool {
-        use DeviceAccessStatus::*;
+        use DeviceAccessStatus::{OpenReadOnly, OpenReadWrite};
 
         matches!(self, OpenReadOnly | OpenReadWrite)
     }

@@ -1,6 +1,10 @@
 use std::sync::Mutex;
 
-use crate::{imp::device::Device, imp::port::*, GenTlError, GenTlResult};
+use crate::{
+    imp::device::Device,
+    imp::port::{Port, TlType},
+    GenTlError, GenTlResult,
+};
 
 pub(crate) mod u3v;
 

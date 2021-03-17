@@ -5,7 +5,10 @@ use cameleon::device::CompressionType;
 use cameleon_impl::memory::prelude::*;
 
 use crate::{
-    imp::{genapi_common, port::*},
+    imp::{
+        genapi_common,
+        port::{Endianness, ModuleType, Port, PortAccess, PortInfo, TlType, XmlInfo, XmlLocation},
+    },
     GenTlError, GenTlResult,
 };
 
@@ -16,7 +19,7 @@ pub(crate) fn enumerate_u3v_device() -> GenTlResult<Vec<U3VDeviceModule>> {
     Ok(u3v::enumerate_devices()?
         .into_iter()
         .map(U3VDeviceModule::new)
-        .filter_map(|dev| dev.ok())
+        .filter_map(std::result::Result::ok)
         .collect())
 }
 

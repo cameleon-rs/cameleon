@@ -13,7 +13,7 @@ use crate::{
             Device, DeviceAccessStatus,
         },
         genapi_common,
-        port::*,
+        port::{Endianness, ModuleType, Port, PortAccess, PortInfo, TlType, XmlInfo, XmlLocation},
     },
     GenTlError, GenTlResult,
 };
@@ -142,7 +142,7 @@ impl U3VInterfaceModule {
     }
 
     fn find_device_by_id(&self, id: &str) -> GenTlResult<Option<&Mutex<U3VDeviceModule>>> {
-        for dev in self.devices.iter() {
+        for dev in &self.devices {
             if dev.lock().unwrap().port_info()?.id == id {
                 return Ok(Some(dev.as_ref()));
             }
@@ -196,14 +196,14 @@ impl U3VInterfaceModule {
         let device_info = device.device_info();
 
         self.vm
-            .write::<GenApiReg::DeviceID>(device.port_info()?.id.to_owned())?;
+            .write::<GenApiReg::DeviceID>(device.port_info()?.id.clone())?;
 
         self.vm
-            .write::<GenApiReg::DeviceVendorName>(device_info.vendor_name.to_owned())
+            .write::<GenApiReg::DeviceVendorName>(device_info.vendor_name.clone())
             .unwrap();
 
         self.vm
-            .write::<GenApiReg::DeviceModelName>(device_info.model_name.to_owned())?;
+            .write::<GenApiReg::DeviceModelName>(device_info.model_name.clone())?;
 
         let status: DeviceAccessStatus = device.access_status();
         self.vm

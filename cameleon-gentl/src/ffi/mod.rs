@@ -46,7 +46,12 @@ impl From<bool> for bool8_t {
 
 impl Into<GC_ERROR> for &GenTlError {
     fn into(self) -> GC_ERROR {
-        use GenTlError::*;
+        use GenTlError::{
+            Abort, AccessDenied, Ambiguous, BufferTooSmall, Busy, Error, InvalidAddress,
+            InvalidBuffer, InvalidHandle, InvalidId, InvalidIndex, InvalidParameter, InvalidValue,
+            Io, NoData, NotAvailable, NotImplemented, NotInitialized, OutOfMemory,
+            ParsingChunkData, ResourceExhausted, ResourceInUse, Timeout,
+        };
         let code = match self {
             Error(..) => -1001,
             NotInitialized => -1002,
@@ -136,16 +141,16 @@ impl<'a> ModuleHandle<'a> {
     unsafe fn from_raw_manually_drop(
         raw_handle: *mut libc::c_void,
     ) -> GenTlResult<ManuallyDrop<Box<ModuleHandle<'a>>>> {
-        if !raw_handle.is_null() {
-            let handle = raw_handle as *mut ModuleHandle;
-            Ok(ManuallyDrop::new(Box::from_raw(handle)))
-        } else {
+        if raw_handle.is_null() {
             Err(GenTlError::InvalidHandle)
+        } else {
+            let handle = raw_handle.cast::<ModuleHandle>();
+            Ok(ManuallyDrop::new(Box::from_raw(handle)))
         }
     }
 
     unsafe fn into_raw(self: Box<Self>) -> *mut libc::c_void {
-        Box::into_raw(self) as *mut libc::c_void
+        Box::into_raw(self).cast::<libc::c_void>()
     }
 }
 
@@ -206,7 +211,7 @@ fn copy_info<T: CopyTo>(
     dst: *mut libc::c_void,
     dst_size: *mut libc::size_t,
 ) -> GenTlResult<INFO_DATATYPE> {
-    src.copy_to(dst as *mut T::Destination, dst_size)?;
+    src.copy_to(dst.cast::<<T as CopyTo>::Destination>(), dst_size)?;
     Ok(T::info_data_type())
 }
 
@@ -232,11 +237,7 @@ impl CopyTo for &str {
                 if *dst_size < string_len {
                     return Err(GenTlError::BufferTooSmall);
                 }
-                std::ptr::copy_nonoverlapping(
-                    self.as_ptr() as *const libc::c_char,
-                    dst,
-                    self.len(),
-                );
+                std::ptr::copy_nonoverlapping(self.as_ptr().cast::<i8>(), dst, self.len());
                 dst.add(self.len()).write(0); // Null terminated.
             }
         }
@@ -426,11 +427,11 @@ gentl_api!(
 gentl_api!(
     pub fn GCCloseLib() -> GenTlResult<()> {
         let mut is_init = IS_LIB_INITIALIZED.write().unwrap();
-        if !*is_init {
-            Err(GenTlError::NotInitialized)
-        } else {
+        if *is_init {
             *is_init = false;
             Ok(())
+        } else {
+            Err(GenTlError::NotInitialized)
         }
     }
 );

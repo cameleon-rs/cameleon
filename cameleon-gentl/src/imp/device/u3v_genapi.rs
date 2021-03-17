@@ -1,9 +1,15 @@
 use cameleon_impl::memory::{memory, prelude::*, register_map};
 use const_format::formatcp;
 
-use GenApiReg::*;
+use GenApiReg::{
+    DeviceAccessStatus, DeviceID, DeviceModelName, DeviceVendorName, StreamID, StreamSelector,
+    StreamSelectorMax,
+};
 
-use crate::imp::{genapi_common::*, port};
+use crate::imp::{
+    genapi_common::{SCHEME_MAJOR_VERSION, SCHEME_MINOR_VERSION, SCHEME_SUBMINOR_VERSION},
+    port,
+};
 
 #[memory]
 pub(super) struct Memory {
