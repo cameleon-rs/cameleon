@@ -1,4 +1,8 @@
-use super::{elem_name::*, node_base::*, xml, Parse};
+use super::{
+    elem_name::{CATEGORY, P_FEATURE, P_INVALIDATOR},
+    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    xml, Parse,
+};
 
 #[derive(Debug, Clone)]
 pub struct CategoryNode {
@@ -10,14 +14,17 @@ pub struct CategoryNode {
 }
 
 impl CategoryNode {
+    #[must_use]
     pub fn node_base(&self) -> NodeBase<'_> {
         NodeBase::new(&self.attr_base, &self.elem_base)
     }
 
+    #[must_use]
     pub fn p_invalidators(&self) -> &[String] {
         &self.p_invalidators
     }
 
+    #[must_use]
     pub fn p_features(&self) -> &[String] {
         &self.p_features
     }

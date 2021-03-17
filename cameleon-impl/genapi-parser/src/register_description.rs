@@ -1,4 +1,19 @@
-use super::{elem_name::*, elem_type::StandardNameSpace, *};
+use super::{
+    convert_to_uint,
+    elem_name::{
+        ADV_FEATURE_LOCK, BOOLEAN, CATEGORY, COMMAND, CONF_ROM, CONVERTER, ENUMERATION, FLOAT,
+        FLOAT_REG, GROUP, INTEGER, INT_CONVERTER, INT_KEY, INT_REG, INT_SWISS_KNIFE, MAJOR_VERSION,
+        MASKED_INT_REG, MINOR_VERSION, MODEL_NAME, NODE, PORT, PRODUCT_GUID, REGISTER,
+        REGISTER_DESCRIPTION, SCHEMA_MAJOR_VERSION, SCHEMA_MINOR_VERSION, SCHEMA_SUB_MINOR_VERSION,
+        SMART_FEATURE, STANDARD_NAME_SPCACE, STRING, STRING_REG, STRUCT_REG, SUB_MINOR_VERSION,
+        SWISS_KNIFE, TEXT_DESC, TOOL_TIP, VENDOR_NAME, VERSION_GUID,
+    },
+    elem_type::StandardNameSpace,
+    xml, BooleanNode, CategoryNode, CommandNode, ConverterNode, EnumerationNode, FloatNode,
+    FloatRegNode, GroupNode, IntConverterNode, IntRegNode, IntSwissKnifeNode, IntegerNode,
+    MaskedIntRegNode, Node, Parse, PortNode, RegisterNode, StringNode, StringRegNode,
+    StructRegNode, SwissKnifeNode,
+};
 
 pub struct RegisterDescription {
     model_name: String,
@@ -18,54 +33,67 @@ pub struct RegisterDescription {
 }
 
 impl RegisterDescription {
+    #[must_use]
     pub fn model_name(&self) -> &str {
         &self.model_name
     }
 
+    #[must_use]
     pub fn vendor_name(&self) -> &str {
         &self.vendor_name
     }
 
+    #[must_use]
     pub fn tool_tip(&self) -> Option<&str> {
         self.tool_tip.as_deref()
     }
 
+    #[must_use]
     pub fn standard_name_space(&self) -> StandardNameSpace {
         self.standard_name_space
     }
 
+    #[must_use]
     pub fn schema_major_version(&self) -> u64 {
         self.schema_major_version
     }
 
+    #[must_use]
     pub fn schema_subminor_version(&self) -> u64 {
         self.schema_subminor_version
     }
 
+    #[must_use]
     pub fn schema_minor_version(&self) -> u64 {
         self.schema_minor_version
     }
 
+    #[must_use]
     pub fn major_version(&self) -> u64 {
         self.major_version
     }
 
+    #[must_use]
     pub fn minor_version(&self) -> u64 {
         self.minor_version
     }
 
+    #[must_use]
     pub fn subminor_version(&self) -> u64 {
         self.subminor_version
     }
 
+    #[must_use]
     pub fn product_guid(&self) -> &str {
         &self.product_guid
     }
 
+    #[must_use]
     pub fn version_guid(&self) -> &str {
         &self.version_guid
     }
 
+    #[must_use]
     pub fn nodes(&self) -> &[NodeKind] {
         &self.nodes
     }

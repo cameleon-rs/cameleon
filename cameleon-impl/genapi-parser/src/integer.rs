@@ -1,4 +1,12 @@
-use super::{elem_name::*, elem_type::*, node_base::*, xml, Parse};
+use super::{
+    elem_name::{
+        INC, INTEGER, MAX, MIN, P_INC, P_INVALIDATOR, P_MAX, P_MIN, P_SELECTED, REPRESENTATION,
+        STREAMABLE, UNIT,
+    },
+    elem_type::{numeric_node_elem, ImmOrPNode, IntegerRepresentation},
+    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    xml, Parse,
+};
 
 #[derive(Debug, Clone)]
 pub struct IntegerNode {
@@ -17,42 +25,52 @@ pub struct IntegerNode {
 }
 
 impl IntegerNode {
+    #[must_use]
     pub fn node_base(&self) -> NodeBase<'_> {
         NodeBase::new(&self.attr_base, &self.elem_base)
     }
 
+    #[must_use]
     pub fn p_invalidators(&self) -> &[String] {
         &self.p_invalidators
     }
 
+    #[must_use]
     pub fn streamable(&self) -> bool {
         self.streamable
     }
 
+    #[must_use]
     pub fn value_kind(&self) -> &numeric_node_elem::ValueKind<i64> {
         &self.value_kind
     }
 
+    #[must_use]
     pub fn min(&self) -> &ImmOrPNode<i64> {
         &self.min
     }
 
+    #[must_use]
     pub fn max(&self) -> &ImmOrPNode<i64> {
         &self.max
     }
 
+    #[must_use]
     pub fn inc(&self) -> &ImmOrPNode<i64> {
         &self.inc
     }
 
+    #[must_use]
     pub fn unit(&self) -> Option<&str> {
         self.unit.as_deref()
     }
 
+    #[must_use]
     pub fn representation(&self) -> IntegerRepresentation {
         self.representation
     }
 
+    #[must_use]
     pub fn p_selected(&self) -> &[String] {
         &self.p_selected
     }

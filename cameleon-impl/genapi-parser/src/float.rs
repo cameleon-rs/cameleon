@@ -1,4 +1,12 @@
-use super::{elem_name::*, elem_type::*, node_base::*, xml, Parse};
+use super::{
+    elem_name::{
+        DISPLAY_NOTATION, DISPLAY_PRECISION, FLOAT, INC, MAX, MIN, P_INC, P_INVALIDATOR, P_MAX,
+        P_MIN, REPRESENTATION, STREAMABLE, UNIT,
+    },
+    elem_type::{numeric_node_elem, DisplayNotation, FloatRepresentation, ImmOrPNode},
+    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    xml, Parse,
+};
 
 #[derive(Debug, Clone)]
 pub struct FloatNode {
@@ -18,46 +26,57 @@ pub struct FloatNode {
 }
 
 impl FloatNode {
+    #[must_use]
     pub fn node_base(&self) -> NodeBase<'_> {
         NodeBase::new(&self.attr_base, &self.elem_base)
     }
 
+    #[must_use]
     pub fn p_invalidators(&self) -> &[String] {
         &self.p_invalidators
     }
 
+    #[must_use]
     pub fn streamable(&self) -> bool {
         self.streamable
     }
 
+    #[must_use]
     pub fn value_kind(&self) -> &numeric_node_elem::ValueKind<f64> {
         &self.value_kind
     }
 
+    #[must_use]
     pub fn min(&self) -> &ImmOrPNode<f64> {
         &self.min
     }
 
+    #[must_use]
     pub fn max(&self) -> &ImmOrPNode<f64> {
         &self.max
     }
 
+    #[must_use]
     pub fn inc(&self) -> Option<&ImmOrPNode<f64>> {
         self.inc.as_ref()
     }
 
+    #[must_use]
     pub fn unit(&self) -> Option<&str> {
         self.unit.as_deref()
     }
 
+    #[must_use]
     pub fn representation(&self) -> FloatRepresentation {
         self.representation
     }
 
+    #[must_use]
     pub fn display_notation(&self) -> DisplayNotation {
         self.display_notation
     }
 
+    #[must_use]
     pub fn display_precision(&self) -> i64 {
         self.display_precision
     }

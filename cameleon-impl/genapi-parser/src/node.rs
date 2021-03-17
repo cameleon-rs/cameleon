@@ -1,4 +1,8 @@
-use super::{elem_name::*, node_base::*, xml, Parse};
+use super::{
+    elem_name::{NODE, P_INVALIDATOR},
+    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    xml, Parse,
+};
 
 #[derive(Debug, Clone)]
 pub struct Node {
@@ -9,10 +13,12 @@ pub struct Node {
 }
 
 impl Node {
+    #[must_use]
     pub fn node_base(&self) -> NodeBase<'_> {
         NodeBase::new(&self.attr_base, &self.elem_base)
     }
 
+    #[must_use]
     pub fn p_invalidators(&self) -> &[String] {
         &self.p_invalidators
     }
@@ -37,7 +43,7 @@ impl Parse for Node {
 
 #[cfg(test)]
 mod tests {
-    use crate::elem_type::*;
+    use crate::elem_type::{AccessMode, MergePriority, NameSpace, Visibility};
 
     use super::*;
 

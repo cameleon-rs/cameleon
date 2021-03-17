@@ -1,3 +1,9 @@
+#![allow(
+    clippy::module_name_repetitions,
+    clippy::clippy::similar_names,
+    clippy::clippy::missing_errors_doc
+)]
+
 mod boolean;
 mod category;
 mod command;
@@ -74,18 +80,11 @@ impl<'a> Parser<'a> {
         Ok(Self { document })
     }
 
-    /// Verify input xml with GenApi schema.
-    // TODO:
-    pub fn verify_xml(&self) -> ParseResult<()> {
-        todo!()
-    }
-
     pub fn parse(&self) -> ParseResult<RegisterDescription> {
-        // TODO:
-        // self.verify_xml()?;
         Ok(self.document.root_node().parse())
     }
 
+    #[must_use]
     pub fn inner_str(&self) -> &'a str {
         self.document.inner_str()
     }

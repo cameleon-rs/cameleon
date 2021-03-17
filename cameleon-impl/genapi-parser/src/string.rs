@@ -1,4 +1,9 @@
-use super::{elem_name::*, elem_type::*, node_base::*, xml, Parse};
+use super::{
+    elem_name::{P_INVALIDATOR, STREAMABLE, STRING, VALUE},
+    elem_type::ImmOrPNode,
+    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    xml, Parse,
+};
 
 #[derive(Debug, Clone)]
 pub struct StringNode {
@@ -11,18 +16,22 @@ pub struct StringNode {
 }
 
 impl StringNode {
+    #[must_use]
     pub fn node_base(&self) -> NodeBase<'_> {
         NodeBase::new(&self.attr_base, &self.elem_base)
     }
 
+    #[must_use]
     pub fn p_invalidators(&self) -> &[String] {
         &self.p_invalidators
     }
 
+    #[must_use]
     pub fn streamable(&self) -> bool {
         self.streamable
     }
 
+    #[must_use]
     pub fn value(&self) -> &ImmOrPNode<String> {
         &self.value
     }
@@ -37,11 +46,10 @@ impl Parse for StringNode {
 
         let p_invalidators = node.parse_while(P_INVALIDATOR);
         let streamable = node.parse_if(STREAMABLE).unwrap_or_default();
-        let value = if let Some(next_node) = node.next_if(VALUE) {
-            ImmOrPNode::Imm(next_node.text().into())
-        } else {
-            ImmOrPNode::PNode(node.next_text().unwrap().into())
-        };
+        let value = node.next_if(VALUE).map_or_else(
+            || ImmOrPNode::PNode(node.next_text().unwrap().into()),
+            |next_node| ImmOrPNode::Imm(next_node.text().into()),
+        );
 
         Self {
             attr_base,

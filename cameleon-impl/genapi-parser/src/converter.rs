@@ -1,4 +1,12 @@
-use super::{elem_name::*, elem_type::*, node_base::*, xml, Parse};
+use super::{
+    elem_name::{
+        CONSTANT, CONVERTER, DISPLAY_NOTATION, DISPLAY_PRECISION, EXPRESSION, IS_LINEAR,
+        P_INVALIDATOR, P_VARIABLE, REPRESENTATION, SLOPE, STREAMABLE, UNIT,
+    },
+    elem_type::{DisplayNotation, FloatRepresentation, NamedValue, Slope},
+    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    xml, Parse,
+};
 
 #[derive(Debug, Clone)]
 pub struct ConverterNode {
@@ -22,62 +30,77 @@ pub struct ConverterNode {
 }
 
 impl ConverterNode {
+    #[must_use]
     pub fn node_base(&self) -> NodeBase<'_> {
         NodeBase::new(&self.attr_base, &self.elem_base)
     }
 
+    #[must_use]
     pub fn p_invalidators(&self) -> &[String] {
         &self.p_invalidators
     }
 
+    #[must_use]
     pub fn streamable(&self) -> bool {
         self.streamable
     }
 
+    #[must_use]
     pub fn p_variables(&self) -> &[NamedValue<String>] {
         &self.p_variables
     }
 
+    #[must_use]
     pub fn constants(&self) -> &[NamedValue<f64>] {
         &self.constants
     }
 
+    #[must_use]
     pub fn expressions(&self) -> &[NamedValue<String>] {
         &self.expressions
     }
 
+    #[must_use]
     pub fn formula_to(&self) -> &str {
         &self.formula_to
     }
 
+    #[must_use]
     pub fn formula_from(&self) -> &str {
         &self.formula_from
     }
 
+    #[must_use]
     pub fn p_value(&self) -> &str {
         &self.p_value
     }
 
+    #[must_use]
     pub fn unit(&self) -> Option<&str> {
         self.unit.as_deref()
     }
 
+    #[must_use]
     pub fn representation(&self) -> FloatRepresentation {
         self.representation
     }
 
+    #[must_use]
     pub fn display_notation(&self) -> DisplayNotation {
         self.display_notation
     }
 
+    #[must_use]
     pub fn display_precision(&self) -> i64 {
         self.display_precision
     }
 
+    #[must_use]
     pub fn slope(&self) -> Slope {
         self.slope
     }
 
+    #[must_use]
     pub fn is_linear(&self) -> bool {
         self.is_linear
     }

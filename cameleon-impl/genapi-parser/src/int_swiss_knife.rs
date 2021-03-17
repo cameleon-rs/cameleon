@@ -1,4 +1,12 @@
-use super::{elem_name::*, elem_type::*, node_base::*, xml, Parse};
+use super::{
+    elem_name::{
+        CONSTANT, EXPRESSION, INT_SWISS_KNIFE, P_INVALIDATOR, P_VARIABLE, REPRESENTATION,
+        STREAMABLE, UNIT,
+    },
+    elem_type::{IntegerRepresentation, NamedValue},
+    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    xml, Parse,
+};
 
 #[derive(Debug, Clone)]
 pub struct IntSwissKnifeNode {
@@ -16,38 +24,47 @@ pub struct IntSwissKnifeNode {
 }
 
 impl IntSwissKnifeNode {
+    #[must_use]
     pub fn node_base(&self) -> NodeBase<'_> {
         NodeBase::new(&self.attr_base, &self.elem_base)
     }
 
+    #[must_use]
     pub fn p_invalidators(&self) -> &[String] {
         &self.p_invalidators
     }
 
+    #[must_use]
     pub fn streamable(&self) -> bool {
         self.streamable
     }
 
+    #[must_use]
     pub fn p_variables(&self) -> &[NamedValue<String>] {
         &self.p_variables
     }
 
+    #[must_use]
     pub fn constants(&self) -> &[NamedValue<i64>] {
         &self.constants
     }
 
+    #[must_use]
     pub fn expressions(&self) -> &[NamedValue<String>] {
         &self.expressions
     }
 
+    #[must_use]
     pub fn formula(&self) -> &str {
         &self.formula
     }
 
+    #[must_use]
     pub fn unit(&self) -> Option<&str> {
         self.unit.as_deref()
     }
 
+    #[must_use]
     pub fn representation(&self) -> IntegerRepresentation {
         self.representation
     }

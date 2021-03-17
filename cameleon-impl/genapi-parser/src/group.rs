@@ -1,4 +1,7 @@
-use super::{elem_name::*, xml, NodeKind, Parse};
+use super::{
+    elem_name::{COMMENT, GROUP},
+    xml, NodeKind, Parse,
+};
 
 #[derive(Debug, Clone)]
 pub struct GroupNode {
@@ -8,14 +11,17 @@ pub struct GroupNode {
 }
 
 impl GroupNode {
+    #[must_use]
     pub fn comment(&self) -> &str {
         &self.comment
     }
 
+    #[must_use]
     pub fn nodes(&self) -> &[NodeKind] {
         &self.nodes
     }
 
+    #[must_use]
     pub fn into_nodes(self) -> Vec<NodeKind> {
         self.nodes
     }

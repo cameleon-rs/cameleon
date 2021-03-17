@@ -1,4 +1,10 @@
-use super::{elem_name::*, elem_type::*, node_base::*, register_base::*, xml, Parse};
+use super::{
+    elem_name::{ENDIANNESS, MASKED_INT_REG, P_SELECTED, REPRESENTATION, SIGN, UNIT},
+    elem_type::{register_node_elem, IntegerRepresentation},
+    node_base::{NodeAttributeBase, NodeBase},
+    register_base::RegisterBase,
+    xml, Parse,
+};
 
 #[derive(Debug, Clone)]
 pub struct MaskedIntRegNode {
@@ -14,35 +20,43 @@ pub struct MaskedIntRegNode {
 }
 
 impl MaskedIntRegNode {
+    #[must_use]
     pub fn node_base(&self) -> NodeBase {
         let elem_base = &self.register_base.elem_base;
         NodeBase::new(&self.attr_base, elem_base)
     }
 
+    #[must_use]
     pub fn register_base(&self) -> &RegisterBase {
         &self.register_base
     }
 
+    #[must_use]
     pub fn bit_mask(&self) -> register_node_elem::BitMask {
         self.bit_mask
     }
 
+    #[must_use]
     pub fn sign(&self) -> register_node_elem::Sign {
         self.sign
     }
 
+    #[must_use]
     pub fn endianness(&self) -> register_node_elem::Endianness {
         self.endianness
     }
 
+    #[must_use]
     pub fn unit(&self) -> Option<&str> {
         self.unit.as_deref()
     }
 
+    #[must_use]
     pub fn representation(&self) -> IntegerRepresentation {
         self.representation
     }
 
+    #[must_use]
     pub fn p_selected(&self) -> &[String] {
         &self.p_selected
     }
@@ -76,7 +90,7 @@ impl Parse for MaskedIntRegNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::register_node_elem::*;
+    use crate::register_node_elem::BitMask;
 
     use super::*;
 
