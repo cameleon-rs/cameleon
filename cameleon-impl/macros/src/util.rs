@@ -1,7 +1,7 @@
 use syn::{Error, Result};
 
 pub(super) fn modify_visibility(vis: &syn::Visibility) -> Result<syn::Visibility> {
-    use syn::Visibility::*;
+    use syn::Visibility::{Crate, Inherited, Public, Restricted};
     match vis {
         Public(_) | Crate(_) => Ok(vis.clone()),
         Inherited => Ok(syn::parse_str("pub(super)").unwrap()),

@@ -2,11 +2,8 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{spanned::Spanned, Error, Result};
 
-pub(super) fn expand(
-    args: proc_macro::TokenStream,
-    input: proc_macro::TokenStream,
-) -> Result<proc_macro::TokenStream> {
-    let memory_struct = MemoryStruct::parse(args, input)?;
+pub(super) fn expand(input: proc_macro::TokenStream) -> Result<proc_macro::TokenStream> {
+    let memory_struct = MemoryStruct::parse(input)?;
 
     let expanded_struct = memory_struct.define_struct();
     let methods = memory_struct.impl_methods();
@@ -27,7 +24,7 @@ struct MemoryStruct {
 }
 
 impl MemoryStruct {
-    fn parse(_args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> Result<Self> {
+    fn parse(input: proc_macro::TokenStream) -> Result<Self> {
         let input_struct: syn::ItemStruct = syn::parse(input)?;
         let span = input_struct.span();
 
@@ -38,7 +35,7 @@ impl MemoryStruct {
         let mut fragments = vec![];
         match input_struct.fields {
             syn::Fields::Named(fields) => {
-                for field in fields.named.into_iter() {
+                for field in fields.named {
                     fragments.push(MemoryFragment::parse(field)?);
                 }
             }
