@@ -11,10 +11,10 @@ exit_if_failed $?
 ## FIXME: The line should be removed when 1.52 is released, See https://github.com/rust-lang/rust-clippy/issues/4612 for more details.
 find . | grep "\.rs$" | xargs touch
 
-RUSTFLAGS="--D warnings" cargo clippy --all-targets -- -D clippy::all
+RUSTFLAGS="--D warnings" cargo clippy --all-targets -- -D clippy::all -D clippy::pedantic
 exit_if_failed $?
 cd cameleon-device
-RUSTFLAGS="--D warnings" cargo clippy --all-targets --features libusb -- -D clippy::all
+RUSTFLAGS="--D warnings" cargo clippy --all-targets --features libusb -- -D clippy::all -D clippy::pedantic
 exit_if_failed $?
 cd ..
 

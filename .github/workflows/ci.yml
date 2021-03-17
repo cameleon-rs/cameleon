@@ -44,10 +44,10 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Clippy with default features
-        run: RUST_FLAGS="--D warnings" cargo clippy --all-targets -- -D clippy::all
+        run: RUST_FLAGS="--D warnings" cargo clippy --all-targets -- -D clippy::all -D clippy::pedantic
 
       - name: Clippy for cameleon-device with libusb
-        run: RUST_FLAGS="--D warnings" cargo clippy --all-targets --features libusb -- -D clippy::all # Check with libusb feature.
+        run: RUST_FLAGS="--D warnings" cargo clippy --all-targets --features libusb -- -D clippy::all -D clippy::pedantic # Check with libusb feature.
         working-directory: cameleon-device
 
   test-default-feature:
