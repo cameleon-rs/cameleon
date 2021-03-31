@@ -599,7 +599,7 @@ pub mod numeric_node_elem {
 }
 
 pub mod register_node_elem {
-    use crate::IntSwissKnifeNode;
+    use super::super::IntSwissKnifeNode;
 
     use super::{
         convert_to_int, xml, ImmOrPNode, Parse, ADDRESS, BIT, INT_SWISS_KNIFE, OFFSET, P_ADDRESS,

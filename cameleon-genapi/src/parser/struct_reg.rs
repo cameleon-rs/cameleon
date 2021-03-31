@@ -263,7 +263,7 @@ impl Parse for StructEntryNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::elem_type::register_node_elem::{BitMask, Endianness, Sign};
+    use super::super::elem_type::register_node_elem::{BitMask, Endianness, Sign};
 
     use super::*;
 

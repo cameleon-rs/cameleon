@@ -12,4 +12,3 @@ proc-macro = true
 syn = { version = "1.0.40", features = ["full"] }
 proc-macro2 = "1.0.21"
 quote = "1.0.7"
-cameleon-impl-genapi-parser = { path = "../genapi-parser" }

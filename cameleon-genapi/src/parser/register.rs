@@ -40,7 +40,7 @@ impl Parse for RegisterNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::{register_node_elem::AddressKind, xml, AccessMode, CachingMode, ImmOrPNode};
+    use super::super::{register_node_elem::AddressKind, xml, AccessMode, CachingMode, ImmOrPNode};
 
     use super::*;
 

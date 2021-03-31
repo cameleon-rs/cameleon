@@ -1,5 +1,5 @@
 use super::{
-    elem_name::{ENDIANNESS, INT_REG, P_SELECTED, REPRESENTATION, SIGN, UNIT},
+    elem_name::{ENDIANNESS, MASKED_INT_REG, P_SELECTED, REPRESENTATION, SIGN, UNIT},
     elem_type::{register_node_elem, IntegerRepresentation},
     node_base::{NodeAttributeBase, NodeBase},
     register_base::RegisterBase,
@@ -7,18 +7,19 @@ use super::{
 };
 
 #[derive(Debug, Clone)]
-pub struct IntRegNode {
-    attr_base: NodeAttributeBase,
-    register_base: RegisterBase,
+pub struct MaskedIntRegNode {
+    pub(super) attr_base: NodeAttributeBase,
+    pub(super) register_base: RegisterBase,
 
-    sign: register_node_elem::Sign,
-    endianness: register_node_elem::Endianness,
-    unit: Option<String>,
-    representation: IntegerRepresentation,
-    p_selected: Vec<String>,
+    pub(super) bit_mask: register_node_elem::BitMask,
+    pub(super) sign: register_node_elem::Sign,
+    pub(super) endianness: register_node_elem::Endianness,
+    pub(super) unit: Option<String>,
+    pub(super) representation: IntegerRepresentation,
+    pub(super) p_selected: Vec<String>,
 }
 
-impl IntRegNode {
+impl MaskedIntRegNode {
     #[must_use]
     pub fn node_base(&self) -> NodeBase {
         let elem_base = &self.register_base.elem_base;
@@ -28,6 +29,11 @@ impl IntRegNode {
     #[must_use]
     pub fn register_base(&self) -> &RegisterBase {
         &self.register_base
+    }
+
+    #[must_use]
+    pub fn bit_mask(&self) -> register_node_elem::BitMask {
+        self.bit_mask
     }
 
     #[must_use]
@@ -56,13 +62,13 @@ impl IntRegNode {
     }
 }
 
-impl Parse for IntRegNode {
+impl Parse for MaskedIntRegNode {
     fn parse(node: &mut xml::Node) -> Self {
-        debug_assert_eq!(node.tag_name(), INT_REG);
-
+        debug_assert_eq!(node.tag_name(), MASKED_INT_REG);
         let attr_base = node.parse();
-        let register_base = node.parse();
 
+        let register_base = node.parse();
+        let bit_mask = node.parse();
         let sign = node.parse_if(SIGN).unwrap_or_default();
         let endianness = node.parse_if(ENDIANNESS).unwrap_or_default();
         let unit = node.parse_if(UNIT);
@@ -72,6 +78,7 @@ impl Parse for IntRegNode {
         Self {
             attr_base,
             register_base,
+            bit_mask,
             sign,
             endianness,
             unit,
@@ -83,31 +90,40 @@ impl Parse for IntRegNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::register_node_elem::{Endianness, Sign};
+    use super::super::register_node_elem::BitMask;
 
     use super::*;
 
     #[test]
-    fn test_int_reg() {
+    fn test_masked_int_reg_with_single_bit_mask() {
         let xml = r#"
-        <IntReg Name="TestNode">
+        <MaskedIntReg Name="TestNode">
           <Address>0x10000</Address>
           <Length>4</Length>
           <pPort>Device</pPort>
-          <Sign>Signed</Sign>
-          <Endianess>BigEndian</Endianess>
-          <Unit>Hz</Unit>
-          <Representation>Logarithmic</Representation>
-          <pSelected>SelectedNode</pSelected>
-        </IntReg>
+          <Bit>3</Bit>
+        </MaskedIntReg>
         "#;
 
-        let node: IntRegNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
+        let node: MaskedIntRegNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
 
-        assert_eq!(node.sign(), Sign::Signed);
-        assert_eq!(node.endianness(), Endianness::BE);
-        assert_eq!(node.unit().unwrap(), "Hz");
-        assert_eq!(node.representation(), IntegerRepresentation::Logarithmic);
-        assert_eq!(node.p_selected().len(), 1);
+        debug_assert_eq!(node.bit_mask(), BitMask::SingleBit(3));
+    }
+
+    #[test]
+    fn test_masked_int_reg_with_bit_range() {
+        let xml = r#"
+        <MaskedIntReg Name="TestNode">
+          <Address>0x10000</Address>
+          <Length>4</Length>
+          <pPort>Device</pPort>
+          <LSB>3</LSB>
+          <MSB>7</MSB>
+        </MaskedIntReg>
+        "#;
+
+        let node: MaskedIntRegNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
+
+        debug_assert_eq!(node.bit_mask(), BitMask::Range { lsb: 3, msb: 7 });
     }
 }
