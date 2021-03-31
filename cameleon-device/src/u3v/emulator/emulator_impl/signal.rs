@@ -62,20 +62,20 @@ pub(super) enum InterfaceSignal {
     Halt(IfaceKind),
 }
 
-impl Into<InterfaceSignal> for ControlSignal {
-    fn into(self) -> InterfaceSignal {
-        InterfaceSignal::ToControl(self)
+impl From<ControlSignal> for InterfaceSignal {
+    fn from(val: ControlSignal) -> Self {
+        Self::ToControl(val)
     }
 }
 
-impl Into<InterfaceSignal> for EventSignal {
-    fn into(self) -> InterfaceSignal {
-        InterfaceSignal::ToEvent(self)
+impl From<EventSignal> for InterfaceSignal {
+    fn from(val: EventSignal) -> Self {
+        Self::ToEvent(val)
     }
 }
 
-impl Into<InterfaceSignal> for StreamSignal {
-    fn into(self) -> InterfaceSignal {
-        InterfaceSignal::ToStream(self)
+impl From<StreamSignal> for InterfaceSignal {
+    fn from(val: StreamSignal) -> Self {
+        Self::ToStream(val)
     }
 }

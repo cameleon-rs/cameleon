@@ -1,6 +1,7 @@
 #![allow(
     clippy::module_name_repetitions,
     clippy::similar_names,
+    clippy::upper_case_acronyms,
     clippy::missing_errors_doc,
     clippy::cast_possible_truncation,
     clippy::cast_possible_wrap,

@@ -1,3 +1,5 @@
+#![allow(clippy::upper_case_acronyms)]
+
 use super::{
     elem_name::{
         ADDRESS, BIT, INDEX, INT_SWISS_KNIFE, NAME, OFFSET, P_ADDRESS, P_INDEX, P_OFFSET, P_VALUE,
