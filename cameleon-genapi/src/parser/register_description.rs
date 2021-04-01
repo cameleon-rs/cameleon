@@ -168,6 +168,8 @@ pub enum NodeData {
 }
 
 impl NodeData {
+    #[allow(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn node_base(&self) -> NodeBase<'_> {
         match self {
             Self::Node(node) => node.node_base(),
@@ -216,7 +218,7 @@ impl Parse for Vec<NodeData> {
             PORT => vec![NodeData::Port(Box::new(node.parse(store)))],
             STRUCT_REG => node
                 .parse::<StructRegNode>(store)
-                .to_masked_int_regs()
+                .into_masked_int_regs()
                 .into_iter()
                 .map(|node| NodeData::MaskedIntReg(node.into()))
                 .collect(),

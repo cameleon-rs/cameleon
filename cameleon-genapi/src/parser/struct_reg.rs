@@ -21,7 +21,7 @@ pub(super) struct StructRegNode {
 
 impl StructRegNode {
     #[must_use]
-    pub(super) fn to_masked_int_regs(self) -> Vec<MaskedIntRegNode> {
+    pub(super) fn into_masked_int_regs(self) -> Vec<MaskedIntRegNode> {
         let register_base = self.register_base;
         let endianness = self.endianness;
         self.entries
@@ -228,7 +228,7 @@ mod tests {
             .unwrap()
             .root_node()
             .parse(&mut store);
-        let masked_int_regs: Vec<_> = node.to_masked_int_regs();
+        let masked_int_regs: Vec<_> = node.into_masked_int_regs();
 
         assert_eq!(masked_int_regs.len(), 2);
 

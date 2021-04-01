@@ -10,6 +10,7 @@ impl Symbol for NodeId {
         if ((u32::MAX - 1) as usize) < index {
             None
         } else {
+            #[allow(clippy::cast_possible_truncation)]
             Some(Self(index as u32))
         }
     }
@@ -25,6 +26,7 @@ pub struct NodeStore {
 }
 
 impl NodeStore {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             interner: StringInterner::new(),
@@ -36,10 +38,13 @@ impl NodeStore {
         self.interner.get_or_intern(s)
     }
 
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn node(&self, id: NodeId) -> &NodeData {
         self.node_opt(id).unwrap()
     }
 
+    #[must_use]
     pub fn node_opt(&self, id: NodeId) -> Option<&NodeData> {
         self.store.get(id.to_usize())?.as_ref()
     }

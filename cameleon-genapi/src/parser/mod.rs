@@ -56,8 +56,8 @@ pub use string::*;
 pub use string_reg::*;
 pub use swiss_knife::*;
 
-use group::*;
-use struct_reg::*;
+use group::GroupNode;
+use struct_reg::StructRegNode;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

@@ -66,10 +66,7 @@ impl<'a> NodeBase<'a> {
 
     #[must_use]
     pub fn display_name(&self) -> Option<&str> {
-        self.elem
-            .display_name
-            .as_ref()
-            .map(|display_name| display_name.as_str())
+        self.elem.display_name.as_deref()
     }
 
     #[must_use]
