@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 roxmltree = "0.13.0"
 thiserror = "1.0.20"
+string-interner = "0.12"
