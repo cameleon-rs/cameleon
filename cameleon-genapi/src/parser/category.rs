@@ -1,6 +1,7 @@
 use super::{
     elem_name::{CATEGORY, P_FEATURE, P_INVALIDATOR},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    node_store::{NodeId, NodeStore},
     xml, Parse,
 };
 
@@ -9,8 +10,8 @@ pub struct CategoryNode {
     attr_base: NodeAttributeBase,
     elem_base: NodeElementBase,
 
-    p_invalidators: Vec<String>,
-    p_features: Vec<String>,
+    p_invalidators: Vec<NodeId>,
+    p_features: Vec<NodeId>,
 }
 
 impl CategoryNode {
@@ -20,25 +21,25 @@ impl CategoryNode {
     }
 
     #[must_use]
-    pub fn p_invalidators(&self) -> &[String] {
+    pub fn p_invalidators(&self) -> &[NodeId] {
         &self.p_invalidators
     }
 
     #[must_use]
-    pub fn p_features(&self) -> &[String] {
+    pub fn p_features(&self) -> &[NodeId] {
         &self.p_features
     }
 }
 
 impl Parse for CategoryNode {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         debug_assert_eq!(node.tag_name(), CATEGORY);
 
-        let attr_base = node.parse();
-        let elem_base = node.parse();
+        let attr_base = node.parse(store);
+        let elem_base = node.parse(store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR);
-        let p_features = node.parse_while(P_FEATURE);
+        let p_invalidators = node.parse_while(P_INVALIDATOR, store);
+        let p_features = node.parse_while(P_FEATURE, store);
 
         Self {
             attr_base,
@@ -53,9 +54,10 @@ impl Parse for CategoryNode {
 mod tests {
     use super::*;
 
-    fn category_node_from_str(xml: &str) -> CategoryNode {
+    fn category_node_from_str(xml: &str) -> (CategoryNode, NodeStore) {
         let document = xml::Document::from_str(xml).unwrap();
-        document.root_node().parse()
+        let mut store = NodeStore::new();
+        (document.root_node().parse(&mut store), store)
     }
 
     #[test]
@@ -69,17 +71,17 @@ mod tests {
             </Category>
             "#;
 
-        let node = category_node_from_str(&xml);
+        let (node, mut store) = category_node_from_str(&xml);
 
         let p_invalidators = node.p_invalidators();
         assert_eq!(p_invalidators.len(), 2);
-        assert_eq!(p_invalidators[0].as_str(), "Invalidator0");
-        assert_eq!(p_invalidators[1].as_str(), "Invalidator1");
+        assert_eq!(p_invalidators[0], store.id_by_name("Invalidator0"));
+        assert_eq!(p_invalidators[1], store.id_by_name("Invalidator1"));
 
         let p_features = node.p_features();
         assert_eq!(p_features.len(), 2);
-        assert_eq!(p_features[0].as_str(), "FeatureNode0");
-        assert_eq!(p_features[1].as_str(), "FeatureNode1");
+        assert_eq!(p_features[0], store.id_by_name("FeatureNode0"));
+        assert_eq!(p_features[1], store.id_by_name("FeatureNode1"));
     }
 
     #[test]
@@ -89,7 +91,7 @@ mod tests {
             </Category>
             "#;
 
-        let node = category_node_from_str(&xml);
+        let (node, _) = category_node_from_str(&xml);
 
         let p_invalidators = node.p_invalidators();
         assert!(p_invalidators.is_empty());
