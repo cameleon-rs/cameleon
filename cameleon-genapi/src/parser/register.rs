@@ -1,6 +1,7 @@
 use super::{
     elem_name::REGISTER,
     node_base::{NodeAttributeBase, NodeBase},
+    node_store::NodeStore,
     register_base::RegisterBase,
     xml, Parse,
 };
@@ -25,11 +26,11 @@ impl RegisterNode {
 }
 
 impl Parse for RegisterNode {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         debug_assert_eq!(node.tag_name(), REGISTER);
 
-        let attr_base = node.parse();
-        let register_base = node.parse();
+        let attr_base = node.parse(store);
+        let register_base = node.parse(store);
 
         Self {
             attr_base,
@@ -73,7 +74,11 @@ mod tests {
         </Register>
         "#;
 
-        let node: RegisterNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
+        let mut store = NodeStore::new();
+        let node: RegisterNode = xml::Document::from_str(&xml)
+            .unwrap()
+            .root_node()
+            .parse(&mut store);
         let reg_base = node.register_base();
 
         let address_kinds = reg_base.address_kinds();
@@ -90,7 +95,7 @@ mod tests {
         match &address_kinds[3] {
             AddressKind::PIndex(p_index) => {
                 assert!(matches!(p_index.offset().unwrap(), ImmOrPNode::Imm(10)));
-                assert_eq!(p_index.p_index(), "IndexNode");
+                assert_eq!(p_index.p_index(), store.id_by_name("IndexNode"));
             }
             _ => panic!(),
         }
