@@ -9,6 +9,8 @@ use super::{
         SWISS_KNIFE, TEXT_DESC, TOOL_TIP, VENDOR_NAME, VERSION_GUID,
     },
     elem_type::StandardNameSpace,
+    node_base::NodeBase,
+    node_store::NodeStore,
     xml, BooleanNode, CategoryNode, CommandNode, ConverterNode, EnumerationNode, FloatNode,
     FloatRegNode, GroupNode, IntConverterNode, IntRegNode, IntSwissKnifeNode, IntegerNode,
     MaskedIntRegNode, Node, Parse, PortNode, RegisterNode, StringNode, StringRegNode,
@@ -28,8 +30,6 @@ pub struct RegisterDescription {
     subminor_version: u64,
     product_guid: String,
     version_guid: String,
-
-    nodes: Vec<NodeKind>,
 }
 
 impl RegisterDescription {
@@ -92,15 +92,10 @@ impl RegisterDescription {
     pub fn version_guid(&self) -> &str {
         &self.version_guid
     }
-
-    #[must_use]
-    pub fn nodes(&self) -> &[NodeKind] {
-        &self.nodes
-    }
 }
 
 impl Parse for RegisterDescription {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         debug_assert_eq!(node.tag_name(), REGISTER_DESCRIPTION);
 
         let model_name = node.attribute_of(MODEL_NAME).unwrap().into();
@@ -119,9 +114,11 @@ impl Parse for RegisterDescription {
         let product_guid = node.attribute_of(PRODUCT_GUID).unwrap().into();
         let version_guid = node.attribute_of(VERSION_GUID).unwrap().into();
 
-        let mut nodes = vec![];
         while let Some(ref mut child) = node.next() {
-            nodes.push(child.parse());
+            for child in child.parse::<Vec<NodeData>>(store) {
+                let id = child.node_base().id();
+                store.store_node(id, child);
+            }
         }
 
         Self {
@@ -137,13 +134,12 @@ impl Parse for RegisterDescription {
             subminor_version,
             product_guid,
             version_guid,
-            nodes,
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub enum NodeKind {
+pub enum NodeData {
     Node(Box<Node>),
     Category(Box<CategoryNode>),
     Integer(Box<IntegerNode>),
@@ -162,8 +158,6 @@ pub enum NodeKind {
     SwissKnife(Box<SwissKnifeNode>),
     IntSwissKnife(Box<IntSwissKnifeNode>),
     Port(Box<PortNode>),
-    StructReg(Box<StructRegNode>),
-    Group(Box<GroupNode>),
 
     // TODO: Implement DCAM specific ndoes.
     ConfRom(()),
@@ -173,29 +167,60 @@ pub enum NodeKind {
     SmartFeature(()),
 }
 
-impl Parse for NodeKind {
-    fn parse(node: &mut xml::Node) -> Self {
+impl NodeData {
+    pub fn node_base(&self) -> NodeBase<'_> {
+        match self {
+            Self::Node(node) => node.node_base(),
+            Self::Category(node) => node.node_base(),
+            Self::Integer(node) => node.node_base(),
+            Self::IntReg(node) => node.node_base(),
+            Self::MaskedIntReg(node) => node.node_base(),
+            Self::Boolean(node) => node.node_base(),
+            Self::Command(node) => node.node_base(),
+            Self::Enumeration(node) => node.node_base(),
+            Self::Float(node) => node.node_base(),
+            Self::FloatReg(node) => node.node_base(),
+            Self::String(node) => node.node_base(),
+            Self::StringReg(node) => node.node_base(),
+            Self::Register(node) => node.node_base(),
+            Self::Converter(node) => node.node_base(),
+            Self::IntConverter(node) => node.node_base(),
+            Self::SwissKnife(node) => node.node_base(),
+            Self::IntSwissKnife(node) => node.node_base(),
+            Self::Port(node) => node.node_base(),
+            _ => todo!(),
+        }
+    }
+}
+
+impl Parse for Vec<NodeData> {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Vec<NodeData> {
         match node.tag_name() {
-            NODE => NodeKind::Node(Box::new(node.parse())),
-            CATEGORY => NodeKind::Category(Box::new(node.parse())),
-            INTEGER => NodeKind::Integer(Box::new(node.parse())),
-            INT_REG => NodeKind::IntReg(Box::new(node.parse())),
-            MASKED_INT_REG => NodeKind::MaskedIntReg(Box::new(node.parse())),
-            BOOLEAN => NodeKind::Boolean(Box::new(node.parse())),
-            COMMAND => NodeKind::Command(Box::new(node.parse())),
-            ENUMERATION => NodeKind::Enumeration(Box::new(node.parse())),
-            FLOAT => NodeKind::Float(Box::new(node.parse())),
-            FLOAT_REG => NodeKind::FloatReg(Box::new(node.parse())),
-            STRING => NodeKind::String(Box::new(node.parse())),
-            STRING_REG => NodeKind::StringReg(Box::new(node.parse())),
-            REGISTER => NodeKind::Register(Box::new(node.parse())),
-            CONVERTER => NodeKind::Converter(Box::new(node.parse())),
-            INT_CONVERTER => NodeKind::IntConverter(Box::new(node.parse())),
-            SWISS_KNIFE => NodeKind::SwissKnife(Box::new(node.parse())),
-            INT_SWISS_KNIFE => NodeKind::IntSwissKnife(Box::new(node.parse())),
-            PORT => NodeKind::Port(Box::new(node.parse())),
-            STRUCT_REG => NodeKind::StructReg(Box::new(node.parse())),
-            GROUP => NodeKind::Group(Box::new(node.parse())),
+            NODE => vec![NodeData::Node(Box::new(node.parse(store)))],
+            CATEGORY => vec![NodeData::Category(Box::new(node.parse(store)))],
+            INTEGER => vec![NodeData::Integer(Box::new(node.parse(store)))],
+            INT_REG => vec![NodeData::IntReg(Box::new(node.parse(store)))],
+            MASKED_INT_REG => vec![NodeData::MaskedIntReg(Box::new(node.parse(store)))],
+            BOOLEAN => vec![NodeData::Boolean(Box::new(node.parse(store)))],
+            COMMAND => vec![NodeData::Command(Box::new(node.parse(store)))],
+            ENUMERATION => vec![NodeData::Enumeration(Box::new(node.parse(store)))],
+            FLOAT => vec![NodeData::Float(Box::new(node.parse(store)))],
+            FLOAT_REG => vec![NodeData::FloatReg(Box::new(node.parse(store)))],
+            STRING => vec![NodeData::String(Box::new(node.parse(store)))],
+            STRING_REG => vec![NodeData::StringReg(Box::new(node.parse(store)))],
+            REGISTER => vec![NodeData::Register(Box::new(node.parse(store)))],
+            CONVERTER => vec![NodeData::Converter(Box::new(node.parse(store)))],
+            INT_CONVERTER => vec![NodeData::IntConverter(Box::new(node.parse(store)))],
+            SWISS_KNIFE => vec![NodeData::SwissKnife(Box::new(node.parse(store)))],
+            INT_SWISS_KNIFE => vec![NodeData::IntSwissKnife(Box::new(node.parse(store)))],
+            PORT => vec![NodeData::Port(Box::new(node.parse(store)))],
+            STRUCT_REG => node
+                .parse::<StructRegNode>(store)
+                .to_masked_int_regs()
+                .into_iter()
+                .map(|node| NodeData::MaskedIntReg(node.into()))
+                .collect(),
+            GROUP => node.parse::<GroupNode>(store).nodes,
 
             // TODO: Implement DCAM specific ndoes.
             CONF_ROM | TEXT_DESC | INT_KEY | ADV_FEATURE_LOCK | SMART_FEATURE => todo!(),
@@ -381,7 +406,8 @@ mod tests {
         "#;
 
         let document = xml::Document::from_str(xml).unwrap();
-        let reg_desc: RegisterDescription = document.root_node().parse();
+        let mut store = NodeStore::new();
+        let reg_desc: RegisterDescription = document.root_node().parse(&mut store);
 
         assert_eq!(reg_desc.model_name(), "CameleonModel");
         assert_eq!(reg_desc.vendor_name(), "CameleonVendor");
@@ -400,6 +426,5 @@ mod tests {
             reg_desc.version_guid(),
             "76543210-3210-3210-3210-ba9876543210"
         );
-        assert_eq!(reg_desc.nodes().len(), 20);
     }
 }
