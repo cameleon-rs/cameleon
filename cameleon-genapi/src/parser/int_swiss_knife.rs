@@ -5,6 +5,7 @@ use super::{
     },
     elem_type::{IntegerRepresentation, NamedValue},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    node_store::{NodeId, NodeStore},
     xml, Parse,
 };
 
@@ -13,9 +14,9 @@ pub struct IntSwissKnifeNode {
     attr_base: NodeAttributeBase,
     elem_base: NodeElementBase,
 
-    p_invalidators: Vec<String>,
+    p_invalidators: Vec<NodeId>,
     streamable: bool,
-    p_variables: Vec<NamedValue<String>>,
+    p_variables: Vec<NamedValue<NodeId>>,
     constants: Vec<NamedValue<i64>>,
     expressions: Vec<NamedValue<String>>,
     formula: String,
@@ -30,7 +31,7 @@ impl IntSwissKnifeNode {
     }
 
     #[must_use]
-    pub fn p_invalidators(&self) -> &[String] {
+    pub fn p_invalidators(&self) -> &[NodeId] {
         &self.p_invalidators
     }
 
@@ -40,7 +41,7 @@ impl IntSwissKnifeNode {
     }
 
     #[must_use]
-    pub fn p_variables(&self) -> &[NamedValue<String>] {
+    pub fn p_variables(&self) -> &[NamedValue<NodeId>] {
         &self.p_variables
     }
 
@@ -71,20 +72,20 @@ impl IntSwissKnifeNode {
 }
 
 impl Parse for IntSwissKnifeNode {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         debug_assert_eq!(node.tag_name(), INT_SWISS_KNIFE);
 
-        let attr_base = node.parse();
-        let elem_base = node.parse();
+        let attr_base = node.parse(store);
+        let elem_base = node.parse(store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR);
-        let streamable = node.parse_if(STREAMABLE).unwrap_or_default();
-        let p_variables = node.parse_while(P_VARIABLE);
-        let constants = node.parse_while(CONSTANT);
-        let expressions = node.parse_while(EXPRESSION);
-        let formula = node.parse();
-        let unit = node.parse_if(UNIT);
-        let representation = node.parse_if(REPRESENTATION).unwrap_or_default();
+        let p_invalidators = node.parse_while(P_INVALIDATOR, store);
+        let streamable = node.parse_if(STREAMABLE, store).unwrap_or_default();
+        let p_variables = node.parse_while(P_VARIABLE, store);
+        let constants = node.parse_while(CONSTANT, store);
+        let expressions = node.parse_while(EXPRESSION, store);
+        let formula = node.parse(store);
+        let unit = node.parse_if(UNIT, store);
+        let representation = node.parse_if(REPRESENTATION, store).unwrap_or_default();
 
         Self {
             attr_base,
@@ -117,14 +118,18 @@ mod tests {
              </IntSwissKnife>
              "#;
 
-        let node: IntSwissKnifeNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
+        let mut store = NodeStore::new();
+        let node: IntSwissKnifeNode = xml::Document::from_str(&xml)
+            .unwrap()
+            .root_node()
+            .parse(&mut store);
 
         let p_variables = node.p_variables();
         assert_eq!(p_variables.len(), 2);
         assert_eq!(p_variables[0].name(), "Var1");
-        assert_eq!(p_variables[0].value(), "pValue1");
+        assert_eq!(p_variables[0].value(), &store.id_by_name("pValue1"));
         assert_eq!(p_variables[1].name(), "Var2");
-        assert_eq!(p_variables[1].value(), "pValue2");
+        assert_eq!(p_variables[1].value(), &store.id_by_name("pValue2"));
 
         let constants = node.constants();
         assert_eq!(constants.len(), 1);

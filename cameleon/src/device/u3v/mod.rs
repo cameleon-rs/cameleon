@@ -37,6 +37,7 @@
 //!     abrm.set_user_defined_name("cameleon").unwrap();
 //! }
 //! ```
+#![allow(clippy::missing_panics_doc)]
 
 pub mod register_map;
 

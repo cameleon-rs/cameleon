@@ -5,6 +5,7 @@ use super::{
     },
     elem_type::ImmOrPNode,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    node_store::{NodeId, NodeStore},
     xml, Parse,
 };
 
@@ -13,11 +14,11 @@ pub struct EnumerationNode {
     attr_base: NodeAttributeBase,
     elem_base: NodeElementBase,
 
-    p_invalidators: Vec<String>,
+    p_invalidators: Vec<NodeId>,
     streamable: bool,
     entries: Vec<EnumEntryNode>,
     value: ImmOrPNode<i64>,
-    p_selected: Vec<String>,
+    p_selected: Vec<NodeId>,
     polling_time: Option<u64>,
 }
 
@@ -28,7 +29,7 @@ impl EnumerationNode {
     }
 
     #[must_use]
-    pub fn p_invalidators(&self) -> &[String] {
+    pub fn p_invalidators(&self) -> &[NodeId] {
         &self.p_invalidators
     }
 
@@ -48,7 +49,7 @@ impl EnumerationNode {
     }
 
     #[must_use]
-    pub fn p_selected(&self) -> &[String] {
+    pub fn p_selected(&self) -> &[NodeId] {
         &self.p_selected
     }
 
@@ -59,21 +60,21 @@ impl EnumerationNode {
 }
 
 impl Parse for EnumerationNode {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         debug_assert_eq!(node.tag_name(), ENUMERATION);
 
-        let attr_base = node.parse();
-        let elem_base = node.parse();
+        let attr_base = node.parse(store);
+        let elem_base = node.parse(store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR);
-        let streamable = node.parse_if(STREAMABLE).unwrap_or_default();
+        let p_invalidators = node.parse_while(P_INVALIDATOR, store);
+        let streamable = node.parse_if(STREAMABLE, store).unwrap_or_default();
         let mut entries = vec![];
         while let Some(mut ent_node) = node.next_if(ENUM_ENTRY) {
-            entries.push(ent_node.parse());
+            entries.push(ent_node.parse(store));
         }
-        let value = node.parse();
-        let p_selected = node.parse_while(P_SELECTED);
-        let polling_time = node.parse_if(POLLING_TIME);
+        let value = node.parse(store);
+        let p_selected = node.parse_while(P_SELECTED, store);
+        let polling_time = node.parse_if(POLLING_TIME, store);
 
         Self {
             attr_base,
@@ -93,7 +94,7 @@ pub struct EnumEntryNode {
     attr_base: NodeAttributeBase,
     elem_base: NodeElementBase,
 
-    p_invalidators: Vec<String>,
+    p_invalidators: Vec<NodeId>,
     value: i64,
     numeric_values: Vec<f64>,
     symbolic: Option<String>,
@@ -107,7 +108,7 @@ impl EnumEntryNode {
     }
 
     #[must_use]
-    pub fn p_invalidators(&self) -> &[String] {
+    pub fn p_invalidators(&self) -> &[NodeId] {
         &self.p_invalidators
     }
 
@@ -137,17 +138,17 @@ impl EnumEntryNode {
 }
 
 impl Parse for EnumEntryNode {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         debug_assert_eq!(node.tag_name(), ENUM_ENTRY);
 
-        let attr_base = node.parse();
-        let elem_base = node.parse();
+        let attr_base = node.parse(store);
+        let elem_base = node.parse(store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR);
-        let value = node.parse();
-        let numeric_values = node.parse_while(NUMERIC_VALUE);
-        let symbolic = node.parse_if(SYMBOLIC);
-        let is_self_clearing = node.parse_if(IS_SELF_CLEARING).unwrap_or_default();
+        let p_invalidators = node.parse_while(P_INVALIDATOR, store);
+        let value = node.parse(store);
+        let numeric_values = node.parse_while(NUMERIC_VALUE, store);
+        let symbolic = node.parse_if(SYMBOLIC, store);
+        let is_self_clearing = node.parse_if(IS_SELF_CLEARING, store).unwrap_or_default();
 
         Self {
             attr_base,
@@ -183,9 +184,13 @@ mod tests {
             </Enumeration>
             "#;
 
-        let node: EnumerationNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
+        let mut store = NodeStore::new();
+        let node: EnumerationNode = xml::Document::from_str(&xml)
+            .unwrap()
+            .root_node()
+            .parse(&mut store);
 
-        assert_eq!(node.value(), &ImmOrPNode::PNode("MyNode".into()));
+        assert_eq!(node.value(), &ImmOrPNode::PNode(store.id_by_name("MyNode")));
         assert_eq!(node.polling_time(), Some(10));
 
         let entries = node.entries();

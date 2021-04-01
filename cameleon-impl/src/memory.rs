@@ -1,3 +1,5 @@
+#![allow(clippy::upper_case_acronyms)]
+
 pub use cameleon_impl_macros::{memory, register_map};
 
 use thiserror::Error;

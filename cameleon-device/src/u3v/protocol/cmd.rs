@@ -550,10 +550,7 @@ mod tests {
 
     #[test]
     fn test_read_mem_stacked() {
-        let mut read_mems = vec![];
-        read_mems.push(ReadMem::new(0x0004, 4));
-        read_mems.push(ReadMem::new(0x0008, 8));
-
+        let read_mems = vec![ReadMem::new(0x0004, 4), ReadMem::new(0x0008, 8)];
         let command = ReadMemStacked::new(read_mems).unwrap().finalize(1);
         let scd_len = 12 * 2;
 
@@ -575,9 +572,10 @@ mod tests {
 
     #[test]
     fn test_write_mem_stacked() {
-        let mut write_mems = vec![];
-        write_mems.push(WriteMem::new(0x0004, &[0x01, 0x02, 0x03, 0x04]).unwrap());
-        write_mems.push(WriteMem::new(0x0008, &[0x11, 0x12, 0x13, 0x14]).unwrap());
+        let write_mems = vec![
+            WriteMem::new(0x0004, &[0x01, 0x02, 0x03, 0x04]).unwrap(),
+            WriteMem::new(0x0008, &[0x11, 0x12, 0x13, 0x14]).unwrap(),
+        ];
 
         let command = WriteMemStacked::new(write_mems).unwrap().finalize(1);
         let scd_len = (12 + 4) * 2;

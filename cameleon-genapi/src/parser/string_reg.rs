@@ -1,5 +1,6 @@
 use super::{
     node_base::{NodeAttributeBase, NodeBase},
+    node_store::NodeStore,
     register_base::RegisterBase,
     xml, Parse,
 };
@@ -24,11 +25,11 @@ impl StringRegNode {
 }
 
 impl Parse for StringRegNode {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         debug_assert!(node.tag_name() == "StringReg");
 
-        let attr_base = node.parse();
-        let register_base = node.parse();
+        let attr_base = node.parse(store);
+        let register_base = node.parse(store);
 
         Self {
             attr_base,

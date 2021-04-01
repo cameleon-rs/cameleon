@@ -2,6 +2,7 @@ use super::{
     elem_name::{ENDIANNESS, INT_REG, P_SELECTED, REPRESENTATION, SIGN, UNIT},
     elem_type::{register_node_elem, IntegerRepresentation},
     node_base::{NodeAttributeBase, NodeBase},
+    node_store::{NodeId, NodeStore},
     register_base::RegisterBase,
     xml, Parse,
 };
@@ -15,7 +16,7 @@ pub struct IntRegNode {
     endianness: register_node_elem::Endianness,
     unit: Option<String>,
     representation: IntegerRepresentation,
-    p_selected: Vec<String>,
+    p_selected: Vec<NodeId>,
 }
 
 impl IntRegNode {
@@ -51,23 +52,23 @@ impl IntRegNode {
     }
 
     #[must_use]
-    pub fn p_selected(&self) -> &[String] {
+    pub fn p_selected(&self) -> &[NodeId] {
         &self.p_selected
     }
 }
 
 impl Parse for IntRegNode {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         debug_assert_eq!(node.tag_name(), INT_REG);
 
-        let attr_base = node.parse();
-        let register_base = node.parse();
+        let attr_base = node.parse(store);
+        let register_base = node.parse(store);
 
-        let sign = node.parse_if(SIGN).unwrap_or_default();
-        let endianness = node.parse_if(ENDIANNESS).unwrap_or_default();
-        let unit = node.parse_if(UNIT);
-        let representation = node.parse_if(REPRESENTATION).unwrap_or_default();
-        let p_selected = node.parse_while(P_SELECTED);
+        let sign = node.parse_if(SIGN, store).unwrap_or_default();
+        let endianness = node.parse_if(ENDIANNESS, store).unwrap_or_default();
+        let unit = node.parse_if(UNIT, store);
+        let representation = node.parse_if(REPRESENTATION, store).unwrap_or_default();
+        let p_selected = node.parse_while(P_SELECTED, store);
 
         Self {
             attr_base,
@@ -83,7 +84,7 @@ impl Parse for IntRegNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::register_node_elem::{Endianness, Sign};
+    use super::super::register_node_elem::{Endianness, Sign};
 
     use super::*;
 
@@ -102,7 +103,11 @@ mod tests {
         </IntReg>
         "#;
 
-        let node: IntRegNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
+        let mut store = NodeStore::new();
+        let node: IntRegNode = xml::Document::from_str(&xml)
+            .unwrap()
+            .root_node()
+            .parse(&mut store);
 
         assert_eq!(node.sign(), Sign::Signed);
         assert_eq!(node.endianness(), Endianness::BE);

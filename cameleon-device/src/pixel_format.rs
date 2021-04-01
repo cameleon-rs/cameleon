@@ -1,3 +1,5 @@
+#![allow(clippy::upper_case_acronyms)]
+
 use std::convert::TryFrom;
 
 #[allow(clippy::enum_glob_use)]
@@ -1082,10 +1084,10 @@ impl TryFrom<u32> for PixelFormat {
     }
 }
 
-impl Into<u32> for PixelFormat {
+impl From<PixelFormat> for u32 {
     #[allow(clippy::too_many_lines)]
-    fn into(self) -> u32 {
-        match self {
+    fn from(val: PixelFormat) -> u32 {
+        match val {
             Mono8 => 0x0108_0001,
             Mono8s => 0x0108_0002,
             Mono10 => 0x0110_0003,

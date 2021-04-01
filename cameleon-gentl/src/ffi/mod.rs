@@ -28,9 +28,9 @@ impl bool8_t {
     }
 }
 
-impl Into<bool> for bool8_t {
-    fn into(self) -> bool {
-        self.0 != 0
+impl From<bool8_t> for bool {
+    fn from(val: bool8_t) -> Self {
+        val.0 != 0
     }
 }
 
@@ -44,15 +44,15 @@ impl From<bool> for bool8_t {
     }
 }
 
-impl Into<GC_ERROR> for &GenTlError {
-    fn into(self) -> GC_ERROR {
+impl From<&GenTlError> for GC_ERROR {
+    fn from(val: &GenTlError) -> Self {
         use GenTlError::{
             Abort, AccessDenied, Ambiguous, BufferTooSmall, Busy, Error, InvalidAddress,
             InvalidBuffer, InvalidHandle, InvalidId, InvalidIndex, InvalidParameter, InvalidValue,
             Io, NoData, NotAvailable, NotImplemented, NotInitialized, OutOfMemory,
             ParsingChunkData, ResourceExhausted, ResourceInUse, Timeout,
         };
-        let code = match self {
+        let code = match val {
             Error(..) => -1001,
             NotInitialized => -1002,
             NotImplemented => -1003,
@@ -81,24 +81,24 @@ impl Into<GC_ERROR> for &GenTlError {
     }
 }
 
-impl Into<GC_ERROR> for GenTlError {
-    fn into(self) -> GC_ERROR {
-        (&self).into()
+impl From<GenTlError> for GC_ERROR {
+    fn from(val: GenTlError) -> Self {
+        (&val).into()
     }
 }
 
-impl<T> Into<GC_ERROR> for GenTlResult<T> {
-    fn into(self) -> GC_ERROR {
-        match self {
+impl<T> From<GenTlResult<T>> for GC_ERROR {
+    fn from(val: GenTlResult<T>) -> Self {
+        match val {
             Ok(..) => GC_ERROR(0),
             Err(e) => e.into(),
         }
     }
 }
 
-impl<T> Into<GC_ERROR> for &GenTlResult<T> {
-    fn into(self) -> GC_ERROR {
-        match self {
+impl<T> From<&GenTlResult<T>> for GC_ERROR {
+    fn from(val: &GenTlResult<T>) -> Self {
+        match val {
             Ok(..) => GC_ERROR(0),
             Err(e) => e.into(),
         }

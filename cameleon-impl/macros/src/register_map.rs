@@ -569,6 +569,7 @@ impl syn::parse::Parse for RegisterAttr {
     }
 }
 
+#[allow(clippy::upper_case_acronyms)]
 enum AccessRight {
     NA,
     RO,
@@ -950,6 +951,7 @@ struct Args {
     endianness: Endianness,
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Clone, Copy)]
 enum Endianness {
     BE,

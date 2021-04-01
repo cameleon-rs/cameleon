@@ -2,6 +2,7 @@ use super::{
     elem_name::{CACHE_CHUNK_DATA, CHUNK_ID, PORT, P_CHUNK_ID, P_INVALIDATOR, SWAP_ENDIANNESS},
     elem_type::ImmOrPNode,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    node_store::{NodeId, NodeStore},
     xml, Parse,
 };
 
@@ -10,7 +11,7 @@ pub struct PortNode {
     attr_base: NodeAttributeBase,
     elem_base: NodeElementBase,
 
-    p_invalidators: Vec<String>,
+    p_invalidators: Vec<NodeId>,
     chunk_id: Option<ImmOrPNode<u64>>,
     swap_endianness: bool,
     cache_chunk_data: bool,
@@ -23,7 +24,7 @@ impl PortNode {
     }
 
     #[must_use]
-    pub fn p_invalidators(&self) -> &[String] {
+    pub fn p_invalidators(&self) -> &[NodeId] {
         &self.p_invalidators
     }
 
@@ -44,17 +45,17 @@ impl PortNode {
 }
 
 impl Parse for PortNode {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         debug_assert_eq!(node.tag_name(), PORT);
 
-        let attr_base = node.parse();
-        let elem_base = node.parse();
+        let attr_base = node.parse(store);
+        let elem_base = node.parse(store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR);
+        let p_invalidators = node.parse_while(P_INVALIDATOR, store);
         let chunk_id = node.next_if(CHUNK_ID).map_or_else(
             || {
                 node.next_if(P_CHUNK_ID)
-                    .map(|next_node| ImmOrPNode::PNode(next_node.text().into()))
+                    .map(|next_node| ImmOrPNode::PNode(store.id_by_name(next_node.text())))
             },
             |next_node| {
                 Some(ImmOrPNode::Imm(
@@ -62,8 +63,8 @@ impl Parse for PortNode {
                 ))
             },
         );
-        let swap_endianness = node.parse_if(SWAP_ENDIANNESS).unwrap_or_default();
-        let cache_chunk_data = node.parse_if(CACHE_CHUNK_DATA).unwrap_or_default();
+        let swap_endianness = node.parse_if(SWAP_ENDIANNESS, store).unwrap_or_default();
+        let cache_chunk_data = node.parse_if(CACHE_CHUNK_DATA, store).unwrap_or_default();
 
         Self {
             attr_base,
@@ -89,7 +90,11 @@ mod tests {
             <Port>
             "#;
 
-        let node: PortNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
+        let mut store = NodeStore::new();
+        let node: PortNode = xml::Document::from_str(&xml)
+            .unwrap()
+            .root_node()
+            .parse(&mut store);
 
         assert_eq!(node.chunk_id().unwrap(), &ImmOrPNode::Imm(0x00FD_3219));
         assert_eq!(node.swap_endianness(), true);
@@ -103,11 +108,15 @@ mod tests {
             <Port>
             "#;
 
-        let node: PortNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
+        let mut store = NodeStore::new();
+        let node: PortNode = xml::Document::from_str(&xml)
+            .unwrap()
+            .root_node()
+            .parse(&mut store);
 
         assert_eq!(
             node.chunk_id().unwrap(),
-            &ImmOrPNode::PNode("Fd3219".into())
+            &ImmOrPNode::PNode(store.id_by_name("Fd3219"))
         );
     }
 
@@ -119,7 +128,11 @@ mod tests {
             <Port>
             "#;
 
-        let node: PortNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
+        let mut store = NodeStore::new();
+        let node: PortNode = xml::Document::from_str(&xml)
+            .unwrap()
+            .root_node()
+            .parse(&mut store);
 
         assert_eq!(node.chunk_id(), None);
         assert_eq!(node.cache_chunk_data(), true);

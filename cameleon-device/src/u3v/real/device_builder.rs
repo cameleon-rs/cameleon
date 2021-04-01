@@ -30,7 +30,7 @@ pub fn enumerate_devices() -> Result<Vec<Device>> {
 
 struct DeviceBuilder {
     device: RusbDevice,
-    u3v_iad: IAD,
+    u3v_iad: Iad,
     config_desc: rusb::ConfigDescriptor,
 }
 
@@ -120,7 +120,7 @@ impl DeviceBuilder {
     fn find_u3v_iad(
         device: &RusbDevice,
         device_desc: &rusb::DeviceDescriptor,
-    ) -> Result<Option<(IAD, rusb::ConfigDescriptor)>> {
+    ) -> Result<Option<(Iad, rusb::ConfigDescriptor)>> {
         let num_config_desc = device_desc.num_configurations();
 
         for config_index in 0..num_config_desc {
@@ -133,9 +133,9 @@ impl DeviceBuilder {
         Ok(None)
     }
 
-    fn find_u3v_iad_in_config_desc(desc: &rusb::ConfigDescriptor) -> Option<IAD> {
+    fn find_u3v_iad_in_config_desc(desc: &rusb::ConfigDescriptor) -> Option<Iad> {
         if let Some(extra) = desc.extra() {
-            if let Some(iad) = IAD::from_bytes(extra) {
+            if let Some(iad) = Iad::from_bytes(extra) {
                 if Self::is_u3v_iad(&iad) {
                     return Some(iad);
                 }
@@ -153,9 +153,9 @@ impl DeviceBuilder {
         None
     }
 
-    fn find_u3v_iad_in_if_desc(desc: &rusb::InterfaceDescriptor) -> Option<IAD> {
+    fn find_u3v_iad_in_if_desc(desc: &rusb::InterfaceDescriptor) -> Option<Iad> {
         if let Some(extra) = desc.extra() {
-            if let Some(iad) = IAD::from_bytes(extra) {
+            if let Some(iad) = Iad::from_bytes(extra) {
                 if Self::is_u3v_iad(&iad) {
                     return Some(iad);
                 }
@@ -171,9 +171,9 @@ impl DeviceBuilder {
         None
     }
 
-    fn find_u3v_iad_in_ep_desc(desc: &rusb::EndpointDescriptor) -> Option<IAD> {
+    fn find_u3v_iad_in_ep_desc(desc: &rusb::EndpointDescriptor) -> Option<Iad> {
         if let Some(extra) = desc.extra() {
-            if let Some(iad) = IAD::from_bytes(extra) {
+            if let Some(iad) = Iad::from_bytes(extra) {
                 if Self::is_u3v_iad(&iad) {
                     return Some(iad);
                 }
@@ -183,7 +183,7 @@ impl DeviceBuilder {
         None
     }
 
-    fn is_u3v_iad(iad: &IAD) -> bool {
+    fn is_u3v_iad(iad: &Iad) -> bool {
         iad.function_class == MISCELLANEOUS_CLASS
             && iad.function_subclass == USB3V_SUBCLASS
             && iad.function_protocol == IAD_FUNCTION_PROTOCOL
@@ -192,7 +192,7 @@ impl DeviceBuilder {
 
 /// Interface Association Descriptor.
 #[allow(unused)]
-struct IAD {
+struct Iad {
     length: u8,
     descriptor_type: u8,
     first_interface: u8,
@@ -203,7 +203,7 @@ struct IAD {
     function: u8,
 }
 
-impl IAD {
+impl Iad {
     fn from_bytes(bytes: &[u8]) -> Option<Self> {
         let mut read = 0;
         let len = bytes.len();

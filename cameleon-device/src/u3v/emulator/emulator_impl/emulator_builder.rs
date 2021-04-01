@@ -55,6 +55,7 @@ pub struct EmulatorBuilder {
 
 impl EmulatorBuilder {
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn new() -> Self {
         let mut memory = Memory::new();
 
