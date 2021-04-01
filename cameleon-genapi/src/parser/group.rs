@@ -1,31 +1,14 @@
 use super::{
     elem_name::{COMMENT, GROUP},
     node_store::NodeStore,
-    xml, NodeKind, Parse,
+    xml, NodeData, Parse,
 };
 
 #[derive(Debug, Clone)]
-pub struct GroupNode {
-    comment: String,
+pub(super) struct GroupNode {
+    pub(super) comment: String,
 
-    nodes: Vec<NodeKind>,
-}
-
-impl GroupNode {
-    #[must_use]
-    pub fn comment(&self) -> &str {
-        &self.comment
-    }
-
-    #[must_use]
-    pub fn nodes(&self) -> &[NodeKind] {
-        &self.nodes
-    }
-
-    #[must_use]
-    pub fn into_nodes(self) -> Vec<NodeKind> {
-        self.nodes
-    }
+    pub(super) nodes: Vec<NodeData>,
 }
 
 impl Parse for GroupNode {
@@ -35,7 +18,7 @@ impl Parse for GroupNode {
 
         let mut nodes = vec![];
         while let Some(ref mut child) = node.next() {
-            nodes.push(child.parse(store));
+            nodes.extend(child.parse::<Vec<NodeData>>(store));
         }
 
         Self { comment, nodes }
@@ -68,7 +51,7 @@ mod tests {
             .root_node()
             .parse(&mut store);
 
-        assert_eq!(node.comment(), "Nothing to say");
-        assert_eq!(node.nodes().len(), 2);
+        assert_eq!(node.comment, "Nothing to say");
+        assert_eq!(node.nodes.len(), 2);
     }
 }

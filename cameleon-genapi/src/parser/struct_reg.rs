@@ -4,14 +4,14 @@ use super::{
         REPRESENTATION, SIGN, STREAMABLE, STRUCT_ENTRY, STRUCT_REG, UNIT,
     },
     elem_type::{register_node_elem, AccessMode, CachingMode, IntegerRepresentation},
-    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    node_base::{NodeAttributeBase, NodeElementBase},
     node_store::{NodeId, NodeStore},
     register_base::RegisterBase,
     xml, MaskedIntRegNode, Parse,
 };
 
 #[derive(Debug, Clone)]
-pub struct StructRegNode {
+pub(super) struct StructRegNode {
     comment: String,
     register_base: RegisterBase,
 
@@ -21,33 +21,12 @@ pub struct StructRegNode {
 
 impl StructRegNode {
     #[must_use]
-    pub fn comment(&self) -> &str {
-        &self.comment
-    }
-
-    #[must_use]
-    pub fn register_base(&self) -> &RegisterBase {
-        &self.register_base
-    }
-
-    #[must_use]
-    pub fn endianness(&self) -> register_node_elem::Endianness {
-        self.endianness
-    }
-
-    #[must_use]
-    pub fn entries(&self) -> &[StructEntryNode] {
-        &self.entries
-    }
-
-    #[must_use]
-    pub fn to_masked_int_regs<T>(&self) -> T
-    where
-        T: std::iter::FromIterator<MaskedIntRegNode>,
-    {
+    pub(super) fn to_masked_int_regs(self) -> Vec<MaskedIntRegNode> {
+        let register_base = self.register_base;
+        let endianness = self.endianness;
         self.entries
-            .iter()
-            .map(|ent| ent.to_masked_int_reg(&self))
+            .into_iter()
+            .map(|ent| ent.into_masked_int_reg(register_base.clone(), endianness))
             .collect()
     }
 }
@@ -76,7 +55,7 @@ impl Parse for StructRegNode {
 }
 
 #[derive(Debug, Clone)]
-pub struct StructEntryNode {
+struct StructEntryNode {
     attr_base: NodeAttributeBase,
     elem_base: NodeElementBase,
 
@@ -115,69 +94,13 @@ macro_rules! merge_impl {
 }
 
 impl StructEntryNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn p_invalidators(&self) -> &[NodeId] {
-        &self.p_invalidators
-    }
-
-    #[must_use]
-    pub fn access_mode(&self) -> AccessMode {
-        self.access_mode
-    }
-
-    #[must_use]
-    pub fn cacheable(&self) -> CachingMode {
-        self.cacheable
-    }
-
-    #[must_use]
-    pub fn polling_time(&self) -> Option<u64> {
-        self.polling_time
-    }
-
-    #[must_use]
-    pub fn streamable(&self) -> bool {
-        self.streamable
-    }
-
-    #[must_use]
-    pub fn bit_mask(&self) -> register_node_elem::BitMask {
-        self.bit_mask
-    }
-
-    #[must_use]
-    pub fn sign(&self) -> register_node_elem::Sign {
-        self.sign
-    }
-
-    #[must_use]
-    pub fn unit(&self) -> Option<&str> {
-        self.unit.as_deref()
-    }
-
-    #[must_use]
-    pub fn representation(&self) -> IntegerRepresentation {
-        self.representation
-    }
-
-    #[must_use]
-    pub fn p_selected(&self) -> &[NodeId] {
-        &self.p_selected
-    }
-
-    fn to_masked_int_reg(&self, struct_reg: &StructRegNode) -> MaskedIntRegNode {
-        self.clone().into_masked_int_reg(struct_reg)
-    }
-
-    fn into_masked_int_reg(self, struct_reg: &StructRegNode) -> MaskedIntRegNode {
+    fn into_masked_int_reg(
+        self,
+        mut register_base: RegisterBase,
+        endianness: register_node_elem::Endianness,
+    ) -> MaskedIntRegNode {
         let attr_base = self.attr_base;
 
-        let mut register_base = struct_reg.register_base().clone();
         let elem_base = &mut register_base.elem_base;
         elem_base.merge(self.elem_base);
 
@@ -195,7 +118,7 @@ impl StructEntryNode {
             register_base,
             bit_mask: self.bit_mask,
             sign: self.sign,
-            endianness: struct_reg.endianness,
+            endianness,
             unit: self.unit,
             representation: self.representation,
             p_selected: self.p_selected,
@@ -264,77 +187,7 @@ impl Parse for StructEntryNode {
 
 #[cfg(test)]
 mod tests {
-    use super::super::elem_type::register_node_elem::{BitMask, Endianness, Sign};
-
     use super::*;
-
-    #[test]
-    fn test_struct_reg() {
-        let xml = r#"
-            <StructReg Comment="Struct Reg Comment">
-                <Address>0x10000</Address>
-                <Length>4</Length>
-                <pPort>Device</pPort>
-                <Endianess>BigEndian</Endianess>
-
-                <StructEntry Name="StructEntry0">
-                    <pInvalidator>Invalidator0</pInvalidator>
-                    <pInvalidator>Invalidator1</pInvalidator>
-                    <AccessMode>RW</AccessMode>
-                    <Cachable>WriteAround</Cachable>
-                    <PollingTime>1000</PollingTime>
-                    <Streamable>Yes</Streamable>
-                    <LSB>10</LSB>
-                    <MSB>1</MSB>
-                    <Sign>Signed</Sign>
-                    <Unit>Hz</Unit>
-                    <Representation>Logarithmic</Representation>
-                    <pSelected>Selected0</pSelected>
-                    <pSelected>Selected1</pSelected>
-                </StructEntry>
-
-                <StructEntry Name="StructEntry1">
-                    <Bit>24</Bit>
-                </StructEntry>
-
-            </StructReg>
-            "#;
-
-        let mut store = NodeStore::new();
-        let node: StructRegNode = xml::Document::from_str(&xml)
-            .unwrap()
-            .root_node()
-            .parse(&mut store);
-
-        assert_eq!(node.comment(), "Struct Reg Comment");
-        assert_eq!(node.endianness(), Endianness::BE);
-
-        let entries = node.entries();
-        assert_eq!(entries.len(), 2);
-
-        let first_ent = &entries[0];
-        assert_eq!(first_ent.node_base().id(), store.id_by_name("StructEntry0"));
-        assert_eq!(first_ent.p_invalidators().len(), 2);
-        assert_eq!(first_ent.access_mode(), AccessMode::RW);
-        assert_eq!(first_ent.cacheable(), CachingMode::WriteAround);
-        assert_eq!(first_ent.polling_time().unwrap(), 1000);
-        assert_eq!(first_ent.streamable(), true);
-        assert_eq!(first_ent.bit_mask(), BitMask::Range { lsb: 10, msb: 1 });
-        assert_eq!(first_ent.sign(), Sign::Signed);
-        assert_eq!(first_ent.unit().unwrap(), "Hz");
-        assert_eq!(
-            first_ent.representation(),
-            IntegerRepresentation::Logarithmic
-        );
-        assert_eq!(first_ent.p_selected().len(), 2);
-
-        let second_ent = &entries[1];
-        assert_eq!(
-            second_ent.node_base().id(),
-            store.id_by_name("StructEntry1")
-        );
-        assert_eq!(second_ent.bit_mask(), BitMask::SingleBit(24));
-    }
 
     #[test]
     fn test_to_masked_int_regs() {
