@@ -5,6 +5,7 @@ use super::{
         ADDRESS, BIT, INDEX, INT_SWISS_KNIFE, NAME, OFFSET, P_ADDRESS, P_INDEX, P_OFFSET, P_VALUE,
         P_VALUE_COPY, P_VALUE_INDEXED, VALUE, VALUE_INDEXED,
     },
+    node_store::{NodeId, NodeStore},
     xml, Parse,
 };
 
@@ -31,7 +32,7 @@ impl From<&str> for NameSpace {
 }
 
 impl Parse for NameSpace {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         node.next_text().unwrap().into()
     }
 }
@@ -63,7 +64,7 @@ impl From<&str> for Visibility {
 }
 
 impl Parse for Visibility {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         node.next_text().unwrap().into()
     }
 }
@@ -93,7 +94,7 @@ impl Default for MergePriority {
 }
 
 impl Parse for MergePriority {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         node.next_text().unwrap().into()
     }
 }
@@ -117,7 +118,7 @@ impl From<&str> for AccessMode {
 }
 
 impl Parse for AccessMode {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         node.next_text().unwrap().into()
     }
 }
@@ -125,7 +126,7 @@ impl Parse for AccessMode {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ImmOrPNode<T: Clone + PartialEq> {
     Imm(T),
-    PNode(String),
+    PNode(NodeId),
 }
 
 impl<T> ImmOrPNode<T>
@@ -139,42 +140,42 @@ where
         }
     }
 
-    pub fn pnode(&self) -> Option<&str> {
+    pub fn pnode(&self) -> Option<NodeId> {
         match self {
-            Self::PNode(node) => Some(node),
+            Self::PNode(node) => Some(*node),
             _ => None,
         }
     }
 }
 
 impl Parse for ImmOrPNode<bool> {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         let peeked_text = node.peek().unwrap().text();
         if peeked_text == "Yes"
             || peeked_text == "No"
             || peeked_text == "true"
             || peeked_text == "false"
         {
-            Self::Imm(node.parse())
+            Self::Imm(node.parse(store))
         } else {
-            Self::PNode(node.parse())
+            Self::PNode(node.parse(store))
         }
     }
 }
 
 impl Parse for ImmOrPNode<i64> {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         let peeked_text = node.peek().unwrap().text();
         if peeked_text.chars().next().unwrap().is_alphabetic() {
-            Self::PNode(node.parse())
+            Self::PNode(node.parse(store))
         } else {
-            Self::Imm(node.parse())
+            Self::Imm(node.parse(store))
         }
     }
 }
 
 impl Parse for ImmOrPNode<f64> {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         let peeked_text = node.peek().unwrap().text();
 
         if peeked_text == "INF"
@@ -182,9 +183,9 @@ impl Parse for ImmOrPNode<f64> {
             || peeked_text == "NaN"
             || !peeked_text.chars().next().unwrap().is_alphabetic()
         {
-            Self::Imm(node.parse())
+            Self::Imm(node.parse(store))
         } else {
-            Self::PNode(node.parse())
+            Self::PNode(node.parse(store))
         }
     }
 }
@@ -232,7 +233,7 @@ impl Default for IntegerRepresentation {
 }
 
 impl Parse for IntegerRepresentation {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         use IntegerRepresentation::{
             Boolean, HexNumber, IpV4Address, Linear, Logarithmic, MacAddress, PureNumber,
         };
@@ -259,7 +260,7 @@ pub enum FloatRepresentation {
 }
 
 impl Parse for FloatRepresentation {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         let value = node.next_text().unwrap();
         match value {
             "Linear" => Self::Linear,
@@ -285,7 +286,7 @@ pub enum Slope {
 }
 
 impl Parse for Slope {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         let value = node.next_text().unwrap();
         match value {
             "Increasing" => Self::Increasing,
@@ -317,7 +318,7 @@ impl Default for DisplayNotation {
 }
 
 impl Parse for DisplayNotation {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         let value = node.next_text().unwrap();
         match value {
             "Automatic" => Self::Automatic,
@@ -378,7 +379,7 @@ impl From<&str> for CachingMode {
 }
 
 impl Parse for CachingMode {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         let text = node.next_text().unwrap();
         text.into()
     }
@@ -410,9 +411,9 @@ impl<T> Parse for NamedValue<T>
 where
     T: Clone + PartialEq + Parse,
 {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         let name = node.peek().unwrap().attribute_of(NAME).unwrap().into();
-        let value = node.parse();
+        let value = node.parse(store);
         Self { name, value }
     }
 }
@@ -426,7 +427,7 @@ pub(super) fn convert_to_bool(value: &str) -> bool {
 }
 
 impl Parse for bool {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         let text = node.next_text().unwrap();
         convert_to_bool(text)
     }
@@ -449,21 +450,21 @@ pub(super) fn convert_to_uint(value: &str) -> u64 {
 }
 
 impl Parse for i64 {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         let value = node.next_text().unwrap();
         convert_to_int(value)
     }
 }
 
 impl Parse for u64 {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         let value = node.next_text().unwrap();
         convert_to_uint(value)
     }
 }
 
 impl Parse for f64 {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         let value = node.next_text().unwrap();
         if value == "INF" {
             f64::INFINITY
@@ -476,16 +477,23 @@ impl Parse for f64 {
 }
 
 impl Parse for String {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         let text = node.next_text().unwrap();
         text.into()
     }
 }
 
+impl Parse for NodeId {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+        let text = node.next_text().unwrap();
+        store.id_by_name(text)
+    }
+}
+
 pub mod numeric_node_elem {
     use super::{
-        convert_to_int, xml, ImmOrPNode, Parse, INDEX, P_INDEX, P_VALUE, P_VALUE_COPY,
-        P_VALUE_INDEXED, VALUE, VALUE_INDEXED,
+        convert_to_int, xml, ImmOrPNode, NodeId, NodeStore, Parse, INDEX, P_INDEX, P_VALUE,
+        P_VALUE_COPY, P_VALUE_INDEXED, VALUE, VALUE_INDEXED,
     };
 
     #[derive(Debug, Clone)]
@@ -503,16 +511,16 @@ pub mod numeric_node_elem {
         T: Clone + Parse + PartialEq,
         ImmOrPNode<T>: Parse,
     {
-        fn parse(node: &mut xml::Node) -> Self {
+        fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
             let peek = node.peek().unwrap();
             match peek.tag_name() {
-                VALUE => ValueKind::Value(node.parse()),
+                VALUE => ValueKind::Value(node.parse(store)),
                 P_VALUE_COPY | P_VALUE => {
-                    let p_value = node.parse();
+                    let p_value = node.parse(store);
                     ValueKind::PValue(p_value)
                 }
                 P_INDEX => {
-                    let p_index = node.parse();
+                    let p_index = node.parse(store);
                     ValueKind::PIndex(p_index)
                 }
                 _ => unreachable!(),
@@ -522,18 +530,18 @@ pub mod numeric_node_elem {
 
     #[derive(Debug, Clone)]
     pub struct PValue {
-        pub p_value: String,
-        pub p_value_copies: Vec<String>,
+        pub p_value: NodeId,
+        pub p_value_copies: Vec<NodeId>,
     }
 
     impl Parse for PValue {
-        fn parse(node: &mut xml::Node) -> Self {
+        fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
             // NOTE: The pValue can be sandwiched between two pValueCopy sequence.
-            let mut p_value_copies = node.parse_while(P_VALUE_COPY);
+            let mut p_value_copies = node.parse_while(P_VALUE_COPY, store);
 
-            let p_value = node.parse();
+            let p_value = node.parse(store);
 
-            p_value_copies.extend(node.parse_while(P_VALUE_COPY));
+            p_value_copies.extend(node.parse_while::<NodeId>(P_VALUE_COPY, store));
 
             Self {
                 p_value,
@@ -547,7 +555,7 @@ pub mod numeric_node_elem {
     where
         T: Clone + PartialEq,
     {
-        pub p_index: String,
+        pub p_index: NodeId,
         pub value_indexed: Vec<ValueIndexed<T>>,
         pub value_default: ImmOrPNode<T>,
     }
@@ -557,18 +565,18 @@ pub mod numeric_node_elem {
         T: Clone + PartialEq + Parse,
         ImmOrPNode<T>: Parse,
     {
-        fn parse(node: &mut xml::Node) -> Self {
-            let p_index = node.parse();
+        fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+            let p_index = node.parse(store);
 
             let mut value_indexed = vec![];
             while let Some(indexed) = node
-                .parse_if(VALUE_INDEXED)
-                .or_else(|| node.parse_if(P_VALUE_INDEXED))
+                .parse_if(VALUE_INDEXED, store)
+                .or_else(|| node.parse_if(P_VALUE_INDEXED, store))
             {
                 value_indexed.push(indexed);
             }
 
-            let value_default = node.parse();
+            let value_default = node.parse(store);
 
             Self {
                 p_index,
@@ -592,9 +600,9 @@ pub mod numeric_node_elem {
         T: Clone + PartialEq + Parse,
         ImmOrPNode<T>: Parse,
     {
-        fn parse(node: &mut xml::Node) -> Self {
+        fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
             let index = convert_to_int(node.peek().unwrap().attribute_of(INDEX).unwrap());
-            let indexed = node.parse();
+            let indexed = node.parse(store);
             Self { index, indexed }
         }
     }
@@ -604,8 +612,8 @@ pub mod register_node_elem {
     use super::super::IntSwissKnifeNode;
 
     use super::{
-        convert_to_int, xml, ImmOrPNode, Parse, ADDRESS, BIT, INT_SWISS_KNIFE, OFFSET, P_ADDRESS,
-        P_INDEX, P_OFFSET,
+        convert_to_int, xml, ImmOrPNode, NodeId, NodeStore, Parse, ADDRESS, BIT, INT_SWISS_KNIFE,
+        OFFSET, P_ADDRESS, P_INDEX, P_OFFSET,
     };
 
     #[derive(Debug, Clone)]
@@ -616,12 +624,12 @@ pub mod register_node_elem {
     }
 
     impl Parse for AddressKind {
-        fn parse(node: &mut xml::Node) -> Self {
+        fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
             let peeked_node = node.peek().unwrap();
             match peeked_node.tag_name() {
-                ADDRESS | P_ADDRESS => Self::Address(node.parse()),
-                INT_SWISS_KNIFE => Self::IntSwissKnife(Box::new(node.next().unwrap().parse())),
-                P_INDEX => Self::PIndex(node.parse()),
+                ADDRESS | P_ADDRESS => Self::Address(node.parse(store)),
+                INT_SWISS_KNIFE => Self::IntSwissKnife(Box::new(node.next().unwrap().parse(store))),
+                P_INDEX => Self::PIndex(node.parse(store)),
                 _ => unreachable!(),
             }
         }
@@ -630,7 +638,7 @@ pub mod register_node_elem {
     #[derive(Debug, Clone)]
     pub struct PIndex {
         offset: Option<ImmOrPNode<i64>>,
-        p_index: String,
+        p_index: NodeId,
     }
 
     impl PIndex {
@@ -640,13 +648,13 @@ pub mod register_node_elem {
         }
 
         #[must_use]
-        pub fn p_index(&self) -> &str {
-            &self.p_index
+        pub fn p_index(&self) -> NodeId {
+            self.p_index
         }
     }
 
     impl Parse for PIndex {
-        fn parse(node: &mut xml::Node) -> Self {
+        fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
             let next_node = node.peek().unwrap();
 
             let imm_offset = next_node
@@ -654,10 +662,10 @@ pub mod register_node_elem {
                 .map(|s| ImmOrPNode::Imm(convert_to_int(s)));
             let pnode_offset = next_node
                 .attribute_of(P_OFFSET)
-                .map(|s| ImmOrPNode::PNode(s.into()));
+                .map(|s| ImmOrPNode::PNode(store.id_by_name(s)));
             let offset = imm_offset.xor(pnode_offset);
 
-            let p_index = node.parse();
+            let p_index = node.parse(store);
 
             Self { offset, p_index }
         }
@@ -676,7 +684,7 @@ pub mod register_node_elem {
     }
 
     impl Parse for Endianness {
-        fn parse(node: &mut xml::Node) -> Self {
+        fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
             match node.next_text().unwrap() {
                 "LittleEndian" => Self::LE,
                 "BigEndian" => Self::BE,
@@ -698,7 +706,7 @@ pub mod register_node_elem {
     }
 
     impl Parse for Sign {
-        fn parse(node: &mut xml::Node) -> Self {
+        fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
             match node.next_text().unwrap() {
                 "Signed" => Self::Signed,
                 "Unsigned" => Self::Unsigned,
@@ -714,11 +722,11 @@ pub mod register_node_elem {
     }
 
     impl Parse for BitMask {
-        fn parse(node: &mut xml::Node) -> Self {
-            node.parse_if(BIT).map_or_else(
+        fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+            node.parse_if(BIT, store).map_or_else(
                 || {
-                    let lsb = node.parse();
-                    let msb = node.parse();
+                    let lsb = node.parse(store);
+                    let msb = node.parse(store);
                     Self::Range { lsb, msb }
                 },
                 Self::SingleBit,
