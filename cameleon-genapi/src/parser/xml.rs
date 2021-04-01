@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-use super::{Parse, ParseResult};
+use super::{node_store::NodeStore, Parse, ParseResult};
 
 pub(super) struct Document<'input> {
     document: roxmltree::Document<'input>,
@@ -29,24 +29,32 @@ pub(super) struct Node<'a, 'input> {
 }
 
 impl<'a, 'input> Node<'a, 'input> {
-    pub(super) fn parse<T>(&mut self) -> T
+    pub(super) fn parse<T>(&mut self, store: &mut NodeStore) -> T
     where
         T: Parse,
     {
-        T::parse(self)
+        T::parse(self, store)
     }
 
-    pub(super) fn parse_if<T: Parse>(&mut self, tag_name: &str) -> Option<T> {
+    pub(super) fn parse_if<T: Parse>(
+        &mut self,
+        tag_name: &str,
+        store: &mut NodeStore,
+    ) -> Option<T> {
         if self.peek()?.tag_name() == tag_name {
-            Some(self.parse())
+            Some(self.parse(store))
         } else {
             None
         }
     }
 
-    pub(super) fn parse_while<T: Parse>(&mut self, tag_name: &str) -> Vec<T> {
+    pub(super) fn parse_while<T: Parse>(
+        &mut self,
+        tag_name: &str,
+        store: &mut NodeStore,
+    ) -> Vec<T> {
         let mut res = vec![];
-        while let Some(parsed) = self.parse_if(tag_name) {
+        while let Some(parsed) = self.parse_if(tag_name, store) {
             res.push(parsed);
         }
         res
