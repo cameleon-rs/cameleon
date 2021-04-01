@@ -32,7 +32,7 @@ impl From<&str> for NameSpace {
 }
 
 impl Parse for NameSpace {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
         node.next_text().unwrap().into()
     }
 }
@@ -64,7 +64,7 @@ impl From<&str> for Visibility {
 }
 
 impl Parse for Visibility {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
         node.next_text().unwrap().into()
     }
 }
@@ -94,7 +94,7 @@ impl Default for MergePriority {
 }
 
 impl Parse for MergePriority {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
         node.next_text().unwrap().into()
     }
 }
@@ -118,7 +118,7 @@ impl From<&str> for AccessMode {
 }
 
 impl Parse for AccessMode {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
         node.next_text().unwrap().into()
     }
 }
@@ -233,7 +233,7 @@ impl Default for IntegerRepresentation {
 }
 
 impl Parse for IntegerRepresentation {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
         use IntegerRepresentation::{
             Boolean, HexNumber, IpV4Address, Linear, Logarithmic, MacAddress, PureNumber,
         };
@@ -260,7 +260,7 @@ pub enum FloatRepresentation {
 }
 
 impl Parse for FloatRepresentation {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
         let value = node.next_text().unwrap();
         match value {
             "Linear" => Self::Linear,
@@ -286,7 +286,7 @@ pub enum Slope {
 }
 
 impl Parse for Slope {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
         let value = node.next_text().unwrap();
         match value {
             "Increasing" => Self::Increasing,
@@ -318,7 +318,7 @@ impl Default for DisplayNotation {
 }
 
 impl Parse for DisplayNotation {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
         let value = node.next_text().unwrap();
         match value {
             "Automatic" => Self::Automatic,
@@ -379,7 +379,7 @@ impl From<&str> for CachingMode {
 }
 
 impl Parse for CachingMode {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
         let text = node.next_text().unwrap();
         text.into()
     }
@@ -427,7 +427,7 @@ pub(super) fn convert_to_bool(value: &str) -> bool {
 }
 
 impl Parse for bool {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
         let text = node.next_text().unwrap();
         convert_to_bool(text)
     }
@@ -450,21 +450,21 @@ pub(super) fn convert_to_uint(value: &str) -> u64 {
 }
 
 impl Parse for i64 {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
         let value = node.next_text().unwrap();
         convert_to_int(value)
     }
 }
 
 impl Parse for u64 {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
         let value = node.next_text().unwrap();
         convert_to_uint(value)
     }
 }
 
 impl Parse for f64 {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
         let value = node.next_text().unwrap();
         if value == "INF" {
             f64::INFINITY
@@ -477,7 +477,7 @@ impl Parse for f64 {
 }
 
 impl Parse for String {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
         let text = node.next_text().unwrap();
         text.into()
     }
@@ -684,7 +684,7 @@ pub mod register_node_elem {
     }
 
     impl Parse for Endianness {
-        fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+        fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
             match node.next_text().unwrap() {
                 "LittleEndian" => Self::LE,
                 "BigEndian" => Self::BE,
@@ -706,7 +706,7 @@ pub mod register_node_elem {
     }
 
     impl Parse for Sign {
-        fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+        fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
             match node.next_text().unwrap() {
                 "Signed" => Self::Signed,
                 "Unsigned" => Self::Unsigned,

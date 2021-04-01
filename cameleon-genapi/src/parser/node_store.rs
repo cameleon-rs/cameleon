@@ -1,5 +1,3 @@
-use std::convert::TryInto;
-
 use string_interner::{StringInterner, Symbol};
 
 use super::register_description::NodeData;
@@ -9,8 +7,11 @@ pub struct NodeId(u32);
 
 impl Symbol for NodeId {
     fn try_from_usize(index: usize) -> Option<Self> {
-        let val: u32 = index.try_into().ok()?;
-        Some(Self(val))
+        if ((u32::MAX - 1) as usize) < index {
+            None
+        } else {
+            Some(Self(index as u32))
+        }
     }
 
     fn to_usize(self) -> usize {
@@ -35,21 +36,21 @@ impl NodeStore {
         self.interner.get_or_intern(s)
     }
 
-    pub fn store_node(&mut self, id: NodeId, data: NodeData) {
-        let id = id.to_usize();
-        if self.store.len() < id {
-            self.store.resize(id, None)
-        }
-        debug_assert!(self.store[id].is_none());
-        self.store[id] = Some(data);
-    }
-
     pub fn node(&self, id: NodeId) -> &NodeData {
         self.node_opt(id).unwrap()
     }
 
     pub fn node_opt(&self, id: NodeId) -> Option<&NodeData> {
         self.store.get(id.to_usize())?.as_ref()
+    }
+
+    pub(super) fn store_node(&mut self, id: NodeId, data: NodeData) {
+        let id = id.to_usize();
+        if self.store.len() <= id {
+            self.store.resize(id + 1, None)
+        }
+        debug_assert!(self.store[id].is_none());
+        self.store[id] = Some(data);
     }
 }
 

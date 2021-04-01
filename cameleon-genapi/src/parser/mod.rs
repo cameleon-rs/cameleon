@@ -4,6 +4,8 @@
     clippy::missing_errors_doc
 )]
 
+pub mod node_store;
+
 mod boolean;
 mod category;
 mod command;
@@ -39,7 +41,6 @@ pub use elem_type::*;
 pub use enumeration::*;
 pub use float::*;
 pub use float_reg::*;
-pub use group::*;
 pub use int_converter::*;
 pub use int_reg::*;
 pub use int_swiss_knife::*;
@@ -53,9 +54,10 @@ pub use register_base::*;
 pub use register_description::*;
 pub use string::*;
 pub use string_reg::*;
-pub use struct_reg::*;
 pub use swiss_knife::*;
 
+use group::*;
+use struct_reg::*;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -80,8 +82,9 @@ impl<'a> Parser<'a> {
         Ok(Self { document })
     }
 
-    pub fn parse(&self) -> ParseResult<RegisterDescription> {
-        Ok(self.document.root_node().parse())
+    pub fn parse(&self) -> ParseResult<(RegisterDescription, node_store::NodeStore)> {
+        let mut store = node_store::NodeStore::new();
+        Ok((self.document.root_node().parse(&mut store), store))
     }
 
     #[must_use]
@@ -91,7 +94,7 @@ impl<'a> Parser<'a> {
 }
 
 trait Parse {
-    fn parse(node: &mut xml::Node) -> Self;
+    fn parse(node: &mut xml::Node, store: &mut node_store::NodeStore) -> Self;
 }
 
 #[cfg(test)]
