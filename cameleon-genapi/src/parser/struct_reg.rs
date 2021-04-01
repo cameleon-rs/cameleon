@@ -5,6 +5,7 @@ use super::{
     },
     elem_type::{register_node_elem, AccessMode, CachingMode, IntegerRepresentation},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    node_store::{NodeId, NodeStore},
     register_base::RegisterBase,
     xml, MaskedIntRegNode, Parse,
 };
@@ -52,16 +53,16 @@ impl StructRegNode {
 }
 
 impl Parse for StructRegNode {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         debug_assert_eq!(node.tag_name(), STRUCT_REG);
 
         let comment = node.attribute_of(COMMENT).unwrap().into();
-        let register_base = node.parse();
+        let register_base = node.parse(store);
 
-        let endianness = node.parse_if(ENDIANNESS).unwrap_or_default();
+        let endianness = node.parse_if(ENDIANNESS, store).unwrap_or_default();
         let mut entries = vec![];
         while let Some(mut entry_node) = node.next() {
-            let entry = entry_node.parse();
+            let entry = entry_node.parse(store);
             entries.push(entry);
         }
 
@@ -79,7 +80,7 @@ pub struct StructEntryNode {
     attr_base: NodeAttributeBase,
     elem_base: NodeElementBase,
 
-    p_invalidators: Vec<String>,
+    p_invalidators: Vec<NodeId>,
     access_mode: AccessMode,
     cacheable: CachingMode,
     polling_time: Option<u64>,
@@ -88,7 +89,7 @@ pub struct StructEntryNode {
     sign: register_node_elem::Sign,
     unit: Option<String>,
     representation: IntegerRepresentation,
-    p_selected: Vec<String>,
+    p_selected: Vec<NodeId>,
 }
 
 /// See "2.8.7 StructReg" in GenICam Standard v2.1.1.
@@ -120,7 +121,7 @@ impl StructEntryNode {
     }
 
     #[must_use]
-    pub fn p_invalidators(&self) -> &[String] {
+    pub fn p_invalidators(&self) -> &[NodeId] {
         &self.p_invalidators
     }
 
@@ -165,7 +166,7 @@ impl StructEntryNode {
     }
 
     #[must_use]
-    pub fn p_selected(&self) -> &[String] {
+    pub fn p_selected(&self) -> &[NodeId] {
         &self.p_selected
     }
 
@@ -227,22 +228,22 @@ impl NodeElementBase {
 }
 
 impl Parse for StructEntryNode {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         debug_assert_eq!(node.tag_name(), STRUCT_ENTRY);
 
-        let attr_base = node.parse();
-        let elem_base = node.parse();
+        let attr_base = node.parse(store);
+        let elem_base = node.parse(store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR);
-        let access_mode = node.parse_if(ACCESS_MODE).unwrap_or(AccessMode::RO);
-        let cacheable = node.parse_if(CACHEABLE).unwrap_or_default();
-        let polling_time = node.parse_if(POLLING_TIME);
-        let streamable = node.parse_if(STREAMABLE).unwrap_or_default();
-        let bit_mask = node.parse();
-        let sign = node.parse_if(SIGN).unwrap_or_default();
-        let unit = node.parse_if(UNIT);
-        let representation = node.parse_if(REPRESENTATION).unwrap_or_default();
-        let p_selected = node.parse_while(P_SELECTED);
+        let p_invalidators = node.parse_while(P_INVALIDATOR, store);
+        let access_mode = node.parse_if(ACCESS_MODE, store).unwrap_or(AccessMode::RO);
+        let cacheable = node.parse_if(CACHEABLE, store).unwrap_or_default();
+        let polling_time = node.parse_if(POLLING_TIME, store);
+        let streamable = node.parse_if(STREAMABLE, store).unwrap_or_default();
+        let bit_mask = node.parse(store);
+        let sign = node.parse_if(SIGN, store).unwrap_or_default();
+        let unit = node.parse_if(UNIT, store);
+        let representation = node.parse_if(REPRESENTATION, store).unwrap_or_default();
+        let p_selected = node.parse_while(P_SELECTED, store);
 
         Self {
             attr_base,
@@ -299,7 +300,11 @@ mod tests {
             </StructReg>
             "#;
 
-        let node: StructRegNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
+        let mut store = NodeStore::new();
+        let node: StructRegNode = xml::Document::from_str(&xml)
+            .unwrap()
+            .root_node()
+            .parse(&mut store);
 
         assert_eq!(node.comment(), "Struct Reg Comment");
         assert_eq!(node.endianness(), Endianness::BE);
@@ -308,7 +313,7 @@ mod tests {
         assert_eq!(entries.len(), 2);
 
         let first_ent = &entries[0];
-        assert_eq!(first_ent.node_base().name(), "StructEntry0");
+        assert_eq!(first_ent.node_base().id(), store.id_by_name("StructEntry0"));
         assert_eq!(first_ent.p_invalidators().len(), 2);
         assert_eq!(first_ent.access_mode(), AccessMode::RW);
         assert_eq!(first_ent.cacheable(), CachingMode::WriteAround);
@@ -324,7 +329,10 @@ mod tests {
         assert_eq!(first_ent.p_selected().len(), 2);
 
         let second_ent = &entries[1];
-        assert_eq!(second_ent.node_base().name(), "StructEntry1");
+        assert_eq!(
+            second_ent.node_base().id(),
+            store.id_by_name("StructEntry1")
+        );
         assert_eq!(second_ent.bit_mask(), BitMask::SingleBit(24));
     }
 
@@ -362,13 +370,20 @@ mod tests {
 
             </StructReg>
             "#;
-        let node: StructRegNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
+        let mut store = NodeStore::new();
+        let node: StructRegNode = xml::Document::from_str(&xml)
+            .unwrap()
+            .root_node()
+            .parse(&mut store);
         let masked_int_regs: Vec<_> = node.to_masked_int_regs();
 
         assert_eq!(masked_int_regs.len(), 2);
 
         let masked_int_reg0 = &masked_int_regs[0];
-        assert_eq!(masked_int_reg0.node_base().name(), "StructEntry0");
+        assert_eq!(
+            masked_int_reg0.node_base().id(),
+            store.id_by_name("StructEntry0")
+        );
         assert_eq!(
             masked_int_reg0.node_base().imposed_access_mode(),
             AccessMode::RO
@@ -383,7 +398,10 @@ mod tests {
         );
 
         let masked_int_reg1 = &masked_int_regs[1];
-        assert_eq!(masked_int_reg1.node_base().name(), "StructEntry1");
+        assert_eq!(
+            masked_int_reg1.node_base().id(),
+            store.id_by_name("StructEntry1")
+        );
         assert_eq!(
             masked_int_reg1.node_base().imposed_access_mode(),
             AccessMode::RW
