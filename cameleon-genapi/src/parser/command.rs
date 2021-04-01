@@ -2,6 +2,7 @@ use super::{
     elem_name::{COMMAND, POLLING_TIME, P_INVALIDATOR},
     elem_type::ImmOrPNode,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    node_store::{NodeId, NodeStore},
     xml, Parse,
 };
 
@@ -10,7 +11,7 @@ pub struct CommandNode {
     attr_base: NodeAttributeBase,
     elem_base: NodeElementBase,
 
-    p_invalidators: Vec<String>,
+    p_invalidators: Vec<NodeId>,
     value: ImmOrPNode<i64>,
     command_value: ImmOrPNode<i64>,
     polling_time: Option<u64>,
@@ -23,7 +24,7 @@ impl CommandNode {
     }
 
     #[must_use]
-    pub fn p_invalidators(&self) -> &[String] {
+    pub fn p_invalidators(&self) -> &[NodeId] {
         &self.p_invalidators
     }
 
@@ -44,16 +45,16 @@ impl CommandNode {
 }
 
 impl Parse for CommandNode {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         debug_assert_eq!(node.tag_name(), COMMAND);
 
-        let attr_base = node.parse();
-        let elem_base = node.parse();
+        let attr_base = node.parse(store);
+        let elem_base = node.parse(store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR);
-        let value = node.parse();
-        let command_value = node.parse();
-        let polling_time = node.parse_if(POLLING_TIME);
+        let p_invalidators = node.parse_while(P_INVALIDATOR, store);
+        let value = node.parse(store);
+        let command_value = node.parse(store);
+        let polling_time = node.parse_if(POLLING_TIME, store);
 
         Self {
             attr_base,
@@ -80,12 +81,16 @@ mod tests {
             </Command>
             "#;
 
-        let node: CommandNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
+        let mut store = NodeStore::new();
+        let node: CommandNode = xml::Document::from_str(&xml)
+            .unwrap()
+            .root_node()
+            .parse(&mut store);
 
         assert_eq!(node.value(), &ImmOrPNode::Imm(100));
         assert_eq!(
             node.command_value(),
-            &ImmOrPNode::PNode("CommandValueNode".into())
+            &ImmOrPNode::PNode(store.id_by_name("CommandValueNode"))
         );
         assert_eq!(node.polling_time(), Some(1000));
     }
