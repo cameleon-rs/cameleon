@@ -5,6 +5,7 @@ use super::{
     },
     elem_type::{numeric_node_elem, ImmOrPNode, IntegerRepresentation},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    node_store::{NodeId, NodeStore},
     xml, Parse,
 };
 
@@ -13,7 +14,7 @@ pub struct IntegerNode {
     attr_base: NodeAttributeBase,
     elem_base: NodeElementBase,
 
-    p_invalidators: Vec<String>,
+    p_invalidators: Vec<NodeId>,
     streamable: bool,
     value_kind: numeric_node_elem::ValueKind<i64>,
     min: ImmOrPNode<i64>,
@@ -21,7 +22,7 @@ pub struct IntegerNode {
     inc: ImmOrPNode<i64>,
     unit: Option<String>,
     representation: IntegerRepresentation,
-    p_selected: Vec<String>,
+    p_selected: Vec<NodeId>,
 }
 
 impl IntegerNode {
@@ -31,7 +32,7 @@ impl IntegerNode {
     }
 
     #[must_use]
-    pub fn p_invalidators(&self) -> &[String] {
+    pub fn p_invalidators(&self) -> &[NodeId] {
         &self.p_invalidators
     }
 
@@ -71,32 +72,36 @@ impl IntegerNode {
     }
 
     #[must_use]
-    pub fn p_selected(&self) -> &[String] {
+    pub fn p_selected(&self) -> &[NodeId] {
         &self.p_selected
     }
 }
 
 impl Parse for IntegerNode {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         debug_assert_eq!(node.tag_name(), INTEGER);
 
-        let attr_base = node.parse();
-        let elem_base = node.parse();
+        let attr_base = node.parse(store);
+        let elem_base = node.parse(store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR);
-        let streamable = node.parse_if(STREAMABLE).unwrap_or_default();
-        let value_kind = node.parse();
-        let min = node.parse_if(MIN).or_else(|| node.parse_if(P_MIN));
-        let max = node.parse_if(MAX).or_else(|| node.parse_if(P_MAX));
+        let p_invalidators = node.parse_while(P_INVALIDATOR, store);
+        let streamable = node.parse_if(STREAMABLE, store).unwrap_or_default();
+        let value_kind = node.parse(store);
+        let min = node
+            .parse_if(MIN, store)
+            .or_else(|| node.parse_if(P_MIN, store));
+        let max = node
+            .parse_if(MAX, store)
+            .or_else(|| node.parse_if(P_MAX, store));
         let inc = node
-            .parse_if(INC)
-            .or_else(|| node.parse_if(P_INC))
+            .parse_if(INC, store)
+            .or_else(|| node.parse_if(P_INC, store))
             .unwrap_or(ImmOrPNode::Imm(10));
-        let unit = node.parse_if(UNIT);
+        let unit = node.parse_if(UNIT, store);
         let representation = node
-            .parse_if::<IntegerRepresentation>(REPRESENTATION)
+            .parse_if::<IntegerRepresentation>(REPRESENTATION, store)
             .unwrap_or_default();
-        let p_selected: Vec<String> = node.parse_while(P_SELECTED);
+        let p_selected: Vec<NodeId> = node.parse_while(P_SELECTED, store);
 
         // Deduce min and max value based on representation if not specified.
         let min = min.unwrap_or_else(|| ImmOrPNode::Imm(representation.deduce_min()));
@@ -122,9 +127,10 @@ impl Parse for IntegerNode {
 mod tests {
     use super::*;
 
-    fn integer_node_from_str(xml: &str) -> IntegerNode {
+    fn integer_node_from_str(xml: &str) -> (IntegerNode, NodeStore) {
         let document = xml::Document::from_str(xml).unwrap();
-        document.root_node().parse()
+        let mut store = NodeStore::new();
+        (document.root_node().parse(&mut store), store)
     }
 
     #[test]
@@ -146,12 +152,12 @@ mod tests {
             </Integer>
             "#;
 
-        let node = integer_node_from_str(xml);
+        let (node, mut store) = integer_node_from_str(xml);
 
         let p_invalidators = node.p_invalidators();
         assert_eq!(p_invalidators.len(), 2);
-        assert_eq!(p_invalidators[0], "Invalidator0");
-        assert_eq!(p_invalidators[1], "Invalidator1");
+        assert_eq!(p_invalidators[0], store.id_by_name("Invalidator0"));
+        assert_eq!(p_invalidators[1], store.id_by_name("Invalidator1"));
 
         assert!(node.streamable());
         assert!(matches! {node.value_kind(), numeric_node_elem::ValueKind::Value(0x100)});
@@ -163,8 +169,8 @@ mod tests {
 
         let p_selected = node.p_selected();
         assert_eq!(p_selected.len(), 2);
-        assert_eq!(p_selected[0], "Selected0");
-        assert_eq!(p_selected[1], "Selected1");
+        assert_eq!(p_selected[0], store.id_by_name("Selected0"));
+        assert_eq!(p_selected[1], store.id_by_name("Selected1"));
     }
 
     #[test]
@@ -181,21 +187,21 @@ mod tests {
             </Integer>
             "#;
 
-        let node = integer_node_from_str(xml);
+        let (node, mut store) = integer_node_from_str(xml);
         let p_value = match node.value_kind() {
             numeric_node_elem::ValueKind::PValue(p_value) => p_value,
             _ => panic!(),
         };
-        assert_eq!(p_value.p_value.as_str(), "pValue");
+        assert_eq!(p_value.p_value, store.id_by_name("pValue"));
         let p_value_copies = &p_value.p_value_copies;
         assert_eq!(p_value_copies.len(), 3);
-        assert_eq!(p_value_copies[0], "Copy1");
-        assert_eq!(p_value_copies[1], "Copy2");
-        assert_eq!(p_value_copies[2], "Copy3");
+        assert_eq!(p_value_copies[0], store.id_by_name("Copy1"));
+        assert_eq!(p_value_copies[1], store.id_by_name("Copy2"));
+        assert_eq!(p_value_copies[2], store.id_by_name("Copy3"));
 
-        assert_eq!(node.min(), &ImmOrPNode::PNode("pMinNode".into()));
-        assert_eq!(node.max(), &ImmOrPNode::PNode("pMaxNode".into()));
-        assert_eq!(node.inc(), &ImmOrPNode::PNode("pIncNode".into()));
+        assert_eq!(node.min(), &ImmOrPNode::PNode(store.id_by_name("pMinNode")));
+        assert_eq!(node.max(), &ImmOrPNode::PNode(store.id_by_name("pMaxNode")));
+        assert_eq!(node.inc(), &ImmOrPNode::PNode(store.id_by_name("pIncNode")));
     }
 
     #[test]
@@ -210,13 +216,13 @@ mod tests {
         </Integer>
         "#;
 
-        let node = integer_node_from_str(xml);
+        let (node, mut store) = integer_node_from_str(xml);
         let p_index = match node.value_kind {
             numeric_node_elem::ValueKind::PIndex(p_index) => p_index,
             _ => panic!(),
         };
 
-        assert_eq!(&p_index.p_index, "pIndexNode");
+        assert_eq!(p_index.p_index, store.id_by_name("pIndexNode"));
 
         let value_indexed = p_index.value_indexed;
         assert_eq!(value_indexed.len(), 3);
@@ -225,7 +231,7 @@ mod tests {
 
         assert_eq!(
             value_indexed[1].indexed,
-            ImmOrPNode::PNode("pValueIndexNode".into())
+            ImmOrPNode::PNode(store.id_by_name("pValueIndexNode"))
         );
         assert_eq!(value_indexed[1].index, 20);
 
@@ -234,7 +240,7 @@ mod tests {
 
         assert_eq!(
             p_index.value_default,
-            ImmOrPNode::PNode("pValueDefaultNode".into())
+            ImmOrPNode::PNode(store.id_by_name("pValueDefaultNode"))
         );
     }
 }
