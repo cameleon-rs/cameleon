@@ -2,6 +2,7 @@ use super::{
     elem_name::{ENDIANNESS, MASKED_INT_REG, P_SELECTED, REPRESENTATION, SIGN, UNIT},
     elem_type::{register_node_elem, IntegerRepresentation},
     node_base::{NodeAttributeBase, NodeBase},
+    node_store::{NodeId, NodeStore},
     register_base::RegisterBase,
     xml, Parse,
 };
@@ -16,7 +17,7 @@ pub struct MaskedIntRegNode {
     pub(super) endianness: register_node_elem::Endianness,
     pub(super) unit: Option<String>,
     pub(super) representation: IntegerRepresentation,
-    pub(super) p_selected: Vec<String>,
+    pub(super) p_selected: Vec<NodeId>,
 }
 
 impl MaskedIntRegNode {
@@ -57,23 +58,23 @@ impl MaskedIntRegNode {
     }
 
     #[must_use]
-    pub fn p_selected(&self) -> &[String] {
+    pub fn p_selected(&self) -> &[NodeId] {
         &self.p_selected
     }
 }
 
 impl Parse for MaskedIntRegNode {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         debug_assert_eq!(node.tag_name(), MASKED_INT_REG);
-        let attr_base = node.parse();
+        let attr_base = node.parse(store);
 
-        let register_base = node.parse();
-        let bit_mask = node.parse();
-        let sign = node.parse_if(SIGN).unwrap_or_default();
-        let endianness = node.parse_if(ENDIANNESS).unwrap_or_default();
-        let unit = node.parse_if(UNIT);
-        let representation = node.parse_if(REPRESENTATION).unwrap_or_default();
-        let p_selected = node.parse_while(P_SELECTED);
+        let register_base = node.parse(store);
+        let bit_mask = node.parse(store);
+        let sign = node.parse_if(SIGN, store).unwrap_or_default();
+        let endianness = node.parse_if(ENDIANNESS, store).unwrap_or_default();
+        let unit = node.parse_if(UNIT, store);
+        let representation = node.parse_if(REPRESENTATION, store).unwrap_or_default();
+        let p_selected = node.parse_while(P_SELECTED, store);
 
         Self {
             attr_base,
@@ -105,7 +106,11 @@ mod tests {
         </MaskedIntReg>
         "#;
 
-        let node: MaskedIntRegNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
+        let mut store = NodeStore::new();
+        let node: MaskedIntRegNode = xml::Document::from_str(&xml)
+            .unwrap()
+            .root_node()
+            .parse(&mut store);
 
         debug_assert_eq!(node.bit_mask(), BitMask::SingleBit(3));
     }
@@ -122,7 +127,11 @@ mod tests {
         </MaskedIntReg>
         "#;
 
-        let node: MaskedIntRegNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
+        let mut store = NodeStore::new();
+        let node: MaskedIntRegNode = xml::Document::from_str(&xml)
+            .unwrap()
+            .root_node()
+            .parse(&mut store);
 
         debug_assert_eq!(node.bit_mask(), BitMask::Range { lsb: 3, msb: 7 });
     }
