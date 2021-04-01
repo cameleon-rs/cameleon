@@ -1,5 +1,6 @@
 use super::{
     elem_name::{COMMENT, GROUP},
+    node_store::NodeStore,
     xml, NodeKind, Parse,
 };
 
@@ -28,13 +29,13 @@ impl GroupNode {
 }
 
 impl Parse for GroupNode {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         debug_assert_eq!(node.tag_name(), GROUP);
         let comment = node.attribute_of(COMMENT).unwrap().into();
 
         let mut nodes = vec![];
         while let Some(ref mut child) = node.next() {
-            nodes.push(child.parse());
+            nodes.push(child.parse(store));
         }
 
         Self { comment, nodes }
@@ -61,7 +62,11 @@ mod tests {
             </Group>
             "#;
 
-        let node: GroupNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
+        let mut store = NodeStore::new();
+        let node: GroupNode = xml::Document::from_str(&xml)
+            .unwrap()
+            .root_node()
+            .parse(&mut store);
 
         assert_eq!(node.comment(), "Nothing to say");
         assert_eq!(node.nodes().len(), 2);
