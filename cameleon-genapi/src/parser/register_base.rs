@@ -5,6 +5,7 @@ use super::{
     },
     elem_type::{register_node_elem, AccessMode, CachingMode, ImmOrPNode},
     node_base::NodeElementBase,
+    node_store::{NodeId, NodeStore},
     xml, Parse,
 };
 
@@ -16,10 +17,10 @@ pub struct RegisterBase {
     pub(super) address_kinds: Vec<register_node_elem::AddressKind>,
     pub(super) length: ImmOrPNode<i64>,
     pub(super) access_mode: AccessMode,
-    pub(super) p_port: String,
+    pub(super) p_port: NodeId,
     pub(super) cacheable: CachingMode,
     pub(super) polling_time: Option<u64>,
-    pub(super) p_invalidators: Vec<String>,
+    pub(super) p_invalidators: Vec<NodeId>,
 }
 
 impl RegisterBase {
@@ -44,8 +45,8 @@ impl RegisterBase {
     }
 
     #[must_use]
-    pub fn p_port(&self) -> &str {
-        &self.p_port
+    pub fn p_port(&self) -> NodeId {
+        self.p_port
     }
 
     #[must_use]
@@ -59,31 +60,31 @@ impl RegisterBase {
     }
 
     #[must_use]
-    pub fn p_invalidators(&self) -> &[String] {
+    pub fn p_invalidators(&self) -> &[NodeId] {
         &self.p_invalidators
     }
 }
 
 impl Parse for RegisterBase {
-    fn parse(node: &mut xml::Node) -> Self {
-        let elem_base = node.parse();
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+        let elem_base = node.parse(store);
 
-        let streamable = node.parse_if(STREAMABLE).unwrap_or_default();
+        let streamable = node.parse_if(STREAMABLE, store).unwrap_or_default();
         let mut address_kinds = vec![];
         while let Some(addr_kind) = node
-            .parse_if(ADDRESS)
-            .or_else(|| node.parse_if(INT_SWISS_KNIFE))
-            .or_else(|| node.parse_if(P_ADDRESS))
-            .or_else(|| node.parse_if(P_INDEX))
+            .parse_if(ADDRESS, store)
+            .or_else(|| node.parse_if(INT_SWISS_KNIFE, store))
+            .or_else(|| node.parse_if(P_ADDRESS, store))
+            .or_else(|| node.parse_if(P_INDEX, store))
         {
             address_kinds.push(addr_kind);
         }
-        let length = node.parse();
-        let access_mode = node.parse_if(ACCESS_MODE).unwrap_or(AccessMode::RO);
-        let p_port = node.parse();
-        let cacheable = node.parse_if(CACHEABLE).unwrap_or_default();
-        let polling_time = node.parse_if(POLLING_TIME);
-        let p_invalidators = node.parse_while(P_INVALIDATOR);
+        let length = node.parse(store);
+        let access_mode = node.parse_if(ACCESS_MODE, store).unwrap_or(AccessMode::RO);
+        let p_port = node.parse(store);
+        let cacheable = node.parse_if(CACHEABLE, store).unwrap_or_default();
+        let polling_time = node.parse_if(POLLING_TIME, store);
+        let p_invalidators = node.parse_while(P_INVALIDATOR, store);
 
         Self {
             elem_base,
