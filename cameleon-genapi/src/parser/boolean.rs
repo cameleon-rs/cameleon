@@ -2,6 +2,7 @@ use super::{
     elem_name::{BOOLEAN, OFF_VALUE, ON_VALUE, P_INVALIDATOR, P_SELECTED, STREAMABLE},
     elem_type::ImmOrPNode,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    node_store::{NodeId, NodeStore},
     xml, Parse,
 };
 
@@ -10,12 +11,12 @@ pub struct BooleanNode {
     attr_base: NodeAttributeBase,
     elem_base: NodeElementBase,
 
-    p_invalidators: Vec<String>,
+    p_invalidators: Vec<NodeId>,
     streamable: bool,
     value: ImmOrPNode<bool>,
     on_value: Option<i64>,
     off_value: Option<i64>,
-    p_selected: Vec<String>,
+    p_selected: Vec<NodeId>,
 }
 
 impl BooleanNode {
@@ -25,7 +26,7 @@ impl BooleanNode {
     }
 
     #[must_use]
-    pub fn p_invalidators(&self) -> &[String] {
+    pub fn p_invalidators(&self) -> &[NodeId] {
         &self.p_invalidators
     }
 
@@ -50,24 +51,24 @@ impl BooleanNode {
     }
 
     #[must_use]
-    pub fn p_selected(&self) -> &[String] {
+    pub fn p_selected(&self) -> &[NodeId] {
         &self.p_selected
     }
 }
 
 impl Parse for BooleanNode {
-    fn parse(node: &mut xml::Node) -> Self {
+    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         debug_assert_eq!(node.tag_name(), BOOLEAN);
 
-        let attr_base = node.parse();
-        let elem_base = node.parse();
+        let attr_base = node.parse(store);
+        let elem_base = node.parse(store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR);
-        let streamable = node.parse_if(STREAMABLE).unwrap_or_default();
-        let value = node.parse();
-        let on_value = node.parse_if(ON_VALUE);
-        let off_value = node.parse_if(OFF_VALUE);
-        let p_selected = node.parse_while(P_SELECTED);
+        let p_invalidators = node.parse_while(P_INVALIDATOR, store);
+        let streamable = node.parse_if(STREAMABLE, store).unwrap_or_default();
+        let value = node.parse(store);
+        let on_value = node.parse_if(ON_VALUE, store);
+        let off_value = node.parse_if(OFF_VALUE, store);
+        let p_selected = node.parse_while(P_SELECTED, store);
 
         Self {
             attr_base,
@@ -96,8 +97,12 @@ mod tests {
             </Boolean>
             "#;
 
-        let node: BooleanNode = xml::Document::from_str(&xml).unwrap().root_node().parse();
-        assert_eq!(node.value(), &ImmOrPNode::PNode("Node".into()));
+        let mut store = NodeStore::new();
+        let node: BooleanNode = xml::Document::from_str(&xml)
+            .unwrap()
+            .root_node()
+            .parse(&mut store);
+        assert_eq!(node.value(), &ImmOrPNode::PNode(store.id_by_name("Node")));
         assert_eq!(node.on_value(), Some(1));
         assert_eq!(node.off_value(), Some(0));
     }
@@ -110,7 +115,11 @@ mod tests {
             </Boolean>
             "#;
 
-        let node: BooleanNode = xml::Document::from_str(&xml1).unwrap().root_node().parse();
+        let mut store = NodeStore::new();
+        let node: BooleanNode = xml::Document::from_str(&xml1)
+            .unwrap()
+            .root_node()
+            .parse(&mut store);
         assert_eq!(node.value(), &ImmOrPNode::Imm(true));
 
         let xml2 = r#"
@@ -119,7 +128,11 @@ mod tests {
             </Boolean>
             "#;
 
-        let node: BooleanNode = xml::Document::from_str(&xml2).unwrap().root_node().parse();
+        let mut store2 = NodeStore::new();
+        let node: BooleanNode = xml::Document::from_str(&xml2)
+            .unwrap()
+            .root_node()
+            .parse(&mut store2);
         assert_eq!(node.value(), &ImmOrPNode::Imm(false));
     }
 }
