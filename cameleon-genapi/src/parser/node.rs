@@ -1,29 +1,13 @@
-use super::{
-    elem_name::{NODE, P_INVALIDATOR},
-    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    node_store::{NodeId, NodeStore},
-    xml, Parse,
+use crate::{
+    node_base::{NodeAttributeBase, NodeElementBase},
+    node_store::NodeStore,
+    Node,
 };
 
-#[derive(Debug, Clone)]
-pub struct Node {
-    attr_base: NodeAttributeBase,
-    elem_base: NodeElementBase,
-
-    p_invalidators: Vec<NodeId>,
-}
-
-impl Node {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn p_invalidators(&self) -> &[NodeId] {
-        &self.p_invalidators
-    }
-}
+use super::{
+    elem_name::{NODE, P_INVALIDATOR},
+    xml, Parse,
+};
 
 impl Parse for Node {
     fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
@@ -44,7 +28,7 @@ impl Parse for Node {
 
 #[cfg(test)]
 mod tests {
-    use super::super::elem_type::{AccessMode, MergePriority, NameSpace, Visibility};
+    use crate::elem_type::{AccessMode, MergePriority, NameSpace, Visibility};
 
     use super::*;
 

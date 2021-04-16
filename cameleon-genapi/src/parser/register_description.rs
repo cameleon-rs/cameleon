@@ -1,101 +1,17 @@
+use crate::{node_store::NodeStore, RegisterDescription};
+
 use super::{
     convert_to_uint,
     elem_name::{
-        ADV_FEATURE_LOCK, BOOLEAN, CATEGORY, COMMAND, CONF_ROM, CONVERTER, ENUMERATION, FLOAT,
-        FLOAT_REG, GROUP, INTEGER, INT_CONVERTER, INT_KEY, INT_REG, INT_SWISS_KNIFE, MAJOR_VERSION,
-        MASKED_INT_REG, MINOR_VERSION, MODEL_NAME, NODE, PORT, PRODUCT_GUID, REGISTER,
-        REGISTER_DESCRIPTION, SCHEMA_MAJOR_VERSION, SCHEMA_MINOR_VERSION, SCHEMA_SUB_MINOR_VERSION,
-        SMART_FEATURE, STANDARD_NAME_SPCACE, STRING, STRING_REG, STRUCT_REG, SUB_MINOR_VERSION,
-        SWISS_KNIFE, TEXT_DESC, TOOL_TIP, VENDOR_NAME, VERSION_GUID,
+        MAJOR_VERSION, MINOR_VERSION, MODEL_NAME, PRODUCT_GUID, REGISTER_DESCRIPTION,
+        SCHEMA_MAJOR_VERSION, SCHEMA_MINOR_VERSION, SCHEMA_SUB_MINOR_VERSION, STANDARD_NAME_SPCACE,
+        SUB_MINOR_VERSION, TOOL_TIP, VENDOR_NAME, VERSION_GUID,
     },
-    elem_type::StandardNameSpace,
-    node_base::NodeBase,
-    node_store::NodeStore,
-    xml, BooleanNode, CategoryNode, CommandNode, ConverterNode, EnumerationNode, FloatNode,
-    FloatRegNode, GroupNode, IntConverterNode, IntRegNode, IntSwissKnifeNode, IntegerNode,
-    MaskedIntRegNode, Node, Parse, PortNode, RegisterNode, StringNode, StringRegNode,
-    StructRegNode, SwissKnifeNode,
+    xml, Parse,
 };
 
-pub struct RegisterDescription {
-    model_name: String,
-    vendor_name: String,
-    tool_tip: Option<String>,
-    standard_name_space: StandardNameSpace,
-    schema_major_version: u64,
-    schema_minor_version: u64,
-    schema_subminor_version: u64,
-    major_version: u64,
-    minor_version: u64,
-    subminor_version: u64,
-    product_guid: String,
-    version_guid: String,
-}
-
-impl RegisterDescription {
-    #[must_use]
-    pub fn model_name(&self) -> &str {
-        &self.model_name
-    }
-
-    #[must_use]
-    pub fn vendor_name(&self) -> &str {
-        &self.vendor_name
-    }
-
-    #[must_use]
-    pub fn tool_tip(&self) -> Option<&str> {
-        self.tool_tip.as_deref()
-    }
-
-    #[must_use]
-    pub fn standard_name_space(&self) -> StandardNameSpace {
-        self.standard_name_space
-    }
-
-    #[must_use]
-    pub fn schema_major_version(&self) -> u64 {
-        self.schema_major_version
-    }
-
-    #[must_use]
-    pub fn schema_subminor_version(&self) -> u64 {
-        self.schema_subminor_version
-    }
-
-    #[must_use]
-    pub fn schema_minor_version(&self) -> u64 {
-        self.schema_minor_version
-    }
-
-    #[must_use]
-    pub fn major_version(&self) -> u64 {
-        self.major_version
-    }
-
-    #[must_use]
-    pub fn minor_version(&self) -> u64 {
-        self.minor_version
-    }
-
-    #[must_use]
-    pub fn subminor_version(&self) -> u64 {
-        self.subminor_version
-    }
-
-    #[must_use]
-    pub fn product_guid(&self) -> &str {
-        &self.product_guid
-    }
-
-    #[must_use]
-    pub fn version_guid(&self) -> &str {
-        &self.version_guid
-    }
-}
-
 impl Parse for RegisterDescription {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
         debug_assert_eq!(node.tag_name(), REGISTER_DESCRIPTION);
 
         let model_name = node.attribute_of(MODEL_NAME).unwrap().into();
@@ -114,13 +30,6 @@ impl Parse for RegisterDescription {
         let product_guid = node.attribute_of(PRODUCT_GUID).unwrap().into();
         let version_guid = node.attribute_of(VERSION_GUID).unwrap().into();
 
-        while let Some(ref mut child) = node.next() {
-            for child in child.parse::<Vec<NodeData>>(store) {
-                let id = child.node_base().id();
-                store.store_node(id, child);
-            }
-        }
-
         Self {
             model_name,
             vendor_name,
@@ -138,102 +47,10 @@ impl Parse for RegisterDescription {
     }
 }
 
-#[derive(Debug, Clone)]
-pub enum NodeData {
-    Node(Box<Node>),
-    Category(Box<CategoryNode>),
-    Integer(Box<IntegerNode>),
-    IntReg(Box<IntRegNode>),
-    MaskedIntReg(Box<MaskedIntRegNode>),
-    Boolean(Box<BooleanNode>),
-    Command(Box<CommandNode>),
-    Enumeration(Box<EnumerationNode>),
-    Float(Box<FloatNode>),
-    FloatReg(Box<FloatRegNode>),
-    String(Box<StringNode>),
-    StringReg(Box<StringRegNode>),
-    Register(Box<RegisterNode>),
-    Converter(Box<ConverterNode>),
-    IntConverter(Box<IntConverterNode>),
-    SwissKnife(Box<SwissKnifeNode>),
-    IntSwissKnife(Box<IntSwissKnifeNode>),
-    Port(Box<PortNode>),
-
-    // TODO: Implement DCAM specific ndoes.
-    ConfRom(()),
-    TextDesc(()),
-    IntKey(()),
-    AdvFeatureLock(()),
-    SmartFeature(()),
-}
-
-impl NodeData {
-    #[allow(clippy::missing_panics_doc)]
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        match self {
-            Self::Node(node) => node.node_base(),
-            Self::Category(node) => node.node_base(),
-            Self::Integer(node) => node.node_base(),
-            Self::IntReg(node) => node.node_base(),
-            Self::MaskedIntReg(node) => node.node_base(),
-            Self::Boolean(node) => node.node_base(),
-            Self::Command(node) => node.node_base(),
-            Self::Enumeration(node) => node.node_base(),
-            Self::Float(node) => node.node_base(),
-            Self::FloatReg(node) => node.node_base(),
-            Self::String(node) => node.node_base(),
-            Self::StringReg(node) => node.node_base(),
-            Self::Register(node) => node.node_base(),
-            Self::Converter(node) => node.node_base(),
-            Self::IntConverter(node) => node.node_base(),
-            Self::SwissKnife(node) => node.node_base(),
-            Self::IntSwissKnife(node) => node.node_base(),
-            Self::Port(node) => node.node_base(),
-            _ => todo!(),
-        }
-    }
-}
-
-impl Parse for Vec<NodeData> {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Vec<NodeData> {
-        match node.tag_name() {
-            NODE => vec![NodeData::Node(Box::new(node.parse(store)))],
-            CATEGORY => vec![NodeData::Category(Box::new(node.parse(store)))],
-            INTEGER => vec![NodeData::Integer(Box::new(node.parse(store)))],
-            INT_REG => vec![NodeData::IntReg(Box::new(node.parse(store)))],
-            MASKED_INT_REG => vec![NodeData::MaskedIntReg(Box::new(node.parse(store)))],
-            BOOLEAN => vec![NodeData::Boolean(Box::new(node.parse(store)))],
-            COMMAND => vec![NodeData::Command(Box::new(node.parse(store)))],
-            ENUMERATION => vec![NodeData::Enumeration(Box::new(node.parse(store)))],
-            FLOAT => vec![NodeData::Float(Box::new(node.parse(store)))],
-            FLOAT_REG => vec![NodeData::FloatReg(Box::new(node.parse(store)))],
-            STRING => vec![NodeData::String(Box::new(node.parse(store)))],
-            STRING_REG => vec![NodeData::StringReg(Box::new(node.parse(store)))],
-            REGISTER => vec![NodeData::Register(Box::new(node.parse(store)))],
-            CONVERTER => vec![NodeData::Converter(Box::new(node.parse(store)))],
-            INT_CONVERTER => vec![NodeData::IntConverter(Box::new(node.parse(store)))],
-            SWISS_KNIFE => vec![NodeData::SwissKnife(Box::new(node.parse(store)))],
-            INT_SWISS_KNIFE => vec![NodeData::IntSwissKnife(Box::new(node.parse(store)))],
-            PORT => vec![NodeData::Port(Box::new(node.parse(store)))],
-            STRUCT_REG => node
-                .parse::<StructRegNode>(store)
-                .into_masked_int_regs()
-                .into_iter()
-                .map(|node| NodeData::MaskedIntReg(node.into()))
-                .collect(),
-            GROUP => node.parse::<GroupNode>(store).nodes,
-
-            // TODO: Implement DCAM specific ndoes.
-            CONF_ROM | TEXT_DESC | INT_KEY | ADV_FEATURE_LOCK | SMART_FEATURE => todo!(),
-            _ => unreachable!(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::elem_type::StandardNameSpace;
 
     #[test]
     #[allow(clippy::too_many_lines)]

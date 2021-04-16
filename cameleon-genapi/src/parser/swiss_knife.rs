@@ -1,87 +1,12 @@
+use crate::{node_store::NodeStore, SwissKnifeNode};
+
 use super::{
     elem_name::{
         CONSTANT, DISPLAY_NOTATION, DISPLAY_PRECISION, EXPRESSION, P_INVALIDATOR, P_VARIABLE,
         REPRESENTATION, STREAMABLE, SWISS_KNIFE, UNIT,
     },
-    elem_type::{DisplayNotation, FloatRepresentation, NamedValue},
-    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    node_store::{NodeId, NodeStore},
     xml, Parse,
 };
-
-#[derive(Debug, Clone)]
-pub struct SwissKnifeNode {
-    attr_base: NodeAttributeBase,
-    elem_base: NodeElementBase,
-
-    p_invalidators: Vec<NodeId>,
-    streamable: bool,
-    p_variables: Vec<NamedValue<NodeId>>,
-    constants: Vec<NamedValue<f64>>,
-    expressions: Vec<NamedValue<String>>,
-    formula: String,
-    unit: Option<String>,
-    representation: FloatRepresentation,
-    display_notation: DisplayNotation,
-    display_precision: i64,
-}
-
-impl SwissKnifeNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn p_invalidators(&self) -> &[NodeId] {
-        &self.p_invalidators
-    }
-
-    #[must_use]
-    pub fn streamable(&self) -> bool {
-        self.streamable
-    }
-
-    #[must_use]
-    pub fn p_variables(&self) -> &[NamedValue<NodeId>] {
-        &self.p_variables
-    }
-
-    #[must_use]
-    pub fn constants(&self) -> &[NamedValue<f64>] {
-        &self.constants
-    }
-
-    #[must_use]
-    pub fn expressions(&self) -> &[NamedValue<String>] {
-        &self.expressions
-    }
-
-    #[must_use]
-    pub fn formula(&self) -> &str {
-        &self.formula
-    }
-
-    #[must_use]
-    pub fn unit(&self) -> Option<&str> {
-        self.unit.as_deref()
-    }
-
-    #[must_use]
-    pub fn representation(&self) -> FloatRepresentation {
-        self.representation
-    }
-
-    #[must_use]
-    pub fn display_notation(&self) -> DisplayNotation {
-        self.display_notation
-    }
-
-    #[must_use]
-    pub fn display_precision(&self) -> i64 {
-        self.display_precision
-    }
-}
 
 impl Parse for SwissKnifeNode {
     fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {

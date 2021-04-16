@@ -1,48 +1,9 @@
+use crate::{elem_type::ImmOrPNode, node_store::NodeStore, PortNode};
+
 use super::{
     elem_name::{CACHE_CHUNK_DATA, CHUNK_ID, PORT, P_CHUNK_ID, P_INVALIDATOR, SWAP_ENDIANNESS},
-    elem_type::ImmOrPNode,
-    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    node_store::{NodeId, NodeStore},
     xml, Parse,
 };
-
-#[derive(Debug, Clone)]
-pub struct PortNode {
-    attr_base: NodeAttributeBase,
-    elem_base: NodeElementBase,
-
-    p_invalidators: Vec<NodeId>,
-    chunk_id: Option<ImmOrPNode<u64>>,
-    swap_endianness: bool,
-    cache_chunk_data: bool,
-}
-
-impl PortNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn p_invalidators(&self) -> &[NodeId] {
-        &self.p_invalidators
-    }
-
-    #[must_use]
-    pub fn chunk_id(&self) -> Option<&ImmOrPNode<u64>> {
-        self.chunk_id.as_ref()
-    }
-
-    #[must_use]
-    pub fn swap_endianness(&self) -> bool {
-        self.swap_endianness
-    }
-
-    #[must_use]
-    pub fn cache_chunk_data(&self) -> bool {
-        self.cache_chunk_data
-    }
-}
 
 impl Parse for PortNode {
     fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {

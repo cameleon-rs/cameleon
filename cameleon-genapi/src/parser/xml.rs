@@ -1,6 +1,8 @@
 use std::iter::Peekable;
 
-use super::{node_store::NodeStore, Parse, ParseResult};
+use crate::node_store::NodeStore;
+
+use super::{Parse, ParseResult};
 
 pub(super) struct Document<'input> {
     document: roxmltree::Document<'input>,

@@ -1,29 +1,6 @@
-use super::{
-    elem_name::REGISTER,
-    node_base::{NodeAttributeBase, NodeBase},
-    node_store::NodeStore,
-    register_base::RegisterBase,
-    xml, Parse,
-};
+use crate::{node_store::NodeStore, RegisterNode};
 
-#[derive(Debug, Clone)]
-pub struct RegisterNode {
-    attr_base: NodeAttributeBase,
-    register_base: RegisterBase,
-}
-
-impl RegisterNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase {
-        let elem_base = &self.register_base.elem_base;
-        NodeBase::new(&self.attr_base, elem_base)
-    }
-
-    #[must_use]
-    pub fn register_base(&self) -> &RegisterBase {
-        &self.register_base
-    }
-}
+use super::{elem_name::REGISTER, xml, Parse};
 
 impl Parse for RegisterNode {
     fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
@@ -41,7 +18,7 @@ impl Parse for RegisterNode {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{register_node_elem::AddressKind, xml, AccessMode, CachingMode, ImmOrPNode};
+    use crate::elem_type::{register_node_elem::AddressKind, AccessMode, CachingMode, ImmOrPNode};
 
     use super::*;
 

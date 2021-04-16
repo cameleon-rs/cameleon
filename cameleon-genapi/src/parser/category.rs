@@ -1,35 +1,9 @@
+use crate::{node_store::NodeStore, CategoryNode};
+
 use super::{
     elem_name::{CATEGORY, P_FEATURE, P_INVALIDATOR},
-    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    node_store::{NodeId, NodeStore},
     xml, Parse,
 };
-
-#[derive(Debug, Clone)]
-pub struct CategoryNode {
-    attr_base: NodeAttributeBase,
-    elem_base: NodeElementBase,
-
-    p_invalidators: Vec<NodeId>,
-    p_features: Vec<NodeId>,
-}
-
-impl CategoryNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn p_invalidators(&self) -> &[NodeId] {
-        &self.p_invalidators
-    }
-
-    #[must_use]
-    pub fn p_features(&self) -> &[NodeId] {
-        &self.p_features
-    }
-}
 
 impl Parse for CategoryNode {
     fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {

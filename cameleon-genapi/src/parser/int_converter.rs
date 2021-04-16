@@ -1,93 +1,12 @@
+use crate::{node_store::NodeStore, IntConverterNode};
+
 use super::{
     elem_name::{
         CONSTANT, EXPRESSION, INT_CONVERTER, P_INVALIDATOR, P_VARIABLE, REPRESENTATION, SLOPE,
         STREAMABLE, UNIT,
     },
-    elem_type::{IntegerRepresentation, NamedValue, Slope},
-    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    node_store::{NodeId, NodeStore},
     xml, Parse,
 };
-
-#[derive(Debug, Clone)]
-pub struct IntConverterNode {
-    attr_base: NodeAttributeBase,
-    elem_base: NodeElementBase,
-
-    p_invalidators: Vec<NodeId>,
-    streamable: bool,
-    p_variables: Vec<NamedValue<NodeId>>,
-    constants: Vec<NamedValue<i64>>,
-    expressions: Vec<NamedValue<String>>,
-    formula_to: String,
-    formula_from: String,
-    p_value: NodeId,
-    unit: Option<String>,
-    representation: IntegerRepresentation,
-    slope: Slope,
-}
-
-impl IntConverterNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn p_invalidators(&self) -> &[NodeId] {
-        &self.p_invalidators
-    }
-
-    #[must_use]
-    pub fn streamable(&self) -> bool {
-        self.streamable
-    }
-
-    #[must_use]
-    pub fn p_variables(&self) -> &[NamedValue<NodeId>] {
-        &self.p_variables
-    }
-
-    #[must_use]
-    pub fn constants(&self) -> &[NamedValue<i64>] {
-        &self.constants
-    }
-
-    #[must_use]
-    pub fn expressions(&self) -> &[NamedValue<String>] {
-        &self.expressions
-    }
-
-    #[must_use]
-    pub fn formula_to(&self) -> &str {
-        &self.formula_to
-    }
-
-    #[must_use]
-    pub fn formula_from(&self) -> &str {
-        &self.formula_from
-    }
-
-    #[must_use]
-    pub fn p_value(&self) -> NodeId {
-        self.p_value
-    }
-
-    #[must_use]
-    pub fn unit(&self) -> Option<&str> {
-        self.unit.as_deref()
-    }
-
-    #[must_use]
-    pub fn representation(&self) -> IntegerRepresentation {
-        self.representation
-    }
-
-    #[must_use]
-    pub fn slope(&self) -> Slope {
-        self.slope
-    }
-}
 
 impl Parse for IntConverterNode {
     fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
@@ -128,6 +47,8 @@ impl Parse for IntConverterNode {
 
 #[cfg(test)]
 mod tests {
+    use crate::elem_type::{IntegerRepresentation, Slope};
+
     use super::*;
 
     #[test]

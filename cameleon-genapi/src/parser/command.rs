@@ -1,48 +1,9 @@
+use crate::{node_store::NodeStore, CommandNode};
+
 use super::{
     elem_name::{COMMAND, POLLING_TIME, P_INVALIDATOR},
-    elem_type::ImmOrPNode,
-    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    node_store::{NodeId, NodeStore},
     xml, Parse,
 };
-
-#[derive(Debug, Clone)]
-pub struct CommandNode {
-    attr_base: NodeAttributeBase,
-    elem_base: NodeElementBase,
-
-    p_invalidators: Vec<NodeId>,
-    value: ImmOrPNode<i64>,
-    command_value: ImmOrPNode<i64>,
-    polling_time: Option<u64>,
-}
-
-impl CommandNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn p_invalidators(&self) -> &[NodeId] {
-        &self.p_invalidators
-    }
-
-    #[must_use]
-    pub fn value(&self) -> &ImmOrPNode<i64> {
-        &self.value
-    }
-
-    #[must_use]
-    pub fn command_value(&self) -> &ImmOrPNode<i64> {
-        &self.command_value
-    }
-
-    #[must_use]
-    pub fn polling_time(&self) -> Option<u64> {
-        self.polling_time
-    }
-}
 
 impl Parse for CommandNode {
     fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
@@ -69,6 +30,8 @@ impl Parse for CommandNode {
 
 #[cfg(test)]
 mod tests {
+    use crate::elem_type::ImmOrPNode;
+
     use super::*;
 
     #[test]

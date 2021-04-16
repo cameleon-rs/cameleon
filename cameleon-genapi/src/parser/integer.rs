@@ -1,81 +1,16 @@
+use crate::{
+    elem_type::{ImmOrPNode, IntegerRepresentation},
+    node_store::{NodeId, NodeStore},
+    IntegerNode,
+};
+
 use super::{
     elem_name::{
         INC, INTEGER, MAX, MIN, P_INC, P_INVALIDATOR, P_MAX, P_MIN, P_SELECTED, REPRESENTATION,
         STREAMABLE, UNIT,
     },
-    elem_type::{numeric_node_elem, ImmOrPNode, IntegerRepresentation},
-    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    node_store::{NodeId, NodeStore},
     xml, Parse,
 };
-
-#[derive(Debug, Clone)]
-pub struct IntegerNode {
-    attr_base: NodeAttributeBase,
-    elem_base: NodeElementBase,
-
-    p_invalidators: Vec<NodeId>,
-    streamable: bool,
-    value_kind: numeric_node_elem::ValueKind<i64>,
-    min: ImmOrPNode<i64>,
-    max: ImmOrPNode<i64>,
-    inc: ImmOrPNode<i64>,
-    unit: Option<String>,
-    representation: IntegerRepresentation,
-    p_selected: Vec<NodeId>,
-}
-
-impl IntegerNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn p_invalidators(&self) -> &[NodeId] {
-        &self.p_invalidators
-    }
-
-    #[must_use]
-    pub fn streamable(&self) -> bool {
-        self.streamable
-    }
-
-    #[must_use]
-    pub fn value_kind(&self) -> &numeric_node_elem::ValueKind<i64> {
-        &self.value_kind
-    }
-
-    #[must_use]
-    pub fn min(&self) -> &ImmOrPNode<i64> {
-        &self.min
-    }
-
-    #[must_use]
-    pub fn max(&self) -> &ImmOrPNode<i64> {
-        &self.max
-    }
-
-    #[must_use]
-    pub fn inc(&self) -> &ImmOrPNode<i64> {
-        &self.inc
-    }
-
-    #[must_use]
-    pub fn unit(&self) -> Option<&str> {
-        self.unit.as_deref()
-    }
-
-    #[must_use]
-    pub fn representation(&self) -> IntegerRepresentation {
-        self.representation
-    }
-
-    #[must_use]
-    pub fn p_selected(&self) -> &[NodeId] {
-        &self.p_selected
-    }
-}
 
 impl Parse for IntegerNode {
     fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
@@ -125,6 +60,8 @@ impl Parse for IntegerNode {
 
 #[cfg(test)]
 mod tests {
+    use crate::elem_type::numeric_node_elem;
+
     use super::*;
 
     fn integer_node_from_str(xml: &str) -> (IntegerNode, NodeStore) {

@@ -1,63 +1,12 @@
+use crate::{node_store::NodeStore, EnumEntryNode, EnumerationNode};
+
 use super::{
     elem_name::{
         ENUMERATION, ENUM_ENTRY, IS_SELF_CLEARING, NUMERIC_VALUE, POLLING_TIME, P_INVALIDATOR,
         P_SELECTED, STREAMABLE, SYMBOLIC,
     },
-    elem_type::ImmOrPNode,
-    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    node_store::{NodeId, NodeStore},
     xml, Parse,
 };
-
-#[derive(Debug, Clone)]
-pub struct EnumerationNode {
-    attr_base: NodeAttributeBase,
-    elem_base: NodeElementBase,
-
-    p_invalidators: Vec<NodeId>,
-    streamable: bool,
-    entries: Vec<EnumEntryNode>,
-    value: ImmOrPNode<i64>,
-    p_selected: Vec<NodeId>,
-    polling_time: Option<u64>,
-}
-
-impl EnumerationNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn p_invalidators(&self) -> &[NodeId] {
-        &self.p_invalidators
-    }
-
-    #[must_use]
-    pub fn streamable(&self) -> bool {
-        self.streamable
-    }
-
-    #[must_use]
-    pub fn entries(&self) -> &[EnumEntryNode] {
-        &self.entries
-    }
-
-    #[must_use]
-    pub fn value(&self) -> &ImmOrPNode<i64> {
-        &self.value
-    }
-
-    #[must_use]
-    pub fn p_selected(&self) -> &[NodeId] {
-        &self.p_selected
-    }
-
-    #[must_use]
-    pub fn polling_time(&self) -> Option<u64> {
-        self.polling_time
-    }
-}
 
 impl Parse for EnumerationNode {
     fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
@@ -89,54 +38,6 @@ impl Parse for EnumerationNode {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct EnumEntryNode {
-    attr_base: NodeAttributeBase,
-    elem_base: NodeElementBase,
-
-    p_invalidators: Vec<NodeId>,
-    value: i64,
-    numeric_values: Vec<f64>,
-    symbolic: Option<String>,
-    is_self_clearing: bool,
-}
-
-impl EnumEntryNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn p_invalidators(&self) -> &[NodeId] {
-        &self.p_invalidators
-    }
-
-    #[must_use]
-    pub fn value(&self) -> i64 {
-        self.value
-    }
-
-    #[must_use]
-    pub fn numeric_values(&self) -> &[f64] {
-        &self.numeric_values
-    }
-
-    #[must_use]
-    pub fn symbolic(&self) -> Option<&str> {
-        self.symbolic.as_deref()
-    }
-
-    pub fn set_symbolic(&mut self, s: String) {
-        self.symbolic = Some(s)
-    }
-
-    #[must_use]
-    pub fn is_self_clearing(&self) -> bool {
-        self.is_self_clearing
-    }
-}
-
 impl Parse for EnumEntryNode {
     fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
         debug_assert_eq!(node.tag_name(), ENUM_ENTRY);
@@ -164,6 +65,8 @@ impl Parse for EnumEntryNode {
 
 #[cfg(test)]
 mod tests {
+    use crate::elem_type::ImmOrPNode;
+
     use super::*;
 
     #[test]

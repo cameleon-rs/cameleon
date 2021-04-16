@@ -1,111 +1,12 @@
+use crate::{node_store::NodeStore, ConverterNode};
+
 use super::{
     elem_name::{
         CONSTANT, CONVERTER, DISPLAY_NOTATION, DISPLAY_PRECISION, EXPRESSION, IS_LINEAR,
         P_INVALIDATOR, P_VARIABLE, REPRESENTATION, SLOPE, STREAMABLE, UNIT,
     },
-    elem_type::{DisplayNotation, FloatRepresentation, NamedValue, Slope},
-    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    node_store::{NodeId, NodeStore},
     xml, Parse,
 };
-
-#[derive(Debug, Clone)]
-pub struct ConverterNode {
-    attr_base: NodeAttributeBase,
-    elem_base: NodeElementBase,
-
-    p_invalidators: Vec<NodeId>,
-    streamable: bool,
-    p_variables: Vec<NamedValue<NodeId>>,
-    constants: Vec<NamedValue<f64>>,
-    expressions: Vec<NamedValue<String>>,
-    formula_to: String,
-    formula_from: String,
-    p_value: NodeId,
-    unit: Option<String>,
-    representation: FloatRepresentation,
-    display_notation: DisplayNotation,
-    display_precision: i64,
-    slope: Slope,
-    is_linear: bool,
-}
-
-impl ConverterNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn p_invalidators(&self) -> &[NodeId] {
-        &self.p_invalidators
-    }
-
-    #[must_use]
-    pub fn streamable(&self) -> bool {
-        self.streamable
-    }
-
-    #[must_use]
-    pub fn p_variables(&self) -> &[NamedValue<NodeId>] {
-        &self.p_variables
-    }
-
-    #[must_use]
-    pub fn constants(&self) -> &[NamedValue<f64>] {
-        &self.constants
-    }
-
-    #[must_use]
-    pub fn expressions(&self) -> &[NamedValue<String>] {
-        &self.expressions
-    }
-
-    #[must_use]
-    pub fn formula_to(&self) -> &str {
-        &self.formula_to
-    }
-
-    #[must_use]
-    pub fn formula_from(&self) -> &str {
-        &self.formula_from
-    }
-
-    #[must_use]
-    pub fn p_value(&self) -> NodeId {
-        self.p_value
-    }
-
-    #[must_use]
-    pub fn unit(&self) -> Option<&str> {
-        self.unit.as_deref()
-    }
-
-    #[must_use]
-    pub fn representation(&self) -> FloatRepresentation {
-        self.representation
-    }
-
-    #[must_use]
-    pub fn display_notation(&self) -> DisplayNotation {
-        self.display_notation
-    }
-
-    #[must_use]
-    pub fn display_precision(&self) -> i64 {
-        self.display_precision
-    }
-
-    #[must_use]
-    pub fn slope(&self) -> Slope {
-        self.slope
-    }
-
-    #[must_use]
-    pub fn is_linear(&self) -> bool {
-        self.is_linear
-    }
-}
 
 impl Parse for ConverterNode {
     fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
@@ -153,6 +54,8 @@ impl Parse for ConverterNode {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use crate::elem_type::Slope;
 
     #[test]
     fn test_converter() {

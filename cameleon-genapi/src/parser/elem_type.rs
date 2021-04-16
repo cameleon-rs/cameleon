@@ -1,19 +1,19 @@
-#![allow(clippy::upper_case_acronyms)]
+use crate::{
+    elem_type::{
+        AccessMode, CachingMode, DisplayNotation, FloatRepresentation, ImmOrPNode,
+        IntegerRepresentation, MergePriority, NameSpace, NamedValue, Slope, StandardNameSpace,
+        Visibility,
+    },
+    node_store::{NodeId, NodeStore},
+};
 
 use super::{
     elem_name::{
         ADDRESS, BIT, INDEX, INT_SWISS_KNIFE, NAME, OFFSET, P_ADDRESS, P_INDEX, P_OFFSET, P_VALUE,
         P_VALUE_COPY, P_VALUE_INDEXED, VALUE, VALUE_INDEXED,
     },
-    node_store::{NodeId, NodeStore},
     xml, Parse,
 };
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NameSpace {
-    Standard,
-    Custom,
-}
 
 impl Default for NameSpace {
     fn default() -> Self {
@@ -35,14 +35,6 @@ impl Parse for NameSpace {
     fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
         node.next_text().unwrap().into()
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Visibility {
-    Beginner,
-    Expert,
-    Guru,
-    Invisible,
 }
 
 impl Default for Visibility {
@@ -69,13 +61,6 @@ impl Parse for Visibility {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MergePriority {
-    High,
-    Mid,
-    Low,
-}
-
 impl From<&str> for MergePriority {
     fn from(value: &str) -> Self {
         match value {
@@ -99,13 +84,6 @@ impl Parse for MergePriority {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AccessMode {
-    RO,
-    WO,
-    RW,
-}
-
 impl From<&str> for AccessMode {
     fn from(value: &str) -> Self {
         match value {
@@ -120,31 +98,6 @@ impl From<&str> for AccessMode {
 impl Parse for AccessMode {
     fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
         node.next_text().unwrap().into()
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum ImmOrPNode<T: Clone + PartialEq> {
-    Imm(T),
-    PNode(NodeId),
-}
-
-impl<T> ImmOrPNode<T>
-where
-    T: Clone + PartialEq,
-{
-    pub fn imm(&self) -> Option<&T> {
-        match self {
-            Self::Imm(value) => Some(value),
-            _ => None,
-        }
-    }
-
-    pub fn pnode(&self) -> Option<NodeId> {
-        match self {
-            Self::PNode(node) => Some(*node),
-            _ => None,
-        }
     }
 }
 
@@ -190,42 +143,6 @@ impl Parse for ImmOrPNode<f64> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum IntegerRepresentation {
-    Linear,
-    Logarithmic,
-    Boolean,
-    PureNumber,
-    HexNumber,
-    IpV4Address,
-    MacAddress,
-}
-
-impl IntegerRepresentation {
-    /// Deduce defalut value of min element.
-    pub(super) fn deduce_min(self) -> i64 {
-        use IntegerRepresentation::{
-            Boolean, HexNumber, IpV4Address, Linear, Logarithmic, MacAddress, PureNumber,
-        };
-        match self {
-            Linear | Logarithmic | Boolean | PureNumber | HexNumber => i64::MIN,
-            IpV4Address | MacAddress => 0,
-        }
-    }
-
-    /// Deduce defalut value of max element.
-    pub(super) fn deduce_max(self) -> i64 {
-        use IntegerRepresentation::{
-            Boolean, HexNumber, IpV4Address, Linear, Logarithmic, MacAddress, PureNumber,
-        };
-        match self {
-            Linear | Logarithmic | Boolean | PureNumber | HexNumber => i64::MAX,
-            IpV4Address => 0xffff_ffff,
-            MacAddress => 0xffff_ffff_ffff,
-        }
-    }
-}
-
 impl Default for IntegerRepresentation {
     fn default() -> Self {
         Self::PureNumber
@@ -252,13 +169,6 @@ impl Parse for IntegerRepresentation {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FloatRepresentation {
-    Linear,
-    Logarithmic,
-    PureNumber,
-}
-
 impl Parse for FloatRepresentation {
     fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
         let value = node.next_text().unwrap();
@@ -275,14 +185,6 @@ impl Default for FloatRepresentation {
     fn default() -> Self {
         Self::PureNumber
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Slope {
-    Increasing,
-    Decreasing,
-    Varying,
-    Automatic,
 }
 
 impl Parse for Slope {
@@ -304,13 +206,6 @@ impl Default for Slope {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DisplayNotation {
-    Automatic,
-    Fixed,
-    Scientific,
-}
-
 impl Default for DisplayNotation {
     fn default() -> Self {
         Self::Automatic
@@ -329,15 +224,6 @@ impl Parse for DisplayNotation {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum StandardNameSpace {
-    None,
-    IIDC,
-    GEV,
-    CL,
-    USB,
-}
-
 impl From<&str> for StandardNameSpace {
     fn from(value: &str) -> Self {
         match value {
@@ -349,16 +235,6 @@ impl From<&str> for StandardNameSpace {
             _ => unreachable!(),
         }
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CachingMode {
-    /// Allow to caching on write.
-    WriteThrough,
-    /// Allow to caching on read.
-    WriteAround,
-    /// Caching is not allowed.
-    NoCache,
 }
 
 impl Default for CachingMode {
@@ -382,28 +258,6 @@ impl Parse for CachingMode {
     fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
         let text = node.next_text().unwrap();
         text.into()
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct NamedValue<T>
-where
-    T: Clone + PartialEq,
-{
-    name: String,
-    value: T,
-}
-
-impl<T> NamedValue<T>
-where
-    T: Clone + PartialEq,
-{
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn value(&self) -> &T {
-        &self.value
     }
 }
 
@@ -491,20 +345,12 @@ impl Parse for NodeId {
 }
 
 pub mod numeric_node_elem {
+    use crate::elem_type::numeric_node_elem::{PIndex, PValue, ValueIndexed, ValueKind};
+
     use super::{
         convert_to_int, xml, ImmOrPNode, NodeId, NodeStore, Parse, INDEX, P_INDEX, P_VALUE,
         P_VALUE_COPY, P_VALUE_INDEXED, VALUE, VALUE_INDEXED,
     };
-
-    #[derive(Debug, Clone)]
-    pub enum ValueKind<T>
-    where
-        T: Clone + PartialEq,
-    {
-        Value(T),
-        PValue(PValue),
-        PIndex(PIndex<T>),
-    }
 
     impl<T> Parse for ValueKind<T>
     where
@@ -528,12 +374,6 @@ pub mod numeric_node_elem {
         }
     }
 
-    #[derive(Debug, Clone)]
-    pub struct PValue {
-        pub p_value: NodeId,
-        pub p_value_copies: Vec<NodeId>,
-    }
-
     impl Parse for PValue {
         fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
             // NOTE: The pValue can be sandwiched between two pValueCopy sequence.
@@ -548,16 +388,6 @@ pub mod numeric_node_elem {
                 p_value_copies,
             }
         }
-    }
-
-    #[derive(Debug, Clone)]
-    pub struct PIndex<T>
-    where
-        T: Clone + PartialEq,
-    {
-        pub p_index: NodeId,
-        pub value_indexed: Vec<ValueIndexed<T>>,
-        pub value_default: ImmOrPNode<T>,
     }
 
     impl<T> Parse for PIndex<T>
@@ -586,15 +416,6 @@ pub mod numeric_node_elem {
         }
     }
 
-    #[derive(Debug, Clone)]
-    pub struct ValueIndexed<T>
-    where
-        T: Clone + PartialEq,
-    {
-        pub index: i64,
-        pub indexed: ImmOrPNode<T>,
-    }
-
     impl<T> Parse for ValueIndexed<T>
     where
         T: Clone + PartialEq + Parse,
@@ -609,19 +430,12 @@ pub mod numeric_node_elem {
 }
 
 pub mod register_node_elem {
-    use super::super::IntSwissKnifeNode;
+    use crate::elem_type::register_node_elem::{AddressKind, BitMask, Endianness, PIndex, Sign};
 
     use super::{
-        convert_to_int, xml, ImmOrPNode, NodeId, NodeStore, Parse, ADDRESS, BIT, INT_SWISS_KNIFE,
-        OFFSET, P_ADDRESS, P_INDEX, P_OFFSET,
+        convert_to_int, xml, ImmOrPNode, NodeStore, Parse, ADDRESS, BIT, INT_SWISS_KNIFE, OFFSET,
+        P_ADDRESS, P_INDEX, P_OFFSET,
     };
-
-    #[derive(Debug, Clone)]
-    pub enum AddressKind {
-        Address(ImmOrPNode<i64>),
-        IntSwissKnife(Box<IntSwissKnifeNode>),
-        PIndex(PIndex),
-    }
 
     impl Parse for AddressKind {
         fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
@@ -632,24 +446,6 @@ pub mod register_node_elem {
                 P_INDEX => Self::PIndex(node.parse(store)),
                 _ => unreachable!(),
             }
-        }
-    }
-
-    #[derive(Debug, Clone)]
-    pub struct PIndex {
-        offset: Option<ImmOrPNode<i64>>,
-        p_index: NodeId,
-    }
-
-    impl PIndex {
-        #[must_use]
-        pub fn offset(&self) -> Option<&ImmOrPNode<i64>> {
-            self.offset.as_ref()
-        }
-
-        #[must_use]
-        pub fn p_index(&self) -> NodeId {
-            self.p_index
         }
     }
 
@@ -671,12 +467,6 @@ pub mod register_node_elem {
         }
     }
 
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub enum Endianness {
-        LE,
-        BE,
-    }
-
     impl Default for Endianness {
         fn default() -> Self {
             Self::LE
@@ -693,12 +483,6 @@ pub mod register_node_elem {
         }
     }
 
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub enum Sign {
-        Signed,
-        Unsigned,
-    }
-
     impl Default for Sign {
         fn default() -> Self {
             Self::Unsigned
@@ -713,12 +497,6 @@ pub mod register_node_elem {
                 _ => unreachable!(),
             }
         }
-    }
-
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub enum BitMask {
-        SingleBit(u64),
-        Range { lsb: u64, msb: u64 },
     }
 
     impl Parse for BitMask {

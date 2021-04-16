@@ -1,13 +1,17 @@
+use crate::{
+    elem_type::{register_node_elem, AccessMode, CachingMode, IntegerRepresentation},
+    node_base::{NodeAttributeBase, NodeElementBase},
+    node_store::{NodeId, NodeStore},
+    register_base::RegisterBase,
+    MaskedIntRegNode,
+};
+
 use super::{
     elem_name::{
         ACCESS_MODE, CACHEABLE, COMMENT, ENDIANNESS, POLLING_TIME, P_INVALIDATOR, P_SELECTED,
         REPRESENTATION, SIGN, STREAMABLE, STRUCT_ENTRY, STRUCT_REG, UNIT,
     },
-    elem_type::{register_node_elem, AccessMode, CachingMode, IntegerRepresentation},
-    node_base::{NodeAttributeBase, NodeElementBase},
-    node_store::{NodeId, NodeStore},
-    register_base::RegisterBase,
-    xml, MaskedIntRegNode, Parse,
+    xml, Parse,
 };
 
 #[derive(Debug, Clone)]

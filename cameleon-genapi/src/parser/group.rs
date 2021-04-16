@@ -1,12 +1,13 @@
+use crate::node_store::NodeStore;
+
 use super::{
     elem_name::{COMMENT, GROUP},
-    node_store::NodeStore,
     xml, NodeData, Parse,
 };
 
 #[derive(Debug, Clone)]
 pub(super) struct GroupNode {
-    pub(super) comment: String,
+    comment: String,
 
     pub(super) nodes: Vec<NodeData>,
 }
@@ -18,7 +19,9 @@ impl Parse for GroupNode {
 
         let mut nodes = vec![];
         while let Some(ref mut child) = node.next() {
-            nodes.extend(child.parse::<Vec<NodeData>>(store));
+            for data in child.parse::<Vec<NodeData>>(store) {
+                nodes.push(data);
+            }
         }
 
         Self { comment, nodes }

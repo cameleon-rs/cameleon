@@ -1,61 +1,9 @@
+use crate::{node_store::NodeStore, FloatRegNode};
+
 use super::{
     elem_name::{DISPLAY_NOTATION, DISPLAY_PRECISION, ENDIANNESS, FLOAT_REG, REPRESENTATION, UNIT},
-    elem_type::{register_node_elem, DisplayNotation, FloatRepresentation},
-    node_base::{NodeAttributeBase, NodeBase},
-    node_store::NodeStore,
-    register_base::RegisterBase,
     xml, Parse,
 };
-
-#[derive(Debug, Clone)]
-pub struct FloatRegNode {
-    attr_base: NodeAttributeBase,
-    register_base: RegisterBase,
-
-    endianness: register_node_elem::Endianness,
-    unit: Option<String>,
-    representation: FloatRepresentation,
-    display_notation: DisplayNotation,
-    display_precision: i64,
-}
-
-impl FloatRegNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase {
-        let elem_base = &self.register_base.elem_base;
-        NodeBase::new(&self.attr_base, elem_base)
-    }
-
-    #[must_use]
-    pub fn register_base(&self) -> &RegisterBase {
-        &self.register_base
-    }
-
-    #[must_use]
-    pub fn endianness(&self) -> register_node_elem::Endianness {
-        self.endianness
-    }
-
-    #[must_use]
-    pub fn unit(&self) -> Option<&str> {
-        self.unit.as_deref()
-    }
-
-    #[must_use]
-    pub fn representation(&self) -> FloatRepresentation {
-        self.representation
-    }
-
-    #[must_use]
-    pub fn display_notation(&self) -> DisplayNotation {
-        self.display_notation
-    }
-
-    #[must_use]
-    pub fn display_precision(&self) -> i64 {
-        self.display_precision
-    }
-}
 
 impl Parse for FloatRegNode {
     fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
@@ -85,6 +33,8 @@ impl Parse for FloatRegNode {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use crate::elem_type::{register_node_elem, DisplayNotation, FloatRepresentation};
 
     #[test]
     fn test_float_reg() {

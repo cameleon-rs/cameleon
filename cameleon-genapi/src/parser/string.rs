@@ -1,42 +1,9 @@
+use crate::{elem_type::ImmOrPNode, node_store::NodeStore, StringNode};
+
 use super::{
     elem_name::{P_INVALIDATOR, STREAMABLE, STRING, VALUE},
-    elem_type::ImmOrPNode,
-    node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    node_store::{NodeId, NodeStore},
     xml, Parse,
 };
-
-#[derive(Debug, Clone)]
-pub struct StringNode {
-    attr_base: NodeAttributeBase,
-    elem_base: NodeElementBase,
-
-    p_invalidators: Vec<NodeId>,
-    streamable: bool,
-    value: ImmOrPNode<String>,
-}
-
-impl StringNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn p_invalidators(&self) -> &[NodeId] {
-        &self.p_invalidators
-    }
-
-    #[must_use]
-    pub fn streamable(&self) -> bool {
-        self.streamable
-    }
-
-    #[must_use]
-    pub fn value(&self) -> &ImmOrPNode<String> {
-        &self.value
-    }
-}
 
 impl Parse for StringNode {
     fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {

@@ -1,67 +1,9 @@
+use crate::{node_store::NodeStore, MaskedIntRegNode};
+
 use super::{
     elem_name::{ENDIANNESS, MASKED_INT_REG, P_SELECTED, REPRESENTATION, SIGN, UNIT},
-    elem_type::{register_node_elem, IntegerRepresentation},
-    node_base::{NodeAttributeBase, NodeBase},
-    node_store::{NodeId, NodeStore},
-    register_base::RegisterBase,
     xml, Parse,
 };
-
-#[derive(Debug, Clone)]
-pub struct MaskedIntRegNode {
-    pub(super) attr_base: NodeAttributeBase,
-    pub(super) register_base: RegisterBase,
-
-    pub(super) bit_mask: register_node_elem::BitMask,
-    pub(super) sign: register_node_elem::Sign,
-    pub(super) endianness: register_node_elem::Endianness,
-    pub(super) unit: Option<String>,
-    pub(super) representation: IntegerRepresentation,
-    pub(super) p_selected: Vec<NodeId>,
-}
-
-impl MaskedIntRegNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase {
-        let elem_base = &self.register_base.elem_base;
-        NodeBase::new(&self.attr_base, elem_base)
-    }
-
-    #[must_use]
-    pub fn register_base(&self) -> &RegisterBase {
-        &self.register_base
-    }
-
-    #[must_use]
-    pub fn bit_mask(&self) -> register_node_elem::BitMask {
-        self.bit_mask
-    }
-
-    #[must_use]
-    pub fn sign(&self) -> register_node_elem::Sign {
-        self.sign
-    }
-
-    #[must_use]
-    pub fn endianness(&self) -> register_node_elem::Endianness {
-        self.endianness
-    }
-
-    #[must_use]
-    pub fn unit(&self) -> Option<&str> {
-        self.unit.as_deref()
-    }
-
-    #[must_use]
-    pub fn representation(&self) -> IntegerRepresentation {
-        self.representation
-    }
-
-    #[must_use]
-    pub fn p_selected(&self) -> &[NodeId] {
-        &self.p_selected
-    }
-}
 
 impl Parse for MaskedIntRegNode {
     fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
@@ -91,7 +33,7 @@ impl Parse for MaskedIntRegNode {
 
 #[cfg(test)]
 mod tests {
-    use super::super::register_node_elem::BitMask;
+    use crate::elem_type::register_node_elem::BitMask;
 
     use super::*;
 

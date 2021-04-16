@@ -1,28 +1,6 @@
-use super::{
-    node_base::{NodeAttributeBase, NodeBase},
-    node_store::NodeStore,
-    register_base::RegisterBase,
-    xml, Parse,
-};
+use crate::{node_store::NodeStore, StringRegNode};
 
-#[derive(Debug, Clone)]
-pub struct StringRegNode {
-    attr_base: NodeAttributeBase,
-    register_base: RegisterBase,
-}
-
-impl StringRegNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase {
-        let elem_base = &self.register_base.elem_base;
-        NodeBase::new(&self.attr_base, elem_base)
-    }
-
-    #[must_use]
-    pub fn register_base(&self) -> &RegisterBase {
-        &self.register_base
-    }
-}
+use super::{xml, Parse};
 
 impl Parse for StringRegNode {
     fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
