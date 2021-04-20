@@ -1,4 +1,4 @@
-use crate::node_store::NodeStore;
+use crate::store::NodeStore;
 
 use super::{
     elem_name::{COMMENT, GROUP},

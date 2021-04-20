@@ -1,4 +1,4 @@
-use crate::{node_store::NodeStore, CategoryNode};
+use crate::{store::NodeStore, CategoryNode};
 
 use super::{
     elem_name::{CATEGORY, P_FEATURE, P_INVALIDATOR},

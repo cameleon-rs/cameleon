@@ -1,5 +1,5 @@
 #![allow(clippy::upper_case_acronyms)]
-use super::node_store::NodeId;
+use super::store::NodeId;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NameSpace {

@@ -1,7 +1,7 @@
 use crate::{
     elem_type::AccessMode,
     node_base::{NodeAttributeBase, NodeElementBase},
-    node_store::NodeStore,
+    store::NodeStore,
 };
 
 use super::{

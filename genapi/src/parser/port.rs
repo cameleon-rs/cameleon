@@ -1,4 +1,4 @@
-use crate::{elem_type::ImmOrPNode, node_store::NodeStore, PortNode};
+use crate::{elem_type::ImmOrPNode, store::NodeStore, PortNode};
 
 use super::{
     elem_name::{CACHE_CHUNK_DATA, CHUNK_ID, PORT, P_CHUNK_ID, P_INVALIDATOR, SWAP_ENDIANNESS},

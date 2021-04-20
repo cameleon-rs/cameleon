@@ -1,4 +1,4 @@
-use crate::{node_store::NodeStore, BooleanNode};
+use crate::{store::NodeStore, BooleanNode};
 
 use super::{
     elem_name::{BOOLEAN, OFF_VALUE, ON_VALUE, P_INVALIDATOR, P_SELECTED, STREAMABLE},

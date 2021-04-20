@@ -1,4 +1,4 @@
-use crate::{node_store::NodeStore, EnumEntryNode, EnumerationNode};
+use crate::{store::NodeStore, EnumEntryNode, EnumerationNode};
 
 use super::{
     elem_name::{

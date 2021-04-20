@@ -1,7 +1,7 @@
 use crate::{
     elem_type::{AccessMode, BitMask, CachingMode, Endianness, IntegerRepresentation, Sign},
     node_base::{NodeAttributeBase, NodeElementBase},
-    node_store::{NodeId, NodeStore},
+    store::{NodeId, NodeStore},
     register_base::RegisterBase,
     MaskedIntRegNode,
 };

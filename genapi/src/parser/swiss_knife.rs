@@ -1,4 +1,4 @@
-use crate::{node_store::NodeStore, SwissKnifeNode};
+use crate::{store::NodeStore, SwissKnifeNode};
 
 use super::{
     elem_name::{

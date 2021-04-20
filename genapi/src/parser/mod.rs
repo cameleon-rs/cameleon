@@ -30,7 +30,7 @@ use struct_reg::StructRegNode;
 use thiserror::Error;
 
 use crate::{
-    node_store::{NodeData, NodeStore},
+    store::{NodeData, NodeStore},
     RegisterDescription,
 };
 

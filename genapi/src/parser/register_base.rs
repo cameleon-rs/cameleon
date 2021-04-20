@@ -1,4 +1,4 @@
-use crate::{elem_type::AccessMode, node_store::NodeStore, RegisterBase};
+use crate::{elem_type::AccessMode, store::NodeStore, RegisterBase};
 
 use super::{
     elem_name::{

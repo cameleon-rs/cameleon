@@ -1,4 +1,4 @@
-use crate::{elem_type::ImmOrPNode, node_store::NodeStore, StringNode};
+use crate::{elem_type::ImmOrPNode, store::NodeStore, StringNode};
 
 use super::{
     elem_name::{P_INVALIDATOR, STREAMABLE, STRING, VALUE},

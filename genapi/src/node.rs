@@ -1,6 +1,6 @@
 use super::{
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    node_store::NodeId,
+    store::NodeId,
 };
 
 #[derive(Debug, Clone)]

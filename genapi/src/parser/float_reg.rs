@@ -1,4 +1,4 @@
-use crate::{node_store::NodeStore, FloatRegNode};
+use crate::{store::NodeStore, FloatRegNode};
 
 use super::{
     elem_name::{DISPLAY_NOTATION, DISPLAY_PRECISION, ENDIANNESS, FLOAT_REG, REPRESENTATION, UNIT},

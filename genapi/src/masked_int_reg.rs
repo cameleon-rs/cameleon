@@ -1,7 +1,7 @@
 use super::{
     elem_type::{BitMask, Endianness, IntegerRepresentation, Sign},
     node_base::{NodeAttributeBase, NodeBase},
-    node_store::NodeId,
+    store::NodeId,
     register_base::RegisterBase,
 };
 

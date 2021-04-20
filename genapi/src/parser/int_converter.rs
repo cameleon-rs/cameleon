@@ -1,4 +1,4 @@
-use crate::{node_store::NodeStore, IntConverterNode};
+use crate::{store::NodeStore, IntConverterNode};
 
 use super::{
     elem_name::{

@@ -1,4 +1,4 @@
-use crate::{elem_type::ImmOrPNode, node_store::NodeStore, FloatNode};
+use crate::{elem_type::ImmOrPNode, store::NodeStore, FloatNode};
 
 use super::{
     elem_name::{

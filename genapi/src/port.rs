@@ -1,7 +1,7 @@
 use super::{
     elem_type::ImmOrPNode,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    node_store::NodeId,
+    store::NodeId,
 };
 
 #[derive(Debug, Clone)]

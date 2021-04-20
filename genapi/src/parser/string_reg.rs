@@ -1,4 +1,4 @@
-use crate::{node_store::NodeStore, StringRegNode};
+use crate::{store::NodeStore, StringRegNode};
 
 use super::{xml, Parse};
 

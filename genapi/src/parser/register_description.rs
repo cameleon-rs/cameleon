@@ -1,4 +1,4 @@
-use crate::{node_store::NodeStore, RegisterDescription};
+use crate::{store::NodeStore, RegisterDescription};
 
 use super::{
     elem_name::{

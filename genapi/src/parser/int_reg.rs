@@ -1,4 +1,4 @@
-use crate::{node_store::NodeStore, IntRegNode};
+use crate::{store::NodeStore, IntRegNode};
 
 use super::{
     elem_name::{ENDIANNESS, INT_REG, P_SELECTED, REPRESENTATION, SIGN, UNIT},

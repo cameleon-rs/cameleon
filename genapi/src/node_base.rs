@@ -1,6 +1,6 @@
 use super::{
     elem_type::{AccessMode, MergePriority, NameSpace, Visibility},
-    node_store::NodeId,
+    store::NodeId,
 };
 
 pub struct NodeBase<'a> {

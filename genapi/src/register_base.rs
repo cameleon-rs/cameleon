@@ -1,7 +1,7 @@
 use super::{
     elem_type::{AccessMode, AddressKind, CachingMode, ImmOrPNode},
     node_base::NodeElementBase,
-    node_store::NodeId,
+    store::NodeId,
 };
 
 #[derive(Debug, Clone)]

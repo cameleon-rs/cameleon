@@ -1,4 +1,4 @@
-use crate::{node_store::NodeStore, RegisterNode};
+use crate::{store::NodeStore, RegisterNode};
 
 use super::{elem_name::REGISTER, xml, Parse};
 

@@ -5,7 +5,7 @@
 )]
 
 pub mod elem_type;
-pub mod node_store;
+pub mod store;
 pub mod parser;
 
 pub use boolean::BooleanNode;

@@ -1,7 +1,7 @@
 use super::{
     elem_type::{DisplayNotation, FloatRepresentation, NamedValue, Slope},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    node_store::NodeId,
+    store::NodeId,
 };
 
 #[derive(Debug, Clone)]
