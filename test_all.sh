@@ -13,7 +13,7 @@ find . | grep "\.rs$" | xargs touch
 
 RUSTFLAGS="--D warnings" cargo clippy --all-targets -- -D clippy::all -D clippy::pedantic
 exit_if_failed $?
-cd cameleon-device
+cd device
 RUSTFLAGS="--D warnings" cargo clippy --all-targets --features libusb -- -D clippy::all -D clippy::pedantic
 exit_if_failed $?
 cd ..
@@ -28,14 +28,14 @@ exit_if_failed $?
 cargo test --doc
 exit_if_failed $?
 
-cd cameleon-device
+cd device
 cargo test --all-targets --features libusb
 exit_if_failed $?
 cargo test --doc --features libusb
 exit_if_failed $?
 cd ..
 
-cd cameleon-gentl
+cd gentl
 cargo test --all-targets --features libusb
 exit_if_failed $?
 cd ..

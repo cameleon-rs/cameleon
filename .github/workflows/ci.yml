@@ -48,7 +48,7 @@ jobs:
 
       - name: Clippy for cameleon-device with libusb
         run: RUST_FLAGS="--D warnings" cargo clippy --all-targets --features libusb -- -D clippy::all -D clippy::pedantic # Check with libusb feature.
-        working-directory: cameleon-device
+        working-directory: device
 
   test-default-feature:
     name: Test with default features
@@ -116,16 +116,16 @@ jobs:
       # Test cameleon-device with libusb feature.
       - name: Test cameleon-device with libusb
         run: cargo test --all-targets --features libusb
-        working-directory: cameleon-device
+        working-directory: device
       # Doctest cameleon-device with libusb feature. --all-targets option doesn't invoke doctest, see https://github.com/rust-lang/cargo/issues/6669.
       - name: Doctest cameleon-device
         run: cargo test --doc --features libusb
-        working-directory: cameleon-device
+        working-directory: device
 
       # Test cameleon-device with libusb feature.
       - name: Test cameleon-gentl with libusb
         run: cargo test --all-targets --features libusb
-        working-directory: cameleon-device
+        working-directory: device
 
       # Test cameleon with libusb feature.
       - name: Test cameleon with libusb

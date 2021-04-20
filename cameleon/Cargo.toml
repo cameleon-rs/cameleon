@@ -10,7 +10,7 @@ edition = "2018"
 thiserror = "1.0.20"
 semver = "0.11.0"
 
-cameleon-device = { path = "../cameleon-device" }
+cameleon-device = { path = "../device" }
 
 [dev-dependencies]
 trybuild = { version = "1.0.34" }

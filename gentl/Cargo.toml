@@ -15,7 +15,7 @@ libc = "0.2"
 lazy_static = "1.4.0"
 const_format = "0.2"
 
-cameleon-impl = { path = "../cameleon-impl" }
+cameleon-impl = { path = "../impl" }
 cameleon = { path = "../cameleon" }
 
 [features]
