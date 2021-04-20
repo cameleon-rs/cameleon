@@ -153,119 +153,127 @@ where
     }
 }
 
-pub mod numeric_node_elem {
-    use super::{ImmOrPNode, NodeId};
+#[derive(Debug, Clone)]
+pub enum ValueKind<T>
+where
+    T: Clone + PartialEq,
+{
+    Value(T),
+    PValue(PValue),
+    PIndex(PIndex<T>),
+}
 
-    #[derive(Debug, Clone)]
-    pub enum ValueKind<T>
-    where
-        T: Clone + PartialEq,
-    {
-        Value(T),
-        PValue(PValue),
-        PIndex(PIndex<T>),
+#[derive(Debug, Clone)]
+pub struct PValue {
+    pub(crate) p_value: NodeId,
+    pub(crate) p_value_copies: Vec<NodeId>,
+}
+
+impl PValue {
+    #[must_use]
+    pub fn p_value(&self) -> NodeId {
+        self.p_value
     }
 
-    #[derive(Debug, Clone)]
-    pub struct PValue {
-        pub p_value: NodeId,
-        pub p_value_copies: Vec<NodeId>,
-    }
-
-    #[derive(Debug, Clone)]
-    pub struct PIndex<T>
-    where
-        T: Clone + PartialEq,
-    {
-        pub(crate) p_index: NodeId,
-        pub(crate) value_indexed: Vec<ValueIndexed<T>>,
-        pub(crate) value_default: ImmOrPNode<T>,
-    }
-
-    impl<T> PIndex<T>
-    where
-        T: Clone + PartialEq,
-    {
-        pub fn p_index(&self) -> NodeId {
-            self.p_index
-        }
-
-        pub fn value_indexed(&self) -> &[ValueIndexed<T>] {
-            &self.value_indexed
-        }
-
-        pub fn value_default(&self) -> &ImmOrPNode<T> {
-            &self.value_default
-        }
-    }
-
-    #[derive(Debug, Clone)]
-    pub struct ValueIndexed<T>
-    where
-        T: Clone + PartialEq,
-    {
-        pub(crate) index: i64,
-        pub(crate) indexed: ImmOrPNode<T>,
-    }
-
-    impl<T> ValueIndexed<T>
-    where
-        T: Clone + PartialEq,
-    {
-        pub fn index(&self) -> i64 {
-            self.index
-        }
-        pub fn indexed(&self) -> &ImmOrPNode<T> {
-            &self.indexed
-        }
+    #[must_use]
+    pub fn p_value_copies(&self) -> &[NodeId] {
+        &self.p_value_copies
     }
 }
 
-pub mod register_node_elem {
-    use crate::IntSwissKnifeNode;
+#[derive(Debug, Clone)]
+pub struct PIndex<T>
+where
+    T: Clone + PartialEq,
+{
+    pub(crate) p_index: NodeId,
+    pub(crate) value_indexed: Vec<ValueIndexed<T>>,
+    pub(crate) value_default: ImmOrPNode<T>,
+}
 
-    use super::{ImmOrPNode, NodeId};
-
-    #[derive(Debug, Clone)]
-    pub enum AddressKind {
-        Address(ImmOrPNode<i64>),
-        IntSwissKnife(Box<IntSwissKnifeNode>),
-        PIndex(PIndex),
+impl<T> PIndex<T>
+where
+    T: Clone + PartialEq,
+{
+    #[must_use]
+    pub fn p_index(&self) -> NodeId {
+        self.p_index
     }
 
-    #[derive(Debug, Clone)]
-    pub struct PIndex {
-        pub(crate) offset: Option<ImmOrPNode<i64>>,
-        pub(crate) p_index: NodeId,
+    #[must_use]
+    pub fn value_indexed(&self) -> &[ValueIndexed<T>] {
+        &self.value_indexed
     }
 
-    impl PIndex {
-        #[must_use]
-        pub fn offset(&self) -> Option<&ImmOrPNode<i64>> {
-            self.offset.as_ref()
-        }
+    #[must_use]
+    pub fn value_default(&self) -> &ImmOrPNode<T> {
+        &self.value_default
+    }
+}
 
-        #[must_use]
-        pub fn p_index(&self) -> NodeId {
-            self.p_index
-        }
+#[derive(Debug, Clone)]
+pub struct ValueIndexed<T>
+where
+    T: Clone + PartialEq,
+{
+    pub(crate) index: i64,
+    pub(crate) indexed: ImmOrPNode<T>,
+}
+
+impl<T> ValueIndexed<T>
+where
+    T: Clone + PartialEq,
+{
+    #[must_use]
+    pub fn index(&self) -> i64 {
+        self.index
     }
 
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub enum Endianness {
-        LE,
-        BE,
+    #[must_use]
+    pub fn indexed(&self) -> &ImmOrPNode<T> {
+        &self.indexed
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum AddressKind {
+    Address(ImmOrPNode<i64>),
+    IntSwissKnife(NodeId),
+    PIndex(RegPIndex),
+}
+
+#[derive(Debug, Clone)]
+pub struct RegPIndex {
+    pub(crate) offset: Option<ImmOrPNode<i64>>,
+    pub(crate) p_index: NodeId,
+}
+
+impl RegPIndex {
+    #[must_use]
+    pub fn offset(&self) -> Option<&ImmOrPNode<i64>> {
+        self.offset.as_ref()
     }
 
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub enum Sign {
-        Signed,
-        Unsigned,
+    #[must_use]
+    pub fn p_index(&self) -> NodeId {
+        self.p_index
     }
+}
 
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub enum BitMask {
-        SingleBit(u64),
-        Range { lsb: u64, msb: u64 },
-    }
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Endianness {
+    LE,
+    BE,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Sign {
+    Signed,
+    Unsigned,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BitMask {
+    SingleBit(u64),
+    Range { lsb: u64, msb: u64 },
 }

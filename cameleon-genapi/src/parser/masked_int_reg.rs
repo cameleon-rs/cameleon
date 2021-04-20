@@ -33,7 +33,7 @@ impl Parse for MaskedIntRegNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::elem_type::register_node_elem::BitMask;
+    use crate::elem_type::BitMask;
 
     use super::*;
 

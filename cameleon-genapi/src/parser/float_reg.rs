@@ -34,7 +34,7 @@ impl Parse for FloatRegNode {
 mod tests {
     use super::*;
 
-    use crate::elem_type::{register_node_elem, DisplayNotation, FloatRepresentation};
+    use crate::elem_type::{DisplayNotation, Endianness, FloatRepresentation};
 
     #[test]
     fn test_float_reg() {
@@ -57,7 +57,7 @@ mod tests {
             .root_node()
             .parse(&mut store);
 
-        assert_eq!(node.endianness(), register_node_elem::Endianness::BE);
+        assert_eq!(node.endianness(), Endianness::BE);
         assert_eq!(node.unit().unwrap(), "Hz");
         assert_eq!(node.representation(), FloatRepresentation::Linear);
         assert_eq!(node.display_notation(), DisplayNotation::Fixed);

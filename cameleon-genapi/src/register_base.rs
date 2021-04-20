@@ -1,5 +1,5 @@
 use super::{
-    elem_type::{register_node_elem, AccessMode, CachingMode, ImmOrPNode},
+    elem_type::{AccessMode, AddressKind, CachingMode, ImmOrPNode},
     node_base::NodeElementBase,
     node_store::NodeId,
 };
@@ -9,10 +9,10 @@ pub struct RegisterBase {
     pub(crate) elem_base: NodeElementBase,
 
     pub(crate) streamable: bool,
-    pub(crate) address_kinds: Vec<register_node_elem::AddressKind>,
+    pub(crate) address_kinds: Vec<AddressKind>,
     pub(crate) length: ImmOrPNode<i64>,
     pub(crate) access_mode: AccessMode,
-    pub(crate) p_port: NodeId,
+    pub(crate) p_port: String,
     pub(crate) cacheable: CachingMode,
     pub(crate) polling_time: Option<u64>,
     pub(crate) p_invalidators: Vec<NodeId>,
@@ -25,7 +25,7 @@ impl RegisterBase {
     }
 
     #[must_use]
-    pub fn address_kinds(&self) -> &[register_node_elem::AddressKind] {
+    pub fn address_kinds(&self) -> &[AddressKind] {
         &self.address_kinds
     }
 
@@ -40,8 +40,8 @@ impl RegisterBase {
     }
 
     #[must_use]
-    pub fn p_port(&self) -> NodeId {
-        self.p_port
+    pub fn p_port(&self) -> &str {
+        &self.p_port
     }
 
     #[must_use]

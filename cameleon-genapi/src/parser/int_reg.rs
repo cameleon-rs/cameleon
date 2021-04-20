@@ -32,10 +32,7 @@ impl Parse for IntRegNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::elem_type::{
-        register_node_elem::{Endianness, Sign},
-        IntegerRepresentation,
-    };
+    use crate::elem_type::{Endianness, IntegerRepresentation, Sign};
 
     use super::*;
 

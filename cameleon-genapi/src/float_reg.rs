@@ -1,5 +1,5 @@
 use super::{
-    elem_type::{register_node_elem, DisplayNotation, FloatRepresentation},
+    elem_type::{DisplayNotation, Endianness, FloatRepresentation},
     node_base::{NodeAttributeBase, NodeBase},
     RegisterBase,
 };
@@ -9,7 +9,7 @@ pub struct FloatRegNode {
     pub(crate) attr_base: NodeAttributeBase,
     pub(crate) register_base: RegisterBase,
 
-    pub(crate) endianness: register_node_elem::Endianness,
+    pub(crate) endianness: Endianness,
     pub(crate) unit: Option<String>,
     pub(crate) representation: FloatRepresentation,
     pub(crate) display_notation: DisplayNotation,
@@ -29,7 +29,7 @@ impl FloatRegNode {
     }
 
     #[must_use]
-    pub fn endianness(&self) -> register_node_elem::Endianness {
+    pub fn endianness(&self) -> Endianness {
         self.endianness
     }
 

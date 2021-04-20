@@ -1,12 +1,12 @@
 use crate::{node_store::NodeStore, RegisterDescription};
 
 use super::{
-    convert_to_uint,
     elem_name::{
         MAJOR_VERSION, MINOR_VERSION, MODEL_NAME, PRODUCT_GUID, REGISTER_DESCRIPTION,
         SCHEMA_MAJOR_VERSION, SCHEMA_MINOR_VERSION, SCHEMA_SUB_MINOR_VERSION, STANDARD_NAME_SPCACE,
         SUB_MINOR_VERSION, TOOL_TIP, VENDOR_NAME, VERSION_GUID,
     },
+    elem_type::convert_to_uint,
     xml, Parse,
 };
 

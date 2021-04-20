@@ -53,7 +53,7 @@ impl Parse for FloatNode {
 
 #[cfg(test)]
 mod test {
-    use crate::elem_type::{numeric_node_elem, DisplayNotation, FloatRepresentation, ImmOrPNode};
+    use crate::elem_type::{DisplayNotation, FloatRepresentation, ImmOrPNode, ValueKind};
 
     use super::*;
 
@@ -87,7 +87,7 @@ mod test {
         assert_eq!(p_invalidators[1], store.id_by_name("Invalidator1"));
 
         assert!(node.streamable());
-        assert!(matches! {node.value_kind(), numeric_node_elem::ValueKind::Value(_)});
+        assert!(matches! {node.value_kind(), ValueKind::Value(_)});
         assert_eq!(node.min(), &ImmOrPNode::Imm(f64::NEG_INFINITY));
         assert_eq!(node.max(), &ImmOrPNode::Imm(f64::INFINITY));
         assert!(node.inc().unwrap().imm().unwrap().is_nan());

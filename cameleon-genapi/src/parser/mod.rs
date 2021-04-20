@@ -29,7 +29,6 @@ pub use boolean::*;
 pub use category::*;
 pub use command::*;
 pub use converter::*;
-pub use elem_type::*;
 pub use enumeration::*;
 pub use float::*;
 pub use float_reg::*;

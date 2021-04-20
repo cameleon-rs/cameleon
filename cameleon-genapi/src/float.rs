@@ -1,5 +1,5 @@
 use super::{
-    elem_type::{numeric_node_elem, DisplayNotation, FloatRepresentation, ImmOrPNode},
+    elem_type::{DisplayNotation, FloatRepresentation, ImmOrPNode, ValueKind},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     node_store::NodeId,
 };
@@ -11,7 +11,7 @@ pub struct FloatNode {
 
     pub(crate) p_invalidators: Vec<NodeId>,
     pub(crate) streamable: bool,
-    pub(crate) value_kind: numeric_node_elem::ValueKind<f64>,
+    pub(crate) value_kind: ValueKind<f64>,
     pub(crate) min: ImmOrPNode<f64>,
     pub(crate) max: ImmOrPNode<f64>,
     pub(crate) inc: Option<ImmOrPNode<f64>>,
@@ -38,7 +38,7 @@ impl FloatNode {
     }
 
     #[must_use]
-    pub fn value_kind(&self) -> &numeric_node_elem::ValueKind<f64> {
+    pub fn value_kind(&self) -> &ValueKind<f64> {
         &self.value_kind
     }
 

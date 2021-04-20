@@ -1,5 +1,5 @@
 use super::{
-    elem_type::{register_node_elem, IntegerRepresentation},
+    elem_type::{BitMask, Endianness, IntegerRepresentation, Sign},
     node_base::{NodeAttributeBase, NodeBase},
     node_store::NodeId,
     register_base::RegisterBase,
@@ -10,9 +10,9 @@ pub struct MaskedIntRegNode {
     pub(crate) attr_base: NodeAttributeBase,
     pub(crate) register_base: RegisterBase,
 
-    pub(crate) bit_mask: register_node_elem::BitMask,
-    pub(crate) sign: register_node_elem::Sign,
-    pub(crate) endianness: register_node_elem::Endianness,
+    pub(crate) bit_mask: BitMask,
+    pub(crate) sign: Sign,
+    pub(crate) endianness: Endianness,
     pub(crate) unit: Option<String>,
     pub(crate) representation: IntegerRepresentation,
     pub(crate) p_selected: Vec<NodeId>,
@@ -31,17 +31,17 @@ impl MaskedIntRegNode {
     }
 
     #[must_use]
-    pub fn bit_mask(&self) -> register_node_elem::BitMask {
+    pub fn bit_mask(&self) -> BitMask {
         self.bit_mask
     }
 
     #[must_use]
-    pub fn sign(&self) -> register_node_elem::Sign {
+    pub fn sign(&self) -> Sign {
         self.sign
     }
 
     #[must_use]
-    pub fn endianness(&self) -> register_node_elem::Endianness {
+    pub fn endianness(&self) -> Endianness {
         self.endianness
     }
 

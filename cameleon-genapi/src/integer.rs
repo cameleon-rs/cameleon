@@ -1,5 +1,5 @@
 use super::{
-    elem_type::{numeric_node_elem, ImmOrPNode, IntegerRepresentation},
+    elem_type::{ImmOrPNode, IntegerRepresentation, ValueKind},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     node_store::NodeId,
 };
@@ -11,7 +11,7 @@ pub struct IntegerNode {
 
     pub(crate) p_invalidators: Vec<NodeId>,
     pub(crate) streamable: bool,
-    pub(crate) value_kind: numeric_node_elem::ValueKind<i64>,
+    pub(crate) value_kind: ValueKind<i64>,
     pub(crate) min: ImmOrPNode<i64>,
     pub(crate) max: ImmOrPNode<i64>,
     pub(crate) inc: ImmOrPNode<i64>,
@@ -37,7 +37,7 @@ impl IntegerNode {
     }
 
     #[must_use]
-    pub fn value_kind(&self) -> &numeric_node_elem::ValueKind<i64> {
+    pub fn value_kind(&self) -> &ValueKind<i64> {
         &self.value_kind
     }
 

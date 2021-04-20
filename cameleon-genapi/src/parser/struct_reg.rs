@@ -1,5 +1,5 @@
 use crate::{
-    elem_type::{register_node_elem, AccessMode, CachingMode, IntegerRepresentation},
+    elem_type::{AccessMode, BitMask, CachingMode, Endianness, IntegerRepresentation, Sign},
     node_base::{NodeAttributeBase, NodeElementBase},
     node_store::{NodeId, NodeStore},
     register_base::RegisterBase,
@@ -19,7 +19,7 @@ pub(super) struct StructRegNode {
     comment: String,
     register_base: RegisterBase,
 
-    endianness: register_node_elem::Endianness,
+    endianness: Endianness,
     entries: Vec<StructEntryNode>,
 }
 
@@ -68,8 +68,8 @@ struct StructEntryNode {
     cacheable: CachingMode,
     polling_time: Option<u64>,
     streamable: bool,
-    bit_mask: register_node_elem::BitMask,
-    sign: register_node_elem::Sign,
+    bit_mask: BitMask,
+    sign: Sign,
     unit: Option<String>,
     representation: IntegerRepresentation,
     p_selected: Vec<NodeId>,
@@ -101,7 +101,7 @@ impl StructEntryNode {
     fn into_masked_int_reg(
         self,
         mut register_base: RegisterBase,
-        endianness: register_node_elem::Endianness,
+        endianness: Endianness,
     ) -> MaskedIntRegNode {
         let attr_base = self.attr_base;
 

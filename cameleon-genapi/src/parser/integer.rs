@@ -60,7 +60,7 @@ impl Parse for IntegerNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::elem_type::numeric_node_elem;
+    use crate::elem_type::ValueKind;
 
     use super::*;
 
@@ -97,7 +97,7 @@ mod tests {
         assert_eq!(p_invalidators[1], store.id_by_name("Invalidator1"));
 
         assert!(node.streamable());
-        assert!(matches! {node.value_kind(), numeric_node_elem::ValueKind::Value(0x100)});
+        assert!(matches! {node.value_kind(), ValueKind::Value(0x100)});
         assert_eq!(node.min(), &ImmOrPNode::Imm(0x10));
         assert_eq!(node.max(), &ImmOrPNode::Imm(100));
         assert_eq!(node.inc(), &ImmOrPNode::Imm(0x5));
@@ -126,7 +126,7 @@ mod tests {
 
         let (node, mut store) = integer_node_from_str(xml);
         let p_value = match node.value_kind() {
-            numeric_node_elem::ValueKind::PValue(p_value) => p_value,
+            ValueKind::PValue(p_value) => p_value,
             _ => panic!(),
         };
         assert_eq!(p_value.p_value, store.id_by_name("pValue"));
@@ -155,7 +155,7 @@ mod tests {
 
         let (node, mut store) = integer_node_from_str(xml);
         let p_index = match node.value_kind {
-            numeric_node_elem::ValueKind::PIndex(p_index) => p_index,
+            ValueKind::PIndex(p_index) => p_index,
             _ => panic!(),
         };
 
