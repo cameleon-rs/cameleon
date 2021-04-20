@@ -69,6 +69,60 @@ impl Default for NodeStore {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ValueId(pub u32);
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ValueData {
+    Integer(i64),
+    Float(f64),
+    Str(String),
+}
+
+pub trait ValueStore {
+    fn store(&mut self, data: impl Into<ValueData>) -> ValueId;
+
+    fn value(&self, id: ValueId) -> &ValueData;
+
+    fn value_mut(&mut self, id: ValueId) -> &mut ValueData;
+}
+
+impl<T> ValueStore for &mut T
+where
+    T: ValueStore,
+{
+    fn store(&mut self, data: impl Into<ValueData>) -> ValueId {
+        (*self).store(data)
+    }
+
+    fn value(&self, id: ValueId) -> &ValueData {
+        (**self).value(id)
+    }
+
+    fn value_mut(&mut self, id: ValueId) -> &mut ValueData {
+        (*self).value_mut(id)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct DefaultValueStore(Vec<ValueData>);
+
+impl ValueStore for DefaultValueStore {
+    fn store(&mut self, data: impl Into<ValueData>) -> ValueId {
+        let id = ValueId(self.0.len() as u32);
+        self.0.push(data.into());
+        id
+    }
+
+    fn value(&self, id: ValueId) -> &ValueData {
+        &self.0[id.0 as usize]
+    }
+
+    fn value_mut(&mut self, id: ValueId) -> &mut ValueData {
+        &mut self.0[id.0 as usize]
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum NodeData {
     Node(Box<Node>),
