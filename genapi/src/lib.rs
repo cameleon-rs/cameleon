@@ -51,3 +51,11 @@ mod register_description;
 mod string;
 mod string_reg;
 mod swiss_knife;
+
+pub trait Device {
+    type Error: std::error::Error;
+
+    fn read_mem(&mut self, address: u64, buf: &mut [u8]) -> Result<(), Self::Error>;
+
+    fn write_mem(&mut self, address: u64, data: &[u8]) -> Result<(), Self::Error>;
+}
