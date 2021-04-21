@@ -6,7 +6,10 @@ use super::{
 };
 
 impl Parse for MaskedIntRegNode {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    where
+        T: NodeStore,
+    {
         debug_assert_eq!(node.tag_name(), MASKED_INT_REG);
         let attr_base = node.parse(store);
 
@@ -33,7 +36,7 @@ impl Parse for MaskedIntRegNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::elem_type::BitMask;
+    use crate::{elem_type::BitMask, store::DefaultNodeStore};
 
     use super::*;
 
@@ -48,7 +51,7 @@ mod tests {
         </MaskedIntReg>
         "#;
 
-        let mut store = NodeStore::new();
+        let mut store = DefaultNodeStore::new();
         let node: MaskedIntRegNode = xml::Document::from_str(&xml)
             .unwrap()
             .root_node()
@@ -69,7 +72,7 @@ mod tests {
         </MaskedIntReg>
         "#;
 
-        let mut store = NodeStore::new();
+        let mut store = DefaultNodeStore::new();
         let node: MaskedIntRegNode = xml::Document::from_str(&xml)
             .unwrap()
             .root_node()

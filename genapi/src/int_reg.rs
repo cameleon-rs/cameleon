@@ -1,8 +1,8 @@
 use super::{
     elem_type::{Endianness, IntegerRepresentation, Sign},
     node_base::{NodeAttributeBase, NodeBase},
-    store::NodeId,
     register_base::RegisterBase,
+    store::NodeId,
 };
 
 #[derive(Debug, Clone)]

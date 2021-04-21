@@ -9,7 +9,10 @@ use super::{
 };
 
 impl Parse for IntConverterNode {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    where
+        T: NodeStore,
+    {
         debug_assert_eq!(node.tag_name(), INT_CONVERTER);
 
         let attr_base = node.parse(store);
@@ -47,7 +50,10 @@ impl Parse for IntConverterNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::elem_type::{IntegerRepresentation, Slope};
+    use crate::{
+        elem_type::{IntegerRepresentation, Slope},
+        store::DefaultNodeStore,
+    };
 
     use super::*;
 
@@ -63,7 +69,7 @@ mod tests {
              </IntConverter>
              "#;
 
-        let mut store = NodeStore::new();
+        let mut store = DefaultNodeStore::new();
         let node: IntConverterNode = xml::Document::from_str(&xml)
             .unwrap()
             .root_node()

@@ -6,7 +6,10 @@ use super::{
 };
 
 impl Parse for BooleanNode {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    where
+        T: NodeStore,
+    {
         debug_assert_eq!(node.tag_name(), BOOLEAN);
 
         let attr_base = node.parse(store);
@@ -34,7 +37,7 @@ impl Parse for BooleanNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::elem_type::ImmOrPNode;
+    use crate::{elem_type::ImmOrPNode, store::DefaultNodeStore};
 
     use super::*;
 
@@ -48,7 +51,7 @@ mod tests {
             </Boolean>
             "#;
 
-        let mut store = NodeStore::new();
+        let mut store = DefaultNodeStore::new();
         let node: BooleanNode = xml::Document::from_str(&xml)
             .unwrap()
             .root_node()
@@ -66,7 +69,7 @@ mod tests {
             </Boolean>
             "#;
 
-        let mut store = NodeStore::new();
+        let mut store = DefaultNodeStore::new();
         let node: BooleanNode = xml::Document::from_str(&xml1)
             .unwrap()
             .root_node()
@@ -79,7 +82,7 @@ mod tests {
             </Boolean>
             "#;
 
-        let mut store2 = NodeStore::new();
+        let mut store2 = DefaultNodeStore::new();
         let node: BooleanNode = xml::Document::from_str(&xml2)
             .unwrap()
             .root_node()

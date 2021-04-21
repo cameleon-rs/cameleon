@@ -11,7 +11,10 @@ use super::{
 };
 
 impl Parse for RegisterDescription {
-    fn parse(node: &mut xml::Node, _: &mut NodeStore) -> Self {
+    fn parse<T>(node: &mut xml::Node, _: &mut T) -> Self
+    where
+        T: NodeStore,
+    {
         debug_assert_eq!(node.tag_name(), REGISTER_DESCRIPTION);
 
         let model_name = node.attribute_of(MODEL_NAME).unwrap().into();
@@ -50,7 +53,7 @@ impl Parse for RegisterDescription {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::elem_type::StandardNameSpace;
+    use crate::{elem_type::StandardNameSpace, store::DefaultNodeStore};
 
     #[test]
     #[allow(clippy::too_many_lines)]
@@ -225,7 +228,7 @@ mod tests {
         "#;
 
         let document = xml::Document::from_str(xml).unwrap();
-        let mut store = NodeStore::new();
+        let mut store = DefaultNodeStore::new();
         let reg_desc: RegisterDescription = document.root_node().parse(&mut store);
 
         assert_eq!(reg_desc.model_name(), "CameleonModel");

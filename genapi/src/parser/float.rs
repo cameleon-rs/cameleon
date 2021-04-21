@@ -9,7 +9,10 @@ use super::{
 };
 
 impl Parse for FloatNode {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    where
+        T: NodeStore,
+    {
         debug_assert_eq!(node.tag_name(), FLOAT);
 
         let attr_base = node.parse(store);
@@ -53,7 +56,10 @@ impl Parse for FloatNode {
 
 #[cfg(test)]
 mod test {
-    use crate::elem_type::{DisplayNotation, FloatRepresentation, ImmOrPNode, ValueKind};
+    use crate::{
+        elem_type::{DisplayNotation, FloatRepresentation, ImmOrPNode, ValueKind},
+        store::DefaultNodeStore,
+    };
 
     use super::*;
 
@@ -75,7 +81,7 @@ mod test {
             </Float>
             "#;
 
-        let mut store = NodeStore::new();
+        let mut store = DefaultNodeStore::new();
         let node: FloatNode = xml::Document::from_str(xml)
             .unwrap()
             .root_node()

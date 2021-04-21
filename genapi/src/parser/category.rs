@@ -6,7 +6,10 @@ use super::{
 };
 
 impl Parse for CategoryNode {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    where
+        T: NodeStore,
+    {
         debug_assert_eq!(node.tag_name(), CATEGORY);
 
         let attr_base = node.parse(store);
@@ -26,11 +29,13 @@ impl Parse for CategoryNode {
 
 #[cfg(test)]
 mod tests {
+    use crate::store::DefaultNodeStore;
+
     use super::*;
 
-    fn category_node_from_str(xml: &str) -> (CategoryNode, NodeStore) {
+    fn category_node_from_str(xml: &str) -> (CategoryNode, DefaultNodeStore) {
         let document = xml::Document::from_str(xml).unwrap();
-        let mut store = NodeStore::new();
+        let mut store = DefaultNodeStore::new();
         (document.root_node().parse(&mut store), store)
     }
 

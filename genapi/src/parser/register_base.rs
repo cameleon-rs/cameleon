@@ -9,7 +9,10 @@ use super::{
 };
 
 impl Parse for RegisterBase {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    where
+        T: NodeStore,
+    {
         let elem_base = node.parse(store);
 
         let streamable = node.parse_if(STREAMABLE, store).unwrap_or_default();

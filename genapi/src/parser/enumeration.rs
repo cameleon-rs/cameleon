@@ -9,7 +9,10 @@ use super::{
 };
 
 impl Parse for EnumerationNode {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    where
+        T: NodeStore,
+    {
         debug_assert_eq!(node.tag_name(), ENUMERATION);
 
         let attr_base = node.parse(store);
@@ -39,7 +42,10 @@ impl Parse for EnumerationNode {
 }
 
 impl Parse for EnumEntryNode {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    where
+        T: NodeStore,
+    {
         debug_assert_eq!(node.tag_name(), ENUM_ENTRY);
 
         let attr_base = node.parse(store);
@@ -65,7 +71,7 @@ impl Parse for EnumEntryNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::elem_type::ImmOrPNode;
+    use crate::{elem_type::ImmOrPNode, store::DefaultNodeStore};
 
     use super::*;
 
@@ -87,7 +93,7 @@ mod tests {
             </Enumeration>
             "#;
 
-        let mut store = NodeStore::new();
+        let mut store = DefaultNodeStore::new();
         let node: EnumerationNode = xml::Document::from_str(&xml)
             .unwrap()
             .root_node()

@@ -16,7 +16,10 @@ use super::{
 };
 
 impl Parse for NodeAttributeBase {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    where
+        T: NodeStore,
+    {
         let name = node.attribute_of(NAME).unwrap();
         let id = store.id_by_name(&name);
         let name_space = node
@@ -41,9 +44,12 @@ impl Parse for NodeAttributeBase {
 }
 
 impl Parse for NodeElementBase {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    where
+        T: NodeStore,
+    {
         // Ignore Extension element.
-        node.parse_if::<String>(EXTENSION, store);
+        let _: Option<String> = node.parse_if(EXTENSION, store);
 
         let tool_tip = node.parse_if(TOOL_TIP, store);
         let description = node.parse_if(DESCRIPTION, store);

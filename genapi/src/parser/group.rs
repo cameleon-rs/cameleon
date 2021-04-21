@@ -13,13 +13,17 @@ pub(super) struct GroupNode {
 }
 
 impl Parse for GroupNode {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    where
+        T: NodeStore,
+    {
         debug_assert_eq!(node.tag_name(), GROUP);
         let comment = node.attribute_of(COMMENT).unwrap().into();
 
         let mut nodes = vec![];
         while let Some(ref mut child) = node.next() {
-            for data in child.parse::<Vec<NodeData>>(store) {
+            let children: Vec<NodeData> = child.parse(store);
+            for data in children {
                 nodes.push(data);
             }
         }
@@ -30,6 +34,8 @@ impl Parse for GroupNode {
 
 #[cfg(test)]
 mod tests {
+    use crate::store::DefaultNodeStore;
+
     use super::*;
 
     #[test]
@@ -48,7 +54,7 @@ mod tests {
             </Group>
             "#;
 
-        let mut store = NodeStore::new();
+        let mut store = DefaultNodeStore::new();
         let node: GroupNode = xml::Document::from_str(&xml)
             .unwrap()
             .root_node()

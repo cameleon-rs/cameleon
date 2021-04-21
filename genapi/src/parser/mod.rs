@@ -30,7 +30,7 @@ use struct_reg::StructRegNode;
 use thiserror::Error;
 
 use crate::{
-    store::{NodeData, NodeStore},
+    store::{DefaultNodeStore, NodeData, NodeStore},
     RegisterDescription,
 };
 
@@ -62,18 +62,27 @@ impl<'a> Parser<'a> {
         Ok(Self { document })
     }
 
-    pub fn parse(&self) -> ParseResult<(RegisterDescription, NodeStore)> {
-        let mut store = NodeStore::new();
+    pub fn parse(&self) -> ParseResult<(RegisterDescription, DefaultNodeStore)> {
+        let mut store = DefaultNodeStore::new();
+        let reg_desc = self.parse_with_store(&mut store)?;
+        Ok((reg_desc, store))
+    }
+
+    pub fn parse_with_store<T>(&self, mut store: T) -> ParseResult<RegisterDescription>
+    where
+        T: NodeStore,
+    {
         let mut node = self.document.root_node();
         let reg_desc = node.parse(&mut store);
         while let Some(ref mut child) = node.next() {
-            for child in child.parse::<Vec<NodeData>>(&mut store) {
+            let children: Vec<NodeData> = child.parse(&mut store);
+            for child in children {
                 let id = child.node_base().id();
                 store.store_node(id, child);
             }
         }
 
-        Ok((reg_desc, store))
+        Ok(reg_desc)
     }
 
     #[must_use]
@@ -83,11 +92,16 @@ impl<'a> Parser<'a> {
 }
 
 trait Parse {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self;
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    where
+        T: NodeStore;
 }
 
 impl Parse for Vec<NodeData> {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Vec<NodeData> {
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Vec<NodeData>
+    where
+        T: NodeStore,
+    {
         match node.tag_name() {
             NODE => vec![NodeData::Node(Box::new(node.parse(store)))],
             CATEGORY => vec![NodeData::Category(Box::new(node.parse(store)))],
@@ -107,14 +121,17 @@ impl Parse for Vec<NodeData> {
             SWISS_KNIFE => vec![NodeData::SwissKnife(Box::new(node.parse(store)))],
             INT_SWISS_KNIFE => vec![NodeData::IntSwissKnife(Box::new(node.parse(store)))],
             PORT => vec![NodeData::Port(Box::new(node.parse(store)))],
-            STRUCT_REG => node
-                .parse::<StructRegNode>(store)
-                .into_masked_int_regs()
-                .into_iter()
-                .map(|node| NodeData::MaskedIntReg(node.into()))
-                .collect(),
-            GROUP => node.parse::<GroupNode>(store).nodes,
-
+            STRUCT_REG => {
+                let node: StructRegNode = node.parse(store);
+                node.into_masked_int_regs()
+                    .into_iter()
+                    .map(|node| NodeData::MaskedIntReg(node.into()))
+                    .collect()
+            }
+            GROUP => {
+                let node: GroupNode = node.parse(store);
+                node.nodes
+            }
             // TODO: Implement DCAM specific ndoes.
             CONF_ROM | TEXT_DESC | INT_KEY | ADV_FEATURE_LOCK | SMART_FEATURE => todo!(),
             _ => unreachable!(),

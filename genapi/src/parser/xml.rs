@@ -31,18 +31,19 @@ pub(super) struct Node<'a, 'input> {
 }
 
 impl<'a, 'input> Node<'a, 'input> {
-    pub(super) fn parse<T>(&mut self, store: &mut NodeStore) -> T
+    pub(super) fn parse<T, U>(&mut self, store: &mut U) -> T
     where
         T: Parse,
+        U: NodeStore,
     {
         T::parse(self, store)
     }
 
-    pub(super) fn parse_if<T: Parse>(
-        &mut self,
-        tag_name: &str,
-        store: &mut NodeStore,
-    ) -> Option<T> {
+    pub(super) fn parse_if<T, U>(&mut self, tag_name: &str, store: &mut U) -> Option<T>
+    where
+        T: Parse,
+        U: NodeStore,
+    {
         if self.peek()?.tag_name() == tag_name {
             Some(self.parse(store))
         } else {
@@ -50,11 +51,11 @@ impl<'a, 'input> Node<'a, 'input> {
         }
     }
 
-    pub(super) fn parse_while<T: Parse>(
-        &mut self,
-        tag_name: &str,
-        store: &mut NodeStore,
-    ) -> Vec<T> {
+    pub(super) fn parse_while<T, U>(&mut self, tag_name: &str, store: &mut U) -> Vec<T>
+    where
+        T: Parse,
+        U: NodeStore,
+    {
         let mut res = vec![];
         while let Some(parsed) = self.parse_if(tag_name, store) {
             res.push(parsed);

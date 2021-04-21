@@ -6,7 +6,10 @@ use super::{
 };
 
 impl Parse for FloatRegNode {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    where
+        T: NodeStore,
+    {
         debug_assert_eq!(node.tag_name(), FLOAT_REG);
 
         let attr_base = node.parse(store);
@@ -34,7 +37,10 @@ impl Parse for FloatRegNode {
 mod tests {
     use super::*;
 
-    use crate::elem_type::{DisplayNotation, Endianness, FloatRepresentation};
+    use crate::{
+        elem_type::{DisplayNotation, Endianness, FloatRepresentation},
+        store::DefaultNodeStore,
+    };
 
     #[test]
     fn test_float_reg() {
@@ -51,7 +57,7 @@ mod tests {
         </FloatReg>
         "#;
 
-        let mut store = NodeStore::new();
+        let mut store = DefaultNodeStore::new();
         let node: FloatRegNode = xml::Document::from_str(&xml)
             .unwrap()
             .root_node()

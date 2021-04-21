@@ -5,8 +5,8 @@
 )]
 
 pub mod elem_type;
-pub mod store;
 pub mod parser;
+pub mod store;
 
 pub use boolean::BooleanNode;
 pub use category::CategoryNode;

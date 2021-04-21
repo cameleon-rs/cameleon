@@ -13,7 +13,10 @@ use super::{
 };
 
 impl Parse for IntegerNode {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    where
+        T: NodeStore,
+    {
         debug_assert_eq!(node.tag_name(), INTEGER);
 
         let attr_base = node.parse(store);
@@ -33,9 +36,8 @@ impl Parse for IntegerNode {
             .or_else(|| node.parse_if(P_INC, store))
             .unwrap_or(ImmOrPNode::Imm(10));
         let unit = node.parse_if(UNIT, store);
-        let representation = node
-            .parse_if::<IntegerRepresentation>(REPRESENTATION, store)
-            .unwrap_or_default();
+        let representation: IntegerRepresentation =
+            node.parse_if(REPRESENTATION, store).unwrap_or_default();
         let p_selected: Vec<NodeId> = node.parse_while(P_SELECTED, store);
 
         // Deduce min and max value based on representation if not specified.
@@ -60,13 +62,13 @@ impl Parse for IntegerNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::elem_type::ValueKind;
+    use crate::{elem_type::ValueKind, store::DefaultNodeStore};
 
     use super::*;
 
-    fn integer_node_from_str(xml: &str) -> (IntegerNode, NodeStore) {
+    fn integer_node_from_str(xml: &str) -> (IntegerNode, DefaultNodeStore) {
         let document = xml::Document::from_str(xml).unwrap();
-        let mut store = NodeStore::new();
+        let mut store = DefaultNodeStore::new();
         (document.root_node().parse(&mut store), store)
     }
 

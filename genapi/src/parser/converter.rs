@@ -9,7 +9,10 @@ use super::{
 };
 
 impl Parse for ConverterNode {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    where
+        T: NodeStore,
+    {
         debug_assert_eq!(node.tag_name(), CONVERTER);
 
         let attr_base = node.parse(store);
@@ -55,7 +58,7 @@ impl Parse for ConverterNode {
 mod tests {
     use super::*;
 
-    use crate::elem_type::Slope;
+    use crate::{elem_type::Slope, store::DefaultNodeStore};
 
     #[test]
     fn test_converter() {
@@ -73,7 +76,7 @@ mod tests {
              </Converter>
              "#;
 
-        let mut store = NodeStore::new();
+        let mut store = DefaultNodeStore::new();
         let node: ConverterNode = xml::Document::from_str(&xml)
             .unwrap()
             .root_node()

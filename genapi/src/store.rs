@@ -1,3 +1,5 @@
+use std::convert::TryFrom;
+
 use string_interner::{StringInterner, Symbol};
 
 use super::{
@@ -21,105 +23,6 @@ impl Symbol for NodeId {
 
     fn to_usize(self) -> usize {
         self.0 as usize
-    }
-}
-
-pub struct NodeStore {
-    interner: StringInterner<NodeId>,
-    store: Vec<Option<NodeData>>,
-}
-
-impl NodeStore {
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            interner: StringInterner::new(),
-            store: Vec::new(),
-        }
-    }
-
-    pub fn id_by_name(&mut self, s: impl AsRef<str>) -> NodeId {
-        self.interner.get_or_intern(s)
-    }
-
-    #[must_use]
-    #[allow(clippy::missing_panics_doc)]
-    pub fn node(&self, id: NodeId) -> &NodeData {
-        self.node_opt(id).unwrap()
-    }
-
-    #[must_use]
-    pub fn node_opt(&self, id: NodeId) -> Option<&NodeData> {
-        self.store.get(id.to_usize())?.as_ref()
-    }
-
-    pub(super) fn store_node(&mut self, id: NodeId, data: NodeData) {
-        let id = id.to_usize();
-        if self.store.len() <= id {
-            self.store.resize(id + 1, None)
-        }
-        debug_assert!(self.store[id].is_none());
-        self.store[id] = Some(data);
-    }
-}
-
-impl Default for NodeStore {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ValueId(pub u32);
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum ValueData {
-    Integer(i64),
-    Float(f64),
-    Str(String),
-}
-
-pub trait ValueStore {
-    fn store(&mut self, data: impl Into<ValueData>) -> ValueId;
-
-    fn value(&self, id: ValueId) -> &ValueData;
-
-    fn value_mut(&mut self, id: ValueId) -> &mut ValueData;
-}
-
-impl<T> ValueStore for &mut T
-where
-    T: ValueStore,
-{
-    fn store(&mut self, data: impl Into<ValueData>) -> ValueId {
-        (*self).store(data)
-    }
-
-    fn value(&self, id: ValueId) -> &ValueData {
-        (**self).value(id)
-    }
-
-    fn value_mut(&mut self, id: ValueId) -> &mut ValueData {
-        (*self).value_mut(id)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct DefaultValueStore(Vec<ValueData>);
-
-impl ValueStore for DefaultValueStore {
-    fn store(&mut self, data: impl Into<ValueData>) -> ValueId {
-        let id = ValueId(self.0.len() as u32);
-        self.0.push(data.into());
-        id
-    }
-
-    fn value(&self, id: ValueId) -> &ValueData {
-        &self.0[id.0 as usize]
-    }
-
-    fn value_mut(&mut self, id: ValueId) -> &mut ValueData {
-        &mut self.0[id.0 as usize]
     }
 }
 
@@ -177,5 +80,130 @@ impl NodeData {
             Self::Port(node) => node.node_base(),
             _ => todo!(),
         }
+    }
+}
+
+pub trait NodeStore {
+    fn id_by_name<T: AsRef<str>>(&mut self, s: T) -> NodeId;
+
+    fn node_opt(&self, id: NodeId) -> Option<&NodeData>;
+
+    fn node(&self, id: NodeId) -> &NodeData {
+        self.node_opt(id).unwrap()
+    }
+
+    fn store_node(&mut self, id: NodeId, data: NodeData);
+}
+
+impl<T> NodeStore for &mut T
+where
+    T: NodeStore,
+{
+    fn id_by_name<U: AsRef<str>>(&mut self, s: U) -> NodeId {
+        (*self).id_by_name(s)
+    }
+
+    fn node_opt(&self, id: NodeId) -> Option<&NodeData> {
+        (**self).node_opt(id)
+    }
+
+    fn store_node(&mut self, id: NodeId, data: NodeData) {
+        (*self).store_node(id, data)
+    }
+}
+
+pub struct DefaultNodeStore {
+    interner: StringInterner<NodeId>,
+    store: Vec<Option<NodeData>>,
+}
+
+impl DefaultNodeStore {
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            interner: StringInterner::new(),
+            store: Vec::new(),
+        }
+    }
+}
+
+impl NodeStore for DefaultNodeStore {
+    fn id_by_name<T: AsRef<str>>(&mut self, s: T) -> NodeId {
+        self.interner.get_or_intern(s)
+    }
+
+    fn node_opt(&self, id: NodeId) -> Option<&NodeData> {
+        self.store.get(id.to_usize())?.as_ref()
+    }
+
+    fn store_node(&mut self, id: NodeId, data: NodeData) {
+        let id = id.to_usize();
+        if self.store.len() <= id {
+            self.store.resize(id + 1, None)
+        }
+        debug_assert!(self.store[id].is_none());
+        self.store[id] = Some(data);
+    }
+}
+
+impl Default for DefaultNodeStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ValueId(pub u32);
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ValueData {
+    Integer(i64),
+    Float(f64),
+    Str(String),
+}
+
+pub trait ValueStore {
+    fn store(&mut self, data: impl Into<ValueData>) -> ValueId;
+
+    fn value(&self, id: ValueId) -> &ValueData;
+
+    fn value_mut(&mut self, id: ValueId) -> &mut ValueData;
+}
+
+impl<T> ValueStore for &mut T
+where
+    T: ValueStore,
+{
+    fn store(&mut self, data: impl Into<ValueData>) -> ValueId {
+        (*self).store(data)
+    }
+
+    fn value(&self, id: ValueId) -> &ValueData {
+        (**self).value(id)
+    }
+
+    fn value_mut(&mut self, id: ValueId) -> &mut ValueData {
+        (*self).value_mut(id)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct DefaultValueStore(Vec<ValueData>);
+
+impl ValueStore for DefaultValueStore {
+    fn store(&mut self, data: impl Into<ValueData>) -> ValueId {
+        let id = u32::try_from(self.0.len())
+            .expect("the number of value stored in `ValueStore` must not exceed u32::MAX");
+        let id = ValueId(id);
+        self.0.push(data.into());
+        id
+    }
+
+    fn value(&self, id: ValueId) -> &ValueData {
+        &self.0[id.0 as usize]
+    }
+
+    fn value_mut(&mut self, id: ValueId) -> &mut ValueData {
+        &mut self.0[id.0 as usize]
     }
 }

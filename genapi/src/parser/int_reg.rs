@@ -6,7 +6,10 @@ use super::{
 };
 
 impl Parse for IntRegNode {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    where
+        T: NodeStore,
+    {
         debug_assert_eq!(node.tag_name(), INT_REG);
 
         let attr_base = node.parse(store);
@@ -32,7 +35,10 @@ impl Parse for IntRegNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::elem_type::{Endianness, IntegerRepresentation, Sign};
+    use crate::{
+        elem_type::{Endianness, IntegerRepresentation, Sign},
+        store::DefaultNodeStore,
+    };
 
     use super::*;
 
@@ -51,7 +57,7 @@ mod tests {
         </IntReg>
         "#;
 
-        let mut store = NodeStore::new();
+        let mut store = DefaultNodeStore::new();
         let node: IntRegNode = xml::Document::from_str(&xml)
             .unwrap()
             .root_node()

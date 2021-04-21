@@ -6,7 +6,10 @@ use super::{
 };
 
 impl Parse for PortNode {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    where
+        T: NodeStore,
+    {
         debug_assert_eq!(node.tag_name(), PORT);
 
         let attr_base = node.parse(store);
@@ -40,6 +43,8 @@ impl Parse for PortNode {
 
 #[cfg(test)]
 mod tests {
+    use crate::store::DefaultNodeStore;
+
     use super::*;
 
     #[test]
@@ -51,7 +56,7 @@ mod tests {
             <Port>
             "#;
 
-        let mut store = NodeStore::new();
+        let mut store = DefaultNodeStore::new();
         let node: PortNode = xml::Document::from_str(&xml)
             .unwrap()
             .root_node()
@@ -69,7 +74,7 @@ mod tests {
             <Port>
             "#;
 
-        let mut store = NodeStore::new();
+        let mut store = DefaultNodeStore::new();
         let node: PortNode = xml::Document::from_str(&xml)
             .unwrap()
             .root_node()
@@ -89,7 +94,7 @@ mod tests {
             <Port>
             "#;
 
-        let mut store = NodeStore::new();
+        let mut store = DefaultNodeStore::new();
         let node: PortNode = xml::Document::from_str(&xml)
             .unwrap()
             .root_node()

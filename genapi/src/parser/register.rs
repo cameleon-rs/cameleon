@@ -3,7 +3,10 @@ use crate::{store::NodeStore, RegisterNode};
 use super::{elem_name::REGISTER, xml, Parse};
 
 impl Parse for RegisterNode {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    where
+        T: NodeStore,
+    {
         debug_assert_eq!(node.tag_name(), REGISTER);
 
         let attr_base = node.parse(store);
@@ -18,7 +21,10 @@ impl Parse for RegisterNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::elem_type::{AccessMode, AddressKind, CachingMode, ImmOrPNode};
+    use crate::{
+        elem_type::{AccessMode, AddressKind, CachingMode, ImmOrPNode},
+        store::DefaultNodeStore,
+    };
 
     use super::*;
 
@@ -51,7 +57,7 @@ mod tests {
         </Register>
         "#;
 
-        let mut store = NodeStore::new();
+        let mut store = DefaultNodeStore::new();
         let node: RegisterNode = xml::Document::from_str(&xml)
             .unwrap()
             .root_node()

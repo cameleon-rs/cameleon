@@ -1,8 +1,8 @@
 use crate::{
     elem_type::{AccessMode, BitMask, CachingMode, Endianness, IntegerRepresentation, Sign},
     node_base::{NodeAttributeBase, NodeElementBase},
-    store::{NodeId, NodeStore},
     register_base::RegisterBase,
+    store::{NodeId, NodeStore},
     MaskedIntRegNode,
 };
 
@@ -36,7 +36,10 @@ impl StructRegNode {
 }
 
 impl Parse for StructRegNode {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    where
+        T: NodeStore,
+    {
         debug_assert_eq!(node.tag_name(), STRUCT_REG);
 
         let comment = node.attribute_of(COMMENT).unwrap().into();
@@ -155,7 +158,10 @@ impl NodeElementBase {
 }
 
 impl Parse for StructEntryNode {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    where
+        T: NodeStore,
+    {
         debug_assert_eq!(node.tag_name(), STRUCT_ENTRY);
 
         let attr_base = node.parse(store);
@@ -191,6 +197,8 @@ impl Parse for StructEntryNode {
 
 #[cfg(test)]
 mod tests {
+    use crate::store::DefaultNodeStore;
+
     use super::*;
 
     #[test]
@@ -227,7 +235,7 @@ mod tests {
 
             </StructReg>
             "#;
-        let mut store = NodeStore::new();
+        let mut store = DefaultNodeStore::new();
         let node: StructRegNode = xml::Document::from_str(&xml)
             .unwrap()
             .root_node()

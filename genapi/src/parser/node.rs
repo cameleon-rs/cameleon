@@ -10,7 +10,10 @@ use super::{
 };
 
 impl Parse for Node {
-    fn parse(node: &mut xml::Node, store: &mut NodeStore) -> Self {
+    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    where
+        T: NodeStore,
+    {
         debug_assert_eq!(node.tag_name(), NODE);
 
         let attr_base = NodeAttributeBase::parse(node, store);
@@ -28,12 +31,15 @@ impl Parse for Node {
 
 #[cfg(test)]
 mod tests {
-    use crate::elem_type::{AccessMode, MergePriority, NameSpace, Visibility};
+    use crate::{
+        elem_type::{AccessMode, MergePriority, NameSpace, Visibility},
+        store::DefaultNodeStore,
+    };
 
     use super::*;
 
-    fn node_from_str(xml: &str) -> (Node, NodeStore) {
-        let mut store = NodeStore::new();
+    fn node_from_str(xml: &str) -> (Node, DefaultNodeStore) {
+        let mut store = DefaultNodeStore::new();
         let document = xml::Document::from_str(xml).unwrap();
         (document.root_node().parse(&mut store), store)
     }
