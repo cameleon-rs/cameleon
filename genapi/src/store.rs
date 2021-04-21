@@ -90,6 +90,8 @@ pub trait NodeStore {
 
     fn store_node(&mut self, id: NodeId, data: NodeData);
 
+    fn visit_nodes(&self, f: impl FnMut(&NodeData));
+
     fn node(&self, id: NodeId) -> &NodeData {
         self.node_opt(id).unwrap()
     }
@@ -109,6 +111,10 @@ where
 
     fn store_node(&mut self, id: NodeId, data: NodeData) {
         (*self).store_node(id, data)
+    }
+
+    fn visit_nodes(&self, f: impl FnMut(&NodeData)) {
+        (**self).visit_nodes(f);
     }
 }
 
@@ -144,6 +150,14 @@ impl NodeStore for DefaultNodeStore {
         }
         debug_assert!(self.store[id].is_none());
         self.store[id] = Some(data);
+    }
+
+    fn visit_nodes(&self, mut f: impl FnMut(&NodeData)) {
+        for data in &self.store {
+            if let Some(data) = data {
+                f(data);
+            }
+        }
     }
 }
 
