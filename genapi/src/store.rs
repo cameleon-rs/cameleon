@@ -1,4 +1,4 @@
-use std::convert::TryFrom;
+use std::{collections::HashMap, convert::TryFrom};
 
 use string_interner::{StringInterner, Symbol};
 
@@ -88,11 +88,11 @@ pub trait NodeStore {
 
     fn node_opt(&self, id: NodeId) -> Option<&NodeData>;
 
+    fn store_node(&mut self, id: NodeId, data: NodeData);
+
     fn node(&self, id: NodeId) -> &NodeData {
         self.node_opt(id).unwrap()
     }
-
-    fn store_node(&mut self, id: NodeId, data: NodeData);
 }
 
 impl<T> NodeStore for &mut T
@@ -344,4 +344,33 @@ impl ValueStore for DefaultValueStore {
     fn value_mut_opt(&mut self, id: impl Into<ValueId>) -> Option<&mut ValueData> {
         self.0.get_mut(id.into().0 as usize)
     }
+}
+
+pub trait CacheStore {
+    fn store(&mut self, node_id: NodeId, value_id: ValueId);
+
+    fn value(&mut self, node_id: NodeId) -> Option<ValueData>;
+
+    fn invalidate(&mut self, id: NodeId);
+}
+
+#[derive(Default, Copy, Clone, Debug)]
+pub struct CacheSink {
+    _priv: (),
+}
+
+impl CacheSink {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl CacheStore for CacheSink {
+    fn store(&mut self, _: NodeId, _: ValueId) {}
+
+    fn value(&mut self, _: NodeId) -> Option<ValueData> {
+        None
+    }
+
+    fn invalidate(&mut self, _: NodeId) {}
 }
