@@ -162,6 +162,62 @@ pub enum ValueData {
     Str(String),
 }
 
+impl ValueData {
+    /// # Panics
+    ///
+    /// This method panics if `self` is not `ValueData::Integer`.
+    #[must_use]
+    pub fn integer(&self) -> i64 {
+        if let Self::Integer(i) = self {
+            *i
+        } else {
+            panic!()
+        }
+    }
+
+    /// # Panics
+    ///
+    /// This method panics if `self` is not `ValueData::Float`.
+    #[must_use]
+    pub fn float(&self) -> f64 {
+        if let Self::Float(f) = self {
+            *f
+        } else {
+            panic!()
+        }
+    }
+
+    /// # Panics
+    ///
+    /// This method panics if `self` is not `ValueData::Str`.
+    #[must_use]
+    pub fn str(&self) -> &str {
+        if let Self::Str(s) = self {
+            s
+        } else {
+            panic!()
+        }
+    }
+}
+
+impl From<i64> for ValueData {
+    fn from(v: i64) -> Self {
+        Self::Integer(v)
+    }
+}
+
+impl From<f64> for ValueData {
+    fn from(v: f64) -> Self {
+        Self::Float(v)
+    }
+}
+
+impl From<String> for ValueData {
+    fn from(v: String) -> Self {
+        Self::Str(v)
+    }
+}
+
 pub trait ValueStore {
     fn store(&mut self, data: impl Into<ValueData>) -> ValueId;
 
