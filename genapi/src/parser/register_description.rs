@@ -1,4 +1,7 @@
-use crate::{store::NodeStore, RegisterDescription};
+use crate::{
+    store::{NodeStore, ValueStore},
+    RegisterDescription,
+};
 
 use super::{
     elem_name::{
@@ -11,9 +14,10 @@ use super::{
 };
 
 impl Parse for RegisterDescription {
-    fn parse<T>(node: &mut xml::Node, _: &mut T) -> Self
+    fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
     where
         T: NodeStore,
+        U: ValueStore,
     {
         debug_assert_eq!(node.tag_name(), REGISTER_DESCRIPTION);
 
@@ -53,7 +57,10 @@ impl Parse for RegisterDescription {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{elem_type::StandardNameSpace, store::DefaultNodeStore};
+    use crate::{
+        elem_type::StandardNameSpace,
+        store::{DefaultNodeStore, DefaultValueStore},
+    };
 
     #[test]
     #[allow(clippy::too_many_lines)]
@@ -228,8 +235,11 @@ mod tests {
         "#;
 
         let document = xml::Document::from_str(xml).unwrap();
-        let mut store = DefaultNodeStore::new();
-        let reg_desc: RegisterDescription = document.root_node().parse(&mut store);
+        let mut node_store = DefaultNodeStore::new();
+        let mut value_store = DefaultValueStore::new();
+        let reg_desc: RegisterDescription = document
+            .root_node()
+            .parse(&mut node_store, &mut value_store);
 
         assert_eq!(reg_desc.model_name(), "CameleonModel");
         assert_eq!(reg_desc.vendor_name(), "CameleonVendor");

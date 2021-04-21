@@ -1,4 +1,7 @@
-use crate::{store::NodeStore, IntRegNode};
+use crate::{
+    store::{NodeStore, ValueStore},
+    IntRegNode,
+};
 
 use super::{
     elem_name::{ENDIANNESS, INT_REG, P_SELECTED, REPRESENTATION, SIGN, UNIT},
@@ -6,20 +9,27 @@ use super::{
 };
 
 impl Parse for IntRegNode {
-    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
         T: NodeStore,
+        U: ValueStore,
     {
         debug_assert_eq!(node.tag_name(), INT_REG);
 
-        let attr_base = node.parse(store);
-        let register_base = node.parse(store);
+        let attr_base = node.parse(node_store, value_store);
+        let register_base = node.parse(node_store, value_store);
 
-        let sign = node.parse_if(SIGN, store).unwrap_or_default();
-        let endianness = node.parse_if(ENDIANNESS, store).unwrap_or_default();
-        let unit = node.parse_if(UNIT, store);
-        let representation = node.parse_if(REPRESENTATION, store).unwrap_or_default();
-        let p_selected = node.parse_while(P_SELECTED, store);
+        let sign = node
+            .parse_if(SIGN, node_store, value_store)
+            .unwrap_or_default();
+        let endianness = node
+            .parse_if(ENDIANNESS, node_store, value_store)
+            .unwrap_or_default();
+        let unit = node.parse_if(UNIT, node_store, value_store);
+        let representation = node
+            .parse_if(REPRESENTATION, node_store, value_store)
+            .unwrap_or_default();
+        let p_selected = node.parse_while(P_SELECTED, node_store, value_store);
 
         Self {
             attr_base,
@@ -37,7 +47,7 @@ impl Parse for IntRegNode {
 mod tests {
     use crate::{
         elem_type::{Endianness, IntegerRepresentation, Sign},
-        store::DefaultNodeStore,
+        store::{DefaultNodeStore, DefaultValueStore},
     };
 
     use super::*;
@@ -57,11 +67,12 @@ mod tests {
         </IntReg>
         "#;
 
-        let mut store = DefaultNodeStore::new();
+        let mut node_store = DefaultNodeStore::new();
+        let mut value_store = DefaultValueStore::new();
         let node: IntRegNode = xml::Document::from_str(&xml)
             .unwrap()
             .root_node()
-            .parse(&mut store);
+            .parse(&mut node_store, &mut value_store);
 
         assert_eq!(node.sign(), Sign::Signed);
         assert_eq!(node.endianness(), Endianness::BE);

@@ -43,9 +43,9 @@ impl<T> ImmOrPNode<T> {
         }
     }
 
-    pub fn pnode(&self) -> Option<NodeId> {
+    pub fn pnode(self) -> Option<NodeId> {
         match self {
-            Self::PNode(node) => Some(*node),
+            Self::PNode(node) => Some(node),
             _ => None,
         }
     }
@@ -145,6 +145,10 @@ impl<T> NamedValue<T> {
     {
         self.value
     }
+
+    pub fn value_ref(&self) -> &T {
+        &self.value
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -152,6 +156,35 @@ pub enum ValueKind<T> {
     Value(T),
     PValue(PValue),
     PIndex(PIndex<T>),
+}
+
+impl<T> ValueKind<T> {
+    pub fn value(&self) -> Option<T>
+    where
+        T: Copy,
+    {
+        if let Self::Value(v) = self {
+            Some(*v)
+        } else {
+            None
+        }
+    }
+
+    pub fn p_value(&self) -> Option<&PValue> {
+        if let Self::PValue(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    pub fn p_index(&self) -> Option<&PIndex<T>> {
+        if let Self::PIndex(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

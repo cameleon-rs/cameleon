@@ -52,8 +52,8 @@ impl IntegerNode {
     }
 
     #[must_use]
-    pub fn inc(&self) -> &ImmOrPNode<i64> {
-        &self.inc
+    pub fn inc(&self) -> ImmOrPNode<i64> {
+        self.inc
     }
 
     #[must_use]

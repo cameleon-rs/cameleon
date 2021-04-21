@@ -1,16 +1,20 @@
-use crate::{store::NodeStore, RegisterNode};
+use crate::{
+    store::{NodeStore, ValueStore},
+    RegisterNode,
+};
 
 use super::{elem_name::REGISTER, xml, Parse};
 
 impl Parse for RegisterNode {
-    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
         T: NodeStore,
+        U: ValueStore,
     {
         debug_assert_eq!(node.tag_name(), REGISTER);
 
-        let attr_base = node.parse(store);
-        let register_base = node.parse(store);
+        let attr_base = node.parse(node_store, value_store);
+        let register_base = node.parse(node_store, value_store);
 
         Self {
             attr_base,
@@ -23,7 +27,7 @@ impl Parse for RegisterNode {
 mod tests {
     use crate::{
         elem_type::{AccessMode, AddressKind, CachingMode, ImmOrPNode},
-        store::DefaultNodeStore,
+        store::{DefaultNodeStore, DefaultValueStore},
     };
 
     use super::*;
@@ -57,11 +61,12 @@ mod tests {
         </Register>
         "#;
 
-        let mut store = DefaultNodeStore::new();
+        let mut node_store = DefaultNodeStore::new();
+        let mut value_store = DefaultValueStore::new();
         let node: RegisterNode = xml::Document::from_str(&xml)
             .unwrap()
             .root_node()
-            .parse(&mut store);
+            .parse(&mut node_store, &mut value_store);
         let reg_base = node.register_base();
 
         let address_kinds = reg_base.address_kinds();
@@ -78,7 +83,7 @@ mod tests {
         match &address_kinds[3] {
             AddressKind::PIndex(p_index) => {
                 assert!(matches!(p_index.offset().unwrap(), ImmOrPNode::Imm(10)));
-                assert_eq!(p_index.p_index(), store.id_by_name("IndexNode"));
+                assert_eq!(p_index.p_index(), node_store.id_by_name("IndexNode"));
             }
             _ => panic!(),
         }

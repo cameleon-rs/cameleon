@@ -1,4 +1,7 @@
-use crate::{store::NodeStore, EnumEntryNode, EnumerationNode};
+use crate::{
+    store::{NodeStore, ValueStore},
+    EnumEntryNode, EnumerationNode,
+};
 
 use super::{
     elem_name::{
@@ -9,24 +12,27 @@ use super::{
 };
 
 impl Parse for EnumerationNode {
-    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
         T: NodeStore,
+        U: ValueStore,
     {
         debug_assert_eq!(node.tag_name(), ENUMERATION);
 
-        let attr_base = node.parse(store);
-        let elem_base = node.parse(store);
+        let attr_base = node.parse(node_store, value_store);
+        let elem_base = node.parse(node_store, value_store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR, store);
-        let streamable = node.parse_if(STREAMABLE, store).unwrap_or_default();
+        let p_invalidators = node.parse_while(P_INVALIDATOR, node_store, value_store);
+        let streamable = node
+            .parse_if(STREAMABLE, node_store, value_store)
+            .unwrap_or_default();
         let mut entries = vec![];
         while let Some(mut ent_node) = node.next_if(ENUM_ENTRY) {
-            entries.push(ent_node.parse(store));
+            entries.push(ent_node.parse(node_store, value_store));
         }
-        let value = node.parse(store);
-        let p_selected = node.parse_while(P_SELECTED, store);
-        let polling_time = node.parse_if(POLLING_TIME, store);
+        let value = node.parse(node_store, value_store);
+        let p_selected = node.parse_while(P_SELECTED, node_store, value_store);
+        let polling_time = node.parse_if(POLLING_TIME, node_store, value_store);
 
         Self {
             attr_base,
@@ -42,20 +48,23 @@ impl Parse for EnumerationNode {
 }
 
 impl Parse for EnumEntryNode {
-    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
         T: NodeStore,
+        U: ValueStore,
     {
         debug_assert_eq!(node.tag_name(), ENUM_ENTRY);
 
-        let attr_base = node.parse(store);
-        let elem_base = node.parse(store);
+        let attr_base = node.parse(node_store, value_store);
+        let elem_base = node.parse(node_store, value_store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR, store);
-        let value = node.parse(store);
-        let numeric_values = node.parse_while(NUMERIC_VALUE, store);
-        let symbolic = node.parse_if(SYMBOLIC, store);
-        let is_self_clearing = node.parse_if(IS_SELF_CLEARING, store).unwrap_or_default();
+        let p_invalidators = node.parse_while(P_INVALIDATOR, node_store, value_store);
+        let value = node.parse(node_store, value_store);
+        let numeric_values = node.parse_while(NUMERIC_VALUE, node_store, value_store);
+        let symbolic = node.parse_if(SYMBOLIC, node_store, value_store);
+        let is_self_clearing = node
+            .parse_if(IS_SELF_CLEARING, node_store, value_store)
+            .unwrap_or_default();
 
         Self {
             attr_base,
@@ -71,7 +80,10 @@ impl Parse for EnumEntryNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::{elem_type::ImmOrPNode, store::DefaultNodeStore};
+    use crate::{
+        elem_type::ImmOrPNode,
+        store::{DefaultNodeStore, DefaultValueStore},
+    };
 
     use super::*;
 
@@ -93,13 +105,17 @@ mod tests {
             </Enumeration>
             "#;
 
-        let mut store = DefaultNodeStore::new();
+        let mut node_store = DefaultNodeStore::new();
+        let mut value_store = DefaultValueStore::new();
         let node: EnumerationNode = xml::Document::from_str(&xml)
             .unwrap()
             .root_node()
-            .parse(&mut store);
+            .parse(&mut node_store, &mut value_store);
 
-        assert_eq!(node.value(), &ImmOrPNode::PNode(store.id_by_name("MyNode")));
+        assert_eq!(
+            node.value(),
+            ImmOrPNode::PNode(node_store.id_by_name("MyNode"))
+        );
         assert_eq!(node.polling_time(), Some(10));
 
         let entries = node.entries();

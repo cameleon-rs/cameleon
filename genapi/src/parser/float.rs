@@ -1,4 +1,8 @@
-use crate::{elem_type::ImmOrPNode, store::NodeStore, FloatNode};
+use crate::{
+    elem_type::ImmOrPNode,
+    store::{NodeStore, ValueStore},
+    FloatNode,
+};
 
 use super::{
     elem_name::{
@@ -9,33 +13,48 @@ use super::{
 };
 
 impl Parse for FloatNode {
-    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
         T: NodeStore,
+        U: ValueStore,
     {
         debug_assert_eq!(node.tag_name(), FLOAT);
 
-        let attr_base = node.parse(store);
-        let elem_base = node.parse(store);
+        let attr_base = node.parse(node_store, value_store);
+        let elem_base = node.parse(node_store, value_store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR, store);
-        let streamable = node.parse_if(STREAMABLE, store).unwrap_or_default();
-        let value_kind = node.parse(store);
+        let p_invalidators = node.parse_while(P_INVALIDATOR, node_store, value_store);
+        let streamable = node
+            .parse_if(STREAMABLE, node_store, value_store)
+            .unwrap_or_default();
+        let value_kind = node.parse(node_store, value_store);
         let min = node
-            .parse_if(MIN, store)
-            .or_else(|| node.parse_if(P_MIN, store))
-            .unwrap_or(ImmOrPNode::Imm(f64::MIN));
+            .parse_if(MIN, node_store, value_store)
+            .or_else(|| node.parse_if(P_MIN, node_store, value_store))
+            .unwrap_or_else(|| {
+                let id = value_store.store(f64::MIN);
+                ImmOrPNode::Imm(id)
+            });
         let max = node
-            .parse_if(MAX, store)
-            .or_else(|| node.parse_if(P_MAX, store))
-            .unwrap_or(ImmOrPNode::Imm(f64::MAX));
+            .parse_if(MAX, node_store, value_store)
+            .or_else(|| node.parse_if(P_MAX, node_store, value_store))
+            .unwrap_or_else(|| {
+                let id = value_store.store(f64::MAX);
+                ImmOrPNode::Imm(id)
+            });
         let inc = node
-            .parse_if(INC, store)
-            .or_else(|| node.parse_if(P_INC, store));
-        let unit = node.parse_if(UNIT, store);
-        let representation = node.parse_if(REPRESENTATION, store).unwrap_or_default();
-        let display_notation = node.parse_if(DISPLAY_NOTATION, store).unwrap_or_default();
-        let display_precision = node.parse_if(DISPLAY_PRECISION, store).unwrap_or(6);
+            .parse_if(INC, node_store, value_store)
+            .or_else(|| node.parse_if(P_INC, node_store, value_store));
+        let unit = node.parse_if(UNIT, node_store, value_store);
+        let representation = node
+            .parse_if(REPRESENTATION, node_store, value_store)
+            .unwrap_or_default();
+        let display_notation = node
+            .parse_if(DISPLAY_NOTATION, node_store, value_store)
+            .unwrap_or_default();
+        let display_precision = node
+            .parse_if(DISPLAY_PRECISION, node_store, value_store)
+            .unwrap_or(6);
 
         Self {
             attr_base,
@@ -57,8 +76,8 @@ impl Parse for FloatNode {
 #[cfg(test)]
 mod test {
     use crate::{
-        elem_type::{DisplayNotation, FloatRepresentation, ImmOrPNode, ValueKind},
-        store::DefaultNodeStore,
+        elem_type::{DisplayNotation, FloatRepresentation, ValueKind},
+        store::{DefaultNodeStore, DefaultValueStore},
     };
 
     use super::*;
@@ -81,21 +100,24 @@ mod test {
             </Float>
             "#;
 
-        let mut store = DefaultNodeStore::new();
+        let mut node_store = DefaultNodeStore::new();
+        let mut value_store = DefaultValueStore::new();
         let node: FloatNode = xml::Document::from_str(xml)
             .unwrap()
             .root_node()
-            .parse(&mut store);
+            .parse(&mut node_store, &mut value_store);
 
         let p_invalidators = node.p_invalidators();
         assert_eq!(p_invalidators.len(), 2);
-        assert_eq!(p_invalidators[0], store.id_by_name("Invalidator0"));
-        assert_eq!(p_invalidators[1], store.id_by_name("Invalidator1"));
+        assert_eq!(p_invalidators[0], node_store.id_by_name("Invalidator0"));
+        assert_eq!(p_invalidators[1], node_store.id_by_name("Invalidator1"));
 
         assert!(node.streamable());
         assert!(matches! {node.value_kind(), ValueKind::Value(_)});
-        assert_eq!(node.min(), &ImmOrPNode::Imm(f64::NEG_INFINITY));
-        assert_eq!(node.max(), &ImmOrPNode::Imm(f64::INFINITY));
+        let min_value = value_store.float_value(node.min().imm().unwrap()).unwrap();
+        assert!(min_value.is_infinite() && min_value.is_sign_negative());
+        let max_value = value_store.float_value(node.max().imm().unwrap()).unwrap();
+        assert!(max_value.is_infinite() && max_value.is_sign_positive());
         assert!(node.inc().unwrap().imm().unwrap().is_nan());
         assert_eq!(node.unit(), Some("dB"));
         assert_eq!(node.representation(), FloatRepresentation::Logarithmic);

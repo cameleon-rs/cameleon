@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-use crate::store::NodeStore;
+use crate::store::{NodeStore, ValueStore};
 
 use super::{Parse, ParseResult};
 
@@ -31,33 +31,46 @@ pub(super) struct Node<'a, 'input> {
 }
 
 impl<'a, 'input> Node<'a, 'input> {
-    pub(super) fn parse<T, U>(&mut self, store: &mut U) -> T
+    pub(super) fn parse<T, U, S>(&mut self, node_store: &mut U, value_store: &mut S) -> T
     where
         T: Parse,
         U: NodeStore,
+        S: ValueStore,
     {
-        T::parse(self, store)
+        T::parse(self, node_store, value_store)
     }
 
-    pub(super) fn parse_if<T, U>(&mut self, tag_name: &str, store: &mut U) -> Option<T>
+    pub(super) fn parse_if<T, U, S>(
+        &mut self,
+        tag_name: &str,
+        node_store: &mut U,
+        value_store: &mut S,
+    ) -> Option<T>
     where
         T: Parse,
         U: NodeStore,
+        S: ValueStore,
     {
         if self.peek()?.tag_name() == tag_name {
-            Some(self.parse(store))
+            Some(self.parse(node_store, value_store))
         } else {
             None
         }
     }
 
-    pub(super) fn parse_while<T, U>(&mut self, tag_name: &str, store: &mut U) -> Vec<T>
+    pub(super) fn parse_while<T, U, S>(
+        &mut self,
+        tag_name: &str,
+        node_store: &mut U,
+        value_store: &mut S,
+    ) -> Vec<T>
     where
         T: Parse,
         U: NodeStore,
+        S: ValueStore,
     {
         let mut res = vec![];
-        while let Some(parsed) = self.parse_if(tag_name, store) {
+        while let Some(parsed) = self.parse_if(tag_name, node_store, value_store) {
             res.push(parsed);
         }
         res

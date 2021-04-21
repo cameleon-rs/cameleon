@@ -112,6 +112,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct DefaultNodeStore {
     interner: StringInterner<NodeId>,
     store: Vec<Option<NodeData>>,
@@ -156,6 +157,7 @@ impl Default for DefaultNodeStore {
 pub struct ValueId(u32);
 
 impl ValueId {
+    #[must_use]
     pub fn from_u32(i: u32) -> Self {
         Self(i)
     }
@@ -166,9 +168,9 @@ macro_rules! declare_value_id {
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
         pub struct $name(u32);
 
-        impl Into<ValueId> for $name {
-            fn into(self) -> ValueId {
-                ValueId(self.0)
+        impl From<$name> for ValueId {
+            fn from(v: $name) -> ValueId {
+                ValueId(v.0)
             }
         }
 
@@ -297,26 +299,30 @@ where
     }
 }
 
-impl From<i64> for ValueData {
-    fn from(v: i64) -> Self {
-        Self::Integer(v)
-    }
+macro_rules! impl_value_data_conversion {
+    ($ty:ty, $ctor:expr) => {
+        impl From<$ty> for ValueData {
+            fn from(v: $ty) -> Self {
+                $ctor(v)
+            }
+        }
+    };
 }
 
-impl From<f64> for ValueData {
-    fn from(v: f64) -> Self {
-        Self::Float(v)
-    }
-}
+impl_value_data_conversion!(i64, Self::Integer);
+impl_value_data_conversion!(f64, Self::Float);
+impl_value_data_conversion!(String, Self::Str);
+impl_value_data_conversion!(bool, Self::Boolean);
 
-impl From<String> for ValueData {
-    fn from(v: String) -> Self {
-        Self::Str(v)
-    }
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct DefaultValueStore(Vec<ValueData>);
+
+impl DefaultValueStore {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
 
 impl ValueStore for DefaultValueStore {
     fn store<T, U>(&mut self, data: T) -> U

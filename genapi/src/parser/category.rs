@@ -1,4 +1,7 @@
-use crate::{store::NodeStore, CategoryNode};
+use crate::{
+    store::{NodeStore, ValueStore},
+    CategoryNode,
+};
 
 use super::{
     elem_name::{CATEGORY, P_FEATURE, P_INVALIDATOR},
@@ -6,17 +9,18 @@ use super::{
 };
 
 impl Parse for CategoryNode {
-    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
         T: NodeStore,
+        U: ValueStore,
     {
         debug_assert_eq!(node.tag_name(), CATEGORY);
 
-        let attr_base = node.parse(store);
-        let elem_base = node.parse(store);
+        let attr_base = node.parse(node_store, value_store);
+        let elem_base = node.parse(node_store, value_store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR, store);
-        let p_features = node.parse_while(P_FEATURE, store);
+        let p_invalidators = node.parse_while(P_INVALIDATOR, node_store, value_store);
+        let p_features = node.parse_while(P_FEATURE, node_store, value_store);
 
         Self {
             attr_base,
@@ -29,14 +33,21 @@ impl Parse for CategoryNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::store::DefaultNodeStore;
+    use crate::store::{DefaultNodeStore, DefaultValueStore};
 
     use super::*;
 
-    fn category_node_from_str(xml: &str) -> (CategoryNode, DefaultNodeStore) {
+    fn category_node_from_str(xml: &str) -> (CategoryNode, DefaultNodeStore, DefaultValueStore) {
         let document = xml::Document::from_str(xml).unwrap();
-        let mut store = DefaultNodeStore::new();
-        (document.root_node().parse(&mut store), store)
+        let mut node_store = DefaultNodeStore::new();
+        let mut value_store = DefaultValueStore::new();
+        (
+            document
+                .root_node()
+                .parse(&mut node_store, &mut value_store),
+            node_store,
+            value_store,
+        )
     }
 
     #[test]
@@ -50,17 +61,17 @@ mod tests {
             </Category>
             "#;
 
-        let (node, mut store) = category_node_from_str(&xml);
+        let (node, mut node_store, _) = category_node_from_str(&xml);
 
         let p_invalidators = node.p_invalidators();
         assert_eq!(p_invalidators.len(), 2);
-        assert_eq!(p_invalidators[0], store.id_by_name("Invalidator0"));
-        assert_eq!(p_invalidators[1], store.id_by_name("Invalidator1"));
+        assert_eq!(p_invalidators[0], node_store.id_by_name("Invalidator0"));
+        assert_eq!(p_invalidators[1], node_store.id_by_name("Invalidator1"));
 
         let p_features = node.p_features();
         assert_eq!(p_features.len(), 2);
-        assert_eq!(p_features[0], store.id_by_name("FeatureNode0"));
-        assert_eq!(p_features[1], store.id_by_name("FeatureNode1"));
+        assert_eq!(p_features[0], node_store.id_by_name("FeatureNode0"));
+        assert_eq!(p_features[1], node_store.id_by_name("FeatureNode1"));
     }
 
     #[test]
@@ -70,7 +81,7 @@ mod tests {
             </Category>
             "#;
 
-        let (node, _) = category_node_from_str(&xml);
+        let (node, ..) = category_node_from_str(&xml);
 
         let p_invalidators = node.p_invalidators();
         assert!(p_invalidators.is_empty());

@@ -30,7 +30,7 @@ use struct_reg::StructRegNode;
 use thiserror::Error;
 
 use crate::{
-    store::{DefaultNodeStore, NodeData, NodeStore},
+    store::{DefaultNodeStore, DefaultValueStore, NodeData, NodeStore, ValueStore},
     RegisterDescription,
 };
 
@@ -62,23 +62,29 @@ impl<'a> Parser<'a> {
         Ok(Self { document })
     }
 
-    pub fn parse(&self) -> ParseResult<(RegisterDescription, DefaultNodeStore)> {
-        let mut store = DefaultNodeStore::new();
-        let reg_desc = self.parse_with_store(&mut store)?;
-        Ok((reg_desc, store))
+    pub fn parse(&self) -> ParseResult<(RegisterDescription, DefaultNodeStore, DefaultValueStore)> {
+        let mut node_store = DefaultNodeStore::new();
+        let mut value_store = DefaultValueStore::new();
+        let reg_desc = self.parse_with_store(&mut node_store, &mut value_store)?;
+        Ok((reg_desc, node_store, value_store))
     }
 
-    pub fn parse_with_store<T>(&self, mut store: T) -> ParseResult<RegisterDescription>
+    pub fn parse_with_store<T, U>(
+        &self,
+        mut node_store: T,
+        mut value_store: U,
+    ) -> ParseResult<RegisterDescription>
     where
         T: NodeStore,
+        U: ValueStore,
     {
         let mut node = self.document.root_node();
-        let reg_desc = node.parse(&mut store);
+        let reg_desc = node.parse(&mut node_store, &mut value_store);
         while let Some(ref mut child) = node.next() {
-            let children: Vec<NodeData> = child.parse(&mut store);
+            let children: Vec<NodeData> = child.parse(&mut node_store, &mut value_store);
             for child in children {
                 let id = child.node_base().id();
-                store.store_node(id, child);
+                node_store.store_node(id, child);
             }
         }
 
@@ -92,44 +98,82 @@ impl<'a> Parser<'a> {
 }
 
 trait Parse {
-    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
-        T: NodeStore;
+        T: NodeStore,
+        U: ValueStore;
 }
 
 impl Parse for Vec<NodeData> {
-    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Vec<NodeData>
+    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
         T: NodeStore,
+        U: ValueStore,
     {
         match node.tag_name() {
-            NODE => vec![NodeData::Node(Box::new(node.parse(store)))],
-            CATEGORY => vec![NodeData::Category(Box::new(node.parse(store)))],
-            INTEGER => vec![NodeData::Integer(Box::new(node.parse(store)))],
-            INT_REG => vec![NodeData::IntReg(Box::new(node.parse(store)))],
-            MASKED_INT_REG => vec![NodeData::MaskedIntReg(Box::new(node.parse(store)))],
-            BOOLEAN => vec![NodeData::Boolean(Box::new(node.parse(store)))],
-            COMMAND => vec![NodeData::Command(Box::new(node.parse(store)))],
-            ENUMERATION => vec![NodeData::Enumeration(Box::new(node.parse(store)))],
-            FLOAT => vec![NodeData::Float(Box::new(node.parse(store)))],
-            FLOAT_REG => vec![NodeData::FloatReg(Box::new(node.parse(store)))],
-            STRING => vec![NodeData::String(Box::new(node.parse(store)))],
-            STRING_REG => vec![NodeData::StringReg(Box::new(node.parse(store)))],
-            REGISTER => vec![NodeData::Register(Box::new(node.parse(store)))],
-            CONVERTER => vec![NodeData::Converter(Box::new(node.parse(store)))],
-            INT_CONVERTER => vec![NodeData::IntConverter(Box::new(node.parse(store)))],
-            SWISS_KNIFE => vec![NodeData::SwissKnife(Box::new(node.parse(store)))],
-            INT_SWISS_KNIFE => vec![NodeData::IntSwissKnife(Box::new(node.parse(store)))],
-            PORT => vec![NodeData::Port(Box::new(node.parse(store)))],
+            NODE => vec![NodeData::Node(Box::new(
+                node.parse(node_store, value_store),
+            ))],
+            CATEGORY => vec![NodeData::Category(Box::new(
+                node.parse(node_store, value_store),
+            ))],
+            INTEGER => vec![NodeData::Integer(Box::new(
+                node.parse(node_store, value_store),
+            ))],
+            INT_REG => vec![NodeData::IntReg(Box::new(
+                node.parse(node_store, value_store),
+            ))],
+            MASKED_INT_REG => vec![NodeData::MaskedIntReg(Box::new(
+                node.parse(node_store, value_store),
+            ))],
+            BOOLEAN => vec![NodeData::Boolean(Box::new(
+                node.parse(node_store, value_store),
+            ))],
+            COMMAND => vec![NodeData::Command(Box::new(
+                node.parse(node_store, value_store),
+            ))],
+            ENUMERATION => vec![NodeData::Enumeration(Box::new(
+                node.parse(node_store, value_store),
+            ))],
+            FLOAT => vec![NodeData::Float(Box::new(
+                node.parse(node_store, value_store),
+            ))],
+            FLOAT_REG => vec![NodeData::FloatReg(Box::new(
+                node.parse(node_store, value_store),
+            ))],
+            STRING => vec![NodeData::String(Box::new(
+                node.parse(node_store, value_store),
+            ))],
+            STRING_REG => vec![NodeData::StringReg(Box::new(
+                node.parse(node_store, value_store),
+            ))],
+            REGISTER => vec![NodeData::Register(Box::new(
+                node.parse(node_store, value_store),
+            ))],
+            CONVERTER => vec![NodeData::Converter(Box::new(
+                node.parse(node_store, value_store),
+            ))],
+            INT_CONVERTER => vec![NodeData::IntConverter(Box::new(
+                node.parse(node_store, value_store),
+            ))],
+            SWISS_KNIFE => vec![NodeData::SwissKnife(Box::new(
+                node.parse(node_store, value_store),
+            ))],
+            INT_SWISS_KNIFE => vec![NodeData::IntSwissKnife(Box::new(
+                node.parse(node_store, value_store),
+            ))],
+            PORT => vec![NodeData::Port(Box::new(
+                node.parse(node_store, value_store),
+            ))],
             STRUCT_REG => {
-                let node: StructRegNode = node.parse(store);
+                let node: StructRegNode = node.parse(node_store, value_store);
                 node.into_masked_int_regs()
                     .into_iter()
                     .map(|node| NodeData::MaskedIntReg(node.into()))
                     .collect()
             }
             GROUP => {
-                let node: GroupNode = node.parse(store);
+                let node: GroupNode = node.parse(node_store, value_store);
                 node.nodes
             }
             // TODO: Implement DCAM specific ndoes.

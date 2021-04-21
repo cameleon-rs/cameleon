@@ -1,7 +1,7 @@
 use crate::{
     elem_type::AccessMode,
     node_base::{NodeAttributeBase, NodeElementBase},
-    store::NodeStore,
+    store::{NodeStore, ValueStore},
 };
 
 use super::{
@@ -16,12 +16,13 @@ use super::{
 };
 
 impl Parse for NodeAttributeBase {
-    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, _: &mut U) -> Self
     where
         T: NodeStore,
+        U: ValueStore,
     {
         let name = node.attribute_of(NAME).unwrap();
-        let id = store.id_by_name(&name);
+        let id = node_store.id_by_name(&name);
         let name_space = node
             .attribute_of(NAME_SPACE)
             .map(|text| text.into())
@@ -44,32 +45,37 @@ impl Parse for NodeAttributeBase {
 }
 
 impl Parse for NodeElementBase {
-    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
         T: NodeStore,
+        U: ValueStore,
     {
         // Ignore Extension element.
-        let _: Option<String> = node.parse_if(EXTENSION, store);
+        let _: Option<String> = node.parse_if(EXTENSION, node_store, value_store);
 
-        let tool_tip = node.parse_if(TOOL_TIP, store);
-        let description = node.parse_if(DESCRIPTION, store);
-        let display_name = node.parse_if(DISPLAY_NAME, store);
-        let visibility = node.parse_if(VISIBILITY, store).unwrap_or_default();
-        let docu_url = node.parse_if(DOCU_URL, store);
-        let is_deprecated = node.parse_if(IS_DEPRECATED, store).unwrap_or_default();
+        let tool_tip = node.parse_if(TOOL_TIP, node_store, value_store);
+        let description = node.parse_if(DESCRIPTION, node_store, value_store);
+        let display_name = node.parse_if(DISPLAY_NAME, node_store, value_store);
+        let visibility = node
+            .parse_if(VISIBILITY, node_store, value_store)
+            .unwrap_or_default();
+        let docu_url = node.parse_if(DOCU_URL, node_store, value_store);
+        let is_deprecated = node
+            .parse_if(IS_DEPRECATED, node_store, value_store)
+            .unwrap_or_default();
         let event_id = node
             .next_if(EVENT_ID)
             .map(|n| u64::from_str_radix(n.text(), 16).unwrap());
-        let p_is_implemented = node.parse_if(P_IS_IMPLEMENTED, store);
-        let p_is_available = node.parse_if(P_IS_AVAILABLE, store);
-        let p_is_locked = node.parse_if(P_IS_LOCKED, store);
-        let p_block_polling = node.parse_if(P_BLOCK_POLLING, store);
+        let p_is_implemented = node.parse_if(P_IS_IMPLEMENTED, node_store, value_store);
+        let p_is_available = node.parse_if(P_IS_AVAILABLE, node_store, value_store);
+        let p_is_locked = node.parse_if(P_IS_LOCKED, node_store, value_store);
+        let p_block_polling = node.parse_if(P_BLOCK_POLLING, node_store, value_store);
         let imposed_access_mode = node
-            .parse_if(IMPOSED_ACCESS_MODE, store)
+            .parse_if(IMPOSED_ACCESS_MODE, node_store, value_store)
             .unwrap_or(AccessMode::RW);
-        let p_errors = node.parse_while(P_ERROR, store);
-        let p_alias = node.parse_if(P_ALIAS, store);
-        let p_cast_alias = node.parse_if(P_CAST_ALIAS, store);
+        let p_errors = node.parse_while(P_ERROR, node_store, value_store);
+        let p_alias = node.parse_if(P_ALIAS, node_store, value_store);
+        let p_cast_alias = node.parse_if(P_CAST_ALIAS, node_store, value_store);
 
         Self {
             tool_tip,

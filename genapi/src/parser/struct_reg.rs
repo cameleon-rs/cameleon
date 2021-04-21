@@ -2,7 +2,7 @@ use crate::{
     elem_type::{AccessMode, BitMask, CachingMode, Endianness, IntegerRepresentation, Sign},
     node_base::{NodeAttributeBase, NodeElementBase},
     register_base::RegisterBase,
-    store::{NodeId, NodeStore},
+    store::{NodeId, NodeStore, ValueStore},
     MaskedIntRegNode,
 };
 
@@ -36,19 +36,22 @@ impl StructRegNode {
 }
 
 impl Parse for StructRegNode {
-    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
         T: NodeStore,
+        U: ValueStore,
     {
         debug_assert_eq!(node.tag_name(), STRUCT_REG);
 
         let comment = node.attribute_of(COMMENT).unwrap().into();
-        let register_base = node.parse(store);
+        let register_base = node.parse(node_store, value_store);
 
-        let endianness = node.parse_if(ENDIANNESS, store).unwrap_or_default();
+        let endianness = node
+            .parse_if(ENDIANNESS, node_store, value_store)
+            .unwrap_or_default();
         let mut entries = vec![];
         while let Some(mut entry_node) = node.next() {
-            let entry = entry_node.parse(store);
+            let entry = entry_node.parse(node_store, value_store);
             entries.push(entry);
         }
 
@@ -158,25 +161,36 @@ impl NodeElementBase {
 }
 
 impl Parse for StructEntryNode {
-    fn parse<T>(node: &mut xml::Node, store: &mut T) -> Self
+    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
         T: NodeStore,
+        U: ValueStore,
     {
         debug_assert_eq!(node.tag_name(), STRUCT_ENTRY);
 
-        let attr_base = node.parse(store);
-        let elem_base = node.parse(store);
+        let attr_base = node.parse(node_store, value_store);
+        let elem_base = node.parse(node_store, value_store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR, store);
-        let access_mode = node.parse_if(ACCESS_MODE, store).unwrap_or(AccessMode::RO);
-        let cacheable = node.parse_if(CACHEABLE, store).unwrap_or_default();
-        let polling_time = node.parse_if(POLLING_TIME, store);
-        let streamable = node.parse_if(STREAMABLE, store).unwrap_or_default();
-        let bit_mask = node.parse(store);
-        let sign = node.parse_if(SIGN, store).unwrap_or_default();
-        let unit = node.parse_if(UNIT, store);
-        let representation = node.parse_if(REPRESENTATION, store).unwrap_or_default();
-        let p_selected = node.parse_while(P_SELECTED, store);
+        let p_invalidators = node.parse_while(P_INVALIDATOR, node_store, value_store);
+        let access_mode = node
+            .parse_if(ACCESS_MODE, node_store, value_store)
+            .unwrap_or(AccessMode::RO);
+        let cacheable = node
+            .parse_if(CACHEABLE, node_store, value_store)
+            .unwrap_or_default();
+        let polling_time = node.parse_if(POLLING_TIME, node_store, value_store);
+        let streamable = node
+            .parse_if(STREAMABLE, node_store, value_store)
+            .unwrap_or_default();
+        let bit_mask = node.parse(node_store, value_store);
+        let sign = node
+            .parse_if(SIGN, node_store, value_store)
+            .unwrap_or_default();
+        let unit = node.parse_if(UNIT, node_store, value_store);
+        let representation = node
+            .parse_if(REPRESENTATION, node_store, value_store)
+            .unwrap_or_default();
+        let p_selected = node.parse_while(P_SELECTED, node_store, value_store);
 
         Self {
             attr_base,
@@ -197,7 +211,7 @@ impl Parse for StructEntryNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::store::DefaultNodeStore;
+    use crate::store::{DefaultNodeStore, DefaultValueStore};
 
     use super::*;
 
@@ -235,11 +249,12 @@ mod tests {
 
             </StructReg>
             "#;
-        let mut store = DefaultNodeStore::new();
+        let mut node_store = DefaultNodeStore::new();
+        let mut value_store = DefaultValueStore::new();
         let node: StructRegNode = xml::Document::from_str(&xml)
             .unwrap()
             .root_node()
-            .parse(&mut store);
+            .parse(&mut node_store, &mut value_store);
         let masked_int_regs: Vec<_> = node.into_masked_int_regs();
 
         assert_eq!(masked_int_regs.len(), 2);
@@ -247,7 +262,7 @@ mod tests {
         let masked_int_reg0 = &masked_int_regs[0];
         assert_eq!(
             masked_int_reg0.node_base().id(),
-            store.id_by_name("StructEntry0")
+            node_store.id_by_name("StructEntry0")
         );
         assert_eq!(
             masked_int_reg0.node_base().imposed_access_mode(),
@@ -265,7 +280,7 @@ mod tests {
         let masked_int_reg1 = &masked_int_regs[1];
         assert_eq!(
             masked_int_reg1.node_base().id(),
-            store.id_by_name("StructEntry1")
+            node_store.id_by_name("StructEntry1")
         );
         assert_eq!(
             masked_int_reg1.node_base().imposed_access_mode(),
