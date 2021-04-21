@@ -1,7 +1,7 @@
 use super::{
     elem_type::ImmOrPNode,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    store::NodeId,
+    store::{BooleanId, NodeId},
 };
 
 #[derive(Debug, Clone)]
@@ -11,7 +11,7 @@ pub struct BooleanNode {
 
     pub(crate) p_invalidators: Vec<NodeId>,
     pub(crate) streamable: bool,
-    pub(crate) value: ImmOrPNode<bool>,
+    pub(crate) value: ImmOrPNode<BooleanId>,
     pub(crate) on_value: Option<i64>,
     pub(crate) off_value: Option<i64>,
     pub(crate) p_selected: Vec<NodeId>,
@@ -34,8 +34,8 @@ impl BooleanNode {
     }
 
     #[must_use]
-    pub fn value(&self) -> &ImmOrPNode<bool> {
-        &self.value
+    pub fn value(&self) -> ImmOrPNode<BooleanId> {
+        self.value
     }
 
     #[must_use]

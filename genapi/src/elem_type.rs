@@ -29,17 +29,14 @@ pub enum AccessMode {
     RW,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum ImmOrPNode<T: Clone + PartialEq> {
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ImmOrPNode<T> {
     Imm(T),
     PNode(NodeId),
 }
 
-impl<T> ImmOrPNode<T>
-where
-    T: Clone + PartialEq,
-{
-    pub fn imm(&self) -> Option<&T> {
+impl<T> ImmOrPNode<T> {
+    pub fn imm(self) -> Option<T> {
         match self {
             Self::Imm(value) => Some(value),
             _ => None,
@@ -132,32 +129,26 @@ pub enum CachingMode {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct NamedValue<T>
-where
-    T: Clone + PartialEq,
-{
+pub struct NamedValue<T> {
     pub(crate) name: String,
     pub(crate) value: T,
 }
 
-impl<T> NamedValue<T>
-where
-    T: Clone + PartialEq,
-{
+impl<T> NamedValue<T> {
     pub fn name(&self) -> &str {
         &self.name
     }
 
-    pub fn value(&self) -> &T {
-        &self.value
+    pub fn value(&self) -> T
+    where
+        T: Copy,
+    {
+        self.value
     }
 }
 
 #[derive(Debug, Clone)]
-pub enum ValueKind<T>
-where
-    T: Clone + PartialEq,
-{
+pub enum ValueKind<T> {
     Value(T),
     PValue(PValue),
     PIndex(PIndex<T>),
@@ -182,19 +173,13 @@ impl PValue {
 }
 
 #[derive(Debug, Clone)]
-pub struct PIndex<T>
-where
-    T: Clone + PartialEq,
-{
+pub struct PIndex<T> {
     pub(crate) p_index: NodeId,
     pub(crate) value_indexed: Vec<ValueIndexed<T>>,
     pub(crate) value_default: ImmOrPNode<T>,
 }
 
-impl<T> PIndex<T>
-where
-    T: Clone + PartialEq,
-{
+impl<T> PIndex<T> {
     #[must_use]
     pub fn p_index(&self) -> NodeId {
         self.p_index
@@ -206,32 +191,32 @@ where
     }
 
     #[must_use]
-    pub fn value_default(&self) -> &ImmOrPNode<T> {
-        &self.value_default
+    pub fn value_default(&self) -> ImmOrPNode<T>
+    where
+        T: Copy,
+    {
+        self.value_default
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct ValueIndexed<T>
-where
-    T: Clone + PartialEq,
-{
+pub struct ValueIndexed<T> {
     pub(crate) index: i64,
     pub(crate) indexed: ImmOrPNode<T>,
 }
 
-impl<T> ValueIndexed<T>
-where
-    T: Clone + PartialEq,
-{
+impl<T> ValueIndexed<T> {
     #[must_use]
     pub fn index(&self) -> i64 {
         self.index
     }
 
     #[must_use]
-    pub fn indexed(&self) -> &ImmOrPNode<T> {
-        &self.indexed
+    pub fn indexed(&self) -> ImmOrPNode<T>
+    where
+        T: Copy,
+    {
+        self.indexed
     }
 }
 
@@ -250,8 +235,8 @@ pub struct RegPIndex {
 
 impl RegPIndex {
     #[must_use]
-    pub fn offset(&self) -> Option<&ImmOrPNode<i64>> {
-        self.offset.as_ref()
+    pub fn offset(&self) -> Option<ImmOrPNode<i64>> {
+        self.offset
     }
 
     #[must_use]

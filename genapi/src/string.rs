@@ -1,7 +1,7 @@
 use super::{
     elem_type::ImmOrPNode,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    store::NodeId,
+    store::{NodeId, StringId},
 };
 
 #[derive(Debug, Clone)]
@@ -11,7 +11,7 @@ pub struct StringNode {
 
     pub(crate) p_invalidators: Vec<NodeId>,
     pub(crate) streamable: bool,
-    pub(crate) value: ImmOrPNode<String>,
+    pub(crate) value: ImmOrPNode<StringId>,
 }
 
 impl StringNode {
@@ -31,7 +31,7 @@ impl StringNode {
     }
 
     #[must_use]
-    pub fn value(&self) -> &ImmOrPNode<String> {
-        &self.value
+    pub fn value(&self) -> ImmOrPNode<StringId> {
+        self.value
     }
 }

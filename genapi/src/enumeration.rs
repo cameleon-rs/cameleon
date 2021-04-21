@@ -1,7 +1,7 @@
 use super::{
     elem_type::ImmOrPNode,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    store::NodeId,
+    store::{IntegerId, NodeId},
 };
 
 #[derive(Debug, Clone)]
@@ -12,7 +12,7 @@ pub struct EnumerationNode {
     pub(crate) p_invalidators: Vec<NodeId>,
     pub(crate) streamable: bool,
     pub(crate) entries: Vec<EnumEntryNode>,
-    pub(crate) value: ImmOrPNode<i64>,
+    pub(crate) value: ImmOrPNode<IntegerId>,
     pub(crate) p_selected: Vec<NodeId>,
     pub(crate) polling_time: Option<u64>,
 }
@@ -39,8 +39,8 @@ impl EnumerationNode {
     }
 
     #[must_use]
-    pub fn value(&self) -> &ImmOrPNode<i64> {
-        &self.value
+    pub fn value(&self) -> ImmOrPNode<IntegerId> {
+        self.value
     }
 
     #[must_use]

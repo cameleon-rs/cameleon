@@ -1,7 +1,7 @@
 use super::{
     elem_type::ImmOrPNode,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    store::NodeId,
+    store::{IntegerId, NodeId},
 };
 
 #[derive(Debug, Clone)]
@@ -10,8 +10,8 @@ pub struct CommandNode {
     pub(crate) elem_base: NodeElementBase,
 
     pub(crate) p_invalidators: Vec<NodeId>,
-    pub(crate) value: ImmOrPNode<i64>,
-    pub(crate) command_value: ImmOrPNode<i64>,
+    pub(crate) value: ImmOrPNode<IntegerId>,
+    pub(crate) command_value: ImmOrPNode<IntegerId>,
     pub(crate) polling_time: Option<u64>,
 }
 
@@ -27,13 +27,13 @@ impl CommandNode {
     }
 
     #[must_use]
-    pub fn value(&self) -> &ImmOrPNode<i64> {
-        &self.value
+    pub fn value(&self) -> ImmOrPNode<IntegerId> {
+        self.value
     }
 
     #[must_use]
-    pub fn command_value(&self) -> &ImmOrPNode<i64> {
-        &self.command_value
+    pub fn command_value(&self) -> ImmOrPNode<IntegerId> {
+        self.command_value
     }
 
     #[must_use]

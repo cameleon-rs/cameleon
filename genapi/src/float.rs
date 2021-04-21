@@ -1,7 +1,7 @@
 use super::{
     elem_type::{DisplayNotation, FloatRepresentation, ImmOrPNode, ValueKind},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    store::NodeId,
+    store::{FloatId, NodeId},
 };
 
 #[derive(Debug, Clone)]
@@ -11,9 +11,9 @@ pub struct FloatNode {
 
     pub(crate) p_invalidators: Vec<NodeId>,
     pub(crate) streamable: bool,
-    pub(crate) value_kind: ValueKind<f64>,
-    pub(crate) min: ImmOrPNode<f64>,
-    pub(crate) max: ImmOrPNode<f64>,
+    pub(crate) value_kind: ValueKind<FloatId>,
+    pub(crate) min: ImmOrPNode<FloatId>,
+    pub(crate) max: ImmOrPNode<FloatId>,
     pub(crate) inc: Option<ImmOrPNode<f64>>,
     pub(crate) unit: Option<String>,
     pub(crate) representation: FloatRepresentation,
@@ -38,18 +38,18 @@ impl FloatNode {
     }
 
     #[must_use]
-    pub fn value_kind(&self) -> &ValueKind<f64> {
+    pub fn value_kind(&self) -> &ValueKind<FloatId> {
         &self.value_kind
     }
 
     #[must_use]
-    pub fn min(&self) -> &ImmOrPNode<f64> {
-        &self.min
+    pub fn min(&self) -> ImmOrPNode<FloatId> {
+        self.min
     }
 
     #[must_use]
-    pub fn max(&self) -> &ImmOrPNode<f64> {
-        &self.max
+    pub fn max(&self) -> ImmOrPNode<FloatId> {
+        self.max
     }
 
     #[must_use]

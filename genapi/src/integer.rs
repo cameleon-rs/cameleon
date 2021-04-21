@@ -1,7 +1,7 @@
 use super::{
     elem_type::{ImmOrPNode, IntegerRepresentation, ValueKind},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    store::NodeId,
+    store::{IntegerId, NodeId},
 };
 
 #[derive(Debug, Clone)]
@@ -11,9 +11,9 @@ pub struct IntegerNode {
 
     pub(crate) p_invalidators: Vec<NodeId>,
     pub(crate) streamable: bool,
-    pub(crate) value_kind: ValueKind<i64>,
-    pub(crate) min: ImmOrPNode<i64>,
-    pub(crate) max: ImmOrPNode<i64>,
+    pub(crate) value_kind: ValueKind<IntegerId>,
+    pub(crate) min: ImmOrPNode<IntegerId>,
+    pub(crate) max: ImmOrPNode<IntegerId>,
     pub(crate) inc: ImmOrPNode<i64>,
     pub(crate) unit: Option<String>,
     pub(crate) representation: IntegerRepresentation,
@@ -37,18 +37,18 @@ impl IntegerNode {
     }
 
     #[must_use]
-    pub fn value_kind(&self) -> &ValueKind<i64> {
+    pub fn value_kind(&self) -> &ValueKind<IntegerId> {
         &self.value_kind
     }
 
     #[must_use]
-    pub fn min(&self) -> &ImmOrPNode<i64> {
-        &self.min
+    pub fn min(&self) -> ImmOrPNode<IntegerId> {
+        self.min
     }
 
     #[must_use]
-    pub fn max(&self) -> &ImmOrPNode<i64> {
-        &self.max
+    pub fn max(&self) -> ImmOrPNode<IntegerId> {
+        self.max
     }
 
     #[must_use]
