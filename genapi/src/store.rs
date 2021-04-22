@@ -1,4 +1,7 @@
-use std::{collections::HashMap, convert::TryFrom};
+use std::{
+    collections::{hash_map, HashMap},
+    convert::TryFrom,
+};
 
 use string_interner::{StringInterner, Symbol};
 
@@ -8,7 +11,7 @@ use super::{
     MaskedIntRegNode, Node, PortNode, RegisterNode, StringNode, StringRegNode, SwissKnifeNode,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct NodeId(u32);
 
 impl Symbol for NodeId {
@@ -167,7 +170,7 @@ impl Default for DefaultNodeStore {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ValueId(u32);
 
 impl ValueId {
@@ -210,10 +213,9 @@ pub enum ValueData {
 }
 
 pub trait ValueStore {
-    fn store<T, U>(&mut self, data: T) -> U
+    fn store<T>(&mut self, data: impl Into<ValueData>) -> T
     where
-        T: Into<ValueData>,
-        U: From<ValueId>;
+        T: From<ValueId>;
 
     fn value_opt(&self, id: impl Into<ValueId>) -> Option<&ValueData>;
 
@@ -225,6 +227,11 @@ pub trait ValueStore {
 
     fn value_mut(&mut self, id: impl Into<ValueId>) -> &mut ValueData {
         self.value_mut_opt(id).unwrap()
+    }
+
+    fn update(&mut self, id: impl Into<ValueId>, value: impl Into<ValueData>) -> Option<ValueData> {
+        let mut prev = self.value_mut_opt(id)?;
+        Some(std::mem::replace(&mut prev, value.into()))
     }
 
     fn integer_value(&self, id: IntegerId) -> Option<i64> {
@@ -296,10 +303,9 @@ impl<T> ValueStore for &mut T
 where
     T: ValueStore,
 {
-    fn store<U, V>(&mut self, data: U) -> V
+    fn store<U>(&mut self, data: impl Into<ValueData>) -> U
     where
-        U: Into<ValueData>,
-        V: From<ValueId>,
+        U: From<ValueId>,
     {
         (*self).store(data)
     }
@@ -339,10 +345,9 @@ impl DefaultValueStore {
 }
 
 impl ValueStore for DefaultValueStore {
-    fn store<T, U>(&mut self, data: T) -> U
+    fn store<T>(&mut self, data: impl Into<ValueData>) -> T
     where
-        T: Into<ValueData>,
-        U: From<ValueId>,
+        T: From<ValueId>,
     {
         let id = u32::try_from(self.0.len())
             .expect("the number of value stored in `ValueStore` must not exceed u32::MAX");
@@ -361,11 +366,89 @@ impl ValueStore for DefaultValueStore {
 }
 
 pub trait CacheStore {
-    fn store(&mut self, node_id: NodeId, value_id: ValueId);
+    fn store(&mut self, node_id: NodeId, value: impl Into<ValueData>, value_store: impl ValueStore);
 
-    fn value(&mut self, node_id: NodeId) -> Option<ValueData>;
+    fn value<'a>(
+        &mut self,
+        node_id: NodeId,
+        value_store: &'a impl ValueStore,
+    ) -> Option<&'a ValueData>;
 
-    fn invalidate(&mut self, id: NodeId);
+    fn invalidate_by(&mut self, id: NodeId);
+}
+
+pub struct DefaultCacheStore {
+    store: HashMap<NodeId, (ValueId, bool)>,
+    invalidators: HashMap<NodeId, Vec<NodeId>>,
+}
+
+impl DefaultCacheStore {
+    #[must_use]
+    pub fn new(node_store: &impl NodeStore) -> Self {
+        let mut invalidators: HashMap<NodeId, Vec<NodeId>> = HashMap::new();
+        macro_rules! push_invalidators {
+            ($node:ident) => {{
+                let id = $node.node_base().id();
+                for invalidator in $node.register_base().p_invalidators() {
+                    let entry = invalidators.entry(*invalidator).or_default();
+                    entry.push(id);
+                }
+            }};
+        }
+        node_store.visit_nodes(|node| match node {
+            NodeData::IntReg(n) => push_invalidators!(n),
+            NodeData::MaskedIntReg(n) => push_invalidators!(n),
+            NodeData::FloatReg(n) => push_invalidators!(n),
+            NodeData::StringReg(n) => push_invalidators!(n),
+            NodeData::Register(n) => push_invalidators!(n),
+            _ => {}
+        });
+
+        Self {
+            store: HashMap::new(),
+            invalidators,
+        }
+    }
+}
+
+impl CacheStore for DefaultCacheStore {
+    fn store(
+        &mut self,
+        node_id: NodeId,
+        value: impl Into<ValueData>,
+        mut value_store: impl ValueStore,
+    ) {
+        match self.store.entry(node_id) {
+            hash_map::Entry::Occupied(mut entry) => {
+                let (value_id, is_valid) = entry.get_mut();
+                value_store.update(*value_id, value);
+                *is_valid = true;
+            }
+            hash_map::Entry::Vacant(entry) => {
+                let value_id = value_store.store(value);
+                entry.insert((value_id, true));
+            }
+        }
+    }
+
+    fn value<'a>(
+        &mut self,
+        node_id: NodeId,
+        value_store: &'a impl ValueStore,
+    ) -> Option<&'a ValueData> {
+        let (id, is_valid) = self.store.get(&node_id)?;
+        is_valid.then(|| value_store.value_opt(*id)).flatten()
+    }
+
+    fn invalidate_by(&mut self, id: NodeId) {
+        if let Some(target_nodes) = self.invalidators.get(&id) {
+            for n in target_nodes {
+                if let Some((_, is_valid)) = self.store.get_mut(&n) {
+                    *is_valid = false;
+                }
+            }
+        }
+    }
 }
 
 #[derive(Default, Copy, Clone, Debug)]
@@ -374,17 +457,18 @@ pub struct CacheSink {
 }
 
 impl CacheSink {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 }
 
 impl CacheStore for CacheSink {
-    fn store(&mut self, _: NodeId, _: ValueId) {}
+    fn store(&mut self, _: NodeId, _: impl Into<ValueData>, _: impl ValueStore) {}
 
-    fn value(&mut self, _: NodeId) -> Option<ValueData> {
+    fn value<'a>(&mut self, _: NodeId, _: &'a impl ValueStore) -> Option<&'a ValueData> {
         None
     }
 
-    fn invalidate(&mut self, _: NodeId) {}
+    fn invalidate_by(&mut self, _: NodeId) {}
 }
