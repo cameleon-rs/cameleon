@@ -5,6 +5,7 @@
 )]
 
 pub mod elem_type;
+pub mod formula;
 pub mod parser;
 pub mod store;
 
