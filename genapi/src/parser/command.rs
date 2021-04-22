@@ -4,7 +4,7 @@ use crate::{
 };
 
 use super::{
-    elem_name::{COMMAND, POLLING_TIME, P_INVALIDATOR},
+    elem_name::{COMMAND, POLLING_TIME},
     xml, Parse,
 };
 
@@ -19,7 +19,6 @@ impl Parse for CommandNode {
         let attr_base = node.parse(node_store, value_store);
         let elem_base = node.parse(node_store, value_store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR, node_store, value_store);
         let value = node.parse(node_store, value_store);
         let command_value = node.parse(node_store, value_store);
         let polling_time = node.parse_if(POLLING_TIME, node_store, value_store);
@@ -27,7 +26,6 @@ impl Parse for CommandNode {
         Self {
             attr_base,
             elem_base,
-            p_invalidators,
             value,
             command_value,
             polling_time,

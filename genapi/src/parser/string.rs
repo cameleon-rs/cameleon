@@ -5,7 +5,7 @@ use crate::{
 };
 
 use super::{
-    elem_name::{P_INVALIDATOR, STREAMABLE, STRING, VALUE},
+    elem_name::{STREAMABLE, STRING, VALUE},
     xml, Parse,
 };
 
@@ -20,7 +20,6 @@ impl Parse for StringNode {
         let attr_base = node.parse(node_store, value_store);
         let elem_base = node.parse(node_store, value_store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR, node_store, value_store);
         let streamable = node
             .parse_if(STREAMABLE, node_store, value_store)
             .unwrap_or_default();
@@ -35,7 +34,6 @@ impl Parse for StringNode {
         Self {
             attr_base,
             elem_base,
-            p_invalidators,
             streamable,
             value,
         }

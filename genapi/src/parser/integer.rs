@@ -6,8 +6,7 @@ use crate::{
 
 use super::{
     elem_name::{
-        INC, INTEGER, MAX, MIN, P_INC, P_INVALIDATOR, P_MAX, P_MIN, P_SELECTED, REPRESENTATION,
-        STREAMABLE, UNIT,
+        INC, INTEGER, MAX, MIN, P_INC, P_MAX, P_MIN, P_SELECTED, REPRESENTATION, STREAMABLE, UNIT,
     },
     xml, Parse,
 };
@@ -23,7 +22,6 @@ impl Parse for IntegerNode {
         let attr_base = node.parse(node_store, value_store);
         let elem_base = node.parse(node_store, value_store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR, node_store, value_store);
         let streamable = node
             .parse_if(STREAMABLE, node_store, value_store)
             .unwrap_or_default();
@@ -57,7 +55,6 @@ impl Parse for IntegerNode {
         Self {
             attr_base,
             elem_base,
-            p_invalidators,
             streamable,
             value_kind,
             min,
@@ -96,8 +93,6 @@ mod tests {
     fn test_integer_node_with_immediate() {
         let xml = r#"
             <Integer Name = "TestNode">
-                <pInvalidator>Invalidator0</pInvalidator>
-                <pInvalidator>Invalidator1</pInvalidator>
                 <Streamable>Yes</Streamable>
                 <Value>0X100</Value>
                 <Min>0x10</Min>
@@ -112,11 +107,6 @@ mod tests {
             "#;
 
         let (node, mut node_store, value_store) = integer_node_from_str(xml);
-
-        let p_invalidators = node.p_invalidators();
-        assert_eq!(p_invalidators.len(), 2);
-        assert_eq!(p_invalidators[0], node_store.id_by_name("Invalidator0"));
-        assert_eq!(p_invalidators[1], node_store.id_by_name("Invalidator1"));
 
         assert!(node.streamable());
         let value = value_store

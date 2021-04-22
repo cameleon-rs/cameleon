@@ -9,7 +9,6 @@ pub struct IntSwissKnifeNode {
     pub(crate) attr_base: NodeAttributeBase,
     pub(crate) elem_base: NodeElementBase,
 
-    pub(crate) p_invalidators: Vec<NodeId>,
     pub(crate) streamable: bool,
     pub(crate) p_variables: Vec<NamedValue<NodeId>>,
     pub(crate) constants: Vec<NamedValue<i64>>,
@@ -23,11 +22,6 @@ impl IntSwissKnifeNode {
     #[must_use]
     pub fn node_base(&self) -> NodeBase<'_> {
         NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn p_invalidators(&self) -> &[NodeId] {
-        &self.p_invalidators
     }
 
     #[must_use]

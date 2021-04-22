@@ -4,10 +4,7 @@ use crate::{
     Node,
 };
 
-use super::{
-    elem_name::{NODE, P_INVALIDATOR},
-    xml, Parse,
-};
+use super::{elem_name::NODE, xml, Parse};
 
 impl Parse for Node {
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
@@ -20,12 +17,9 @@ impl Parse for Node {
         let attr_base = NodeAttributeBase::parse(node, node_store, value_store);
         let elem_base = NodeElementBase::parse(node, node_store, value_store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR, node_store, value_store);
-
         Self {
             attr_base,
             elem_base,
-            p_invalidators,
         }
     }
 }
@@ -72,8 +66,6 @@ mod tests {
                 <pError>AnotherErr1</pError>
                 <pAlias>AnotherNode5</pAlias>
                 <pCastAlias>AnotherNode6</pCastAlias>
-                <pInvalidator>Invalidator0</pInvalidator>
-                <pInvalidator>Invalidator1</pInvalidator>
             </Node>
             "#;
 
@@ -125,11 +117,6 @@ mod tests {
             node_base.p_cast_alias().unwrap(),
             node_store.id_by_name("AnotherNode6")
         );
-
-        let p_invalidators = node.p_invalidators();
-        assert_eq!(p_invalidators.len(), 2);
-        assert_eq!(p_invalidators[0], node_store.id_by_name("Invalidator0"));
-        assert_eq!(p_invalidators[1], node_store.id_by_name("Invalidator1"));
     }
 
     #[test]
@@ -160,8 +147,5 @@ mod tests {
         assert_eq!(node_base.p_errors().len(), 0);
         assert!(node_base.p_alias().is_none());
         assert!(node_base.p_cast_alias().is_none());
-
-        let p_invalidators = node.p_invalidators();
-        assert!(p_invalidators.is_empty());
     }
 }

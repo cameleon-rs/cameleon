@@ -5,8 +5,8 @@ use crate::{
 
 use super::{
     elem_name::{
-        ENUMERATION, ENUM_ENTRY, IS_SELF_CLEARING, NUMERIC_VALUE, POLLING_TIME, P_INVALIDATOR,
-        P_SELECTED, STREAMABLE, SYMBOLIC,
+        ENUMERATION, ENUM_ENTRY, IS_SELF_CLEARING, NUMERIC_VALUE, POLLING_TIME, P_SELECTED,
+        STREAMABLE, SYMBOLIC,
     },
     xml, Parse,
 };
@@ -22,7 +22,6 @@ impl Parse for EnumerationNode {
         let attr_base = node.parse(node_store, value_store);
         let elem_base = node.parse(node_store, value_store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR, node_store, value_store);
         let streamable = node
             .parse_if(STREAMABLE, node_store, value_store)
             .unwrap_or_default();
@@ -37,7 +36,6 @@ impl Parse for EnumerationNode {
         Self {
             attr_base,
             elem_base,
-            p_invalidators,
             streamable,
             entries,
             value,
@@ -58,7 +56,6 @@ impl Parse for EnumEntryNode {
         let attr_base = node.parse(node_store, value_store);
         let elem_base = node.parse(node_store, value_store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR, node_store, value_store);
         let value = node.parse(node_store, value_store);
         let numeric_values = node.parse_while(NUMERIC_VALUE, node_store, value_store);
         let symbolic = node.parse_if(SYMBOLIC, node_store, value_store);
@@ -69,7 +66,6 @@ impl Parse for EnumEntryNode {
         Self {
             attr_base,
             elem_base,
-            p_invalidators,
             value,
             numeric_values,
             symbolic,

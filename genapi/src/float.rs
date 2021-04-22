@@ -1,7 +1,7 @@
 use super::{
     elem_type::{DisplayNotation, FloatRepresentation, ImmOrPNode, ValueKind},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    store::{FloatId, NodeId},
+    store::{FloatId},
 };
 
 #[derive(Debug, Clone)]
@@ -9,7 +9,6 @@ pub struct FloatNode {
     pub(crate) attr_base: NodeAttributeBase,
     pub(crate) elem_base: NodeElementBase,
 
-    pub(crate) p_invalidators: Vec<NodeId>,
     pub(crate) streamable: bool,
     pub(crate) value_kind: ValueKind<FloatId>,
     pub(crate) min: ImmOrPNode<FloatId>,
@@ -25,11 +24,6 @@ impl FloatNode {
     #[must_use]
     pub fn node_base(&self) -> NodeBase<'_> {
         NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn p_invalidators(&self) -> &[NodeId] {
-        &self.p_invalidators
     }
 
     #[must_use]

@@ -5,7 +5,7 @@ use crate::{
 };
 
 use super::{
-    elem_name::{CACHE_CHUNK_DATA, CHUNK_ID, PORT, P_CHUNK_ID, P_INVALIDATOR, SWAP_ENDIANNESS},
+    elem_name::{CACHE_CHUNK_DATA, CHUNK_ID, PORT, P_CHUNK_ID, SWAP_ENDIANNESS},
     xml, Parse,
 };
 
@@ -20,7 +20,6 @@ impl Parse for PortNode {
         let attr_base = node.parse(node_store, value_store);
         let elem_base = node.parse(node_store, value_store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR, node_store, value_store);
         let chunk_id = node.next_if(CHUNK_ID).map_or_else(
             || {
                 node.next_if(P_CHUNK_ID)
@@ -42,7 +41,6 @@ impl Parse for PortNode {
         Self {
             attr_base,
             elem_base,
-            p_invalidators,
             chunk_id,
             swap_endianness,
             cache_chunk_data,

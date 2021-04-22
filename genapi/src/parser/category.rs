@@ -4,7 +4,7 @@ use crate::{
 };
 
 use super::{
-    elem_name::{CATEGORY, P_FEATURE, P_INVALIDATOR},
+    elem_name::{CATEGORY, P_FEATURE},
     xml, Parse,
 };
 
@@ -19,13 +19,11 @@ impl Parse for CategoryNode {
         let attr_base = node.parse(node_store, value_store);
         let elem_base = node.parse(node_store, value_store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR, node_store, value_store);
         let p_features = node.parse_while(P_FEATURE, node_store, value_store);
 
         Self {
             attr_base,
             elem_base,
-            p_invalidators,
             p_features,
         }
     }
@@ -54,19 +52,12 @@ mod tests {
     fn test_category_node_filled() {
         let xml = r#"
             <Category Name = "TestNode">
-                <pInvalidator>Invalidator0</pInvalidator>
-                <pInvalidator>Invalidator1</pInvalidator>
                 <pFeature>FeatureNode0</pFeature>
                 <pFeature>FeatureNode1</pFeature>
             </Category>
             "#;
 
         let (node, mut node_store, _) = category_node_from_str(&xml);
-
-        let p_invalidators = node.p_invalidators();
-        assert_eq!(p_invalidators.len(), 2);
-        assert_eq!(p_invalidators[0], node_store.id_by_name("Invalidator0"));
-        assert_eq!(p_invalidators[1], node_store.id_by_name("Invalidator1"));
 
         let p_features = node.p_features();
         assert_eq!(p_features.len(), 2);
@@ -82,9 +73,6 @@ mod tests {
             "#;
 
         let (node, ..) = category_node_from_str(&xml);
-
-        let p_invalidators = node.p_invalidators();
-        assert!(p_invalidators.is_empty());
 
         let p_features = node.p_features();
         assert!(p_features.is_empty());

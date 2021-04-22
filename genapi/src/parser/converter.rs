@@ -6,7 +6,7 @@ use crate::{
 use super::{
     elem_name::{
         CONSTANT, CONVERTER, DISPLAY_NOTATION, DISPLAY_PRECISION, EXPRESSION, IS_LINEAR,
-        P_INVALIDATOR, P_VARIABLE, REPRESENTATION, SLOPE, STREAMABLE, UNIT,
+        P_VARIABLE, REPRESENTATION, SLOPE, STREAMABLE, UNIT,
     },
     xml, Parse,
 };
@@ -22,7 +22,6 @@ impl Parse for ConverterNode {
         let attr_base = node.parse(node_store, value_store);
         let elem_base = node.parse(node_store, value_store);
 
-        let p_invalidators = node.parse_while(P_INVALIDATOR, node_store, value_store);
         let streamable = node
             .parse_if(STREAMABLE, node_store, value_store)
             .unwrap_or_default();
@@ -52,7 +51,6 @@ impl Parse for ConverterNode {
         Self {
             attr_base,
             elem_base,
-            p_invalidators,
             streamable,
             p_variables,
             constants,
