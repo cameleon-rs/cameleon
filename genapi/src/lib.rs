@@ -1,7 +1,8 @@
 #![allow(
     clippy::module_name_repetitions,
     clippy::similar_names,
-    clippy::missing_errors_doc
+    clippy::missing_errors_doc,
+    clippy::option_if_let_else
 )]
 
 pub mod elem_type;

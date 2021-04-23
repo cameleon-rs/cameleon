@@ -1,9 +1,4 @@
-// TODO:
-#![allow(unused)]
-
 use std::str::FromStr;
-
-use super::store::ValueData;
 
 #[derive(Debug, PartialEq)]
 pub enum Expr {
@@ -15,10 +10,12 @@ pub enum Expr {
 
     UnOp {
         kind: UnOpKind,
-        lhs: Box<Expr>,
+        expr: Box<Expr>,
     },
 
-    Immediate(ValueData),
+    Integer(i64),
+
+    Float(f64),
 
     Ident(String),
 
@@ -60,10 +57,10 @@ pub enum UnOpKind {
     Cos,
     Tan,
     Asin,
-    ACos,
+    Acos,
     Atan,
     Abs,
-    Expr,
+    Exp,
     Ln,
     Lg,
     Sqrt,
@@ -72,6 +69,240 @@ pub enum UnOpKind {
     Ceil,
     Round,
     Sgn,
+}
+
+#[must_use]
+pub fn parse(s: &str) -> Expr {
+    let lexer = Lexer::new(s);
+    Parser { lexer }.expr()
+}
+
+struct Parser<'a> {
+    lexer: Lexer<'a>,
+}
+
+macro_rules! parse_binop {
+    ($self:ident.$f:ident, ($token:expr, $op:expr) $(,($token_rep:expr, $op_rep:expr))*) => {
+        {
+        let mut expr = $self.$f();
+        loop {
+            let (op_kind, rhs) = if $self.eat(&$token) {
+                ($op, $self.$f())
+            } $(else if $self.eat(&$token_rep) {
+                ($op_rep, $self.$f())
+            })* else {
+                break;
+            };
+            expr = Expr::BinOp {
+                kind: op_kind,
+                lhs: expr.into(),
+                rhs: rhs.into(),
+            };
+        }
+        expr
+        }
+    }
+}
+
+impl<'a> Parser<'a> {
+    fn expr(&mut self) -> Expr {
+        let expr = self.logical_or();
+        if self.eat(&Token::Question) {
+            let then = self.expr();
+            self.expect(&Token::Colon);
+            let else_ = self.expr();
+            Expr::If {
+                cond: expr.into(),
+                then: then.into(),
+                else_: else_.into(),
+            }
+        } else {
+            expr
+        }
+    }
+
+    fn logical_or(&mut self) -> Expr {
+        parse_binop!(self.logical_and, (Token::DoubleOr, BinOpKind::Or))
+    }
+
+    fn logical_and(&mut self) -> Expr {
+        parse_binop!(self.bitwise_or, (Token::DoubleAnd, BinOpKind::And))
+    }
+
+    fn bitwise_or(&mut self) -> Expr {
+        parse_binop!(self.bitwise_xor, (Token::Or, BinOpKind::BitOr))
+    }
+
+    fn bitwise_xor(&mut self) -> Expr {
+        parse_binop!(self.bitwise_and, (Token::Caret, BinOpKind::Xor))
+    }
+
+    fn bitwise_and(&mut self) -> Expr {
+        parse_binop!(self.eq, (Token::And, BinOpKind::BitAnd))
+    }
+
+    fn eq(&mut self) -> Expr {
+        parse_binop!(
+            self.rel,
+            (Token::Eq, BinOpKind::Eq),
+            (Token::Ne, BinOpKind::Ne)
+        )
+    }
+
+    fn rel(&mut self) -> Expr {
+        parse_binop!(
+            self.bit_shift,
+            (Token::Lt, BinOpKind::Lt),
+            (Token::Le, BinOpKind::Le),
+            (Token::Gt, BinOpKind::Gt),
+            (Token::Ge, BinOpKind::Ge)
+        )
+    }
+
+    fn bit_shift(&mut self) -> Expr {
+        parse_binop!(
+            self.term,
+            (Token::Shl, BinOpKind::Shl),
+            (Token::Shr, BinOpKind::Shr)
+        )
+    }
+
+    fn term(&mut self) -> Expr {
+        parse_binop!(
+            self.factor,
+            (Token::Plus, BinOpKind::Add),
+            (Token::Minus, BinOpKind::Sub)
+        )
+    }
+
+    fn factor(&mut self) -> Expr {
+        parse_binop!(
+            self.not,
+            (Token::Star, BinOpKind::Mul),
+            (Token::Slash, BinOpKind::Div),
+            (Token::Percent, BinOpKind::Rem)
+        )
+    }
+
+    fn not(&mut self) -> Expr {
+        if self.eat(&Token::Tilde) {
+            let expr = self.call();
+            Expr::UnOp {
+                kind: UnOpKind::Not,
+                expr: expr.into(),
+            }
+        } else {
+            self.call()
+        }
+    }
+
+    fn call(&mut self) -> Expr {
+        if let Some(op_kind) = self.next_call() {
+            self.expect(&Token::LParen);
+            let expr = self.expr();
+            self.expect(&Token::RParen);
+            Expr::UnOp {
+                kind: op_kind,
+                expr: expr.into(),
+            }
+        } else {
+            self.primary()
+        }
+    }
+
+    fn primary(&mut self) -> Expr {
+        if self.eat(&Token::LParen) {
+            let expr = self.expr();
+            self.expect(&Token::RParen);
+            expr
+        } else if let Some(i) = self.next_integer() {
+            Expr::Integer(i)
+        } else if let Some(f) = self.next_float() {
+            Expr::Float(f)
+        } else {
+            let s = self.next_ident().unwrap();
+            Expr::Ident(s)
+        }
+    }
+
+    fn eat(&mut self, tok: &Token) -> bool {
+        match self.lexer.peek() {
+            Some(peek) if peek == tok => {
+                self.lexer.next();
+                true
+            }
+            _ => false,
+        }
+    }
+
+    fn next_call(&mut self) -> Option<UnOpKind> {
+        let s = match self.lexer.peek() {
+            Some(Token::Ident(s)) => s,
+            _ => return None,
+        };
+        let op = Some(match s.as_str() {
+            "NEG" => UnOpKind::Neg,
+            "SIN" => UnOpKind::Sin,
+            "COS" => UnOpKind::Cos,
+            "TAN" => UnOpKind::Tan,
+            "ASIN" => UnOpKind::Asin,
+            "ACOS" => UnOpKind::Acos,
+            "ATAN" => UnOpKind::Atan,
+            "ABS" => UnOpKind::Abs,
+            "EXP" => UnOpKind::Exp,
+            "LN" => UnOpKind::Ln,
+            "LG" => UnOpKind::Lg,
+            "SQRT" => UnOpKind::Sqrt,
+            "TRUNC" => UnOpKind::Trunc,
+            "FLOOR" => UnOpKind::Floor,
+            "CEIL" => UnOpKind::Ceil,
+            "ROUND" => UnOpKind::Round,
+            _ => return None,
+        });
+
+        self.lexer.next();
+        op
+    }
+
+    fn next_integer(&mut self) -> Option<i64> {
+        if let Some(&Token::Integer(i)) = self.lexer.peek() {
+            self.lexer.next();
+            Some(i)
+        } else {
+            None
+        }
+    }
+
+    fn next_float(&mut self) -> Option<f64> {
+        if let Some(&Token::Float(f)) = self.lexer.peek() {
+            self.lexer.next();
+            Some(f)
+        } else if let Some(Token::Ident(s)) = self.lexer.peek() {
+            let f = match s.as_str() {
+                "PI" => std::f64::consts::PI,
+                "E" => std::f64::consts::E,
+                _ => return None,
+            };
+            self.lexer.next();
+            Some(f)
+        } else {
+            None
+        }
+    }
+
+    fn next_ident(&mut self) -> Option<String> {
+        if let Some(Token::Ident(s)) = self.lexer.peek() {
+            let s = s.to_string();
+            self.lexer.next();
+            Some(s)
+        } else {
+            None
+        }
+    }
+
+    fn expect(&mut self, tok: &Token) {
+        assert!(self.eat(tok))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -189,7 +420,7 @@ impl<'a> Lexer<'a> {
             }
             '.' => {
                 let start_pos = self.cur - 1;
-                while self.eat_char(|c| c.is_numeric()) {}
+                while self.eat_char(char::is_numeric) {}
                 let end_pos = self.cur;
                 let f = f64::from_str(self.sub_string(start_pos, end_pos)).unwrap();
                 Token::Float(f)
@@ -247,15 +478,12 @@ impl<'a> Lexer<'a> {
     }
 
     fn eat_char(&mut self, f: impl FnOnce(char) -> bool) -> bool {
-        let peek = match self.peek_char() {
-            Some(peek) => peek,
-            None => return false,
-        };
-        if f(peek) {
-            self.next_char();
-            true
-        } else {
-            false
+        match self.peek_char() {
+            Some(peek) if f(peek) => {
+                self.next_char();
+                true
+            }
+            _ => false,
         }
     }
 
@@ -283,12 +511,10 @@ impl<'a> Lexer<'a> {
             && self.peek_char_raw(';', 3)
         {
             ('>', self.cur + 4)
+        } else if let Some(c) = self.src.get(self.cur).map(|c| *c as char) {
+            (c, self.cur + 1)
         } else {
-            if let Some(c) = self.src.get(self.cur).map(|c| *c as char) {
-                (c, self.cur + 1)
-            } else {
-                return None;
-            }
+            return None;
         };
 
         self.peek_char = Some((peek, idx));
@@ -296,11 +522,9 @@ impl<'a> Lexer<'a> {
     }
 
     fn peek_char_raw(&self, c: char, n: usize) -> bool {
-        if let Some(next) = self.src.get(self.cur + n).map(|c| *c as char) {
-            next == c
-        } else {
-            false
-        }
+        self.src
+            .get(self.cur + n)
+            .map_or(false, |next| c == *next as char)
     }
 
     fn sub_string(&self, start_pos: usize, end_pos: usize) -> &str {
