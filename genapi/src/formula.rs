@@ -1,4 +1,11 @@
-use std::str::FromStr;
+#![allow(
+    clippy::missing_panics_doc,
+    clippy::cast_sign_loss,
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation
+)]
+
+use std::{collections::HashMap, ops::Neg, str::FromStr};
 
 #[derive(Debug, PartialEq)]
 pub enum Expr {
@@ -7,23 +14,213 @@ pub enum Expr {
         lhs: Box<Expr>,
         rhs: Box<Expr>,
     },
-
     UnOp {
         kind: UnOpKind,
         expr: Box<Expr>,
     },
-
-    Integer(i64),
-
-    Float(f64),
-
-    Ident(String),
-
     If {
         cond: Box<Expr>,
         then: Box<Expr>,
         else_: Box<Expr>,
     },
+    Integer(i64),
+    Float(f64),
+    Ident(String),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum EvaluationResult {
+    Integer(i64),
+    Float(f64),
+}
+
+impl From<i64> for EvaluationResult {
+    fn from(i: i64) -> Self {
+        Self::Integer(i)
+    }
+}
+
+impl From<f64> for EvaluationResult {
+    fn from(f: f64) -> Self {
+        Self::Float(f)
+    }
+}
+
+impl From<bool> for EvaluationResult {
+    fn from(b: bool) -> Self {
+        if b {
+            Self::Integer(1)
+        } else {
+            Self::Integer(0)
+        }
+    }
+}
+
+impl EvaluationResult {
+    #[must_use]
+    pub fn as_integer(self) -> i64 {
+        match self {
+            Self::Integer(i) => i,
+            Self::Float(f) => f as i64,
+        }
+    }
+
+    #[must_use]
+    pub fn as_float(self) -> f64 {
+        match self {
+            Self::Integer(i) => i as f64,
+            Self::Float(f) => f,
+        }
+    }
+
+    fn as_bool(self) -> bool {
+        match self {
+            Self::Integer(i) => i != 0,
+            Self::Float(f) => f != 0.,
+        }
+    }
+
+    fn is_integer(&self) -> bool {
+        matches!(self, Self::Integer(..))
+    }
+}
+
+impl Expr {
+    #[must_use]
+    pub fn eval<V>(&self, var_env: &HashMap<String, V>) -> EvaluationResult
+    where
+        V: AsRef<Expr>,
+    {
+        match self {
+            Self::BinOp { kind, lhs, rhs } => lhs.eval_binop(*kind, rhs, var_env),
+            Self::UnOp { kind, expr } => expr.eval_unop(*kind, var_env),
+            Self::If { cond, then, else_ } => {
+                if cond.eval(var_env).as_bool() {
+                    then.eval(var_env)
+                } else {
+                    else_.eval(var_env)
+                }
+            }
+            &Self::Integer(i) => i.into(),
+            &Self::Float(f) => f.into(),
+            Self::Ident(s) => var_env.get(s).unwrap().as_ref().eval(var_env),
+        }
+    }
+
+    fn eval_binop<V>(
+        &self,
+        op: BinOpKind,
+        rhs: &Self,
+        var_env: &HashMap<String, V>,
+    ) -> EvaluationResult
+    where
+        V: AsRef<Expr>,
+    {
+        use std::ops::{Add, Div, Mul, Rem, Sub};
+
+        match op {
+            BinOpKind::And => (self.eval(var_env).as_bool() && rhs.eval(var_env).as_bool()).into(),
+            BinOpKind::Or => (self.eval(var_env).as_bool() || rhs.eval(var_env).as_bool()).into(),
+
+            _ => {
+                let lhs = self.eval(var_env);
+                let rhs = self.eval(var_env);
+
+                macro_rules! apply_normal_op {
+                    ($fint:ident, $ffloat:ident) => {{
+                        if lhs.is_integer() && rhs.is_integer() {
+                            (lhs.as_integer().$fint(rhs.as_integer())).0.into()
+                        } else {
+                            (lhs.as_float().$ffloat(rhs.as_float())).into()
+                        }
+                    }};
+                }
+
+                macro_rules! apply_cmp_op {
+                    ($fint:ident, $ffloat:ident) => {{
+                        if lhs.is_integer() && rhs.is_integer() {
+                            (lhs.as_integer().$fint(&rhs.as_integer())).into()
+                        } else {
+                            (lhs.as_float().$ffloat(&rhs.as_float())).into()
+                        }
+                    }};
+                }
+                match op {
+                    BinOpKind::Add => apply_normal_op!(overflowing_add, add),
+                    BinOpKind::Sub => apply_normal_op!(overflowing_sub, sub),
+                    BinOpKind::Mul => apply_normal_op!(overflowing_mul, mul),
+                    BinOpKind::Div => apply_normal_op!(overflowing_div, div),
+                    BinOpKind::Rem => apply_normal_op!(overflowing_rem, rem),
+                    BinOpKind::Pow => {
+                        if lhs.is_integer() && rhs.is_integer() {
+                            lhs.as_integer()
+                                .overflowing_pow(rhs.as_integer() as u32)
+                                .0
+                                .into()
+                        } else {
+                            lhs.as_float().powf(rhs.as_float()).into()
+                        }
+                    }
+                    BinOpKind::Eq => apply_cmp_op!(eq, eq),
+                    BinOpKind::Ne => apply_cmp_op!(ne, ne),
+                    BinOpKind::Lt => apply_cmp_op!(lt, lt),
+                    BinOpKind::Le => apply_cmp_op!(le, le),
+                    BinOpKind::Gt => apply_cmp_op!(gt, gt),
+                    BinOpKind::Ge => apply_cmp_op!(ge, ge),
+                    BinOpKind::Shl => lhs
+                        .as_integer()
+                        .overflowing_shl(rhs.as_integer() as u32)
+                        .0
+                        .into(),
+                    BinOpKind::Shr => lhs
+                        .as_integer()
+                        .overflowing_shr(rhs.as_integer() as u32)
+                        .0
+                        .into(),
+                    BinOpKind::BitAnd => (lhs.as_integer() & rhs.as_integer()).into(),
+                    BinOpKind::BitOr => (lhs.as_integer() | rhs.as_integer()).into(),
+                    BinOpKind::Xor => (lhs.as_integer() ^ rhs.as_integer()).into(),
+                    _ => unreachable!(),
+                }
+            }
+        }
+    }
+
+    fn eval_unop<V>(&self, op: UnOpKind, var_env: &HashMap<String, V>) -> EvaluationResult
+    where
+        V: AsRef<Expr>,
+    {
+        let res = self.eval(&var_env);
+        macro_rules! apply_op {
+            ($f:ident) => {
+                match res {
+                    EvaluationResult::Integer(i) => i.$f().into(),
+                    EvaluationResult::Float(f) => f.$f().into(),
+                }
+            };
+        }
+
+        match op {
+            UnOpKind::Not => (!res.as_integer()).into(),
+            UnOpKind::Abs => apply_op!(abs),
+            UnOpKind::Sgn => apply_op!(signum),
+            UnOpKind::Neg => apply_op!(neg),
+            UnOpKind::Sin => res.as_float().sin().into(),
+            UnOpKind::Cos => res.as_float().cos().into(),
+            UnOpKind::Tan => res.as_float().tan().into(),
+            UnOpKind::Asin => res.as_float().asin().into(),
+            UnOpKind::Acos => res.as_float().acos().into(),
+            UnOpKind::Atan => res.as_float().atan().into(),
+            UnOpKind::Exp => res.as_float().exp().into(),
+            UnOpKind::Ln => res.as_float().ln().into(),
+            UnOpKind::Lg => res.as_float().log10().into(),
+            UnOpKind::Sqrt => res.as_float().sqrt().into(),
+            UnOpKind::Trunc => res.as_float().trunc().into(),
+            UnOpKind::Floor => res.as_float().floor().into(),
+            UnOpKind::Ceil => res.as_float().ceil().into(),
+            UnOpKind::Round => res.as_float().round().into(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -52,6 +249,8 @@ pub enum BinOpKind {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnOpKind {
     Not,
+    Abs,
+    Sgn,
     Neg,
     Sin,
     Cos,
@@ -59,7 +258,6 @@ pub enum UnOpKind {
     Asin,
     Acos,
     Atan,
-    Abs,
     Exp,
     Ln,
     Lg,
@@ -68,7 +266,6 @@ pub enum UnOpKind {
     Floor,
     Ceil,
     Round,
-    Sgn,
 }
 
 #[must_use]
