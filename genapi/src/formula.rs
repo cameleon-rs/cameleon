@@ -28,6 +28,28 @@ pub enum Expr {
     Ident(String),
 }
 
+impl From<i64> for Expr {
+    fn from(i: i64) -> Self {
+        Self::Integer(i)
+    }
+}
+
+impl From<f64> for Expr {
+    fn from(f: f64) -> Self {
+        Self::Float(f)
+    }
+}
+
+impl From<bool> for Expr {
+    fn from(b: bool) -> Self {
+        if b {
+            Self::Integer(1)
+        } else {
+            Self::Integer(0)
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum EvaluationResult {
     Integer(i64),
@@ -87,10 +109,7 @@ impl EvaluationResult {
 
 impl Expr {
     #[must_use]
-    pub fn eval<V>(&self, var_env: &HashMap<String, V>) -> EvaluationResult
-    where
-        V: AsRef<Expr>,
-    {
+    pub fn eval(&self, var_env: &HashMap<String, Expr>) -> EvaluationResult {
         match self {
             Self::BinOp { kind, lhs, rhs } => lhs.eval_binop(*kind, rhs, var_env),
             Self::UnOp { kind, expr } => expr.eval_unop(*kind, var_env),
@@ -103,19 +122,16 @@ impl Expr {
             }
             &Self::Integer(i) => i.into(),
             &Self::Float(f) => f.into(),
-            Self::Ident(s) => var_env.get(s).unwrap().as_ref().eval(var_env),
+            Self::Ident(s) => var_env.get(s).unwrap().eval(var_env),
         }
     }
 
-    fn eval_binop<V>(
+    fn eval_binop(
         &self,
         op: BinOpKind,
         rhs: &Self,
-        var_env: &HashMap<String, V>,
-    ) -> EvaluationResult
-    where
-        V: AsRef<Expr>,
-    {
+        var_env: &HashMap<String, Expr>,
+    ) -> EvaluationResult {
         use std::ops::{Add, Div, Mul, Rem, Sub};
 
         match op {
@@ -124,9 +140,9 @@ impl Expr {
 
             _ => {
                 let lhs = self.eval(var_env);
-                let rhs = self.eval(var_env);
+                let rhs = rhs.eval(var_env);
 
-                macro_rules! apply_normal_op {
+                macro_rules! apply_arithmetic_op {
                     ($fint:ident, $ffloat:ident) => {{
                         if lhs.is_integer() && rhs.is_integer() {
                             (lhs.as_integer().$fint(rhs.as_integer())).0.into()
@@ -146,11 +162,11 @@ impl Expr {
                     }};
                 }
                 match op {
-                    BinOpKind::Add => apply_normal_op!(overflowing_add, add),
-                    BinOpKind::Sub => apply_normal_op!(overflowing_sub, sub),
-                    BinOpKind::Mul => apply_normal_op!(overflowing_mul, mul),
-                    BinOpKind::Div => apply_normal_op!(overflowing_div, div),
-                    BinOpKind::Rem => apply_normal_op!(overflowing_rem, rem),
+                    BinOpKind::Add => apply_arithmetic_op!(overflowing_add, add),
+                    BinOpKind::Sub => apply_arithmetic_op!(overflowing_sub, sub),
+                    BinOpKind::Mul => apply_arithmetic_op!(overflowing_mul, mul),
+                    BinOpKind::Div => apply_arithmetic_op!(overflowing_div, div),
+                    BinOpKind::Rem => apply_arithmetic_op!(overflowing_rem, rem),
                     BinOpKind::Pow => {
                         if lhs.is_integer() && rhs.is_integer() {
                             lhs.as_integer()
@@ -186,10 +202,7 @@ impl Expr {
         }
     }
 
-    fn eval_unop<V>(&self, op: UnOpKind, var_env: &HashMap<String, V>) -> EvaluationResult
-    where
-        V: AsRef<Expr>,
-    {
+    fn eval_unop(&self, op: UnOpKind, var_env: &HashMap<String, Expr>) -> EvaluationResult {
         let res = self.eval(&var_env);
         macro_rules! apply_op {
             ($f:ident) => {
@@ -230,10 +243,10 @@ pub enum BinOpKind {
     Mul,
     Div,
     Rem,
-    And,
     Pow,
     Shl,
     Shr,
+    And,
     Or,
     Eq,
     Ne,
@@ -383,14 +396,18 @@ impl<'a> Parser<'a> {
 
     fn not(&mut self) -> Expr {
         if self.eat(&Token::Tilde) {
-            let expr = self.call();
+            let expr = self.pow();
             Expr::UnOp {
                 kind: UnOpKind::Not,
                 expr: expr.into(),
             }
         } else {
-            self.call()
+            self.pow()
         }
+    }
+
+    fn pow(&mut self) -> Expr {
+        parse_binop!(self.call, (Token::DoubleStar, BinOpKind::Pow))
     }
 
     fn call(&mut self) -> Expr {
@@ -769,5 +786,44 @@ mod tests {
         assert_eq!(Token::DoubleStar, lexer.next().unwrap());
         assert_eq!(Token::Shr, lexer.next().unwrap());
         assert_eq!(Token::Shl, lexer.next().unwrap());
+    }
+
+    fn test_eval_impl(expr: &str, var_env: &HashMap<String, Expr>) {
+        let expr = parse(expr);
+        assert!(matches!(expr.eval(var_env), EvaluationResult::Integer(1)));
+    }
+
+    fn test_eval_no_var_impl(expr: &str) {
+        test_eval_impl(expr, &HashMap::new());
+    }
+
+    #[test]
+    fn test_eval_no_env() {
+        test_eval_no_var_impl("(1 + 2 * 3 - 6) = 1 ");
+        test_eval_no_var_impl("(1 + 2 / 3) = 1");
+        test_eval_no_var_impl("(10 % 3) = 1");
+        test_eval_no_var_impl("(2 * 3 ** 2) = 18");
+        test_eval_no_var_impl("(1 << 2 + 2 >> 1) = 8");
+        test_eval_no_var_impl("(1 || 1 && 0) = 1");
+        test_eval_no_var_impl("((1 <> 0) + (1 = 1)) = 2");
+        test_eval_no_var_impl("((1 > 0) + (1 > 1) + (1 >= 1) + (1 >= 2)) = 2");
+        test_eval_no_var_impl("((0 < 1) + (1 < 1) + (1 <= 1) + (2 <= 1)) = 2");
+        test_eval_no_var_impl("(0xff00 & 0xf0f0) = 0xf000");
+        test_eval_no_var_impl("(0xff00 | 0xf0f0) = 0xfff0");
+        test_eval_no_var_impl("(0xff00 ^ 0xf0f0) = 0x0ff0");
+        test_eval_no_var_impl("(~0) = (0 - 1)");
+    }
+
+    #[test]
+    fn test_eval_with_env() {
+        let env = vec![
+            ("VAR1".to_string(), Expr::Integer(1)),
+            ("EPS".to_string(), Expr::Float(f64::EPSILON)),
+        ]
+        .into_iter()
+        .collect();
+
+        test_eval_impl("((SIN(PI) - VAR1) < EPS) = 1", &env);
+        test_eval_impl("(LN(E) - 1 < EPS) = 1", &env);
     }
 }
