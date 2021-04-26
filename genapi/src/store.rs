@@ -334,7 +334,7 @@ impl_value_data_conversion!(f64, Self::Float);
 impl_value_data_conversion!(String, Self::Str);
 impl_value_data_conversion!(bool, Self::Boolean);
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct DefaultValueStore(Vec<ValueData>);
 
 impl DefaultValueStore {
@@ -377,6 +377,7 @@ pub trait CacheStore {
     fn invalidate_by(&mut self, id: NodeId);
 }
 
+#[derive(Debug)]
 pub struct DefaultCacheStore {
     store: HashMap<NodeId, (ValueId, bool)>,
     invalidators: HashMap<NodeId, Vec<NodeId>>,
