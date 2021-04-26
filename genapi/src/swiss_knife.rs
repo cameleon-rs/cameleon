@@ -1,5 +1,6 @@
 use super::{
     elem_type::{DisplayNotation, FloatRepresentation, NamedValue},
+    formula::Formula,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::NodeId,
 };
@@ -13,7 +14,7 @@ pub struct SwissKnifeNode {
     pub(crate) p_variables: Vec<NamedValue<NodeId>>,
     pub(crate) constants: Vec<NamedValue<f64>>,
     pub(crate) expressions: Vec<NamedValue<String>>,
-    pub(crate) formula: String,
+    pub(crate) formula: Formula,
     pub(crate) unit: Option<String>,
     pub(crate) representation: FloatRepresentation,
     pub(crate) display_notation: DisplayNotation,
@@ -47,7 +48,7 @@ impl SwissKnifeNode {
     }
 
     #[must_use]
-    pub fn formula(&self) -> &str {
+    pub fn formula(&self) -> &Formula {
         &self.formula
     }
 

@@ -90,8 +90,6 @@ mod tests {
         assert_eq!(p_variables[1].name(), "Var2");
         assert_eq!(p_variables[1].value(), node_store.id_by_name("pValue2"));
 
-        assert_eq!(node.formula_to(), "FROM*Var1/Var2");
-        assert_eq!(node.formula_from(), "TO/Var1*Var2");
         assert_eq!(node.p_value(), node_store.id_by_name("Target"));
         assert_eq!(node.representation(), IntegerRepresentation::PureNumber);
         assert_eq!(node.slope(), Slope::Automatic);

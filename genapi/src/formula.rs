@@ -7,7 +7,19 @@
 
 use std::{collections::HashMap, ops::Neg, str::FromStr};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
+pub struct Formula {
+    pub(crate) expr: Expr,
+}
+
+impl Formula {
+    #[must_use]
+    pub fn expr(&self) -> &Expr {
+        &self.expr
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     BinOp {
         kind: BinOpKind,

@@ -1,5 +1,6 @@
 use super::{
     elem_type::{DisplayNotation, FloatRepresentation, NamedValue, Slope},
+    formula::Formula,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::NodeId,
 };
@@ -13,8 +14,8 @@ pub struct ConverterNode {
     pub(crate) p_variables: Vec<NamedValue<NodeId>>,
     pub(crate) constants: Vec<NamedValue<f64>>,
     pub(crate) expressions: Vec<NamedValue<String>>,
-    pub(crate) formula_to: String,
-    pub(crate) formula_from: String,
+    pub(crate) formula_to: Formula,
+    pub(crate) formula_from: Formula,
     pub(crate) p_value: NodeId,
     pub(crate) unit: Option<String>,
     pub(crate) representation: FloatRepresentation,
@@ -51,12 +52,12 @@ impl ConverterNode {
     }
 
     #[must_use]
-    pub fn formula_to(&self) -> &str {
+    pub fn formula_to(&self) -> &Formula {
         &self.formula_to
     }
 
     #[must_use]
-    pub fn formula_from(&self) -> &str {
+    pub fn formula_from(&self) -> &Formula {
         &self.formula_from
     }
 

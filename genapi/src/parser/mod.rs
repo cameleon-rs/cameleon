@@ -7,6 +7,7 @@ mod elem_type;
 mod enumeration;
 mod float;
 mod float_reg;
+mod formula;
 mod group;
 mod int_converter;
 mod int_reg;
