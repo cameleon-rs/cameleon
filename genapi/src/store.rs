@@ -383,6 +383,32 @@ pub struct DefaultCacheStore {
     invalidators: HashMap<NodeId, Vec<NodeId>>,
 }
 
+impl<T> CacheStore for &mut T
+where
+    T: CacheStore,
+{
+    fn store(
+        &mut self,
+        node_id: NodeId,
+        value: impl Into<ValueData>,
+        value_store: impl ValueStore,
+    ) {
+        (**self).store(node_id, value, value_store);
+    }
+
+    fn value<'a>(
+        &mut self,
+        node_id: NodeId,
+        value_store: &'a impl ValueStore,
+    ) -> Option<&'a ValueData> {
+        (**self).value(node_id, value_store)
+    }
+
+    fn invalidate_by(&mut self, id: NodeId) {
+        (**self).invalidate_by(id)
+    }
+}
+
 impl DefaultCacheStore {
     #[must_use]
     pub fn new(node_store: &impl NodeStore) -> Self {
