@@ -419,7 +419,17 @@ impl<'a> Parser<'a> {
     }
 
     fn pow(&mut self) -> Expr {
-        parse_binop!(self.call, (Token::DoubleStar, BinOpKind::Pow))
+        let expr = self.call();
+        if self.eat(&Token::DoubleStar) {
+            let rhs = self.pow();
+            Expr::BinOp {
+                kind: BinOpKind::Pow,
+                lhs: expr.into(),
+                rhs: rhs.into(),
+            }
+        } else {
+            expr
+        }
     }
 
     fn call(&mut self) -> Expr {
@@ -815,6 +825,7 @@ mod tests {
         test_eval_no_var_impl("(1 + 2 / 3) = 1");
         test_eval_no_var_impl("(10 % 3) = 1");
         test_eval_no_var_impl("(2 * 3 ** 2) = 18");
+        test_eval_no_var_impl("(2 ** 3 ** 2) = 512");
         test_eval_no_var_impl("(1 << 2 + 2 >> 1) = 8");
         test_eval_no_var_impl("(1 || 1 && 0) = 1");
         test_eval_no_var_impl("((1 <> 0) + (1 = 1)) = 2");
