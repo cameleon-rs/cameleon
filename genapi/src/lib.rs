@@ -88,3 +88,34 @@ pub enum GenApiError {
 }
 
 pub type GenApiResult<T> = std::result::Result<T, GenApiError>;
+
+pub struct Context<T = store::DefaultValueStore, U = store::DefaultCacheStore>
+where
+    T: store::ValueStore,
+    U: store::CacheStore,
+{
+    value_store: T,
+    cache_store: U,
+}
+
+impl<T, U> Context<T, U>
+where
+    T: store::ValueStore,
+    U: store::CacheStore,
+{
+    pub fn value_store(&self) -> &T {
+        &self.value_store
+    }
+
+    pub fn value_store_mut(&mut self) -> &mut T {
+        &mut self.value_store
+    }
+
+    pub fn cache_store(&mut self) -> &U {
+        &self.cache_store
+    }
+
+    pub fn cache_store_mut(&mut self) -> &mut U {
+        &mut self.cache_store
+    }
+}
