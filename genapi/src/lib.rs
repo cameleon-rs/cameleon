@@ -61,3 +61,30 @@ pub trait Device {
 
     fn write_mem(&mut self, address: u64, data: &[u8]) -> Result<(), Self::Error>;
 }
+
+#[derive(Debug, thiserror::Error)]
+pub enum GenApiError {
+    /// Device I/O error.
+    #[error("device I/O error: {}", 0)]
+    Device(Box<dyn std::error::Error>),
+
+    /// Read/Write access to the `GenApi` node is denied.
+    #[error("access is denied by the node: {}", 0)]
+    AccessDenied(String),
+
+    /// Node that doesn't implement requested `GenApi` interface.
+    #[error("invalid node: {}", 0)]
+    InvalidNode(String),
+
+    /// Try to write invalid value to the node.
+    ///
+    /// e.g. try to write the value that exceeds the max value of the node.
+    #[error("invalid data: {}", 0)]
+    InvalidData(String),
+
+    /// Operation on the node failed due to the lack of chunk data where it's required to complete the operation.
+    #[error("chunk data missing")]
+    ChunkDataMissing,
+}
+
+pub type GenApiResult<T> = std::result::Result<T, GenApiError>;
