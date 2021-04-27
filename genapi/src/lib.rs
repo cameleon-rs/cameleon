@@ -10,6 +10,28 @@ pub mod formula;
 pub mod parser;
 pub mod store;
 
+mod boolean;
+mod category;
+mod command;
+mod converter;
+mod enumeration;
+mod float;
+mod float_reg;
+mod int_converter;
+mod int_reg;
+mod int_swiss_knife;
+mod integer;
+mod masked_int_reg;
+mod node;
+mod node_base;
+mod port;
+mod register;
+mod register_base;
+mod register_description;
+mod string;
+mod string_reg;
+mod swiss_knife;
+
 pub use boolean::BooleanNode;
 pub use category::CategoryNode;
 pub use command::CommandNode;
@@ -32,27 +54,8 @@ pub use string::StringNode;
 pub use string_reg::StringRegNode;
 pub use swiss_knife::SwissKnifeNode;
 
-mod boolean;
-mod category;
-mod command;
-mod converter;
-mod enumeration;
-mod float;
-mod float_reg;
-mod int_converter;
-mod int_reg;
-mod int_swiss_knife;
-mod integer;
-mod masked_int_reg;
-mod node;
-mod node_base;
-mod port;
-mod register;
-mod register_base;
-mod register_description;
-mod string;
-mod string_reg;
-mod swiss_knife;
+use elem_type::IntegerRepresentation;
+use store::{CacheStore, NodeStore, ValueStore};
 
 pub trait Device {
     type Error: std::error::Error;
@@ -89,10 +92,11 @@ pub enum GenApiError {
 
 pub type GenApiResult<T> = std::result::Result<T, GenApiError>;
 
-pub struct Context<T = store::DefaultValueStore, U = store::DefaultCacheStore>
+#[derive(Clone, Debug)]
+pub struct Context<T, U>
 where
-    T: store::ValueStore,
-    U: store::CacheStore,
+    T: ValueStore,
+    U: CacheStore,
 {
     value_store: T,
     cache_store: U,
@@ -100,8 +104,8 @@ where
 
 impl<T, U> Context<T, U>
 where
-    T: store::ValueStore,
-    U: store::CacheStore,
+    T: ValueStore,
+    U: CacheStore,
 {
     pub fn value_store(&self) -> &T {
         &self.value_store
@@ -118,4 +122,76 @@ where
     pub fn cache_store_mut(&mut self) -> &mut U {
         &mut self.cache_store
     }
+}
+
+#[derive(Clone, Debug)]
+pub enum IncrementMode {
+    FixedIncrement,
+    /// NOTE: `ListIncrement` is not supported in `GenApiSchema Version 1.1` yet.
+    ListIncrement,
+}
+
+pub trait IInteger {
+    fn value<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut Context<T, U>,
+    ) -> GenApiResult<i64>;
+
+    fn set_value<T: ValueStore, U: CacheStore>(
+        &self,
+        value: i64,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut Context<T, U>,
+    ) -> GenApiResult<i64>;
+
+    fn min<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut Context<T, U>,
+    ) -> GenApiResult<i64>;
+
+    fn max<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut Context<T, U>,
+    ) -> GenApiResult<i64>;
+
+    fn inc_mode(&self, node_store: impl NodeStore) -> GenApiResult<Option<IncrementMode>>;
+
+    fn inc<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut Context<T, U>,
+    ) -> GenApiResult<Option<i64>>;
+
+    /// NOTE: `ValidValueSet` is not supported in `GenApiSchema Version 1.1` yet.
+    fn valid_value_set(&self) -> &[i64] {
+        &[]
+    }
+
+    fn representation(&self, node_store: impl NodeStore) -> IntegerRepresentation;
+
+    fn unit(&self, node_store: impl NodeStore) -> Option<&str>;
+
+    fn set_min<T: ValueStore, U: CacheStore>(
+        &self,
+        value: i64,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut Context<T, U>,
+    ) -> GenApiResult<i64>;
+
+    fn set_max<T: ValueStore, U: CacheStore>(
+        &self,
+        value: i64,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut Context<T, U>,
+    ) -> GenApiResult<i64>;
 }
