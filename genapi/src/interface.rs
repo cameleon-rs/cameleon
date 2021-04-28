@@ -226,6 +226,9 @@ pub trait IBoolean {
 }
 
 pub trait IRegister {
+    /// Read bytes from the register.
+    ///
+    /// `buf.len()` must be same as the register length returned from [`IRegister::length`].
     fn read<T: ValueStore, U: CacheStore>(
         &self,
         buf: &mut [u8],
@@ -234,6 +237,9 @@ pub trait IRegister {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
+    /// Write bytes to the register.
+    ///
+    /// `buf.len()` must be same as the register length returned from [`IRegister::length`].
     fn write<T: ValueStore, U: CacheStore>(
         &self,
         buf: &[u8],

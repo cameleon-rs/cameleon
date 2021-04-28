@@ -1,5 +1,9 @@
 #![allow(clippy::upper_case_acronyms)]
-use super::store::NodeId;
+use super::{
+    interface::IInteger,
+    store::{CacheStore, NodeId, NodeStore, ValueStore},
+    Device, GenApiResult, ValueCtxt,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NameSpace {
@@ -47,6 +51,32 @@ impl<T> ImmOrPNode<T> {
         match self {
             Self::PNode(node) => Some(node),
             _ => None,
+        }
+    }
+}
+
+impl ImmOrPNode<i64> {
+    pub(super) fn value<T: ValueStore, U: CacheStore>(
+        self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        match self {
+            Self::Imm(i) => Ok(i),
+            Self::PNode(n) => n.expect_iinteger_kind(store)?.value(device, store, cx),
+        }
+    }
+
+    pub(super) fn set_value<T: ValueStore, U: CacheStore>(
+        self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        match self {
+            Self::Imm(i) => Ok(i),
+            Self::PNode(n) => n.expect_iinteger_kind(store)?.value(device, store, cx),
         }
     }
 }
@@ -260,6 +290,21 @@ pub enum AddressKind {
     PIndex(RegPIndex),
 }
 
+impl AddressKind {
+    pub(super) fn value<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        match self {
+            Self::Address(i) => i.value(device, store, cx),
+            Self::IntSwissKnife(nid) => nid.expect_iinteger_kind(store)?.value(device, store, cx),
+            Self::PIndex(p_index) => p_index.value(device, store, cx),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct RegPIndex {
     pub(crate) offset: Option<ImmOrPNode<i64>>,
@@ -275,6 +320,23 @@ impl RegPIndex {
     #[must_use]
     pub fn p_index(&self) -> NodeId {
         self.p_index
+    }
+
+    pub(super) fn value<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        let base = self
+            .p_index
+            .expect_iinteger_kind(store)?
+            .value(device, store, cx)?;
+        if let Some(offset) = &self.offset {
+            Ok(base + offset.value(device, store, cx)?)
+        } else {
+            Ok(base)
+        }
     }
 }
 

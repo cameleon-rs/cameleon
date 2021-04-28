@@ -1,9 +1,9 @@
 use super::{
     elem_type::{AccessMode, AddressKind, CachingMode, ImmOrPNode},
-    interface::IRegister,
+    interface::{IPort, IRegister},
     node_base::NodeElementBase,
     store::{CacheStore, NodeId, NodeStore, ValueStore},
-    Device, GenApiResult, ValueCtxt,
+    Device, GenApiError, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -70,7 +70,15 @@ impl IRegister for RegisterBase {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        self.elem_base.verify_is_readable(device, store, cx)?;
+        if buf.len() != self.length(device, store, cx)? as usize {
+            return Err(GenApiError::InvalidBuffer);
+        }
+
+        let addr = self.address(device, store, cx)?;
+        self.p_port
+            .expect_iport_kind(store)?
+            .read(addr, buf, device, store, cx)
     }
 
     fn write<T: ValueStore, U: CacheStore>(
@@ -80,7 +88,15 @@ impl IRegister for RegisterBase {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        self.elem_base.verify_is_writable(device, store, cx)?;
+        if buf.len() != self.length(device, store, cx)? as usize {
+            return Err(GenApiError::InvalidBuffer);
+        }
+
+        let addr = self.address(device, store, cx)?;
+        self.p_port
+            .expect_iport_kind(store)?
+            .write(addr, buf, device, store, cx)
     }
 
     fn address<T: ValueStore, U: CacheStore>(
@@ -89,7 +105,11 @@ impl IRegister for RegisterBase {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
-        todo!()
+        let mut address = 0;
+        for addr_kind in self.address_kinds() {
+            address += addr_kind.value(device, store, cx)?;
+        }
+        Ok(address)
     }
 
     fn length<T: ValueStore, U: CacheStore>(
@@ -98,6 +118,6 @@ impl IRegister for RegisterBase {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
-        todo!()
+        self.length_elem().value(device, store, cx)
     }
 }

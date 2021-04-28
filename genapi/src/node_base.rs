@@ -1,6 +1,8 @@
 use super::{
     elem_type::{AccessMode, MergePriority, NameSpace, Visibility},
-    store::NodeId,
+    store::{CacheStore, NodeId, NodeStore, ValueStore},
+    utils::bool_from_id,
+    Device, GenApiError, GenApiResult, ValueCtxt,
 };
 
 pub struct NodeBase<'a> {
@@ -123,4 +125,72 @@ pub(crate) struct NodeElementBase {
     pub(crate) p_errors: Vec<NodeId>,
     pub(crate) p_alias: Option<NodeId>,
     pub(crate) p_cast_alias: Option<NodeId>,
+}
+
+impl NodeElementBase {
+    pub(super) fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        Ok(self.is_available(device, store, cx)?
+            && matches!(self.imposed_access_mode, AccessMode::WO | AccessMode::RW))
+    }
+
+    pub(super) fn is_readable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        Ok(self.is_available(device, store, cx)?
+            && matches!(self.imposed_access_mode, AccessMode::RO | AccessMode::RW))
+    }
+
+    pub(super) fn verify_is_readable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        if self.is_readable(device, store, cx)? {
+            Ok(())
+        } else {
+            Err(GenApiError::AccessDenied("the node is not readable"))
+        }
+    }
+
+    pub(super) fn verify_is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        if self.is_writable(device, store, cx)? {
+            Ok(())
+        } else {
+            Err(GenApiError::AccessDenied("the node is not writable"))
+        }
+    }
+
+    fn is_available<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        let mut is_available = true;
+        if let Some(nid) = self.p_is_implemented {
+            is_available &= bool_from_id(nid, device, store, cx)?;
+        }
+        if let Some(nid) = self.p_is_available {
+            is_available &= bool_from_id(nid, device, store, cx)?;
+        }
+        if let Some(nid) = self.p_is_locked {
+            is_available &= bool_from_id(nid, device, store, cx)?;
+        }
+
+        Ok(is_available)
+    }
 }
