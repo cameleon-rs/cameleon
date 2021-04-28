@@ -257,6 +257,11 @@ pub trait IRegister {
     ) -> GenApiResult<i64>;
 }
 
+pub trait ICategory {
+    /// Return nodes in the category.
+    fn nodes(&self, store: impl NodeStore) -> GenApiResult<&[NodeId]>;
+}
+
 pub trait IPort {
     fn read<T: ValueStore, U: CacheStore>(
         &self,
