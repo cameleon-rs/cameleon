@@ -92,7 +92,7 @@ pub enum GenApiError {
 pub type GenApiResult<T> = std::result::Result<T, GenApiError>;
 
 #[derive(Clone, Debug)]
-pub struct Context<T, U>
+pub struct ValueCtxt<T, U>
 where
     T: store::ValueStore,
     U: store::CacheStore,
@@ -101,7 +101,7 @@ where
     cache_store: U,
 }
 
-impl<T, U> Context<T, U>
+impl<T, U> ValueCtxt<T, U>
 where
     T: store::ValueStore,
     U: store::CacheStore,

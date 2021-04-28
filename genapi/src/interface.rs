@@ -1,7 +1,7 @@
 use super::{
     elem_type::{DisplayNotation, FloatRepresentation, IntegerRepresentation},
     store::{CacheStore, NodeId, NodeStore, ValueStore},
-    EnumEntryNode, {Context, Device, GenApiResult},
+    EnumEntryNode, {Device, GenApiResult, ValueCtxt},
 };
 
 #[derive(Clone, Debug)]
@@ -16,7 +16,7 @@ pub trait IInteger {
         &self,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64>;
 
     fn set_value<T: ValueStore, U: CacheStore>(
@@ -24,21 +24,21 @@ pub trait IInteger {
         value: i64,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
     fn min<T: ValueStore, U: CacheStore>(
         &self,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64>;
 
     fn max<T: ValueStore, U: CacheStore>(
         &self,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64>;
 
     fn inc_mode(&self, store: impl NodeStore) -> GenApiResult<Option<IncrementMode>>;
@@ -47,7 +47,7 @@ pub trait IInteger {
         &self,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Option<i64>>;
 
     /// NOTE: `ValidValueSet` is not supported in `GenApiSchema Version 1.1` yet.
@@ -62,7 +62,7 @@ pub trait IInteger {
         value: i64,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
     fn set_max<T: ValueStore, U: CacheStore>(
@@ -70,7 +70,7 @@ pub trait IInteger {
         value: i64,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 }
 
@@ -79,7 +79,7 @@ pub trait IFloat {
         &self,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64>;
 
     fn set_value<T: ValueStore, U: CacheStore>(
@@ -87,21 +87,21 @@ pub trait IFloat {
         value: f64,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
     fn min<T: ValueStore, U: CacheStore>(
         &self,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64>;
 
     fn max<T: ValueStore, U: CacheStore>(
         &self,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64>;
 
     fn inc_mode(&self, store: impl NodeStore) -> GenApiResult<Option<IncrementMode>>;
@@ -110,7 +110,7 @@ pub trait IFloat {
         &self,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Option<f64>>;
 
     /// NOTE: `ValidValueSet` is not supported in `GenApiSchema Version 1.1` yet.
@@ -129,7 +129,7 @@ pub trait IFloat {
         value: f64,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
     fn set_max<T: ValueStore, U: CacheStore>(
@@ -137,7 +137,7 @@ pub trait IFloat {
         value: f64,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 }
 
@@ -146,7 +146,7 @@ pub trait IString {
         &self,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<String>;
 
     fn set_value<T: ValueStore, U: CacheStore>(
@@ -154,14 +154,14 @@ pub trait IString {
         value: &str,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
     fn max_length<T: ValueStore, U: CacheStore>(
         &self,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64>;
 }
 
@@ -170,7 +170,7 @@ pub trait IEnumeration {
         &self,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<&EnumEntryNode>;
 
     fn entries(&self, store: impl NodeStore) -> GenApiResult<&[EnumEntryNode]>;
@@ -180,7 +180,7 @@ pub trait IEnumeration {
         name: &str,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
     fn set_entry_by_idx<T: ValueStore, U: CacheStore>(
@@ -188,7 +188,7 @@ pub trait IEnumeration {
         idx: usize,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 }
 
@@ -197,14 +197,14 @@ pub trait ICommand {
         &self,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
     fn is_done<T: ValueStore, U: CacheStore>(
         &self,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool>;
 }
 
@@ -213,7 +213,7 @@ pub trait IBoolean {
         &self,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool>;
 
     fn set_value<T: ValueStore, U: CacheStore>(
@@ -221,7 +221,7 @@ pub trait IBoolean {
         value: bool,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 }
 
@@ -231,7 +231,7 @@ pub trait IRegister {
         buf: &mut [u8],
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
     fn write<T: ValueStore, U: CacheStore>(
@@ -239,21 +239,21 @@ pub trait IRegister {
         buf: &[u8],
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
     fn address<T: ValueStore, U: CacheStore>(
         &self,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64>;
 
     fn length<T: ValueStore, U: CacheStore>(
         &self,
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64>;
 }
 
@@ -268,7 +268,7 @@ pub trait IPort {
         buf: &mut [u8],
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
     fn write<T: ValueStore, U: CacheStore>(
@@ -276,7 +276,7 @@ pub trait IPort {
         buf: &[u8],
         device: impl Device,
         store: impl NodeStore,
-        cx: &mut Context<T, U>,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 }
 
