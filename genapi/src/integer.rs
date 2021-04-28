@@ -38,27 +38,27 @@ impl IntegerNode {
     }
 
     #[must_use]
-    pub fn min(&self) -> ImmOrPNode<IntegerId> {
+    pub fn min_elem(&self) -> ImmOrPNode<IntegerId> {
         self.min
     }
 
     #[must_use]
-    pub fn max(&self) -> ImmOrPNode<IntegerId> {
+    pub fn max_elem(&self) -> ImmOrPNode<IntegerId> {
         self.max
     }
 
     #[must_use]
-    pub fn inc(&self) -> ImmOrPNode<i64> {
+    pub fn inc_elem(&self) -> ImmOrPNode<i64> {
         self.inc
     }
 
     #[must_use]
-    pub fn unit(&self) -> Option<&str> {
+    pub fn unit_elem(&self) -> Option<&str> {
         self.unit.as_deref()
     }
 
     #[must_use]
-    pub fn representation(&self) -> IntegerRepresentation {
+    pub fn representation_elem(&self) -> IntegerRepresentation {
         self.representation
     }
 

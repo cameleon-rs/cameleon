@@ -76,8 +76,11 @@ mod tests {
 
         assert_eq!(node.sign(), Sign::Signed);
         assert_eq!(node.endianness(), Endianness::BE);
-        assert_eq!(node.unit().unwrap(), "Hz");
-        assert_eq!(node.representation(), IntegerRepresentation::Logarithmic);
+        assert_eq!(node.unit_elem().unwrap(), "Hz");
+        assert_eq!(
+            node.representation_elem(),
+            IntegerRepresentation::Logarithmic
+        );
         assert_eq!(node.p_selected().len(), 1);
     }
 }

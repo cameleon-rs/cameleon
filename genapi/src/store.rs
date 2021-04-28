@@ -6,9 +6,10 @@ use std::{
 use string_interner::{StringInterner, Symbol};
 
 use super::{
-    node_base::NodeBase, BooleanNode, CategoryNode, CommandNode, ConverterNode, EnumerationNode,
-    FloatNode, FloatRegNode, IntConverterNode, IntRegNode, IntSwissKnifeNode, IntegerNode,
-    MaskedIntRegNode, Node, PortNode, RegisterNode, StringNode, StringRegNode, SwissKnifeNode,
+    interface::IIntegerKind, node_base::NodeBase, BooleanNode, CategoryNode, CommandNode,
+    ConverterNode, EnumerationNode, FloatNode, FloatRegNode, GenApiError, GenApiResult,
+    IntConverterNode, IntRegNode, IntSwissKnifeNode, IntegerNode, MaskedIntRegNode, Node, PortNode,
+    RegisterNode, StringNode, StringRegNode, SwissKnifeNode,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -26,6 +27,21 @@ impl Symbol for NodeId {
 
     fn to_usize(self) -> usize {
         self.0 as usize
+    }
+}
+
+impl NodeId {
+    pub fn as_iinteger_kind<'a>(self, store: &'a impl NodeStore) -> Option<IIntegerKind<'a>> {
+        IIntegerKind::maybe_from(self, store)
+    }
+
+    pub fn expect_iinteger_kind<'a>(
+        self,
+        store: &'a impl NodeStore,
+    ) -> GenApiResult<IIntegerKind<'a>> {
+        IIntegerKind::maybe_from(self, store).ok_or(GenApiError::InvalidNode(
+            "the node doesn't implement `IInteger`",
+        ))
     }
 }
 

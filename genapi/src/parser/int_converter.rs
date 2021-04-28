@@ -91,7 +91,10 @@ mod tests {
         assert_eq!(p_variables[1].value(), node_store.id_by_name("pValue2"));
 
         assert_eq!(node.p_value(), node_store.id_by_name("Target"));
-        assert_eq!(node.representation(), IntegerRepresentation::PureNumber);
+        assert_eq!(
+            node.representation_elem(),
+            IntegerRepresentation::PureNumber
+        );
         assert_eq!(node.slope(), Slope::Automatic);
     }
 }

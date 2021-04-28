@@ -1,6 +1,6 @@
 use super::{
     elem_type::{DisplayNotation, FloatRepresentation, IntegerRepresentation},
-    store::{CacheStore, NodeId, NodeStore, ValueStore},
+    store::{CacheStore, NodeData, NodeId, NodeStore, ValueStore},
     EnumEntryNode, {Device, GenApiResult, ValueCtxt},
 };
 
@@ -292,4 +292,120 @@ pub trait ISelector {
         &self,
         store: impl NodeStore,
     ) -> GenApiResult<Vec<NodeId>>;
+}
+
+pub enum IIntegerKind<'a> {
+    Integer(&'a super::IntegerNode),
+    IntReg(&'a super::IntRegNode),
+    MaskedIntReg(&'a super::MaskedIntRegNode),
+    IntConverter(&'a super::IntConverterNode),
+    IntSwissKnife(&'a super::IntSwissKnifeNode),
+}
+
+impl<'a> IIntegerKind<'a> {
+    pub(super) fn maybe_from(id: NodeId, store: &'a impl NodeStore) -> Option<Self> {
+        match store.node_opt(id)? {
+            NodeData::Integer(n) => Some(Self::Integer(n)),
+            NodeData::IntReg(n) => Some(Self::IntReg(n)),
+            NodeData::MaskedIntReg(n) => Some(Self::MaskedIntReg(n)),
+            NodeData::IntConverter(n) => Some(Self::IntConverter(n)),
+            NodeData::IntSwissKnife(n) => Some(Self::IntSwissKnife(n)),
+            _ => None,
+        }
+    }
+}
+
+macro_rules! delegate_to_iinteger_variant {
+    ($self:ident.$method:ident($($arg:ident),*)) => {
+        match $self {
+            IIntegerKind::Integer(n) => n.$method($($arg),*),
+            IIntegerKind::IntReg(n) => n.$method($($arg),*),
+            IIntegerKind::MaskedIntReg(n) => n.$method($($arg),*),
+            IIntegerKind::IntConverter(n) => n.$method($($arg),*),
+            IIntegerKind::IntSwissKnife(n) => n.$method($($arg),*),
+        }
+    }
+}
+
+impl<'a> IInteger for IIntegerKind<'a> {
+    fn value<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        delegate_to_iinteger_variant!(self.value(device, store, cx))
+    }
+    fn set_value<T: ValueStore, U: CacheStore>(
+        &self,
+        value: i64,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        delegate_to_iinteger_variant!(self.set_value(value, device, store, cx))
+    }
+
+    fn min<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        delegate_to_iinteger_variant!(self.min(device, store, cx))
+    }
+
+    fn max<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        delegate_to_iinteger_variant!(self.max(device, store, cx))
+    }
+
+    fn inc_mode(&self, store: impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
+        delegate_to_iinteger_variant!(self.inc_mode(store))
+    }
+
+    fn inc<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<Option<i64>> {
+        delegate_to_iinteger_variant!(self.inc(device, store, cx))
+    }
+
+    fn valid_value_set(&self, store: impl NodeStore) -> &[i64] {
+        delegate_to_iinteger_variant!(self.valid_value_set(store))
+    }
+
+    fn representation(&self, store: impl NodeStore) -> IntegerRepresentation {
+        delegate_to_iinteger_variant!(self.representation(store))
+    }
+
+    fn unit(&self, store: impl NodeStore) -> Option<&str> {
+        delegate_to_iinteger_variant!(self.unit(store))
+    }
+
+    fn set_min<T: ValueStore, U: CacheStore>(
+        &self,
+        value: i64,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        delegate_to_iinteger_variant!(self.set_min(value, device, store, cx))
+    }
+
+    fn set_max<T: ValueStore, U: CacheStore>(
+        &self,
+        value: i64,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        delegate_to_iinteger_variant!(self.set_max(value, device, store, cx))
+    }
 }

@@ -66,12 +66,12 @@ impl IntConverterNode {
     }
 
     #[must_use]
-    pub fn unit(&self) -> Option<&str> {
+    pub fn unit_elem(&self) -> Option<&str> {
         self.unit.as_deref()
     }
 
     #[must_use]
-    pub fn representation(&self) -> IntegerRepresentation {
+    pub fn representation_elem(&self) -> IntegerRepresentation {
         self.representation
     }
 

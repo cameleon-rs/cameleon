@@ -114,16 +114,19 @@ mod tests {
             .unwrap();
         assert_eq!(value, 0x100);
         let min = value_store
-            .integer_value(node.min().imm().unwrap())
+            .integer_value(node.min_elem().imm().unwrap())
             .unwrap();
         assert_eq!(min, 0x10);
         let max = value_store
-            .integer_value(node.max().imm().unwrap())
+            .integer_value(node.max_elem().imm().unwrap())
             .unwrap();
         assert_eq!(max, 100);
-        assert_eq!(node.inc(), ImmOrPNode::Imm(0x5));
-        assert_eq!(node.unit(), Some("dB"));
-        assert_eq!(node.representation(), IntegerRepresentation::Logarithmic);
+        assert_eq!(node.inc_elem(), ImmOrPNode::Imm(0x5));
+        assert_eq!(node.unit_elem(), Some("dB"));
+        assert_eq!(
+            node.representation_elem(),
+            IntegerRepresentation::Logarithmic
+        );
 
         let p_selected = node.p_selected();
         assert_eq!(p_selected.len(), 2);
@@ -158,15 +161,15 @@ mod tests {
         assert_eq!(p_value_copies[2], node_store.id_by_name("Copy3"));
 
         assert_eq!(
-            node.min(),
+            node.min_elem(),
             ImmOrPNode::PNode(node_store.id_by_name("pMinNode"))
         );
         assert_eq!(
-            node.max(),
+            node.max_elem(),
             ImmOrPNode::PNode(node_store.id_by_name("pMaxNode"))
         );
         assert_eq!(
-            node.inc(),
+            node.inc_elem(),
             ImmOrPNode::PNode(node_store.id_by_name("pIncNode"))
         );
     }

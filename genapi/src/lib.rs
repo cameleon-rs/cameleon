@@ -7,6 +7,7 @@
 
 pub mod elem_type;
 pub mod formula;
+pub mod interface;
 pub mod parser;
 pub mod store;
 
@@ -21,7 +22,6 @@ mod int_converter;
 mod int_reg;
 mod int_swiss_knife;
 mod integer;
-mod interface;
 mod masked_int_reg;
 mod node;
 mod node_base;
@@ -83,7 +83,7 @@ pub enum GenApiError {
 
     /// Node that doesn't implement requested `GenApi` interface.
     #[error("invalid node: {}", 0)]
-    InvalidNode(String),
+    InvalidNode(&'static str),
 
     /// Try to write invalid value to the node.
     ///
