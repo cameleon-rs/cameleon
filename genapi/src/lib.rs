@@ -32,6 +32,7 @@ mod register_description;
 mod string;
 mod string_reg;
 mod swiss_knife;
+mod utils;
 
 pub use boolean::BooleanNode;
 pub use category::CategoryNode;
@@ -92,8 +93,8 @@ pub enum GenApiError {
     Device(Box<dyn std::error::Error>),
 
     /// Read/Write access to the `GenApi` node is denied.
-    #[error("access is denied by the node: {}", 0)]
-    AccessDenied(String),
+    #[error("access is denied: {}", 0)]
+    AccessDenied(&'static str),
 
     /// Node that doesn't implement requested `GenApi` interface.
     #[error("invalid node: {}", 0)]
@@ -108,6 +109,10 @@ pub enum GenApiError {
     /// Operation on the node failed due to the lack of chunk data where it's required to complete the operation.
     #[error("chunk data missing")]
     ChunkDataMissing,
+
+    /// Invalid buffer.
+    #[error("invalid buffer: given buffer size doesn't same as the register length")]
+    InvalidBuffer,
 }
 
 pub type GenApiResult<T> = std::result::Result<T, GenApiError>;
