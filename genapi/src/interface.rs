@@ -265,6 +265,7 @@ pub trait ICategory {
 pub trait IPort {
     fn read<T: ValueStore, U: CacheStore>(
         &self,
+        address: i64,
         buf: &mut [u8],
         device: impl Device,
         store: impl NodeStore,
@@ -273,6 +274,7 @@ pub trait IPort {
 
     fn write<T: ValueStore, U: CacheStore>(
         &self,
+        address: i64,
         buf: &[u8],
         device: impl Device,
         store: impl NodeStore,
@@ -821,5 +823,50 @@ macro_rules! delegate_to_icategory_variant {
 impl<'a> ICategory for ICategoryKind<'a> {
     fn nodes(&self, store: impl NodeStore) -> GenApiResult<&[NodeId]> {
         delegate_to_icategory_variant!(self.nodes(store))
+    }
+}
+
+pub enum IPortKind<'a> {
+    Port(&'a super::PortNode),
+}
+
+impl<'a> IPortKind<'a> {
+    pub(super) fn maybe_from(id: NodeId, store: &'a impl NodeStore) -> Option<Self> {
+        match store.node_opt(id)? {
+            NodeData::Port(n) => Some(Self::Port(n)),
+            _ => None,
+        }
+    }
+}
+
+macro_rules! delegate_to_iport_variant {
+    ($self:ident.$method:ident($($arg:ident),*)) => {
+        match $self {
+            IPortKind::Port(n) => n.$method($($arg),*)
+        }
+    }
+}
+
+impl<'a> IPort for IPortKind<'a> {
+    fn read<T: ValueStore, U: CacheStore>(
+        &self,
+        address: i64,
+        buf: &mut [u8],
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        delegate_to_iport_variant!(self.read(address, buf, device, store, cx))
+    }
+
+    fn write<T: ValueStore, U: CacheStore>(
+        &self,
+        address: i64,
+        buf: &[u8],
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        delegate_to_iport_variant!(self.write(address, buf, device, store, cx))
     }
 }

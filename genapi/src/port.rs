@@ -1,6 +1,9 @@
 use super::{
     elem_type::ImmOrPNode,
+    interface::IPort,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
+    store::{CacheStore, NodeStore, ValueStore},
+    Device, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -32,5 +35,29 @@ impl PortNode {
     #[must_use]
     pub fn cache_chunk_data(&self) -> bool {
         self.cache_chunk_data
+    }
+}
+
+impl IPort for PortNode {
+    fn read<T: ValueStore, U: CacheStore>(
+        &self,
+        address: i64,
+        buf: &mut [u8],
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        todo!()
+    }
+
+    fn write<T: ValueStore, U: CacheStore>(
+        &self,
+        address: i64,
+        buf: &[u8],
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        todo!()
     }
 }
