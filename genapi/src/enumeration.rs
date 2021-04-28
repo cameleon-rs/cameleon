@@ -1,7 +1,9 @@
 use super::{
     elem_type::ImmOrPNode,
+    interface::IEnumeration,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    store::{IntegerId, NodeId},
+    store::{CacheStore, IntegerId, NodeId, NodeStore, ValueStore},
+    Device, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -28,12 +30,12 @@ impl EnumerationNode {
     }
 
     #[must_use]
-    pub fn entries(&self) -> &[EnumEntryNode] {
+    pub fn entries_elem(&self) -> &[EnumEntryNode] {
         &self.entries
     }
 
     #[must_use]
-    pub fn value(&self) -> ImmOrPNode<IntegerId> {
+    pub fn value_elem(&self) -> ImmOrPNode<IntegerId> {
         self.value
     }
 
@@ -45,6 +47,41 @@ impl EnumerationNode {
     #[must_use]
     pub fn polling_time(&self) -> Option<u64> {
         self.polling_time
+    }
+}
+
+impl IEnumeration for EnumerationNode {
+    fn current_entry<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<&EnumEntryNode> {
+        todo!()
+    }
+
+    fn entries(&self, store: impl NodeStore) -> GenApiResult<&[EnumEntryNode]> {
+        todo!()
+    }
+
+    fn set_entry_by_name<T: ValueStore, U: CacheStore>(
+        &self,
+        name: &str,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        todo!()
+    }
+
+    fn set_entry_by_idx<T: ValueStore, U: CacheStore>(
+        &self,
+        idx: usize,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        todo!()
     }
 }
 

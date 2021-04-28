@@ -6,7 +6,7 @@ use std::{
 use string_interner::{StringInterner, Symbol};
 
 use super::{
-    interface::{ICommandKind, IFloatKind, IIntegerKind, IStringKind},
+    interface::{ICommandKind, IEnumerationKind, IFloatKind, IIntegerKind, IStringKind},
     node_base::NodeBase,
     BooleanNode, CategoryNode, CommandNode, ConverterNode, EnumerationNode, FloatNode,
     FloatRegNode, GenApiError, GenApiResult, IntConverterNode, IntRegNode, IntSwissKnifeNode,
@@ -80,6 +80,23 @@ impl NodeId {
         self.as_icommand_kind(store).ok_or(GenApiError::InvalidNode(
             "the node doesn't implement `ICommand`",
         ))
+    }
+
+    pub fn as_ienuemration_kind<'a>(
+        self,
+        store: &'a impl NodeStore,
+    ) -> Option<IEnumerationKind<'a>> {
+        IEnumerationKind::maybe_from(self, store)
+    }
+
+    pub fn expect_ienumeration_kind<'a>(
+        self,
+        store: &'a impl NodeStore,
+    ) -> GenApiResult<IEnumerationKind<'a>> {
+        self.as_ienuemration_kind(store)
+            .ok_or(GenApiError::InvalidNode(
+                "the node doesn't implement `IEnumeration`",
+            ))
     }
 }
 

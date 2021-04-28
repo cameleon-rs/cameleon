@@ -109,12 +109,12 @@ mod tests {
             .parse(&mut node_store, &mut value_store);
 
         assert_eq!(
-            node.value(),
+            node.value_elem(),
             ImmOrPNode::PNode(node_store.id_by_name("MyNode"))
         );
         assert_eq!(node.polling_time(), Some(10));
 
-        let entries = node.entries();
+        let entries = node.entries_elem();
         assert_eq!(entries.len(), 2);
 
         let entry0 = &entries[0];

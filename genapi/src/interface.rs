@@ -589,6 +589,14 @@ pub enum ICommandKind<'a> {
     Command(&'a super::CommandNode),
 }
 
+macro_rules! delegate_to_icommand_variant {
+    ($self:ident.$method:ident($($arg:ident),*)) => {
+        match $self {
+            ICommandKind::Command(n) => n.$method($($arg),*)
+        }
+    }
+}
+
 impl<'a> ICommandKind<'a> {
     pub(super) fn maybe_from(id: NodeId, store: &'a impl NodeStore) -> Option<Self> {
         match store.node_opt(id)? {
@@ -605,9 +613,7 @@ impl<'a> ICommand for ICommandKind<'a> {
         store: impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        match self {
-            Self::Command(n) => n.execute(device, store, cx),
-        }
+        delegate_to_icommand_variant!(self.execute(device, store, cx))
     }
 
     fn is_done<T: ValueStore, U: CacheStore>(
@@ -616,8 +622,62 @@ impl<'a> ICommand for ICommandKind<'a> {
         store: impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        match self {
-            Self::Command(n) => n.is_done(device, store, cx),
+        delegate_to_icommand_variant!(self.is_done(device, store, cx))
+    }
+}
+
+pub enum IEnumerationKind<'a> {
+    Enumeration(&'a super::EnumerationNode),
+}
+
+impl<'a> IEnumerationKind<'a> {
+    pub(super) fn maybe_from(id: NodeId, store: &'a impl NodeStore) -> Option<Self> {
+        match store.node_opt(id)? {
+            NodeData::Enumeration(n) => Some(Self::Enumeration(n)),
+            _ => None,
         }
+    }
+}
+
+macro_rules! delegate_to_ienumeration_variant {
+    ($self:ident.$method:ident($($arg:ident),*)) => {
+        match $self {
+            IEnumerationKind::Enumeration(n) => n.$method($($arg),*)
+        }
+    }
+}
+
+impl<'a> IEnumeration for IEnumerationKind<'a> {
+    fn current_entry<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<&EnumEntryNode> {
+        delegate_to_ienumeration_variant!(self.current_entry(device, store, cx))
+    }
+
+    fn entries(&self, store: impl NodeStore) -> GenApiResult<&[EnumEntryNode]> {
+        delegate_to_ienumeration_variant!(self.entries(store))
+    }
+
+    fn set_entry_by_name<T: ValueStore, U: CacheStore>(
+        &self,
+        name: &str,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        delegate_to_ienumeration_variant!(self.set_entry_by_name(name, device, store, cx))
+    }
+
+    fn set_entry_by_idx<T: ValueStore, U: CacheStore>(
+        &self,
+        idx: usize,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        delegate_to_ienumeration_variant!(self.set_entry_by_idx(idx, device, store, cx))
     }
 }
