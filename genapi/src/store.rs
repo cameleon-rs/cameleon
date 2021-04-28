@@ -7,7 +7,8 @@ use string_interner::{StringInterner, Symbol};
 
 use super::{
     interface::{
-        IBooleanKind, ICommandKind, IEnumerationKind, IFloatKind, IIntegerKind, IStringKind,
+        IBooleanKind, ICommandKind, IEnumerationKind, IFloatKind, IIntegerKind, IRegisterKind,
+        IStringKind,
     },
     node_base::NodeBase,
     BooleanNode, CategoryNode, CommandNode, ConverterNode, EnumerationNode, FloatNode,
@@ -112,6 +113,20 @@ impl NodeId {
         self.as_iboolean_kind(store).ok_or(GenApiError::InvalidNode(
             "the node doesn't implement `IBoolean`",
         ))
+    }
+
+    pub fn as_iregister_kind<'a>(self, store: &'a impl NodeStore) -> Option<IRegisterKind<'a>> {
+        IRegisterKind::maybe_from(self, store)
+    }
+
+    pub fn expect_iregister_kind<'a>(
+        self,
+        store: &'a impl NodeStore,
+    ) -> GenApiResult<IRegisterKind<'a>> {
+        self.as_iregister_kind(store)
+            .ok_or(GenApiError::InvalidNode(
+                "the node doesn't implement `IRegister`",
+            ))
     }
 }
 

@@ -1,7 +1,9 @@
 use super::{
     elem_type::{AccessMode, AddressKind, CachingMode, ImmOrPNode},
+    interface::IRegister,
     node_base::NodeElementBase,
-    store::NodeId,
+    store::{CacheStore, NodeId, NodeStore, ValueStore},
+    Device, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -30,7 +32,7 @@ impl RegisterBase {
     }
 
     #[must_use]
-    pub fn length(&self) -> &ImmOrPNode<i64> {
+    pub fn length_elem(&self) -> &ImmOrPNode<i64> {
         &self.length
     }
 
@@ -57,5 +59,45 @@ impl RegisterBase {
     #[must_use]
     pub fn p_invalidators(&self) -> &[NodeId] {
         &self.p_invalidators
+    }
+}
+
+impl IRegister for RegisterBase {
+    fn read<T: ValueStore, U: CacheStore>(
+        &self,
+        buf: &mut [u8],
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        todo!()
+    }
+
+    fn write<T: ValueStore, U: CacheStore>(
+        &self,
+        buf: &[u8],
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        todo!()
+    }
+
+    fn address<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        todo!()
+    }
+
+    fn length<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        todo!()
     }
 }

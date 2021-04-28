@@ -1,6 +1,6 @@
 use super::{
     elem_type::{DisplayNotation, Endianness, FloatRepresentation},
-    interface::{IFloat, IncrementMode},
+    interface::{IFloat, IRegister, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase},
     store::{CacheStore, NodeStore, ValueStore},
     Device, GenApiResult, RegisterBase, ValueCtxt,
@@ -146,5 +146,45 @@ impl IFloat for FloatRegNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo!()
+    }
+}
+
+impl IRegister for FloatRegNode {
+    fn read<T: ValueStore, U: CacheStore>(
+        &self,
+        buf: &mut [u8],
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        self.register_base().read(buf, device, store, cx)
+    }
+
+    fn write<T: ValueStore, U: CacheStore>(
+        &self,
+        buf: &[u8],
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        self.register_base().write(buf, device, store, cx)
+    }
+
+    fn address<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        self.register_base().address(device, store, cx)
+    }
+
+    fn length<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        self.register_base().length(device, store, cx)
     }
 }

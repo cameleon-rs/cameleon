@@ -88,7 +88,7 @@ mod tests {
             _ => panic!(),
         }
 
-        assert_eq!(reg_base.length(), &ImmOrPNode::Imm(4));
+        assert_eq!(reg_base.length_elem(), &ImmOrPNode::Imm(4));
         assert_eq!(reg_base.access_mode(), AccessMode::RW);
         assert_eq!(reg_base.cacheable(), CachingMode::WriteAround);
         assert_eq!(reg_base.polling_time().unwrap(), 300);

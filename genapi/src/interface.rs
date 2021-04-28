@@ -723,3 +723,76 @@ impl<'a> IBoolean for IBooleanKind<'a> {
         delegate_to_iboolean_variant!(self.set_value(value, device, store, cx))
     }
 }
+
+pub enum IRegisterKind<'a> {
+    Register(&'a super::RegisterNode),
+    IntReg(&'a super::IntRegNode),
+    MaskedIntReg(&'a super::MaskedIntRegNode),
+    StringReg(&'a super::StringRegNode),
+    FloatReg(&'a super::FloatRegNode),
+}
+
+impl<'a> IRegisterKind<'a> {
+    pub(super) fn maybe_from(id: NodeId, store: &'a impl NodeStore) -> Option<Self> {
+        match store.node_opt(id)? {
+            NodeData::Register(n) => Some(Self::Register(n)),
+            NodeData::IntReg(n) => Some(Self::IntReg(n)),
+            NodeData::MaskedIntReg(n) => Some(Self::MaskedIntReg(n)),
+            NodeData::StringReg(n) => Some(Self::StringReg(n)),
+            NodeData::FloatReg(n) => Some(Self::FloatReg(n)),
+            _ => None,
+        }
+    }
+}
+
+macro_rules! delegate_to_iregister_variant {
+    ($self:ident.$method:ident($($arg:ident),*)) => {
+        match $self {
+            IRegisterKind::Register(n) => n.$method($($arg),*),
+            IRegisterKind::IntReg(n) => n.$method($($arg),*),
+            IRegisterKind::MaskedIntReg(n) => n.$method($($arg),*),
+            IRegisterKind::StringReg(n) => n.$method($($arg),*),
+            IRegisterKind::FloatReg(n) => n.$method($($arg),*),
+        }
+    }
+}
+
+impl<'a> IRegister for IRegisterKind<'a> {
+    fn read<T: ValueStore, U: CacheStore>(
+        &self,
+        buf: &mut [u8],
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        delegate_to_iregister_variant!(self.read(buf, device, store, cx))
+    }
+
+    fn write<T: ValueStore, U: CacheStore>(
+        &self,
+        buf: &[u8],
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        delegate_to_iregister_variant!(self.write(buf, device, store, cx))
+    }
+
+    fn address<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        delegate_to_iregister_variant!(self.address(device, store, cx))
+    }
+
+    fn length<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        delegate_to_iregister_variant!(self.length(device, store, cx))
+    }
+}

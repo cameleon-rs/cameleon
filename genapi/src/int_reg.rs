@@ -1,6 +1,6 @@
 use super::{
     elem_type::{Endianness, IntegerRepresentation, Sign},
-    interface::{IInteger, IncrementMode},
+    interface::{IInteger, IRegister, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase},
     register_base::RegisterBase,
     store::{CacheStore, NodeId, NodeStore, ValueStore},
@@ -138,5 +138,45 @@ impl IInteger for IntRegNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo!()
+    }
+}
+
+impl IRegister for IntRegNode {
+    fn read<T: ValueStore, U: CacheStore>(
+        &self,
+        buf: &mut [u8],
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        self.register_base().read(buf, device, store, cx)
+    }
+
+    fn write<T: ValueStore, U: CacheStore>(
+        &self,
+        buf: &[u8],
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        self.register_base().write(buf, device, store, cx)
+    }
+
+    fn address<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        self.register_base().address(device, store, cx)
+    }
+
+    fn length<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        self.register_base().length(device, store, cx)
     }
 }
