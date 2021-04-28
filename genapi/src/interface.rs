@@ -230,7 +230,7 @@ pub trait IBoolean {
 }
 
 pub trait IRegister {
-    fn get<T: ValueStore, U: CacheStore>(
+    fn read<T: ValueStore, U: CacheStore>(
         &self,
         buf: &mut [u8],
         device: impl Device,
@@ -238,7 +238,7 @@ pub trait IRegister {
         cx: &mut Context<T, U>,
     ) -> GenApiResult<()>;
 
-    fn set<T: ValueStore, U: CacheStore>(
+    fn write<T: ValueStore, U: CacheStore>(
         &self,
         buf: &[u8],
         device: impl Device,
@@ -259,4 +259,22 @@ pub trait IRegister {
         store: impl NodeStore,
         cx: &mut Context<T, U>,
     ) -> GenApiResult<i64>;
+}
+
+pub trait IPort {
+    fn read<T: ValueStore, U: CacheStore>(
+        &self,
+        buf: &mut [u8],
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut Context<T, U>,
+    ) -> GenApiResult<()>;
+
+    fn write<T: ValueStore, U: CacheStore>(
+        &self,
+        buf: &[u8],
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut Context<T, U>,
+    ) -> GenApiResult<()>;
 }
