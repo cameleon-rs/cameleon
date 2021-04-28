@@ -193,3 +193,19 @@ pub trait IEnumeration {
         cx: &mut Context<T, U>,
     ) -> GenApiResult<()>;
 }
+
+pub trait ICommand {
+    fn execute<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut Context<T, U>,
+    ) -> GenApiResult<()>;
+
+    fn is_done<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut Context<T, U>,
+    ) -> GenApiResult<()>;
+}
