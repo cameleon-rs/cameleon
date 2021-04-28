@@ -56,6 +56,13 @@ pub use string::StringNode;
 pub use string_reg::StringRegNode;
 pub use swiss_knife::SwissKnifeNode;
 
+pub mod prelude {
+    pub use super::interface::{
+        IBoolean, ICategory, ICommand, IEnumeration, IFloat, IInteger, IPort, IRegister, ISelector,
+        IString,
+    };
+}
+
 pub trait Device {
     type Error: std::error::Error;
 
