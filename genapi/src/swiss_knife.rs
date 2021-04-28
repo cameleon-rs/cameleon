@@ -1,8 +1,10 @@
 use super::{
     elem_type::{DisplayNotation, FloatRepresentation, NamedValue},
     formula::Formula,
+    interface::{IFloat, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    store::NodeId,
+    store::{CacheStore, NodeId, NodeStore, ValueStore},
+    Device, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -53,22 +55,115 @@ impl SwissKnifeNode {
     }
 
     #[must_use]
-    pub fn unit(&self) -> Option<&str> {
+    pub fn unit_elem(&self) -> Option<&str> {
         self.unit.as_deref()
     }
 
     #[must_use]
-    pub fn representation(&self) -> FloatRepresentation {
+    pub fn representation_elem(&self) -> FloatRepresentation {
         self.representation
     }
 
     #[must_use]
-    pub fn display_notation(&self) -> DisplayNotation {
+    pub fn display_notation_elem(&self) -> DisplayNotation {
         self.display_notation
     }
 
     #[must_use]
-    pub fn display_precision(&self) -> i64 {
+    pub fn display_precision_elem(&self) -> i64 {
         self.display_precision
+    }
+}
+
+impl IFloat for SwissKnifeNode {
+    fn value<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<f64> {
+        todo!()
+    }
+
+    fn set_value<T: ValueStore, U: CacheStore>(
+        &self,
+        value: f64,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        todo! {}
+    }
+
+    fn min<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<f64> {
+        todo!()
+    }
+
+    fn max<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<f64> {
+        todo!()
+    }
+
+    fn inc_mode(&self, store: impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
+        todo!()
+    }
+
+    fn inc<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<Option<f64>> {
+        todo!()
+    }
+
+    /// NOTE: `ValidValueSet` is not supported in `GenApiSchema Version 1.1` yet.
+    fn valid_value_set(&self, store: impl NodeStore) -> &[f64] {
+        todo!()
+    }
+
+    fn representation(&self, store: impl NodeStore) -> FloatRepresentation {
+        todo!()
+    }
+
+    fn unit(&self, store: impl NodeStore) -> Option<&str> {
+        todo!()
+    }
+
+    fn display_notation(&self, store: impl NodeStore) -> DisplayNotation {
+        todo!()
+    }
+
+    fn display_precision(&self, store: impl NodeStore) -> i64 {
+        todo! {}
+    }
+
+    fn set_min<T: ValueStore, U: CacheStore>(
+        &self,
+        value: f64,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        todo!()
+    }
+
+    fn set_max<T: ValueStore, U: CacheStore>(
+        &self,
+        value: f64,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        todo!()
     }
 }

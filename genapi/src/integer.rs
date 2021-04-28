@@ -1,9 +1,9 @@
 use super::{
     elem_type::{ImmOrPNode, IntegerRepresentation, ValueKind},
-    interface::IncrementMode,
+    interface::{IInteger, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, IntegerId, NodeId, NodeStore, ValueStore},
-    Device, GenApiResult, IInteger, ValueCtxt,
+    Device, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]

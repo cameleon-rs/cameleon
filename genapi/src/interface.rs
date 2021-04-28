@@ -409,3 +409,124 @@ impl<'a> IInteger for IIntegerKind<'a> {
         delegate_to_iinteger_variant!(self.set_max(value, device, store, cx))
     }
 }
+
+pub enum IFloatKind<'a> {
+    Float(&'a super::FloatNode),
+    FloatReg(&'a super::FloatRegNode),
+    Converter(&'a super::ConverterNode),
+    SwissKnife(&'a super::SwissKnifeNode),
+}
+
+impl<'a> IFloatKind<'a> {
+    pub(super) fn maybe_from(id: NodeId, store: &'a impl NodeStore) -> Option<Self> {
+        match store.node_opt(id)? {
+            NodeData::Float(n) => Some(Self::Float(n)),
+            NodeData::FloatReg(n) => Some(Self::FloatReg(n)),
+            NodeData::Converter(n) => Some(Self::Converter(n)),
+            NodeData::SwissKnife(n) => Some(Self::SwissKnife(n)),
+            _ => None,
+        }
+    }
+}
+
+macro_rules! delegate_to_ifloat_variant {
+    ($self:ident.$method:ident($($arg:ident),*)) => {
+        match $self {
+            IFloatKind::Float(n) => n.$method($($arg),*),
+            IFloatKind::FloatReg(n) => n.$method($($arg),*),
+            IFloatKind::Converter(n) => n.$method($($arg),*),
+            IFloatKind::SwissKnife(n) => n.$method($($arg),*),
+        }
+    }
+}
+
+impl<'a> IFloat for IFloatKind<'a> {
+    fn value<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<f64> {
+        delegate_to_ifloat_variant!(self.value(device, store, cx))
+    }
+    fn set_value<T: ValueStore, U: CacheStore>(
+        &self,
+        value: f64,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        delegate_to_ifloat_variant!(self.set_value(value, device, store, cx))
+    }
+
+    fn min<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<f64> {
+        delegate_to_ifloat_variant!(self.min(device, store, cx))
+    }
+
+    fn max<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<f64> {
+        delegate_to_ifloat_variant!(self.max(device, store, cx))
+    }
+
+    fn inc_mode(&self, store: impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
+        delegate_to_ifloat_variant!(self.inc_mode(store))
+    }
+
+    fn inc<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<Option<f64>> {
+        delegate_to_ifloat_variant!(self.inc(device, store, cx))
+    }
+
+    fn valid_value_set(&self, store: impl NodeStore) -> &[f64] {
+        delegate_to_ifloat_variant!(self.valid_value_set(store))
+    }
+
+    fn representation(&self, store: impl NodeStore) -> FloatRepresentation {
+        delegate_to_ifloat_variant!(self.representation(store))
+    }
+
+    fn unit(&self, store: impl NodeStore) -> Option<&str> {
+        delegate_to_ifloat_variant!(self.unit(store))
+    }
+
+    fn display_notation(&self, store: impl NodeStore) -> DisplayNotation {
+        delegate_to_ifloat_variant!(self.display_notation(store))
+    }
+
+    fn display_precision(&self, store: impl NodeStore) -> i64 {
+        delegate_to_ifloat_variant!(self.display_precision(store))
+    }
+
+    fn set_min<T: ValueStore, U: CacheStore>(
+        &self,
+        value: f64,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        delegate_to_ifloat_variant!(self.set_min(value, device, store, cx))
+    }
+
+    fn set_max<T: ValueStore, U: CacheStore>(
+        &self,
+        value: f64,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        delegate_to_ifloat_variant!(self.set_max(value, device, store, cx))
+    }
+}

@@ -105,14 +105,18 @@ mod test {
 
         assert!(node.streamable());
         assert!(matches! {node.value_kind(), ValueKind::Value(_)});
-        let min_value = value_store.float_value(node.min().imm().unwrap()).unwrap();
+        let min_value = value_store
+            .float_value(node.min_elem().imm().unwrap())
+            .unwrap();
         assert!(min_value.is_infinite() && min_value.is_sign_negative());
-        let max_value = value_store.float_value(node.max().imm().unwrap()).unwrap();
+        let max_value = value_store
+            .float_value(node.max_elem().imm().unwrap())
+            .unwrap();
         assert!(max_value.is_infinite() && max_value.is_sign_positive());
-        assert!(node.inc().unwrap().imm().unwrap().is_nan());
-        assert_eq!(node.unit(), Some("dB"));
-        assert_eq!(node.representation(), FloatRepresentation::Logarithmic);
-        assert_eq!(node.display_notation(), DisplayNotation::Fixed);
-        assert_eq!(node.display_precision(), 10);
+        assert!(node.inc_elem().unwrap().imm().unwrap().is_nan());
+        assert_eq!(node.unit_elem(), Some("dB"));
+        assert_eq!(node.representation_elem(), FloatRepresentation::Logarithmic);
+        assert_eq!(node.display_notation_elem(), DisplayNotation::Fixed);
+        assert_eq!(node.display_precision_elem(), 10);
     }
 }

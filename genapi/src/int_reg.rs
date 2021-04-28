@@ -1,10 +1,10 @@
 use super::{
     elem_type::{Endianness, IntegerRepresentation, Sign},
-    interface::IncrementMode,
+    interface::{IInteger, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase},
     register_base::RegisterBase,
     store::{CacheStore, NodeId, NodeStore, ValueStore},
-    Device, GenApiResult, IInteger, ValueCtxt,
+    Device, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]

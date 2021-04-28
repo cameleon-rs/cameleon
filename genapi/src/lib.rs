@@ -44,7 +44,6 @@ pub use int_converter::IntConverterNode;
 pub use int_reg::IntRegNode;
 pub use int_swiss_knife::IntSwissKnifeNode;
 pub use integer::IntegerNode;
-pub use interface::IInteger;
 pub use masked_int_reg::MaskedIntRegNode;
 pub use node::Node;
 pub use node_base::NodeBase;

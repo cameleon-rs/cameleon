@@ -1,10 +1,10 @@
 use super::{
     elem_type::{IntegerRepresentation, NamedValue, Slope},
     formula::Formula,
-    interface::IncrementMode,
+    interface::{IInteger, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, NodeId, NodeStore, ValueStore},
-    Device, GenApiResult, IInteger, ValueCtxt,
+    Device, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]

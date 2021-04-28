@@ -77,9 +77,9 @@ mod tests {
             .parse(&mut node_store, &mut value_store);
 
         assert_eq!(node.endianness(), Endianness::BE);
-        assert_eq!(node.unit().unwrap(), "Hz");
-        assert_eq!(node.representation(), FloatRepresentation::Linear);
-        assert_eq!(node.display_notation(), DisplayNotation::Fixed);
-        assert_eq!(node.display_precision(), 10);
+        assert_eq!(node.unit_elem().unwrap(), "Hz");
+        assert_eq!(node.representation_elem(), FloatRepresentation::Linear);
+        assert_eq!(node.display_notation_elem(), DisplayNotation::Fixed);
+        assert_eq!(node.display_precision_elem(), 10);
     }
 }
