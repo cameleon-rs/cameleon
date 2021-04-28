@@ -56,6 +56,8 @@ pub use string::StringNode;
 pub use string_reg::StringRegNode;
 pub use swiss_knife::SwissKnifeNode;
 
+use std::borrow::Cow;
+
 pub mod prelude {
     pub use super::interface::{
         IBoolean, ICategory, ICommand, IEnumeration, IFloat, IInteger, IPort, IRegister, ISelector,
@@ -94,25 +96,25 @@ pub enum GenApiError {
 
     /// Read/Write access to the `GenApi` node is denied.
     #[error("access is denied: {}", 0)]
-    AccessDenied(&'static str),
+    AccessDenied(Cow<'static, str>),
 
     /// Node that doesn't implement requested `GenApi` interface.
     #[error("invalid node: {}", 0)]
-    InvalidNode(&'static str),
+    InvalidNode(Cow<'static, str>),
 
     /// Try to write invalid value to the node.
     ///
     /// e.g. try to write the value that exceeds the max value of the node.
     #[error("invalid data: {}", 0)]
-    InvalidData(String),
+    InvalidData(Cow<'static, str>),
 
     /// Operation on the node failed due to the lack of chunk data where it's required to complete the operation.
     #[error("chunk data missing")]
     ChunkDataMissing,
 
     /// Invalid buffer.
-    #[error("invalid buffer: given buffer size doesn't same as the register length")]
-    InvalidBuffer,
+    #[error("invalid buffer: {}", 0)]
+    InvalidBuffer(Cow<'static, str>),
 }
 
 pub type GenApiResult<T> = std::result::Result<T, GenApiError>;
@@ -146,5 +148,24 @@ where
 
     pub fn cache_store_mut(&mut self) -> &mut U {
         &mut self.cache_store
+    }
+
+    pub fn cache_data(&mut self, nid: store::NodeId, value: impl Into<store::ValueData>) {
+        if let Some(data) = self.cache_store.value(nid) {
+            self.value_store.update(data.value_id, value);
+            self.cache_store.store(nid, data.value_id)
+        } else {
+            let vid: store::ValueId = self.value_store.store(value);
+            self.cache_store.store(nid, vid)
+        }
+    }
+
+    pub fn get_cached(&self, nid: store::NodeId) -> Option<&store::ValueData> {
+        let cache_data = self.cache_store.value(nid)?;
+        self.value_store.value_opt(cache_data.value_id)
+    }
+
+    pub fn invalidate_cache_by(&mut self, nid: store::NodeId) {
+        self.cache_store.invalidate_by(nid)
     }
 }

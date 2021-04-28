@@ -2,7 +2,7 @@ use super::{
     elem_type::{AccessMode, AddressKind, CachingMode, ImmOrPNode},
     interface::{IPort, IRegister},
     node_base::NodeElementBase,
-    store::{CacheStore, NodeId, NodeStore, ValueStore},
+    store::{CacheStore, NodeId, NodeStore, ValueData, ValueStore},
     Device, GenApiError, GenApiResult, ValueCtxt,
 };
 
@@ -60,6 +60,20 @@ impl RegisterBase {
     pub fn p_invalidators(&self) -> &[NodeId] {
         &self.p_invalidators
     }
+
+    pub(super) fn cache<T: ValueStore, U: CacheStore>(
+        &self,
+        nid: NodeId,
+        data: impl Into<ValueData>,
+        cx: &mut ValueCtxt<T, U>,
+        on_read: bool,
+    ) {
+        match (self.cacheable, on_read) {
+            (CachingMode::WriteThrough, _) => cx.cache_data(nid, data),
+            (CachingMode::WriteAround, true) => cx.cache_data(nid, data),
+            _ => {}
+        }
+    }
 }
 
 impl IRegister for RegisterBase {
@@ -72,7 +86,9 @@ impl IRegister for RegisterBase {
     ) -> GenApiResult<()> {
         self.elem_base.verify_is_readable(device, store, cx)?;
         if buf.len() != self.length(device, store, cx)? as usize {
-            return Err(GenApiError::InvalidBuffer);
+            return Err(GenApiError::InvalidBuffer(
+                "given buffer length doesn't same as the register length".into(),
+            ));
         }
 
         let addr = self.address(device, store, cx)?;
@@ -90,7 +106,9 @@ impl IRegister for RegisterBase {
     ) -> GenApiResult<()> {
         self.elem_base.verify_is_writable(device, store, cx)?;
         if buf.len() != self.length(device, store, cx)? as usize {
-            return Err(GenApiError::InvalidBuffer);
+            return Err(GenApiError::InvalidBuffer(
+                "given buffer length doesn't same as the register length".into(),
+            ));
         }
 
         let addr = self.address(device, store, cx)?;

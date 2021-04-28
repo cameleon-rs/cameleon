@@ -2,7 +2,7 @@
 use super::{
     interface::IInteger,
     store::{CacheStore, IntegerId, NodeId, NodeStore, ValueStore},
-    Device, GenApiError, GenApiResult, ValueCtxt,
+    Device, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -91,7 +91,7 @@ impl ImmOrPNode<IntegerId> {
     ) -> GenApiResult<()> {
         match self {
             Self::Imm(vid) => {
-                *cx.value_store_mut().integer_value_mut(vid).unwrap() = value;
+                cx.value_store_mut().update(vid, value);
                 Ok(())
             }
             Self::PNode(nid) => nid
@@ -170,7 +170,7 @@ pub enum StandardNameSpace {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CachingMode {
-    /// Allow to caching on write.
+    /// Allow to caching on read/write.
     WriteThrough,
     /// Allow to caching on read.
     WriteAround,
@@ -260,7 +260,7 @@ impl ValueKind<IntegerId> {
     ) -> GenApiResult<()> {
         match self {
             Self::Value(vid) => {
-                *cx.value_store_mut().integer_value_mut(*vid).unwrap() = value;
+                cx.value_store_mut().update(*vid, value);
                 Ok(())
             }
             Self::PValue(p_value) => p_value.set_value(value, device, store, cx),

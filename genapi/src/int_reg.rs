@@ -3,8 +3,8 @@ use super::{
     interface::{IInteger, IRegister, ISelector, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase},
     register_base::RegisterBase,
-    store::{CacheStore, NodeId, NodeStore, ValueStore},
-    Device, GenApiResult, ValueCtxt,
+    store::{CacheStore, NodeId, NodeStore, ValueData, ValueStore},
+    utils, Device, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -64,7 +64,18 @@ impl IInteger for IntRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
-        todo!()
+        let nid = self.node_base().id();
+        if let Some(ValueData::Integer(i)) = cx.get_cached(nid) {
+            return Ok(*i);
+        }
+
+        let reg = self.register_base();
+        let len = reg.length(device, store, cx)?;
+        let mut buf = vec![0u8; len as usize];
+        reg.read(&mut buf, device, store, cx)?;
+        let res = utils::int_from_slice(&buf, self.endianness, self.sign)?;
+        reg.cache(nid, res, cx, true);
+        Ok(res)
     }
 
     fn set_value<T: ValueStore, U: CacheStore>(
@@ -74,58 +85,64 @@ impl IInteger for IntRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        let reg = self.register_base();
+        let len = reg.length(device, store, cx)?;
+        let mut buf = vec![0u8; len as usize];
+        utils::bytes_from_int(value, &mut buf, self.endianness, self.sign)?;
+        reg.write(&buf, device, store, cx)?;
+        reg.cache(self.node_base().id(), value, cx, false);
+        Ok(())
     }
 
     fn min<T: ValueStore, U: CacheStore>(
         &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
+        _: &mut impl Device,
+        _: &impl NodeStore,
+        _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         Ok(i64::MIN)
     }
 
     fn max<T: ValueStore, U: CacheStore>(
         &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
+        _: &mut impl Device,
+        _: &impl NodeStore,
+        _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         Ok(i64::MAX)
     }
 
-    fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
+    fn inc_mode(&self, _: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
         Ok(None)
     }
 
     fn inc<T: ValueStore, U: CacheStore>(
         &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
+        _: &mut impl Device,
+        _: &impl NodeStore,
+        _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Option<i64>> {
         Ok(None)
     }
 
-    fn valid_value_set(&self, store: &impl NodeStore) -> &[i64] {
+    fn valid_value_set(&self, _: &impl NodeStore) -> &[i64] {
         &[]
     }
 
-    fn representation(&self, store: &impl NodeStore) -> IntegerRepresentation {
-        todo!()
+    fn representation(&self, _: &impl NodeStore) -> IntegerRepresentation {
+        self.representation_elem()
     }
 
-    fn unit(&self, store: &impl NodeStore) -> Option<&str> {
-        todo!()
+    fn unit(&self, _: &impl NodeStore) -> Option<&str> {
+        self.unit_elem()
     }
 
     fn set_min<T: ValueStore, U: CacheStore>(
         &self,
-        value: i64,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
+        _: i64,
+        _: &mut impl Device,
+        _: &impl NodeStore,
+        _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         Ok(())
     }
@@ -182,7 +199,7 @@ impl IRegister for IntRegNode {
 }
 
 impl ISelector for IntRegNode {
-    fn selecting_nodes(&self, store: &impl NodeStore) -> GenApiResult<&[NodeId]> {
+    fn selecting_nodes(&self, _: &impl NodeStore) -> GenApiResult<&[NodeId]> {
         Ok(self.p_selected())
     }
 }

@@ -3,7 +3,7 @@ use super::{
     interface::{IInteger, ISelector, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, IntegerId, NodeId, NodeStore, ValueStore},
-    Device, GenApiResult, ValueCtxt,
+    Device, GenApiError, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -87,7 +87,19 @@ impl IInteger for IntegerNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         self.elem_base.verify_is_writable(device, store, cx)?;
-        self.value_kind().set_value(value, device, store, cx)
+        cx.invalidate_cache_by(self.node_base().id());
+
+        if value < self.min(device, store, cx)? {
+            Err(GenApiError::InvalidData(
+                "given data is smaller than min value of the node".into(),
+            ))
+        } else if value > self.max(device, store, cx)? {
+            Err(GenApiError::InvalidData(
+                "given data is larger than max value of the node".into(),
+            ))
+        } else {
+            self.value_kind().set_value(value, device, store, cx)
+        }
     }
 
     fn min<T: ValueStore, U: CacheStore>(

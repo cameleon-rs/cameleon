@@ -45,7 +45,7 @@ impl NodeId {
         store: &'a impl NodeStore,
     ) -> GenApiResult<IIntegerKind<'a>> {
         self.as_iinteger_kind(store).ok_or(GenApiError::InvalidNode(
-            "the node doesn't implement `IInteger`",
+            "the node doesn't implement `IInteger`".into(),
         ))
     }
 
@@ -55,7 +55,7 @@ impl NodeId {
 
     pub fn expect_ifloat_kind<'a>(self, store: &'a impl NodeStore) -> GenApiResult<IFloatKind<'a>> {
         self.as_ifloat_kind(store).ok_or(GenApiError::InvalidNode(
-            "the node doesn't implement `IFloat`",
+            "the node doesn't implement `IFloat`".into(),
         ))
     }
 
@@ -68,7 +68,7 @@ impl NodeId {
         store: &'a impl NodeStore,
     ) -> GenApiResult<IStringKind<'a>> {
         self.as_istring_kind(store).ok_or(GenApiError::InvalidNode(
-            "the node doesn't implement `IString`",
+            "the node doesn't implement `IString`".into(),
         ))
     }
 
@@ -81,7 +81,7 @@ impl NodeId {
         store: &'a impl NodeStore,
     ) -> GenApiResult<ICommandKind<'a>> {
         self.as_icommand_kind(store).ok_or(GenApiError::InvalidNode(
-            "the node doesn't implement `ICommand`",
+            "the node doesn't implement `ICommand`".into(),
         ))
     }
 
@@ -98,7 +98,7 @@ impl NodeId {
     ) -> GenApiResult<IEnumerationKind<'a>> {
         self.as_ienuemration_kind(store)
             .ok_or(GenApiError::InvalidNode(
-                "the node doesn't implement `IEnumeration`",
+                "the node doesn't implement `IEnumeration`".into(),
             ))
     }
 
@@ -111,7 +111,7 @@ impl NodeId {
         store: &'a impl NodeStore,
     ) -> GenApiResult<IBooleanKind<'a>> {
         self.as_iboolean_kind(store).ok_or(GenApiError::InvalidNode(
-            "the node doesn't implement `IBoolean`",
+            "the node doesn't implement `IBoolean`".into(),
         ))
     }
 
@@ -125,7 +125,7 @@ impl NodeId {
     ) -> GenApiResult<IRegisterKind<'a>> {
         self.as_iregister_kind(store)
             .ok_or(GenApiError::InvalidNode(
-                "the node doesn't implement `IRegister`",
+                "the node doesn't implement `IRegister`".into(),
             ))
     }
 
@@ -139,7 +139,7 @@ impl NodeId {
     ) -> GenApiResult<ICategoryKind<'a>> {
         self.as_icategory_kind(store)
             .ok_or(GenApiError::InvalidNode(
-                "the node doesn't implement `ICategory`",
+                "the node doesn't implement `ICategory`".into(),
             ))
     }
 
@@ -149,7 +149,7 @@ impl NodeId {
 
     pub fn expect_iport_kind<'a>(self, store: &'a impl NodeStore) -> GenApiResult<IPortKind<'a>> {
         self.as_iport_kind(store).ok_or(GenApiError::InvalidNode(
-            "the node doesn't implement `IPort`",
+            "the node doesn't implement `IPort`".into(),
         ))
     }
 
@@ -163,7 +163,7 @@ impl NodeId {
     ) -> GenApiResult<ISelectorKind<'a>> {
         self.as_iselector_kind(store)
             .ok_or(GenApiError::InvalidNode(
-                "the node doesn't implement `ISelector`",
+                "the node doesn't implement `ISelector`".into(),
             ))
     }
 }
@@ -505,20 +505,28 @@ impl ValueStore for DefaultValueStore {
 }
 
 pub trait CacheStore {
-    fn store(&mut self, node_id: NodeId, value: impl Into<ValueData>, value_store: impl ValueStore);
+    fn store(&mut self, node_id: NodeId, value_id: impl Into<ValueId>);
 
-    fn value<'a>(
-        &mut self,
-        node_id: NodeId,
-        value_store: &'a impl ValueStore,
-    ) -> Option<&'a ValueData>;
+    fn value(&self, node_id: NodeId) -> Option<CacheData>;
 
     fn invalidate_by(&mut self, id: NodeId);
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct CacheData {
+    pub value_id: ValueId,
+    pub is_valid: bool,
+}
+
+impl CacheData {
+    fn new(value_id: ValueId, is_valid: bool) -> Self {
+        Self { value_id, is_valid }
+    }
+}
+
 #[derive(Debug)]
 pub struct DefaultCacheStore {
-    store: HashMap<NodeId, (ValueId, bool)>,
+    store: HashMap<NodeId, CacheData>,
     invalidators: HashMap<NodeId, Vec<NodeId>>,
 }
 
@@ -526,21 +534,12 @@ impl<T> CacheStore for &mut T
 where
     T: CacheStore,
 {
-    fn store(
-        &mut self,
-        node_id: NodeId,
-        value: impl Into<ValueData>,
-        value_store: impl ValueStore,
-    ) {
-        (**self).store(node_id, value, value_store);
+    fn store(&mut self, node_id: NodeId, value_id: impl Into<ValueId>) {
+        (**self).store(node_id, value_id);
     }
 
-    fn value<'a>(
-        &mut self,
-        node_id: NodeId,
-        value_store: &'a impl ValueStore,
-    ) -> Option<&'a ValueData> {
-        (**self).value(node_id, value_store)
+    fn value(&self, node_id: NodeId) -> Option<CacheData> {
+        (**self).value(node_id)
     }
 
     fn invalidate_by(&mut self, id: NodeId) {
@@ -578,38 +577,25 @@ impl DefaultCacheStore {
 }
 
 impl CacheStore for DefaultCacheStore {
-    fn store(
-        &mut self,
-        node_id: NodeId,
-        value: impl Into<ValueData>,
-        mut value_store: impl ValueStore,
-    ) {
-        match self.store.entry(node_id) {
-            hash_map::Entry::Occupied(mut entry) => {
-                let (value_id, is_valid) = entry.get_mut();
-                value_store.update(*value_id, value);
-                *is_valid = true;
-            }
-            hash_map::Entry::Vacant(entry) => {
-                let value_id = value_store.store(value);
-                entry.insert((value_id, true));
-            }
-        }
+    fn store(&mut self, node_id: NodeId, value_id: impl Into<ValueId>) {
+        self.store
+            .entry(node_id)
+            .and_modify(|e| e.is_valid = true)
+            .or_insert(CacheData::new(value_id.into(), true));
     }
 
-    fn value<'a>(
-        &mut self,
-        node_id: NodeId,
-        value_store: &'a impl ValueStore,
-    ) -> Option<&'a ValueData> {
-        let (id, is_valid) = self.store.get(&node_id)?;
-        is_valid.then(|| value_store.value_opt(*id)).flatten()
+    fn value(&self, node_id: NodeId) -> Option<CacheData> {
+        self.store.get(&node_id).copied()
     }
 
     fn invalidate_by(&mut self, id: NodeId) {
         if let Some(target_nodes) = self.invalidators.get(&id) {
             for n in target_nodes {
-                if let Some((_, is_valid)) = self.store.get_mut(&n) {
+                if let Some(CacheData {
+                    value_id: _,
+                    is_valid,
+                }) = self.store.get_mut(&n)
+                {
                     *is_valid = false;
                 }
             }
@@ -630,9 +616,9 @@ impl CacheSink {
 }
 
 impl CacheStore for CacheSink {
-    fn store(&mut self, _: NodeId, _: impl Into<ValueData>, _: impl ValueStore) {}
+    fn store(&mut self, _: NodeId, _: impl Into<ValueId>) {}
 
-    fn value<'a>(&mut self, _: NodeId, _: &'a impl ValueStore) -> Option<&'a ValueData> {
+    fn value(&self, _: NodeId) -> Option<CacheData> {
         None
     }
 
