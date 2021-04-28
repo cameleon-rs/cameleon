@@ -1,8 +1,10 @@
 use super::{
     elem_type::{IntegerRepresentation, NamedValue, Slope},
     formula::Formula,
+    interface::IncrementMode,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    store::NodeId,
+    store::{CacheStore, NodeId, NodeStore, ValueStore},
+    Device, GenApiResult, IInteger, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -76,5 +78,89 @@ impl IntConverterNode {
     #[must_use]
     pub fn slope(&self) -> Slope {
         self.slope
+    }
+}
+
+impl IInteger for IntConverterNode {
+    fn value<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        todo!()
+    }
+
+    fn set_value<T: ValueStore, U: CacheStore>(
+        &self,
+        value: i64,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        todo!()
+    }
+
+    fn min<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        todo!()
+    }
+
+    fn max<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        todo! {}
+    }
+
+    fn inc_mode(&self, store: impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
+        todo!()
+    }
+
+    fn inc<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<Option<i64>> {
+        todo!()
+    }
+
+    fn valid_value_set(&self, store: impl NodeStore) -> &[i64] {
+        todo!()
+    }
+
+    fn representation(&self, store: impl NodeStore) -> IntegerRepresentation {
+        todo!()
+    }
+
+    fn unit(&self, store: impl NodeStore) -> Option<&str> {
+        todo!()
+    }
+
+    fn set_min<T: ValueStore, U: CacheStore>(
+        &self,
+        value: i64,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        todo!()
+    }
+
+    fn set_max<T: ValueStore, U: CacheStore>(
+        &self,
+        value: i64,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        todo!()
     }
 }
