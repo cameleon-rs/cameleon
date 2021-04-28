@@ -72,8 +72,6 @@ pub trait IInteger {
         store: impl NodeStore,
         cx: &mut Context<T, U>,
     ) -> GenApiResult<()>;
-
-    fn selected_by(&self, store: impl NodeStore) -> &[NodeId];
 }
 
 pub trait IFloat {
@@ -192,8 +190,6 @@ pub trait IEnumeration {
         store: impl NodeStore,
         cx: &mut Context<T, U>,
     ) -> GenApiResult<()>;
-
-    fn selected_by(&self, store: impl NodeStore) -> &[NodeId];
 }
 
 pub trait ICommand {
@@ -277,4 +273,18 @@ pub trait IPort {
         store: impl NodeStore,
         cx: &mut Context<T, U>,
     ) -> GenApiResult<()>;
+}
+
+pub trait ISelector {
+    /// Return nodes which is selected by the current node.
+    fn selected_nodes<T: ValueStore, U: CacheStore>(
+        &self,
+        store: impl NodeStore,
+    ) -> GenApiResult<Vec<NodeId>>;
+
+    /// Return nodes which refer to the current node as a selector.
+    fn selecting_nodes<T: ValueStore, U: CacheStore>(
+        &self,
+        store: impl NodeStore,
+    ) -> GenApiResult<Vec<NodeId>>;
 }
