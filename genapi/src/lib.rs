@@ -21,6 +21,7 @@ mod int_converter;
 mod int_reg;
 mod int_swiss_knife;
 mod integer;
+mod interface;
 mod masked_int_reg;
 mod node;
 mod node_base;
@@ -43,6 +44,7 @@ pub use int_converter::IntConverterNode;
 pub use int_reg::IntRegNode;
 pub use int_swiss_knife::IntSwissKnifeNode;
 pub use integer::IntegerNode;
+pub use interface::IInteger;
 pub use masked_int_reg::MaskedIntRegNode;
 pub use node::Node;
 pub use node_base::NodeBase;
@@ -53,9 +55,6 @@ pub use register_description::RegisterDescription;
 pub use string::StringNode;
 pub use string_reg::StringRegNode;
 pub use swiss_knife::SwissKnifeNode;
-
-use elem_type::IntegerRepresentation;
-use store::{CacheStore, NodeStore, ValueStore};
 
 pub trait Device {
     type Error: std::error::Error;
@@ -95,8 +94,8 @@ pub type GenApiResult<T> = std::result::Result<T, GenApiError>;
 #[derive(Clone, Debug)]
 pub struct Context<T, U>
 where
-    T: ValueStore,
-    U: CacheStore,
+    T: store::ValueStore,
+    U: store::CacheStore,
 {
     value_store: T,
     cache_store: U,
@@ -104,8 +103,8 @@ where
 
 impl<T, U> Context<T, U>
 where
-    T: ValueStore,
-    U: CacheStore,
+    T: store::ValueStore,
+    U: store::CacheStore,
 {
     pub fn value_store(&self) -> &T {
         &self.value_store
@@ -122,76 +121,4 @@ where
     pub fn cache_store_mut(&mut self) -> &mut U {
         &mut self.cache_store
     }
-}
-
-#[derive(Clone, Debug)]
-pub enum IncrementMode {
-    FixedIncrement,
-    /// NOTE: `ListIncrement` is not supported in `GenApiSchema Version 1.1` yet.
-    ListIncrement,
-}
-
-pub trait IInteger {
-    fn value<T: ValueStore, U: CacheStore>(
-        &self,
-        device: impl Device,
-        store: impl NodeStore,
-        cx: &mut Context<T, U>,
-    ) -> GenApiResult<i64>;
-
-    fn set_value<T: ValueStore, U: CacheStore>(
-        &self,
-        value: i64,
-        device: impl Device,
-        store: impl NodeStore,
-        cx: &mut Context<T, U>,
-    ) -> GenApiResult<i64>;
-
-    fn min<T: ValueStore, U: CacheStore>(
-        &self,
-        device: impl Device,
-        store: impl NodeStore,
-        cx: &mut Context<T, U>,
-    ) -> GenApiResult<i64>;
-
-    fn max<T: ValueStore, U: CacheStore>(
-        &self,
-        device: impl Device,
-        store: impl NodeStore,
-        cx: &mut Context<T, U>,
-    ) -> GenApiResult<i64>;
-
-    fn inc_mode(&self, node_store: impl NodeStore) -> GenApiResult<Option<IncrementMode>>;
-
-    fn inc<T: ValueStore, U: CacheStore>(
-        &self,
-        device: impl Device,
-        store: impl NodeStore,
-        cx: &mut Context<T, U>,
-    ) -> GenApiResult<Option<i64>>;
-
-    /// NOTE: `ValidValueSet` is not supported in `GenApiSchema Version 1.1` yet.
-    fn valid_value_set(&self) -> &[i64] {
-        &[]
-    }
-
-    fn representation(&self, node_store: impl NodeStore) -> IntegerRepresentation;
-
-    fn unit(&self, node_store: impl NodeStore) -> Option<&str>;
-
-    fn set_min<T: ValueStore, U: CacheStore>(
-        &self,
-        value: i64,
-        device: impl Device,
-        store: impl NodeStore,
-        cx: &mut Context<T, U>,
-    ) -> GenApiResult<i64>;
-
-    fn set_max<T: ValueStore, U: CacheStore>(
-        &self,
-        value: i64,
-        device: impl Device,
-        store: impl NodeStore,
-        cx: &mut Context<T, U>,
-    ) -> GenApiResult<i64>;
 }
