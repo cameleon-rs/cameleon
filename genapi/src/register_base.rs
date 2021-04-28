@@ -12,7 +12,7 @@ pub struct RegisterBase {
     pub(crate) address_kinds: Vec<AddressKind>,
     pub(crate) length: ImmOrPNode<i64>,
     pub(crate) access_mode: AccessMode,
-    pub(crate) p_port: String,
+    pub(crate) p_port: NodeId,
     pub(crate) cacheable: CachingMode,
     pub(crate) polling_time: Option<u64>,
     pub(crate) p_invalidators: Vec<NodeId>,
@@ -40,8 +40,8 @@ impl RegisterBase {
     }
 
     #[must_use]
-    pub fn p_port(&self) -> &str {
-        &self.p_port
+    pub fn p_port(&self) -> NodeId {
+        self.p_port
     }
 
     #[must_use]
