@@ -164,7 +164,7 @@ pub trait IString {
         device: impl Device,
         store: impl NodeStore,
         cx: &mut Context<T, U>,
-    ) -> GenApiResult<usize>;
+    ) -> GenApiResult<i64>;
 }
 
 pub trait IEnumeration {
@@ -192,6 +192,8 @@ pub trait IEnumeration {
         store: impl NodeStore,
         cx: &mut Context<T, U>,
     ) -> GenApiResult<()>;
+
+    fn selected_by(&self, store: impl NodeStore) -> &[NodeId];
 }
 
 pub trait ICommand {
@@ -207,5 +209,54 @@ pub trait ICommand {
         device: impl Device,
         store: impl NodeStore,
         cx: &mut Context<T, U>,
+    ) -> GenApiResult<bool>;
+}
+
+pub trait IBoolean {
+    fn value<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut Context<T, U>,
+    ) -> GenApiResult<bool>;
+
+    fn set_value<T: ValueStore, U: CacheStore>(
+        &self,
+        value: bool,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut Context<T, U>,
     ) -> GenApiResult<()>;
+}
+
+pub trait IRegister {
+    fn get<T: ValueStore, U: CacheStore>(
+        &self,
+        buf: &mut [u8],
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut Context<T, U>,
+    ) -> GenApiResult<()>;
+
+    fn set<T: ValueStore, U: CacheStore>(
+        &self,
+        buf: &[u8],
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut Context<T, U>,
+    ) -> GenApiResult<()>;
+
+    fn address<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut Context<T, U>,
+    ) -> GenApiResult<i64>;
+
+    fn length<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut Context<T, U>,
+    ) -> GenApiResult<i64>;
 }
