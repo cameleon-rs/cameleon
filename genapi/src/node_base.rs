@@ -128,24 +128,27 @@ pub(crate) struct NodeElementBase {
 }
 
 impl NodeElementBase {
-    pub(super) fn is_writable<T: ValueStore, U: CacheStore>(
-        &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<bool> {
-        Ok(self.is_available(device, store, cx)?
-            && matches!(self.imposed_access_mode, AccessMode::WO | AccessMode::RW))
-    }
-
     pub(super) fn is_readable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        Ok(self.is_available(device, store, cx)?
+        Ok(self.is_implemented(device, store, cx)?
+            && self.is_available(device, store, cx)?
             && matches!(self.imposed_access_mode, AccessMode::RO | AccessMode::RW))
+    }
+
+    pub(super) fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        Ok(self.is_implemented(device, store, cx)?
+            && self.is_available(device, store, cx)?
+            && !self.is_locked(device, store, cx)?
+            && matches!(self.imposed_access_mode, AccessMode::WO | AccessMode::RW))
     }
 
     pub(super) fn verify_is_readable<T: ValueStore, U: CacheStore>(
@@ -174,23 +177,42 @@ impl NodeElementBase {
         }
     }
 
+    fn is_locked<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        if let Some(nid) = self.p_is_locked {
+            bool_from_id(nid, device, store, cx)
+        } else {
+            Ok(false)
+        }
+    }
+
+    fn is_implemented<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        if let Some(nid) = self.p_is_implemented {
+            bool_from_id(nid, device, store, cx)
+        } else {
+            Ok(false)
+        }
+    }
+
     fn is_available<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        let mut is_available = true;
-        if let Some(nid) = self.p_is_implemented {
-            is_available &= bool_from_id(nid, device, store, cx)?;
-        }
         if let Some(nid) = self.p_is_available {
-            is_available &= bool_from_id(nid, device, store, cx)?;
+            bool_from_id(nid, device, store, cx)
+        } else {
+            Ok(false)
         }
-        if let Some(nid) = self.p_is_locked {
-            is_available &= bool_from_id(nid, device, store, cx)?;
-        }
-
-        Ok(is_available)
     }
 }

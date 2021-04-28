@@ -110,7 +110,7 @@ mod tests {
 
         assert!(node.streamable());
         let value = value_store
-            .integer_value(node.value_kind.value().unwrap())
+            .integer_value(node.value_kind.imm().unwrap())
             .unwrap();
         assert_eq!(value, 0x100);
         let min = value_store

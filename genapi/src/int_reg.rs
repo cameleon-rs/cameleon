@@ -83,7 +83,7 @@ impl IInteger for IntRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
-        todo!()
+        Ok(i64::MIN)
     }
 
     fn max<T: ValueStore, U: CacheStore>(
@@ -92,11 +92,11 @@ impl IInteger for IntRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
-        todo! {}
+        Ok(i64::MAX)
     }
 
     fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
-        todo!()
+        Ok(None)
     }
 
     fn inc<T: ValueStore, U: CacheStore>(
@@ -105,11 +105,11 @@ impl IInteger for IntRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Option<i64>> {
-        todo!()
+        Ok(None)
     }
 
     fn valid_value_set(&self, store: &impl NodeStore) -> &[i64] {
-        todo!()
+        &[]
     }
 
     fn representation(&self, store: &impl NodeStore) -> IntegerRepresentation {
@@ -127,17 +127,17 @@ impl IInteger for IntRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        Ok(())
     }
 
     fn set_max<T: ValueStore, U: CacheStore>(
         &self,
-        value: i64,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
+        _: i64,
+        _: &mut impl Device,
+        _: &impl NodeStore,
+        _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        Ok(())
     }
 }
 

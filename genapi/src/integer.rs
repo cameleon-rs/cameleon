@@ -75,7 +75,8 @@ impl IInteger for IntegerNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
-        todo!()
+        self.elem_base.verify_is_readable(device, store, cx)?;
+        self.value_kind().value(device, store, cx)
     }
 
     fn set_value<T: ValueStore, U: CacheStore>(
@@ -85,7 +86,8 @@ impl IInteger for IntegerNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        self.elem_base.verify_is_writable(device, store, cx)?;
+        self.value_kind().set_value(value, device, store, cx)
     }
 
     fn min<T: ValueStore, U: CacheStore>(
@@ -94,7 +96,7 @@ impl IInteger for IntegerNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
-        todo!()
+        self.min.value(device, store, cx)
     }
 
     fn max<T: ValueStore, U: CacheStore>(
@@ -103,11 +105,11 @@ impl IInteger for IntegerNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
-        todo! {}
+        self.max.value(device, store, cx)
     }
 
-    fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
-        todo!()
+    fn inc_mode(&self, _: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
+        Ok(Some(IncrementMode::FixedIncrement))
     }
 
     fn inc<T: ValueStore, U: CacheStore>(
@@ -116,19 +118,19 @@ impl IInteger for IntegerNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Option<i64>> {
-        todo!()
+        Some(self.inc.value(device, store, cx)).transpose()
     }
 
-    fn valid_value_set(&self, store: &impl NodeStore) -> &[i64] {
-        todo!()
+    fn valid_value_set(&self, _: &impl NodeStore) -> &[i64] {
+        &[]
     }
 
-    fn representation(&self, store: &impl NodeStore) -> IntegerRepresentation {
-        todo!()
+    fn representation(&self, _: &impl NodeStore) -> IntegerRepresentation {
+        self.representation_elem()
     }
 
-    fn unit(&self, store: &impl NodeStore) -> Option<&str> {
-        todo!()
+    fn unit(&self, _: &impl NodeStore) -> Option<&str> {
+        self.unit_elem()
     }
 
     fn set_min<T: ValueStore, U: CacheStore>(
@@ -138,7 +140,7 @@ impl IInteger for IntegerNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        self.min.set_value(value, device, store, cx)
     }
 
     fn set_max<T: ValueStore, U: CacheStore>(
@@ -148,12 +150,12 @@ impl IInteger for IntegerNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        self.max.set_value(value, device, store, cx)
     }
 }
 
 impl ISelector for IntegerNode {
-    fn selecting_nodes(&self, store: &impl NodeStore) -> GenApiResult<&[NodeId]> {
+    fn selecting_nodes(&self, _: &impl NodeStore) -> GenApiResult<&[NodeId]> {
         Ok(self.p_selected())
     }
 }
