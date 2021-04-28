@@ -6,7 +6,7 @@ use std::{
 use string_interner::{StringInterner, Symbol};
 
 use super::{
-    interface::{IFloatKind, IIntegerKind, IStringKind},
+    interface::{ICommandKind, IFloatKind, IIntegerKind, IStringKind},
     node_base::NodeBase,
     BooleanNode, CategoryNode, CommandNode, ConverterNode, EnumerationNode, FloatNode,
     FloatRegNode, GenApiError, GenApiResult, IntConverterNode, IntRegNode, IntSwissKnifeNode,
@@ -41,7 +41,7 @@ impl NodeId {
         self,
         store: &'a impl NodeStore,
     ) -> GenApiResult<IIntegerKind<'a>> {
-        IIntegerKind::maybe_from(self, store).ok_or(GenApiError::InvalidNode(
+        self.as_iinteger_kind(store).ok_or(GenApiError::InvalidNode(
             "the node doesn't implement `IInteger`",
         ))
     }
@@ -51,7 +51,7 @@ impl NodeId {
     }
 
     pub fn expect_ifloat_kind<'a>(self, store: &'a impl NodeStore) -> GenApiResult<IFloatKind<'a>> {
-        IFloatKind::maybe_from(self, store).ok_or(GenApiError::InvalidNode(
+        self.as_ifloat_kind(store).ok_or(GenApiError::InvalidNode(
             "the node doesn't implement `IFloat`",
         ))
     }
@@ -64,8 +64,21 @@ impl NodeId {
         self,
         store: &'a impl NodeStore,
     ) -> GenApiResult<IStringKind<'a>> {
-        IStringKind::maybe_from(self, store).ok_or(GenApiError::InvalidNode(
+        self.as_istring_kind(store).ok_or(GenApiError::InvalidNode(
             "the node doesn't implement `IString`",
+        ))
+    }
+
+    pub fn as_icommand_kind<'a>(self, store: &'a impl NodeStore) -> Option<ICommandKind<'a>> {
+        ICommandKind::maybe_from(self, store)
+    }
+
+    pub fn expect_icommand_kind<'a>(
+        self,
+        store: &'a impl NodeStore,
+    ) -> GenApiResult<ICommandKind<'a>> {
+        self.as_icommand_kind(store).ok_or(GenApiError::InvalidNode(
+            "the node doesn't implement `ICommand`",
         ))
     }
 }

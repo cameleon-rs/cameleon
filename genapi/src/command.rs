@@ -1,7 +1,9 @@
 use super::{
     elem_type::ImmOrPNode,
+    interface::ICommand,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    store::IntegerId,
+    store::{CacheStore, IntegerId, NodeStore, ValueStore},
+    Device, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -21,17 +23,37 @@ impl CommandNode {
     }
 
     #[must_use]
-    pub fn value(&self) -> ImmOrPNode<IntegerId> {
+    pub fn value_elem(&self) -> ImmOrPNode<IntegerId> {
         self.value
     }
 
     #[must_use]
-    pub fn command_value(&self) -> ImmOrPNode<IntegerId> {
+    pub fn command_value_elem(&self) -> ImmOrPNode<IntegerId> {
         self.command_value
     }
 
     #[must_use]
     pub fn polling_time(&self) -> Option<u64> {
         self.polling_time
+    }
+}
+
+impl ICommand for CommandNode {
+    fn execute<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        todo!()
+    }
+
+    fn is_done<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        todo!()
     }
 }

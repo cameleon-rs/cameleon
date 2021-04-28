@@ -584,3 +584,40 @@ impl<'a> IString for IStringKind<'a> {
         delegate_to_istring_variant!(self.max_length(device, store, cx))
     }
 }
+
+pub enum ICommandKind<'a> {
+    Command(&'a super::CommandNode),
+}
+
+impl<'a> ICommandKind<'a> {
+    pub(super) fn maybe_from(id: NodeId, store: &'a impl NodeStore) -> Option<Self> {
+        match store.node_opt(id)? {
+            NodeData::Command(n) => Some(Self::Command(n)),
+            _ => None,
+        }
+    }
+}
+
+impl<'a> ICommand for ICommandKind<'a> {
+    fn execute<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        match self {
+            Self::Command(n) => n.execute(device, store, cx),
+        }
+    }
+
+    fn is_done<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        match self {
+            Self::Command(n) => n.is_done(device, store, cx),
+        }
+    }
+}

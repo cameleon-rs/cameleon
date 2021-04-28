@@ -61,11 +61,11 @@ mod tests {
             .parse(&mut node_store, &mut value_store);
 
         let value = value_store
-            .integer_value(node.value().imm().unwrap())
+            .integer_value(node.value_elem().imm().unwrap())
             .unwrap();
         assert_eq!(value, 100);
         assert_eq!(
-            node.command_value(),
+            node.command_value_elem(),
             ImmOrPNode::PNode(node_store.id_by_name("CommandValueNode"))
         );
         assert_eq!(node.polling_time(), Some(1000));
