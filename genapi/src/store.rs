@@ -6,7 +6,7 @@ use std::{
 use string_interner::{StringInterner, Symbol};
 
 use super::{
-    interface::{IFloatKind, IIntegerKind},
+    interface::{IFloatKind, IIntegerKind, IStringKind},
     node_base::NodeBase,
     BooleanNode, CategoryNode, CommandNode, ConverterNode, EnumerationNode, FloatNode,
     FloatRegNode, GenApiError, GenApiResult, IntConverterNode, IntRegNode, IntSwissKnifeNode,
@@ -53,6 +53,19 @@ impl NodeId {
     pub fn expect_ifloat_kind<'a>(self, store: &'a impl NodeStore) -> GenApiResult<IFloatKind<'a>> {
         IFloatKind::maybe_from(self, store).ok_or(GenApiError::InvalidNode(
             "the node doesn't implement `IFloat`",
+        ))
+    }
+
+    pub fn as_istring_kind<'a>(self, store: &'a impl NodeStore) -> Option<IStringKind<'a>> {
+        IStringKind::maybe_from(self, store)
+    }
+
+    pub fn expect_istring_kind<'a>(
+        self,
+        store: &'a impl NodeStore,
+    ) -> GenApiResult<IStringKind<'a>> {
+        IStringKind::maybe_from(self, store).ok_or(GenApiError::InvalidNode(
+            "the node doesn't implement `IString`",
         ))
     }
 }

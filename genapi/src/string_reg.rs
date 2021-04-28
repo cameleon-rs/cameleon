@@ -1,6 +1,9 @@
 use super::{
+    interface::IString,
     node_base::{NodeAttributeBase, NodeBase},
     register_base::RegisterBase,
+    store::{CacheStore, NodeStore, ValueStore},
+    Device, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -19,5 +22,35 @@ impl StringRegNode {
     #[must_use]
     pub fn register_base(&self) -> &RegisterBase {
         &self.register_base
+    }
+}
+
+impl IString for StringRegNode {
+    fn value<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<String> {
+        todo!()
+    }
+
+    fn set_value<T: ValueStore, U: CacheStore>(
+        &self,
+        value: &str,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        todo!()
+    }
+
+    fn max_length<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        todo!()
     }
 }

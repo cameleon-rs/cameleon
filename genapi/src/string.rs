@@ -1,7 +1,9 @@
 use super::{
     elem_type::ImmOrPNode,
+    interface::IString,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    store::StringId,
+    store::{CacheStore, NodeStore, StringId, ValueStore},
+    Device, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -25,7 +27,37 @@ impl StringNode {
     }
 
     #[must_use]
-    pub fn value(&self) -> ImmOrPNode<StringId> {
+    pub fn value_elem(&self) -> ImmOrPNode<StringId> {
         self.value
+    }
+}
+
+impl IString for StringNode {
+    fn value<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<String> {
+        todo!()
+    }
+
+    fn set_value<T: ValueStore, U: CacheStore>(
+        &self,
+        value: &str,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        todo!()
+    }
+
+    fn max_length<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        todo!()
     }
 }

@@ -530,3 +530,57 @@ impl<'a> IFloat for IFloatKind<'a> {
         delegate_to_ifloat_variant!(self.set_max(value, device, store, cx))
     }
 }
+
+pub enum IStringKind<'a> {
+    String(&'a super::StringNode),
+    StringReg(&'a super::StringRegNode),
+}
+
+impl<'a> IStringKind<'a> {
+    pub(super) fn maybe_from(id: NodeId, store: &'a impl NodeStore) -> Option<Self> {
+        match store.node_opt(id)? {
+            NodeData::String(n) => Some(Self::String(n)),
+            NodeData::StringReg(n) => Some(Self::StringReg(n)),
+            _ => None,
+        }
+    }
+}
+
+macro_rules! delegate_to_istring_variant {
+    ($self:ident.$method:ident($($arg:ident),*)) => {
+        match $self {
+            IStringKind::String(n) => n.$method($($arg),*),
+            IStringKind::StringReg(n) => n.$method($($arg),*),
+        }
+    }
+}
+
+impl<'a> IString for IStringKind<'a> {
+    fn value<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<String> {
+        delegate_to_istring_variant!(self.value(device, store, cx))
+    }
+
+    fn set_value<T: ValueStore, U: CacheStore>(
+        &self,
+        value: &str,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        delegate_to_istring_variant!(self.set_value(value, device, store, cx))
+    }
+
+    fn max_length<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        delegate_to_istring_variant!(self.max_length(device, store, cx))
+    }
+}

@@ -63,7 +63,9 @@ mod tests {
             .parse(&mut node_store, &mut value_store);
 
         assert_eq!(node.streamable(), true);
-        let value = value_store.str_value(node.value().imm().unwrap()).unwrap();
+        let value = value_store
+            .str_value(node.value_elem().imm().unwrap())
+            .unwrap();
         assert_eq!(value, "Immediate String");
     }
 
@@ -84,7 +86,7 @@ mod tests {
 
         assert_eq!(node.streamable(), false);
         assert_eq!(
-            node.value(),
+            node.value_elem(),
             ImmOrPNode::PNode(node_store.id_by_name("AnotherStringNode"))
         );
     }
