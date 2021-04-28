@@ -1,6 +1,6 @@
 use super::{
     elem_type::ImmOrPNode,
-    interface::IBoolean,
+    interface::{IBoolean, ISelector},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{BooleanId, CacheStore, NodeId, NodeStore, ValueStore},
     Device, GenApiResult, ValueCtxt,
@@ -68,5 +68,11 @@ impl IBoolean for BooleanNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo!()
+    }
+}
+
+impl ISelector for BooleanNode {
+    fn selecting_nodes(&self, store: impl NodeStore) -> GenApiResult<&[NodeId]> {
+        Ok(self.p_selected())
     }
 }

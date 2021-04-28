@@ -1,6 +1,6 @@
 use super::{
     elem_type::ImmOrPNode,
-    interface::IEnumeration,
+    interface::{IEnumeration, ISelector},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, IntegerId, NodeId, NodeStore, ValueStore},
     Device, GenApiResult, ValueCtxt,
@@ -124,5 +124,11 @@ impl EnumEntryNode {
     #[must_use]
     pub fn is_self_clearing(&self) -> bool {
         self.is_self_clearing
+    }
+}
+
+impl ISelector for EnumerationNode {
+    fn selecting_nodes(&self, store: impl NodeStore) -> GenApiResult<&[NodeId]> {
+        Ok(self.p_selected())
     }
 }

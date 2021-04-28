@@ -8,7 +8,7 @@ use string_interner::{StringInterner, Symbol};
 use super::{
     interface::{
         IBooleanKind, ICategoryKind, ICommandKind, IEnumerationKind, IFloatKind, IIntegerKind,
-        IPortKind, IRegisterKind, IStringKind,
+        IPortKind, IRegisterKind, ISelectorKind, IStringKind,
     },
     node_base::NodeBase,
     BooleanNode, CategoryNode, CommandNode, ConverterNode, EnumerationNode, FloatNode,
@@ -151,6 +151,20 @@ impl NodeId {
         self.as_iport_kind(store).ok_or(GenApiError::InvalidNode(
             "the node doesn't implement `IPort`",
         ))
+    }
+
+    pub fn as_iselector_kind<'a>(self, store: &'a impl NodeStore) -> Option<ISelectorKind<'a>> {
+        ISelectorKind::maybe_from(self, store)
+    }
+
+    pub fn expect_iselector_kind<'a>(
+        self,
+        store: &'a impl NodeStore,
+    ) -> GenApiResult<ISelectorKind<'a>> {
+        self.as_iselector_kind(store)
+            .ok_or(GenApiError::InvalidNode(
+                "the node doesn't implement `ISelector`",
+            ))
     }
 }
 

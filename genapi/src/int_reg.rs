@@ -1,6 +1,6 @@
 use super::{
     elem_type::{Endianness, IntegerRepresentation, Sign},
-    interface::{IInteger, IRegister, IncrementMode},
+    interface::{IInteger, IRegister, ISelector, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase},
     register_base::RegisterBase,
     store::{CacheStore, NodeId, NodeStore, ValueStore},
@@ -178,5 +178,11 @@ impl IRegister for IntRegNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         self.register_base().length(device, store, cx)
+    }
+}
+
+impl ISelector for IntRegNode {
+    fn selecting_nodes(&self, store: impl NodeStore) -> GenApiResult<&[NodeId]> {
+        Ok(self.p_selected())
     }
 }

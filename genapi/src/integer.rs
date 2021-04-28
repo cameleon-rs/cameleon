@@ -1,6 +1,6 @@
 use super::{
     elem_type::{ImmOrPNode, IntegerRepresentation, ValueKind},
-    interface::{IInteger, IncrementMode},
+    interface::{IInteger, ISelector, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, IntegerId, NodeId, NodeStore, ValueStore},
     Device, GenApiResult, ValueCtxt,
@@ -149,5 +149,11 @@ impl IInteger for IntegerNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo!()
+    }
+}
+
+impl ISelector for IntegerNode {
+    fn selecting_nodes(&self, store: impl NodeStore) -> GenApiResult<&[NodeId]> {
+        Ok(self.p_selected())
     }
 }

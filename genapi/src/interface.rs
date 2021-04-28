@@ -283,17 +283,8 @@ pub trait IPort {
 }
 
 pub trait ISelector {
-    /// Return nodes which is selected by the current node.
-    fn selected_nodes<T: ValueStore, U: CacheStore>(
-        &self,
-        store: impl NodeStore,
-    ) -> GenApiResult<Vec<NodeId>>;
-
     /// Return nodes which refer to the current node as a selector.
-    fn selecting_nodes<T: ValueStore, U: CacheStore>(
-        &self,
-        store: impl NodeStore,
-    ) -> GenApiResult<Vec<NodeId>>;
+    fn selecting_nodes(&self, store: impl NodeStore) -> GenApiResult<&[NodeId]>;
 }
 
 pub enum IIntegerKind<'a> {
@@ -868,5 +859,44 @@ impl<'a> IPort for IPortKind<'a> {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         delegate_to_iport_variant!(self.write(address, buf, device, store, cx))
+    }
+}
+
+pub enum ISelectorKind<'a> {
+    Integer(&'a super::IntegerNode),
+    IntReg(&'a super::IntRegNode),
+    MaskedIntReg(&'a super::MaskedIntRegNode),
+    Boolean(&'a super::BooleanNode),
+    Enumeration(&'a super::EnumerationNode),
+}
+
+impl<'a> ISelectorKind<'a> {
+    pub(super) fn maybe_from(id: NodeId, store: &'a impl NodeStore) -> Option<Self> {
+        match store.node_opt(id)? {
+            NodeData::Integer(n) => Some(Self::Integer(n)),
+            NodeData::IntReg(n) => Some(Self::IntReg(n)),
+            NodeData::MaskedIntReg(n) => Some(Self::MaskedIntReg(n)),
+            NodeData::Boolean(n) => Some(Self::Boolean(n)),
+            NodeData::Enumeration(n) => Some(Self::Enumeration(n)),
+            _ => None,
+        }
+    }
+}
+
+macro_rules! delegate_to_iselector_variant {
+    ($self:ident.$method:ident($($arg:ident),*)) => {
+        match $self {
+            ISelectorKind::Integer(n) => n.$method($($arg),*),
+            ISelectorKind::IntReg(n) => n.$method($($arg),*),
+            ISelectorKind::MaskedIntReg(n) => n.$method($($arg),*),
+            ISelectorKind::Boolean(n) => n.$method($($arg),*),
+            ISelectorKind::Enumeration(n) => n.$method($($arg),*),
+        }
+    }
+}
+
+impl<'a> ISelector for ISelectorKind<'a> {
+    fn selecting_nodes(&self, store: impl NodeStore) -> GenApiResult<&[NodeId]> {
+        delegate_to_iselector_variant!(self.selecting_nodes(store))
     }
 }
