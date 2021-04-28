@@ -6,7 +6,9 @@ use std::{
 use string_interner::{StringInterner, Symbol};
 
 use super::{
-    interface::{ICommandKind, IEnumerationKind, IFloatKind, IIntegerKind, IStringKind},
+    interface::{
+        IBooleanKind, ICommandKind, IEnumerationKind, IFloatKind, IIntegerKind, IStringKind,
+    },
     node_base::NodeBase,
     BooleanNode, CategoryNode, CommandNode, ConverterNode, EnumerationNode, FloatNode,
     FloatRegNode, GenApiError, GenApiResult, IntConverterNode, IntRegNode, IntSwissKnifeNode,
@@ -97,6 +99,19 @@ impl NodeId {
             .ok_or(GenApiError::InvalidNode(
                 "the node doesn't implement `IEnumeration`",
             ))
+    }
+
+    pub fn as_iboolean_kind<'a>(self, store: &'a impl NodeStore) -> Option<IBooleanKind<'a>> {
+        IBooleanKind::maybe_from(self, store)
+    }
+
+    pub fn expect_iboolean_kind<'a>(
+        self,
+        store: &'a impl NodeStore,
+    ) -> GenApiResult<IBooleanKind<'a>> {
+        self.as_iboolean_kind(store).ok_or(GenApiError::InvalidNode(
+            "the node doesn't implement `IBoolean`",
+        ))
     }
 }
 

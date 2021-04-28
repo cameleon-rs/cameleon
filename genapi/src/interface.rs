@@ -681,3 +681,45 @@ impl<'a> IEnumeration for IEnumerationKind<'a> {
         delegate_to_ienumeration_variant!(self.set_entry_by_idx(idx, device, store, cx))
     }
 }
+
+pub enum IBooleanKind<'a> {
+    Boolean(&'a super::BooleanNode),
+}
+
+impl<'a> IBooleanKind<'a> {
+    pub(super) fn maybe_from(id: NodeId, store: &'a impl NodeStore) -> Option<Self> {
+        match store.node_opt(id)? {
+            NodeData::Boolean(n) => Some(Self::Boolean(n)),
+            _ => None,
+        }
+    }
+}
+
+macro_rules! delegate_to_iboolean_variant {
+    ($self:ident.$method:ident($($arg:ident),*)) => {
+        match $self {
+            IBooleanKind::Boolean(n) => n.$method($($arg),*)
+        }
+    }
+}
+
+impl<'a> IBoolean for IBooleanKind<'a> {
+    fn value<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        delegate_to_iboolean_variant!(self.value(device, store, cx))
+    }
+
+    fn set_value<T: ValueStore, U: CacheStore>(
+        &self,
+        value: bool,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        delegate_to_iboolean_variant!(self.set_value(value, device, store, cx))
+    }
+}

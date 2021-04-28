@@ -65,7 +65,7 @@ mod tests {
             .root_node()
             .parse(&mut node_store, &mut value_store);
         assert_eq!(
-            node.value(),
+            node.value_elem(),
             ImmOrPNode::PNode(node_store.id_by_name("Node"))
         );
         assert_eq!(node.on_value(), Some(1));
@@ -87,7 +87,7 @@ mod tests {
             .root_node()
             .parse(&mut node_store, &mut value_store);
         let value = value_store
-            .boolean_value(node.value().imm().unwrap())
+            .boolean_value(node.value_elem().imm().unwrap())
             .unwrap();
         assert_eq!(value, true);
 
@@ -104,7 +104,7 @@ mod tests {
             .root_node()
             .parse(&mut node_store2, &mut value_store2);
         let value = value_store2
-            .boolean_value(node.value().imm().unwrap())
+            .boolean_value(node.value_elem().imm().unwrap())
             .unwrap();
         assert_eq!(value, false);
     }

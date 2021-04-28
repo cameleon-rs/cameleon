@@ -1,7 +1,9 @@
 use super::{
     elem_type::ImmOrPNode,
+    interface::IBoolean,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    store::{BooleanId, NodeId},
+    store::{BooleanId, CacheStore, NodeId, NodeStore, ValueStore},
+    Device, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -28,7 +30,7 @@ impl BooleanNode {
     }
 
     #[must_use]
-    pub fn value(&self) -> ImmOrPNode<BooleanId> {
+    pub fn value_elem(&self) -> ImmOrPNode<BooleanId> {
         self.value
     }
 
@@ -45,5 +47,26 @@ impl BooleanNode {
     #[must_use]
     pub fn p_selected(&self) -> &[NodeId] {
         &self.p_selected
+    }
+}
+
+impl IBoolean for BooleanNode {
+    fn value<T: ValueStore, U: CacheStore>(
+        &self,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        todo!()
+    }
+
+    fn set_value<T: ValueStore, U: CacheStore>(
+        &self,
+        value: bool,
+        device: impl Device,
+        store: impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        todo!()
     }
 }
