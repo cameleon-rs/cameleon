@@ -41,8 +41,8 @@ impl CommandNode {
 impl ICommand for CommandNode {
     fn execute<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo!()
@@ -50,8 +50,8 @@ impl ICommand for CommandNode {
 
     fn is_done<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
         todo!()

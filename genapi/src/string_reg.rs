@@ -28,8 +28,8 @@ impl StringRegNode {
 impl IString for StringRegNode {
     fn value<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<String> {
         todo!()
@@ -38,8 +38,8 @@ impl IString for StringRegNode {
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: &str,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo!()
@@ -47,8 +47,8 @@ impl IString for StringRegNode {
 
     fn max_length<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         todo!()
@@ -59,8 +59,8 @@ impl IRegister for StringRegNode {
     fn read<T: ValueStore, U: CacheStore>(
         &self,
         buf: &mut [u8],
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         self.register_base().read(buf, device, store, cx)
@@ -69,8 +69,8 @@ impl IRegister for StringRegNode {
     fn write<T: ValueStore, U: CacheStore>(
         &self,
         buf: &[u8],
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         self.register_base().write(buf, device, store, cx)
@@ -78,8 +78,8 @@ impl IRegister for StringRegNode {
 
     fn address<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         self.register_base().address(device, store, cx)
@@ -87,8 +87,8 @@ impl IRegister for StringRegNode {
 
     fn length<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         self.register_base().length(device, store, cx)

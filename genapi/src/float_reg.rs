@@ -59,8 +59,8 @@ impl FloatRegNode {
 impl IFloat for FloatRegNode {
     fn value<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
         todo!()
@@ -69,8 +69,8 @@ impl IFloat for FloatRegNode {
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: f64,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo! {}
@@ -78,8 +78,8 @@ impl IFloat for FloatRegNode {
 
     fn min<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
         todo!()
@@ -87,52 +87,52 @@ impl IFloat for FloatRegNode {
 
     fn max<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
         todo!()
     }
 
-    fn inc_mode(&self, store: impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
+    fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
         todo!()
     }
 
     fn inc<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Option<f64>> {
         todo!()
     }
 
     /// NOTE: `ValidValueSet` is not supported in `GenApiSchema Version 1.1` yet.
-    fn valid_value_set(&self, store: impl NodeStore) -> &[f64] {
+    fn valid_value_set(&self, store: &impl NodeStore) -> &[f64] {
         todo!()
     }
 
-    fn representation(&self, store: impl NodeStore) -> FloatRepresentation {
+    fn representation(&self, store: &impl NodeStore) -> FloatRepresentation {
         todo!()
     }
 
-    fn unit(&self, store: impl NodeStore) -> Option<&str> {
+    fn unit(&self, store: &impl NodeStore) -> Option<&str> {
         todo!()
     }
 
-    fn display_notation(&self, store: impl NodeStore) -> DisplayNotation {
+    fn display_notation(&self, store: &impl NodeStore) -> DisplayNotation {
         todo!()
     }
 
-    fn display_precision(&self, store: impl NodeStore) -> i64 {
+    fn display_precision(&self, store: &impl NodeStore) -> i64 {
         todo! {}
     }
 
     fn set_min<T: ValueStore, U: CacheStore>(
         &self,
         value: f64,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo!()
@@ -141,8 +141,8 @@ impl IFloat for FloatRegNode {
     fn set_max<T: ValueStore, U: CacheStore>(
         &self,
         value: f64,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo!()
@@ -153,8 +153,8 @@ impl IRegister for FloatRegNode {
     fn read<T: ValueStore, U: CacheStore>(
         &self,
         buf: &mut [u8],
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         self.register_base().read(buf, device, store, cx)
@@ -163,8 +163,8 @@ impl IRegister for FloatRegNode {
     fn write<T: ValueStore, U: CacheStore>(
         &self,
         buf: &[u8],
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         self.register_base().write(buf, device, store, cx)
@@ -172,8 +172,8 @@ impl IRegister for FloatRegNode {
 
     fn address<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         self.register_base().address(device, store, cx)
@@ -181,8 +181,8 @@ impl IRegister for FloatRegNode {
 
     fn length<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         self.register_base().length(device, store, cx)

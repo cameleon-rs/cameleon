@@ -35,8 +35,8 @@ impl StringNode {
 impl IString for StringNode {
     fn value<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<String> {
         todo!()
@@ -45,8 +45,8 @@ impl IString for StringNode {
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: &str,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo!()
@@ -54,8 +54,8 @@ impl IString for StringNode {
 
     fn max_length<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         todo!()

@@ -102,8 +102,8 @@ impl ConverterNode {
 impl IFloat for ConverterNode {
     fn value<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
         todo!()
@@ -112,8 +112,8 @@ impl IFloat for ConverterNode {
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: f64,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo! {}
@@ -121,8 +121,8 @@ impl IFloat for ConverterNode {
 
     fn min<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
         todo!()
@@ -130,52 +130,52 @@ impl IFloat for ConverterNode {
 
     fn max<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
         todo!()
     }
 
-    fn inc_mode(&self, store: impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
+    fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
         todo!()
     }
 
     fn inc<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Option<f64>> {
         todo!()
     }
 
     /// NOTE: `ValidValueSet` is not supported in `GenApiSchema Version 1.1` yet.
-    fn valid_value_set(&self, store: impl NodeStore) -> &[f64] {
+    fn valid_value_set(&self, store: &impl NodeStore) -> &[f64] {
         todo!()
     }
 
-    fn representation(&self, store: impl NodeStore) -> FloatRepresentation {
+    fn representation(&self, store: &impl NodeStore) -> FloatRepresentation {
         todo!()
     }
 
-    fn unit(&self, store: impl NodeStore) -> Option<&str> {
+    fn unit(&self, store: &impl NodeStore) -> Option<&str> {
         todo!()
     }
 
-    fn display_notation(&self, store: impl NodeStore) -> DisplayNotation {
+    fn display_notation(&self, store: &impl NodeStore) -> DisplayNotation {
         todo!()
     }
 
-    fn display_precision(&self, store: impl NodeStore) -> i64 {
+    fn display_precision(&self, store: &impl NodeStore) -> i64 {
         todo! {}
     }
 
     fn set_min<T: ValueStore, U: CacheStore>(
         &self,
         value: f64,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo!()
@@ -184,8 +184,8 @@ impl IFloat for ConverterNode {
     fn set_max<T: ValueStore, U: CacheStore>(
         &self,
         value: f64,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo!()

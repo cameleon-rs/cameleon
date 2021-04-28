@@ -66,8 +66,8 @@ impl IRegister for RegisterBase {
     fn read<T: ValueStore, U: CacheStore>(
         &self,
         buf: &mut [u8],
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo!()
@@ -76,8 +76,8 @@ impl IRegister for RegisterBase {
     fn write<T: ValueStore, U: CacheStore>(
         &self,
         buf: &[u8],
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo!()
@@ -85,8 +85,8 @@ impl IRegister for RegisterBase {
 
     fn address<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         todo!()
@@ -94,8 +94,8 @@ impl IRegister for RegisterBase {
 
     fn length<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         todo!()

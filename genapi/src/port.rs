@@ -43,8 +43,8 @@ impl IPort for PortNode {
         &self,
         address: i64,
         buf: &mut [u8],
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo!()
@@ -54,8 +54,8 @@ impl IPort for PortNode {
         &self,
         address: i64,
         buf: &[u8],
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo!()

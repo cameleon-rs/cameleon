@@ -66,8 +66,8 @@ impl MaskedIntRegNode {
 impl IInteger for MaskedIntRegNode {
     fn value<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         todo!()
@@ -76,8 +76,8 @@ impl IInteger for MaskedIntRegNode {
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: i64,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo!()
@@ -85,8 +85,8 @@ impl IInteger for MaskedIntRegNode {
 
     fn min<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         todo!()
@@ -94,43 +94,43 @@ impl IInteger for MaskedIntRegNode {
 
     fn max<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         todo! {}
     }
 
-    fn inc_mode(&self, store: impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
+    fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
         todo!()
     }
 
     fn inc<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Option<i64>> {
         todo!()
     }
 
-    fn valid_value_set(&self, store: impl NodeStore) -> &[i64] {
+    fn valid_value_set(&self, store: &impl NodeStore) -> &[i64] {
         todo!()
     }
 
-    fn representation(&self, store: impl NodeStore) -> IntegerRepresentation {
+    fn representation(&self, store: &impl NodeStore) -> IntegerRepresentation {
         todo!()
     }
 
-    fn unit(&self, store: impl NodeStore) -> Option<&str> {
+    fn unit(&self, store: &impl NodeStore) -> Option<&str> {
         todo!()
     }
 
     fn set_min<T: ValueStore, U: CacheStore>(
         &self,
         value: i64,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo!()
@@ -139,8 +139,8 @@ impl IInteger for MaskedIntRegNode {
     fn set_max<T: ValueStore, U: CacheStore>(
         &self,
         value: i64,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo!()
@@ -151,8 +151,8 @@ impl IRegister for MaskedIntRegNode {
     fn read<T: ValueStore, U: CacheStore>(
         &self,
         buf: &mut [u8],
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         self.register_base().read(buf, device, store, cx)
@@ -161,8 +161,8 @@ impl IRegister for MaskedIntRegNode {
     fn write<T: ValueStore, U: CacheStore>(
         &self,
         buf: &[u8],
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         self.register_base().write(buf, device, store, cx)
@@ -170,8 +170,8 @@ impl IRegister for MaskedIntRegNode {
 
     fn address<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         self.register_base().address(device, store, cx)
@@ -179,8 +179,8 @@ impl IRegister for MaskedIntRegNode {
 
     fn length<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         self.register_base().length(device, store, cx)
@@ -188,7 +188,7 @@ impl IRegister for MaskedIntRegNode {
 }
 
 impl ISelector for MaskedIntRegNode {
-    fn selecting_nodes(&self, store: impl NodeStore) -> GenApiResult<&[NodeId]> {
+    fn selecting_nodes(&self, store: &impl NodeStore) -> GenApiResult<&[NodeId]> {
         Ok(self.p_selected())
     }
 }

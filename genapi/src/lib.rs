@@ -70,6 +70,21 @@ pub trait Device {
     fn write_mem(&mut self, address: u64, data: &[u8]) -> Result<(), Self::Error>;
 }
 
+impl<T> Device for &mut T
+where
+    T: Device,
+{
+    type Error = T::Error;
+
+    fn read_mem(&mut self, address: u64, buf: &mut [u8]) -> Result<(), Self::Error> {
+        (**self).read_mem(address, buf)
+    }
+
+    fn write_mem(&mut self, address: u64, data: &[u8]) -> Result<(), Self::Error> {
+        (**self).write_mem(address, data)
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum GenApiError {
     /// Device I/O error.

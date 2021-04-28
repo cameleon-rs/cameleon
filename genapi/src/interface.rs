@@ -14,62 +14,62 @@ pub enum IncrementMode {
 pub trait IInteger {
     fn value<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64>;
 
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: i64,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
     fn min<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64>;
 
     fn max<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64>;
 
-    fn inc_mode(&self, store: impl NodeStore) -> GenApiResult<Option<IncrementMode>>;
+    fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>>;
 
     fn inc<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Option<i64>>;
 
     /// NOTE: `ValidValueSet` is not supported in `GenApiSchema Version 1.1` yet.
-    fn valid_value_set(&self, store: impl NodeStore) -> &[i64];
+    fn valid_value_set(&self, store: &impl NodeStore) -> &[i64];
 
-    fn representation(&self, store: impl NodeStore) -> IntegerRepresentation;
+    fn representation(&self, store: &impl NodeStore) -> IntegerRepresentation;
 
-    fn unit(&self, store: impl NodeStore) -> Option<&str>;
+    fn unit(&self, store: &impl NodeStore) -> Option<&str>;
 
     fn set_min<T: ValueStore, U: CacheStore>(
         &self,
         value: i64,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
     fn set_max<T: ValueStore, U: CacheStore>(
         &self,
         value: i64,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 }
@@ -77,66 +77,66 @@ pub trait IInteger {
 pub trait IFloat {
     fn value<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64>;
 
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: f64,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
     fn min<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64>;
 
     fn max<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64>;
 
-    fn inc_mode(&self, store: impl NodeStore) -> GenApiResult<Option<IncrementMode>>;
+    fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>>;
 
     fn inc<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Option<f64>>;
 
     /// NOTE: `ValidValueSet` is not supported in `GenApiSchema Version 1.1` yet.
-    fn valid_value_set(&self, store: impl NodeStore) -> &[f64];
+    fn valid_value_set(&self, store: &impl NodeStore) -> &[f64];
 
-    fn representation(&self, store: impl NodeStore) -> FloatRepresentation;
+    fn representation(&self, store: &impl NodeStore) -> FloatRepresentation;
 
-    fn unit(&self, store: impl NodeStore) -> Option<&str>;
+    fn unit(&self, store: &impl NodeStore) -> Option<&str>;
 
-    fn display_notation(&self, store: impl NodeStore) -> DisplayNotation;
+    fn display_notation(&self, store: &impl NodeStore) -> DisplayNotation;
 
-    fn display_precision(&self, store: impl NodeStore) -> i64;
+    fn display_precision(&self, store: &impl NodeStore) -> i64;
 
     fn set_min<T: ValueStore, U: CacheStore>(
         &self,
         value: f64,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
     fn set_max<T: ValueStore, U: CacheStore>(
         &self,
         value: f64,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 }
@@ -144,23 +144,23 @@ pub trait IFloat {
 pub trait IString {
     fn value<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<String>;
 
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: &str,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
     fn max_length<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64>;
 }
@@ -168,26 +168,26 @@ pub trait IString {
 pub trait IEnumeration {
     fn current_entry<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<&EnumEntryNode>;
 
-    fn entries(&self, store: impl NodeStore) -> GenApiResult<&[EnumEntryNode]>;
+    fn entries(&self, store: &impl NodeStore) -> GenApiResult<&[EnumEntryNode]>;
 
     fn set_entry_by_name<T: ValueStore, U: CacheStore>(
         &self,
         name: &str,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
     fn set_entry_by_idx<T: ValueStore, U: CacheStore>(
         &self,
         idx: usize,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 }
@@ -195,15 +195,15 @@ pub trait IEnumeration {
 pub trait ICommand {
     fn execute<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
     fn is_done<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool>;
 }
@@ -211,16 +211,16 @@ pub trait ICommand {
 pub trait IBoolean {
     fn value<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool>;
 
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: bool,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 }
@@ -229,37 +229,37 @@ pub trait IRegister {
     fn read<T: ValueStore, U: CacheStore>(
         &self,
         buf: &mut [u8],
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
     fn write<T: ValueStore, U: CacheStore>(
         &self,
         buf: &[u8],
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
     fn address<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64>;
 
     fn length<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64>;
 }
 
 pub trait ICategory {
     /// Return nodes in the category.
-    fn nodes(&self, store: impl NodeStore) -> GenApiResult<&[NodeId]>;
+    fn nodes(&self, store: &impl NodeStore) -> GenApiResult<&[NodeId]>;
 }
 
 pub trait IPort {
@@ -267,8 +267,8 @@ pub trait IPort {
         &self,
         address: i64,
         buf: &mut [u8],
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
@@ -276,15 +276,15 @@ pub trait IPort {
         &self,
         address: i64,
         buf: &[u8],
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 }
 
 pub trait ISelector {
     /// Return nodes which refer to the current node as a selector.
-    fn selecting_nodes(&self, store: impl NodeStore) -> GenApiResult<&[NodeId]>;
+    fn selecting_nodes(&self, store: &impl NodeStore) -> GenApiResult<&[NodeId]>;
 }
 
 pub enum IIntegerKind<'a> {
@@ -323,8 +323,8 @@ macro_rules! delegate_to_iinteger_variant {
 impl<'a> IInteger for IIntegerKind<'a> {
     fn value<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         delegate_to_iinteger_variant!(self.value(device, store, cx))
@@ -332,8 +332,8 @@ impl<'a> IInteger for IIntegerKind<'a> {
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: i64,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         delegate_to_iinteger_variant!(self.set_value(value, device, store, cx))
@@ -341,8 +341,8 @@ impl<'a> IInteger for IIntegerKind<'a> {
 
     fn min<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         delegate_to_iinteger_variant!(self.min(device, store, cx))
@@ -350,43 +350,43 @@ impl<'a> IInteger for IIntegerKind<'a> {
 
     fn max<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         delegate_to_iinteger_variant!(self.max(device, store, cx))
     }
 
-    fn inc_mode(&self, store: impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
+    fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
         delegate_to_iinteger_variant!(self.inc_mode(store))
     }
 
     fn inc<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Option<i64>> {
         delegate_to_iinteger_variant!(self.inc(device, store, cx))
     }
 
-    fn valid_value_set(&self, store: impl NodeStore) -> &[i64] {
+    fn valid_value_set(&self, store: &impl NodeStore) -> &[i64] {
         delegate_to_iinteger_variant!(self.valid_value_set(store))
     }
 
-    fn representation(&self, store: impl NodeStore) -> IntegerRepresentation {
+    fn representation(&self, store: &impl NodeStore) -> IntegerRepresentation {
         delegate_to_iinteger_variant!(self.representation(store))
     }
 
-    fn unit(&self, store: impl NodeStore) -> Option<&str> {
+    fn unit(&self, store: &impl NodeStore) -> Option<&str> {
         delegate_to_iinteger_variant!(self.unit(store))
     }
 
     fn set_min<T: ValueStore, U: CacheStore>(
         &self,
         value: i64,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         delegate_to_iinteger_variant!(self.set_min(value, device, store, cx))
@@ -395,8 +395,8 @@ impl<'a> IInteger for IIntegerKind<'a> {
     fn set_max<T: ValueStore, U: CacheStore>(
         &self,
         value: i64,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         delegate_to_iinteger_variant!(self.set_max(value, device, store, cx))
@@ -436,8 +436,8 @@ macro_rules! delegate_to_ifloat_variant {
 impl<'a> IFloat for IFloatKind<'a> {
     fn value<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
         delegate_to_ifloat_variant!(self.value(device, store, cx))
@@ -445,8 +445,8 @@ impl<'a> IFloat for IFloatKind<'a> {
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: f64,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         delegate_to_ifloat_variant!(self.set_value(value, device, store, cx))
@@ -454,8 +454,8 @@ impl<'a> IFloat for IFloatKind<'a> {
 
     fn min<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
         delegate_to_ifloat_variant!(self.min(device, store, cx))
@@ -463,51 +463,51 @@ impl<'a> IFloat for IFloatKind<'a> {
 
     fn max<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
         delegate_to_ifloat_variant!(self.max(device, store, cx))
     }
 
-    fn inc_mode(&self, store: impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
+    fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
         delegate_to_ifloat_variant!(self.inc_mode(store))
     }
 
     fn inc<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Option<f64>> {
         delegate_to_ifloat_variant!(self.inc(device, store, cx))
     }
 
-    fn valid_value_set(&self, store: impl NodeStore) -> &[f64] {
+    fn valid_value_set(&self, store: &impl NodeStore) -> &[f64] {
         delegate_to_ifloat_variant!(self.valid_value_set(store))
     }
 
-    fn representation(&self, store: impl NodeStore) -> FloatRepresentation {
+    fn representation(&self, store: &impl NodeStore) -> FloatRepresentation {
         delegate_to_ifloat_variant!(self.representation(store))
     }
 
-    fn unit(&self, store: impl NodeStore) -> Option<&str> {
+    fn unit(&self, store: &impl NodeStore) -> Option<&str> {
         delegate_to_ifloat_variant!(self.unit(store))
     }
 
-    fn display_notation(&self, store: impl NodeStore) -> DisplayNotation {
+    fn display_notation(&self, store: &impl NodeStore) -> DisplayNotation {
         delegate_to_ifloat_variant!(self.display_notation(store))
     }
 
-    fn display_precision(&self, store: impl NodeStore) -> i64 {
+    fn display_precision(&self, store: &impl NodeStore) -> i64 {
         delegate_to_ifloat_variant!(self.display_precision(store))
     }
 
     fn set_min<T: ValueStore, U: CacheStore>(
         &self,
         value: f64,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         delegate_to_ifloat_variant!(self.set_min(value, device, store, cx))
@@ -516,8 +516,8 @@ impl<'a> IFloat for IFloatKind<'a> {
     fn set_max<T: ValueStore, U: CacheStore>(
         &self,
         value: f64,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         delegate_to_ifloat_variant!(self.set_max(value, device, store, cx))
@@ -551,8 +551,8 @@ macro_rules! delegate_to_istring_variant {
 impl<'a> IString for IStringKind<'a> {
     fn value<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<String> {
         delegate_to_istring_variant!(self.value(device, store, cx))
@@ -561,8 +561,8 @@ impl<'a> IString for IStringKind<'a> {
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: &str,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         delegate_to_istring_variant!(self.set_value(value, device, store, cx))
@@ -570,8 +570,8 @@ impl<'a> IString for IStringKind<'a> {
 
     fn max_length<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         delegate_to_istring_variant!(self.max_length(device, store, cx))
@@ -602,8 +602,8 @@ impl<'a> ICommandKind<'a> {
 impl<'a> ICommand for ICommandKind<'a> {
     fn execute<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         delegate_to_icommand_variant!(self.execute(device, store, cx))
@@ -611,8 +611,8 @@ impl<'a> ICommand for ICommandKind<'a> {
 
     fn is_done<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
         delegate_to_icommand_variant!(self.is_done(device, store, cx))
@@ -643,22 +643,22 @@ macro_rules! delegate_to_ienumeration_variant {
 impl<'a> IEnumeration for IEnumerationKind<'a> {
     fn current_entry<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<&EnumEntryNode> {
         delegate_to_ienumeration_variant!(self.current_entry(device, store, cx))
     }
 
-    fn entries(&self, store: impl NodeStore) -> GenApiResult<&[EnumEntryNode]> {
+    fn entries(&self, store: &impl NodeStore) -> GenApiResult<&[EnumEntryNode]> {
         delegate_to_ienumeration_variant!(self.entries(store))
     }
 
     fn set_entry_by_name<T: ValueStore, U: CacheStore>(
         &self,
         name: &str,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         delegate_to_ienumeration_variant!(self.set_entry_by_name(name, device, store, cx))
@@ -667,8 +667,8 @@ impl<'a> IEnumeration for IEnumerationKind<'a> {
     fn set_entry_by_idx<T: ValueStore, U: CacheStore>(
         &self,
         idx: usize,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         delegate_to_ienumeration_variant!(self.set_entry_by_idx(idx, device, store, cx))
@@ -699,8 +699,8 @@ macro_rules! delegate_to_iboolean_variant {
 impl<'a> IBoolean for IBooleanKind<'a> {
     fn value<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
         delegate_to_iboolean_variant!(self.value(device, store, cx))
@@ -709,8 +709,8 @@ impl<'a> IBoolean for IBooleanKind<'a> {
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: bool,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         delegate_to_iboolean_variant!(self.set_value(value, device, store, cx))
@@ -754,8 +754,8 @@ impl<'a> IRegister for IRegisterKind<'a> {
     fn read<T: ValueStore, U: CacheStore>(
         &self,
         buf: &mut [u8],
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         delegate_to_iregister_variant!(self.read(buf, device, store, cx))
@@ -764,8 +764,8 @@ impl<'a> IRegister for IRegisterKind<'a> {
     fn write<T: ValueStore, U: CacheStore>(
         &self,
         buf: &[u8],
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         delegate_to_iregister_variant!(self.write(buf, device, store, cx))
@@ -773,8 +773,8 @@ impl<'a> IRegister for IRegisterKind<'a> {
 
     fn address<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         delegate_to_iregister_variant!(self.address(device, store, cx))
@@ -782,8 +782,8 @@ impl<'a> IRegister for IRegisterKind<'a> {
 
     fn length<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         delegate_to_iregister_variant!(self.length(device, store, cx))
@@ -812,7 +812,7 @@ macro_rules! delegate_to_icategory_variant {
 }
 
 impl<'a> ICategory for ICategoryKind<'a> {
-    fn nodes(&self, store: impl NodeStore) -> GenApiResult<&[NodeId]> {
+    fn nodes(&self, store: &impl NodeStore) -> GenApiResult<&[NodeId]> {
         delegate_to_icategory_variant!(self.nodes(store))
     }
 }
@@ -843,8 +843,8 @@ impl<'a> IPort for IPortKind<'a> {
         &self,
         address: i64,
         buf: &mut [u8],
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         delegate_to_iport_variant!(self.read(address, buf, device, store, cx))
@@ -854,8 +854,8 @@ impl<'a> IPort for IPortKind<'a> {
         &self,
         address: i64,
         buf: &[u8],
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         delegate_to_iport_variant!(self.write(address, buf, device, store, cx))
@@ -896,7 +896,7 @@ macro_rules! delegate_to_iselector_variant {
 }
 
 impl<'a> ISelector for ISelectorKind<'a> {
-    fn selecting_nodes(&self, store: impl NodeStore) -> GenApiResult<&[NodeId]> {
+    fn selecting_nodes(&self, store: &impl NodeStore) -> GenApiResult<&[NodeId]> {
         delegate_to_iselector_variant!(self.selecting_nodes(store))
     }
 }

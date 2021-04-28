@@ -53,22 +53,22 @@ impl EnumerationNode {
 impl IEnumeration for EnumerationNode {
     fn current_entry<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<&EnumEntryNode> {
         todo!()
     }
 
-    fn entries(&self, store: impl NodeStore) -> GenApiResult<&[EnumEntryNode]> {
+    fn entries(&self, store: &impl NodeStore) -> GenApiResult<&[EnumEntryNode]> {
         todo!()
     }
 
     fn set_entry_by_name<T: ValueStore, U: CacheStore>(
         &self,
         name: &str,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo!()
@@ -77,8 +77,8 @@ impl IEnumeration for EnumerationNode {
     fn set_entry_by_idx<T: ValueStore, U: CacheStore>(
         &self,
         idx: usize,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo!()
@@ -128,7 +128,7 @@ impl EnumEntryNode {
 }
 
 impl ISelector for EnumerationNode {
-    fn selecting_nodes(&self, store: impl NodeStore) -> GenApiResult<&[NodeId]> {
+    fn selecting_nodes(&self, store: &impl NodeStore) -> GenApiResult<&[NodeId]> {
         Ok(self.p_selected())
     }
 }

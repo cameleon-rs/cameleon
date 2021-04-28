@@ -53,8 +53,8 @@ impl BooleanNode {
 impl IBoolean for BooleanNode {
     fn value<T: ValueStore, U: CacheStore>(
         &self,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
         todo!()
@@ -63,8 +63,8 @@ impl IBoolean for BooleanNode {
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: bool,
-        device: impl Device,
-        store: impl NodeStore,
+        device: &mut impl Device,
+        store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         todo!()
@@ -72,7 +72,7 @@ impl IBoolean for BooleanNode {
 }
 
 impl ISelector for BooleanNode {
-    fn selecting_nodes(&self, store: impl NodeStore) -> GenApiResult<&[NodeId]> {
+    fn selecting_nodes(&self, store: &impl NodeStore) -> GenApiResult<&[NodeId]> {
         Ok(self.p_selected())
     }
 }
