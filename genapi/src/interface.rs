@@ -796,3 +796,30 @@ impl<'a> IRegister for IRegisterKind<'a> {
         delegate_to_iregister_variant!(self.length(device, store, cx))
     }
 }
+
+pub enum ICategoryKind<'a> {
+    Category(&'a super::CategoryNode),
+}
+
+impl<'a> ICategoryKind<'a> {
+    pub(super) fn maybe_from(id: NodeId, store: &'a impl NodeStore) -> Option<Self> {
+        match store.node_opt(id)? {
+            NodeData::Category(n) => Some(Self::Category(n)),
+            _ => None,
+        }
+    }
+}
+
+macro_rules! delegate_to_icategory_variant {
+    ($self:ident.$method:ident($($arg:ident),*)) => {
+        match $self {
+            ICategoryKind::Category(n) => n.$method($($arg),*)
+        }
+    }
+}
+
+impl<'a> ICategory for ICategoryKind<'a> {
+    fn nodes(&self, store: impl NodeStore) -> GenApiResult<&[NodeId]> {
+        delegate_to_icategory_variant!(self.nodes(store))
+    }
+}

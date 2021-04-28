@@ -7,8 +7,8 @@ use string_interner::{StringInterner, Symbol};
 
 use super::{
     interface::{
-        IBooleanKind, ICommandKind, IEnumerationKind, IFloatKind, IIntegerKind, IRegisterKind,
-        IStringKind,
+        IBooleanKind, ICategoryKind, ICommandKind, IEnumerationKind, IFloatKind, IIntegerKind,
+        IRegisterKind, IStringKind,
     },
     node_base::NodeBase,
     BooleanNode, CategoryNode, CommandNode, ConverterNode, EnumerationNode, FloatNode,
@@ -126,6 +126,20 @@ impl NodeId {
         self.as_iregister_kind(store)
             .ok_or(GenApiError::InvalidNode(
                 "the node doesn't implement `IRegister`",
+            ))
+    }
+
+    pub fn as_icategory_kind<'a>(self, store: &'a impl NodeStore) -> Option<ICategoryKind<'a>> {
+        ICategoryKind::maybe_from(self, store)
+    }
+
+    pub fn expect_icategory_kind<'a>(
+        self,
+        store: &'a impl NodeStore,
+    ) -> GenApiResult<ICategoryKind<'a>> {
+        self.as_icategory_kind(store)
+            .ok_or(GenApiError::InvalidNode(
+                "the node doesn't implement `ICategory`",
             ))
     }
 }

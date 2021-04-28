@@ -1,6 +1,8 @@
 use super::{
+    interface::ICategory,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    store::NodeId,
+    store::{NodeId, NodeStore},
+    GenApiResult,
 };
 
 #[derive(Debug, Clone)]
@@ -20,5 +22,11 @@ impl CategoryNode {
     #[must_use]
     pub fn p_features(&self) -> &[NodeId] {
         &self.p_features
+    }
+}
+
+impl ICategory for CategoryNode {
+    fn nodes(&self, _: impl NodeStore) -> GenApiResult<&[NodeId]> {
+        Ok(self.p_features())
     }
 }
