@@ -98,7 +98,7 @@ pub enum GenApiError {
     #[error("access is denied: {}", 0)]
     AccessDenied(Cow<'static, str>),
 
-    /// Node that doesn't implement requested `GenApi` interface.
+    /// Invalid node.
     #[error("invalid node: {}", 0)]
     InvalidNode(Cow<'static, str>),
 

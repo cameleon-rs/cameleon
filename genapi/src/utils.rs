@@ -1,8 +1,9 @@
-use std::convert::TryInto;
+use std::{borrow::Cow, collections::HashMap, convert::TryInto};
 
 use super::{
-    elem_type::{Endianness, Sign},
-    interface::{IBoolean, IInteger},
+    elem_type::{Endianness, NamedValue, Sign},
+    formula::Expr,
+    interface::{IBoolean, IEnumeration, IFloat, IInteger},
     store::{CacheStore, NodeId, NodeStore, ValueStore},
     Device, GenApiError, GenApiResult, ValueCtxt,
 };
@@ -83,5 +84,147 @@ where
         ))
     } else {
         Ok(())
+    }
+}
+
+pub(super) struct FormulaEnvCollector<'a, T> {
+    p_variables: &'a [NamedValue<NodeId>],
+    constants: &'a [NamedValue<T>],
+    expressions: &'a [NamedValue<Expr>],
+}
+
+impl<'a, T: Copy + Into<Expr>> FormulaEnvCollector<'a, T> {
+    pub(super) fn collect<U: ValueStore, S: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<U, S>,
+    ) -> GenApiResult<HashMap<&'a str, Cow<'a, Expr>>> {
+        // Collect variables.
+        let mut var_env = self.collect_variables(device, store, cx)?;
+
+        // Collect constatns.
+        for constant in self.constants {
+            let name = constant.name();
+            let value: Expr = (constant.value()).into();
+            var_env.insert(name, Cow::Owned(value));
+        }
+
+        // Collect expressions.
+        for expr in self.expressions {
+            let name = expr.name();
+            let value = expr.value_ref();
+            var_env.insert(name, Cow::Borrowed(value));
+        }
+
+        Ok(var_env)
+    }
+
+    fn collect_variables<U: ValueStore, S: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<U, S>,
+    ) -> GenApiResult<HashMap<&'a str, Cow<'a, Expr>>> {
+        let mut var_env = HashMap::new();
+
+        for variable in self.p_variables {
+            let name = variable.name();
+            let nid = variable.value();
+            let expr = VariableKind::from_str(name).get_value(nid, device, store, cx)?;
+            var_env.insert(name, Cow::Owned(expr));
+        }
+        Ok(var_env)
+    }
+}
+
+enum VariableKind<'a> {
+    Value,
+    Min,
+    Max,
+    Inc,
+    Enum(&'a str),
+}
+
+impl<'a> VariableKind<'a> {
+    fn from_str(s: &'a str) -> Self {
+        let split: Vec<&'a str> = s.splitn(3, '.').collect();
+        match split.as_slice() {
+            [_] | [_, "Value"] => Self::Value,
+            [_, "Min"] => Self::Min,
+            [_, "Max"] => Self::Max,
+            [_, "Inc"] => Self::Inc,
+            [_, "Enum", name] => Self::Enum(name),
+            _ => panic!("invalid `pVariable`: {}", s),
+        }
+    }
+
+    fn get_value<T: ValueStore, U: CacheStore>(
+        self,
+        nid: NodeId,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<Expr> {
+        fn error(nid: NodeId, store: &impl NodeStore) -> GenApiError {
+            GenApiError::InvalidNode(format!("invalid `pVariable: {}`", nid.name(store)).into())
+        }
+
+        let expr: Expr = match self {
+            Self::Value => {
+                if let Some(node) = nid.as_iinteger_kind(store) {
+                    node.value(device, store, cx)?.into()
+                } else if let Some(node) = nid.as_ifloat_kind(store) {
+                    node.value(device, store, cx)?.into()
+                } else if let Some(node) = nid.as_iboolean_kind(store) {
+                    node.value(device, store, cx)?.into()
+                } else {
+                    return Err(error(nid, store));
+                }
+            }
+            Self::Min => {
+                if let Some(node) = nid.as_iinteger_kind(store) {
+                    node.min(device, store, cx)?.into()
+                } else if let Some(node) = nid.as_ifloat_kind(store) {
+                    node.min(device, store, cx)?.into()
+                } else {
+                    return Err(error(nid, store));
+                }
+            }
+            Self::Max => {
+                if let Some(node) = nid.as_iinteger_kind(store) {
+                    node.max(device, store, cx)?.into()
+                } else if let Some(node) = nid.as_ifloat_kind(store) {
+                    node.max(device, store, cx)?.into()
+                } else {
+                    return Err(error(nid, store));
+                }
+            }
+            Self::Inc => {
+                if let Some(node) = nid.as_iinteger_kind(store) {
+                    node.inc(device, store, cx)?
+                        .ok_or_else(|| error(nid, store))?
+                        .into()
+                } else if let Some(node) = nid.as_ifloat_kind(store) {
+                    node.inc(device, store, cx)?
+                        .ok_or_else(|| error(nid, store))?
+                        .into()
+                } else {
+                    return Err(error(nid, store));
+                }
+            }
+            Self::Enum(name) => {
+                if let Some(node) = nid.as_ienumeration_kind(store) {
+                    node.entry_by_name(name, store)?
+                        .ok_or_else(|| error(nid, store))?
+                        .value()
+                        .into()
+                } else {
+                    return Err(error(nid, store));
+                }
+            }
+        };
+
+        Ok(expr)
     }
 }

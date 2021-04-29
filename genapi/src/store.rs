@@ -1,7 +1,4 @@
-use std::{
-    collections::{hash_map, HashMap},
-    convert::TryFrom,
-};
+use std::{collections::HashMap, convert::TryFrom};
 
 use string_interner::{StringInterner, Symbol};
 
@@ -36,6 +33,10 @@ impl Symbol for NodeId {
 }
 
 impl NodeId {
+    pub fn name<'a>(self, store: &'a impl NodeStore) -> &'a str {
+        store.name_by_id(self).unwrap()
+    }
+
     pub fn as_iinteger_kind<'a>(self, store: &'a impl NodeStore) -> Option<IIntegerKind<'a>> {
         IIntegerKind::maybe_from(self, store)
     }
@@ -85,7 +86,7 @@ impl NodeId {
         ))
     }
 
-    pub fn as_ienuemration_kind<'a>(
+    pub fn as_ienumeration_kind<'a>(
         self,
         store: &'a impl NodeStore,
     ) -> Option<IEnumerationKind<'a>> {
@@ -96,7 +97,7 @@ impl NodeId {
         self,
         store: &'a impl NodeStore,
     ) -> GenApiResult<IEnumerationKind<'a>> {
-        self.as_ienuemration_kind(store)
+        self.as_ienumeration_kind(store)
             .ok_or(GenApiError::InvalidNode(
                 "the node doesn't implement `IEnumeration`".into(),
             ))
@@ -228,6 +229,8 @@ impl NodeData {
 pub trait NodeStore {
     fn id_by_name<T: AsRef<str>>(&mut self, s: T) -> NodeId;
 
+    fn name_by_id(&self, nid: NodeId) -> Option<&str>;
+
     fn node_opt(&self, id: NodeId) -> Option<&NodeData>;
 
     fn store_node(&mut self, id: NodeId, data: NodeData);
@@ -245,6 +248,10 @@ where
 {
     fn id_by_name<U: AsRef<str>>(&mut self, s: U) -> NodeId {
         (*self).id_by_name(s)
+    }
+
+    fn name_by_id(&self, nid: NodeId) -> Option<&str> {
+        (**self).name_by_id(nid)
     }
 
     fn node_opt(&self, id: NodeId) -> Option<&NodeData> {
@@ -279,6 +286,10 @@ impl DefaultNodeStore {
 impl NodeStore for DefaultNodeStore {
     fn id_by_name<T: AsRef<str>>(&mut self, s: T) -> NodeId {
         self.interner.get_or_intern(s)
+    }
+
+    fn name_by_id(&self, nid: NodeId) -> Option<&str> {
+        self.interner.resolve(nid)
     }
 
     fn node_opt(&self, id: NodeId) -> Option<&NodeData> {

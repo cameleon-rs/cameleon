@@ -175,6 +175,17 @@ pub trait IEnumeration {
 
     fn entries(&self, store: &impl NodeStore) -> GenApiResult<&[EnumEntryNode]>;
 
+    fn entry_by_name(
+        &self,
+        name: &str,
+        store: &impl NodeStore,
+    ) -> GenApiResult<Option<&EnumEntryNode>> {
+        Ok(self
+            .entries(store)?
+            .iter()
+            .find(|ent| ent.node_base().id().name(store) == name))
+    }
+
     fn set_entry_by_name<T: ValueStore, U: CacheStore>(
         &self,
         name: &str,
