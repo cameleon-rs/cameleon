@@ -1,5 +1,6 @@
 use super::{
     elem_type::{IntegerRepresentation, NamedValue},
+    formula::{Expr, Formula},
     interface::{IInteger, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, NodeId, NodeStore, ValueStore},
@@ -14,8 +15,8 @@ pub struct IntSwissKnifeNode {
     pub(crate) streamable: bool,
     pub(crate) p_variables: Vec<NamedValue<NodeId>>,
     pub(crate) constants: Vec<NamedValue<i64>>,
-    pub(crate) expressions: Vec<NamedValue<String>>,
-    pub(crate) formula: String,
+    pub(crate) expressions: Vec<NamedValue<Expr>>,
+    pub(crate) formula: Formula,
     pub(crate) unit: Option<String>,
     pub(crate) representation: IntegerRepresentation,
 }
@@ -42,12 +43,12 @@ impl IntSwissKnifeNode {
     }
 
     #[must_use]
-    pub fn expressions(&self) -> &[NamedValue<String>] {
+    pub fn expressions(&self) -> &[NamedValue<Expr>] {
         &self.expressions
     }
 
     #[must_use]
-    pub fn formula(&self) -> &str {
+    pub fn formula(&self) -> &Formula {
         &self.formula
     }
 

@@ -1,6 +1,6 @@
 use super::{
     elem_type::{IntegerRepresentation, NamedValue, Slope},
-    formula::Formula,
+    formula::{Expr, Formula},
     interface::{IInteger, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, NodeId, NodeStore, ValueStore},
@@ -15,7 +15,7 @@ pub struct IntConverterNode {
     pub(crate) streamable: bool,
     pub(crate) p_variables: Vec<NamedValue<NodeId>>,
     pub(crate) constants: Vec<NamedValue<i64>>,
-    pub(crate) expressions: Vec<NamedValue<String>>,
+    pub(crate) expressions: Vec<NamedValue<Expr>>,
     pub(crate) formula_to: Formula,
     pub(crate) formula_from: Formula,
     pub(crate) p_value: NodeId,
@@ -46,7 +46,7 @@ impl IntConverterNode {
     }
 
     #[must_use]
-    pub fn expressions(&self) -> &[NamedValue<String>] {
+    pub fn expressions(&self) -> &[NamedValue<Expr>] {
         &self.expressions
     }
 

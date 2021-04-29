@@ -115,7 +115,6 @@ mod tests {
         let expressions = node.expressions();
         assert_eq!(expressions.len(), 1);
         assert_eq!(expressions[0].name(), "ConstBy2");
-        assert_eq!(expressions[0].value_ref(), "2.0*Const");
         assert_eq!(node.p_value(), node_store.id_by_name("Target"));
         assert_eq!(node.slope(), Slope::Increasing);
         assert_eq!(node.is_linear(), true);
