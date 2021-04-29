@@ -5,7 +5,7 @@
     clippy::cast_possible_truncation
 )]
 
-use std::{collections::HashMap, ops::Neg, str::FromStr};
+use std::{borrow::Borrow, collections::HashMap, hash::Hash, ops::Neg, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Formula {
@@ -121,7 +121,11 @@ impl EvaluationResult {
 
 impl Expr {
     #[must_use]
-    pub fn eval(&self, var_env: &HashMap<String, Expr>) -> EvaluationResult {
+    pub fn eval<K, V>(&self, var_env: &HashMap<K, V>) -> EvaluationResult
+    where
+        K: Borrow<str> + Eq + Hash,
+        V: Borrow<Expr>,
+    {
         match self {
             Self::BinOp { kind, lhs, rhs } => lhs.eval_binop(*kind, rhs, var_env),
             Self::UnOp { kind, expr } => expr.eval_unop(*kind, var_env),
@@ -134,16 +138,20 @@ impl Expr {
             }
             &Self::Integer(i) => i.into(),
             &Self::Float(f) => f.into(),
-            Self::Ident(s) => var_env.get(s).unwrap().eval(var_env),
+            Self::Ident(s) => var_env.get(s.as_str()).unwrap().borrow().eval(var_env),
         }
     }
 
-    fn eval_binop(
+    fn eval_binop<K, V>(
         &self,
         op: BinOpKind,
         rhs: &Self,
-        var_env: &HashMap<String, Expr>,
-    ) -> EvaluationResult {
+        var_env: &HashMap<K, V>,
+    ) -> EvaluationResult
+    where
+        K: Borrow<str> + Eq + Hash,
+        V: Borrow<Expr>,
+    {
         use std::ops::{Add, Div, Mul, Rem, Sub};
 
         match op {
@@ -214,7 +222,11 @@ impl Expr {
         }
     }
 
-    fn eval_unop(&self, op: UnOpKind, var_env: &HashMap<String, Expr>) -> EvaluationResult {
+    fn eval_unop<K, V>(&self, op: UnOpKind, var_env: &HashMap<K, V>) -> EvaluationResult
+    where
+        K: Borrow<str> + Eq + Hash,
+        V: Borrow<Expr>,
+    {
         let res = self.eval(&var_env);
         macro_rules! apply_op {
             ($f:ident) => {
@@ -810,7 +822,7 @@ mod tests {
         assert_eq!(Token::Shl, lexer.next().unwrap());
     }
 
-    fn test_eval_impl(expr: &str, var_env: &HashMap<String, Expr>) {
+    fn test_eval_impl(expr: &str, var_env: &HashMap<&str, Expr>) {
         let expr = parse(expr);
         assert!(matches!(expr.eval(var_env), EvaluationResult::Integer(1)));
     }
@@ -840,8 +852,8 @@ mod tests {
     #[test]
     fn test_eval_with_env() {
         let env = vec![
-            ("VAR1".to_string(), Expr::Integer(1)),
-            ("EPS".to_string(), Expr::Float(f64::EPSILON)),
+            ("VAR1", Expr::Integer(1)),
+            ("EPS", Expr::Float(f64::EPSILON)),
         ]
         .into_iter()
         .collect();
