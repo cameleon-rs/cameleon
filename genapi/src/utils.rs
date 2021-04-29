@@ -68,3 +68,20 @@ pub(super) fn bytes_from_int(
 
     convert_to_slice!((8, i64, u64), (4, i32, u32), (2, i16, u16), (1, i8, u8))
 }
+
+pub(super) fn verify_value_in_range<T>(value: T, min: T, max: T) -> GenApiResult<()>
+where
+    T: PartialOrd,
+{
+    if value < min {
+        Err(GenApiError::InvalidData(
+            "given data is smaller than min value of the node".into(),
+        ))
+    } else if value > max {
+        Err(GenApiError::InvalidData(
+            "given data is larger than max value of the node".into(),
+        ))
+    } else {
+        Ok(())
+    }
+}

@@ -4,7 +4,7 @@ use super::{
     node_base::{NodeAttributeBase, NodeBase},
     register_base::RegisterBase,
     store::{CacheStore, NodeId, NodeStore, ValueData, ValueStore},
-    utils, Device, GenApiResult, ValueCtxt,
+    utils, Device, GenApiError, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -70,10 +70,11 @@ impl IInteger for IntRegNode {
         }
 
         let reg = self.register_base();
-        let len = reg.length(device, store, cx)?;
-        let mut buf = vec![0u8; len as usize];
-        reg.read(&mut buf, device, store, cx)?;
-        let res = utils::int_from_slice(&buf, self.endianness, self.sign)?;
+        let res = utils::int_from_slice(
+            &reg.alloc_read(device, store, cx)?,
+            self.endianness,
+            self.sign,
+        )?;
         reg.cache(nid, res, cx, true);
         Ok(res)
     }
@@ -85,12 +86,15 @@ impl IInteger for IntRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
+        let nid = self.node_base().id();
+        cx.invalidate_cache_by(nid);
+
         let reg = self.register_base();
         let len = reg.length(device, store, cx)?;
         let mut buf = vec![0u8; len as usize];
         utils::bytes_from_int(value, &mut buf, self.endianness, self.sign)?;
         reg.write(&buf, device, store, cx)?;
-        reg.cache(self.node_base().id(), value, cx, false);
+        reg.cache(nid, value, cx, false);
         Ok(())
     }
 
@@ -100,7 +104,10 @@ impl IInteger for IntRegNode {
         _: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
-        Ok(i64::MIN)
+        match self.sign {
+            Sign::Signed => Ok(i64::MIN),
+            Sign::Unsigned => Ok(0),
+        }
     }
 
     fn max<T: ValueStore, U: CacheStore>(
@@ -144,7 +151,9 @@ impl IInteger for IntRegNode {
         _: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Ok(())
+        Err(GenApiError::AccessDenied(
+            "can't set value to register's min elem".into(),
+        ))
     }
 
     fn set_max<T: ValueStore, U: CacheStore>(
@@ -154,7 +163,9 @@ impl IInteger for IntRegNode {
         _: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Ok(())
+        Err(GenApiError::AccessDenied(
+            "can't set value to register's max elem".into(),
+        ))
     }
 }
 

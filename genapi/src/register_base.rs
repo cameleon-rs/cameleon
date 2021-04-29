@@ -1,5 +1,5 @@
 use super::{
-    elem_type::{AccessMode, AddressKind, CachingMode, ImmOrPNode},
+    elem_type::{AccessMode, AddressKind, CachingMode, Endianness, ImmOrPNode, Sign},
     interface::{IPort, IRegister},
     node_base::NodeElementBase,
     store::{CacheStore, NodeId, NodeStore, ValueData, ValueStore},
@@ -73,6 +73,18 @@ impl RegisterBase {
             (CachingMode::WriteAround, true) => cx.cache_data(nid, data),
             _ => {}
         }
+    }
+
+    pub(super) fn alloc_read<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<Vec<u8>> {
+        let len = self.length(device, store, cx)? as usize;
+        let mut buf = vec![0; len];
+        self.read(&mut buf, device, store, cx)?;
+        Ok(buf)
     }
 }
 
