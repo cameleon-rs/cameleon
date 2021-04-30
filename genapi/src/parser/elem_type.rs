@@ -5,7 +5,7 @@ use crate::{
         NamedValue, PIndex, PValue, RegPIndex, Sign, Slope, StandardNameSpace, ValueIndexed,
         ValueKind, Visibility,
     },
-    store::{BooleanId, FloatId, IntegerId, NodeData, NodeId, NodeStore, ValueStore},
+    store::{BooleanId, FloatId, IntegerId, NodeData, NodeId, WritableNodeStore, ValueStore},
     IntSwissKnifeNode,
 };
 
@@ -36,7 +36,7 @@ impl From<&str> for NameSpace {
 impl Parse for NameSpace {
     fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         node.next_text().unwrap().into()
@@ -64,7 +64,7 @@ impl From<&str> for Visibility {
 impl Parse for Visibility {
     fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         node.next_text().unwrap().into()
@@ -91,7 +91,7 @@ impl Default for MergePriority {
 impl Parse for MergePriority {
     fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         node.next_text().unwrap().into()
@@ -112,7 +112,7 @@ impl From<&str> for AccessMode {
 impl Parse for AccessMode {
     fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         node.next_text().unwrap().into()
@@ -122,7 +122,7 @@ impl Parse for AccessMode {
 impl Parse for ImmOrPNode<i64> {
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         let peeked_text = node.peek().unwrap().text();
@@ -137,7 +137,7 @@ impl Parse for ImmOrPNode<i64> {
 impl Parse for ImmOrPNode<f64> {
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         let peeked_text = node.peek().unwrap().text();
@@ -157,7 +157,7 @@ impl Parse for ImmOrPNode<f64> {
 impl Parse for ImmOrPNode<bool> {
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         let peeked_text = node.peek().unwrap().text();
@@ -178,7 +178,7 @@ macro_rules! impl_parse_for_imm_or_pnode_id {
         impl Parse for ImmOrPNode<$id> {
             fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
             where
-                T: NodeStore,
+                T: WritableNodeStore,
                 U: ValueStore,
             {
                 let node: ImmOrPNode<$value_ty> = node.parse(node_store, value_store);
@@ -207,7 +207,7 @@ impl Default for IntegerRepresentation {
 impl Parse for IntegerRepresentation {
     fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         use IntegerRepresentation::{
@@ -231,7 +231,7 @@ impl Parse for IntegerRepresentation {
 impl Parse for FloatRepresentation {
     fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         let value = node.next_text().unwrap();
@@ -253,7 +253,7 @@ impl Default for FloatRepresentation {
 impl Parse for Slope {
     fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         let value = node.next_text().unwrap();
@@ -282,7 +282,7 @@ impl Default for DisplayNotation {
 impl Parse for DisplayNotation {
     fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         let value = node.next_text().unwrap();
@@ -328,7 +328,7 @@ impl From<&str> for CachingMode {
 impl Parse for CachingMode {
     fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         let text = node.next_text().unwrap();
@@ -342,7 +342,7 @@ where
 {
     fn parse<U, S>(node: &mut xml::Node, node_store: &mut U, value_store: &mut S) -> Self
     where
-        U: NodeStore,
+        U: WritableNodeStore,
         S: ValueStore,
     {
         let name = node.peek().unwrap().attribute_of(NAME).unwrap().into();
@@ -362,7 +362,7 @@ pub(super) fn convert_to_bool(value: &str) -> bool {
 impl Parse for bool {
     fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         let text = node.next_text().unwrap();
@@ -389,7 +389,7 @@ pub(super) fn convert_to_uint(value: &str) -> u64 {
 impl Parse for i64 {
     fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         let value = node.next_text().unwrap();
@@ -400,7 +400,7 @@ impl Parse for i64 {
 impl Parse for u64 {
     fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         let value = node.next_text().unwrap();
@@ -411,7 +411,7 @@ impl Parse for u64 {
 impl Parse for f64 {
     fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         let value = node.next_text().unwrap();
@@ -428,7 +428,7 @@ impl Parse for f64 {
 impl Parse for String {
     fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         let text = node.next_text().unwrap();
@@ -439,7 +439,7 @@ impl Parse for String {
 impl Parse for NodeId {
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, _: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         let text = node.next_text().unwrap();
@@ -452,7 +452,7 @@ macro_rules! impl_parse_for_value_id {
         impl Parse for $id {
             fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
             where
-                T: NodeStore,
+                T: WritableNodeStore,
                 U: ValueStore,
             {
                 let value: $value_ty = node.parse(node_store, value_store);
@@ -474,7 +474,7 @@ where
 {
     fn parse<U, S>(node: &mut xml::Node, node_store: &mut U, value_store: &mut S) -> Self
     where
-        U: NodeStore,
+        U: WritableNodeStore,
         S: ValueStore,
     {
         let peek = node.peek().unwrap();
@@ -496,7 +496,7 @@ where
 impl Parse for PValue {
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         // NOTE: The pValue can be sandwiched between two pValueCopy sequence.
@@ -521,7 +521,7 @@ where
 {
     fn parse<U, S>(node: &mut xml::Node, node_store: &mut U, value_store: &mut S) -> Self
     where
-        U: NodeStore,
+        U: WritableNodeStore,
         S: ValueStore,
     {
         let p_index = node.parse(node_store, value_store);
@@ -551,7 +551,7 @@ where
 {
     fn parse<U, S>(node: &mut xml::Node, node_store: &mut U, value_store: &mut S) -> Self
     where
-        U: NodeStore,
+        U: WritableNodeStore,
         S: ValueStore,
     {
         let index = convert_to_int(node.peek().unwrap().attribute_of(INDEX).unwrap());
@@ -563,7 +563,7 @@ where
 impl Parse for AddressKind {
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         let peeked_node = node.peek().unwrap();
@@ -585,7 +585,7 @@ impl Parse for AddressKind {
 impl Parse for RegPIndex {
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         let next_node = node.peek().unwrap();
@@ -613,7 +613,7 @@ impl Default for Endianness {
 impl Parse for Endianness {
     fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         match node.next_text().unwrap() {
@@ -633,7 +633,7 @@ impl Default for Sign {
 impl Parse for Sign {
     fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         match node.next_text().unwrap() {
@@ -647,7 +647,7 @@ impl Parse for Sign {
 impl Parse for BitMask {
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         node.parse_if(BIT, node_store, value_store).map_or_else(

@@ -1,5 +1,6 @@
 use std::{collections::HashMap, convert::TryFrom};
 
+use auto_impl::auto_impl;
 use string_interner::{StringInterner, Symbol};
 
 use super::{
@@ -226,45 +227,28 @@ impl NodeData {
     }
 }
 
+#[auto_impl(&, &mut, Box, Rc, Arc)]
 pub trait NodeStore {
-    fn id_by_name<T: AsRef<str>>(&mut self, s: T) -> NodeId;
-
     fn name_by_id(&self, nid: NodeId) -> Option<&str>;
 
     fn node_opt(&self, nid: NodeId) -> Option<&NodeData>;
 
-    fn store_node(&mut self, nid: NodeId, data: NodeData);
-
-    fn visit_nodes(&self, f: impl FnMut(&NodeData));
-
     fn node(&self, nid: NodeId) -> &NodeData {
         self.node_opt(nid).unwrap()
     }
+
+    fn visit_nodes<F>(&self, f: F)
+    where
+        F: FnMut(&NodeData);
 }
 
-impl<T> NodeStore for &mut T
-where
-    T: NodeStore,
-{
-    fn id_by_name<U: AsRef<str>>(&mut self, s: U) -> NodeId {
-        (*self).id_by_name(s)
-    }
+#[auto_impl(&mut, Box)]
+pub trait WritableNodeStore {
+    fn store_node(&mut self, nid: NodeId, data: NodeData);
 
-    fn name_by_id(&self, nid: NodeId) -> Option<&str> {
-        (**self).name_by_id(nid)
-    }
-
-    fn node_opt(&self, nid: NodeId) -> Option<&NodeData> {
-        (**self).node_opt(nid)
-    }
-
-    fn store_node(&mut self, nid: NodeId, data: NodeData) {
-        (*self).store_node(nid, data)
-    }
-
-    fn visit_nodes(&self, f: impl FnMut(&NodeData)) {
-        (**self).visit_nodes(f);
-    }
+    fn id_by_name<T>(&mut self, s: T) -> NodeId
+    where
+        T: AsRef<str>;
 }
 
 #[derive(Debug)]
@@ -284,16 +268,32 @@ impl DefaultNodeStore {
 }
 
 impl NodeStore for DefaultNodeStore {
-    fn id_by_name<T: AsRef<str>>(&mut self, s: T) -> NodeId {
-        self.interner.get_or_intern(s)
-    }
-
     fn name_by_id(&self, nid: NodeId) -> Option<&str> {
         self.interner.resolve(nid)
     }
 
     fn node_opt(&self, nid: NodeId) -> Option<&NodeData> {
         self.store.get(nid.to_usize())?.as_ref()
+    }
+
+    fn visit_nodes<F>(&self, mut f: F)
+    where
+        F: FnMut(&NodeData),
+    {
+        for data in &self.store {
+            if let Some(data) = data {
+                f(data);
+            }
+        }
+    }
+}
+
+impl WritableNodeStore for DefaultNodeStore {
+    fn id_by_name<T>(&mut self, s: T) -> NodeId
+    where
+        T: AsRef<str>,
+    {
+        self.interner.get_or_intern(s)
     }
 
     fn store_node(&mut self, nid: NodeId, data: NodeData) {
@@ -303,14 +303,6 @@ impl NodeStore for DefaultNodeStore {
         }
         debug_assert!(self.store[id].is_none());
         self.store[id] = Some(data);
-    }
-
-    fn visit_nodes(&self, mut f: impl FnMut(&NodeData)) {
-        for data in &self.store {
-            if let Some(data) = data {
-                f(data);
-            }
-        }
     }
 }
 
@@ -362,14 +354,21 @@ pub enum ValueData {
     Boolean(bool),
 }
 
+#[auto_impl(&mut, Box)]
 pub trait ValueStore {
-    fn store<T>(&mut self, data: impl Into<ValueData>) -> T
+    fn store<T, U>(&mut self, data: T) -> U
     where
-        T: From<ValueId>;
+        T: Into<ValueData>,
+        U: From<ValueId>;
 
-    fn value_opt(&self, id: impl Into<ValueId>) -> Option<ValueData>;
+    fn value_opt<T>(&self, id: T) -> Option<ValueData>
+    where
+        T: Into<ValueId>;
 
-    fn update(&mut self, id: impl Into<ValueId>, value: impl Into<ValueData>) -> Option<ValueData>;
+    fn update<T, U>(&mut self, id: T, value: U) -> Option<ValueData>
+    where
+        T: Into<ValueId>,
+        U: Into<ValueData>;
 
     fn value(&self, id: impl Into<ValueId>) -> ValueData {
         self.value_opt(id).unwrap()
@@ -408,26 +407,6 @@ pub trait ValueStore {
     }
 }
 
-impl<T> ValueStore for &mut T
-where
-    T: ValueStore,
-{
-    fn store<U>(&mut self, data: impl Into<ValueData>) -> U
-    where
-        U: From<ValueId>,
-    {
-        (*self).store(data)
-    }
-
-    fn value_opt(&self, id: impl Into<ValueId>) -> Option<ValueData> {
-        (**self).value_opt(id)
-    }
-
-    fn update(&mut self, id: impl Into<ValueId>, value: impl Into<ValueData>) -> Option<ValueData> {
-        (*self).update(id, value)
-    }
-}
-
 macro_rules! impl_value_data_conversion {
     ($ty:ty, $ctor:expr) => {
         impl From<$ty> for ValueData {
@@ -454,9 +433,10 @@ impl DefaultValueStore {
 }
 
 impl ValueStore for DefaultValueStore {
-    fn store<T>(&mut self, data: impl Into<ValueData>) -> T
+    fn store<T, U>(&mut self, data: T) -> U
     where
-        T: From<ValueId>,
+        T: Into<ValueData>,
+        U: From<ValueId>,
     {
         let id = u32::try_from(self.0.len())
             .expect("the number of value stored in `ValueStore` must not exceed u32::MAX");
@@ -465,19 +445,29 @@ impl ValueStore for DefaultValueStore {
         id.into()
     }
 
-    fn value_opt(&self, id: impl Into<ValueId>) -> Option<ValueData> {
+    fn value_opt<T>(&self, id: T) -> Option<ValueData>
+    where
+        T: Into<ValueId>,
+    {
         self.0.get(id.into().0 as usize).cloned()
     }
 
-    fn update(&mut self, id: impl Into<ValueId>, value: impl Into<ValueData>) -> Option<ValueData> {
+    fn update<T, U>(&mut self, id: T, value: U) -> Option<ValueData>
+    where
+        T: Into<ValueId>,
+        U: Into<ValueData>,
+    {
         self.0
             .get_mut(id.into().0 as usize)
             .map(|old| std::mem::replace(old, value.into()))
     }
 }
 
+#[auto_impl(&mut, Box)]
 pub trait CacheStore {
-    fn store(&mut self, nid: NodeId, vid: impl Into<ValueId>);
+    fn store<T>(&mut self, nid: NodeId, vid: T)
+    where
+        T: Into<ValueId>;
 
     fn value(&self, nid: NodeId) -> Option<CacheData>;
 
@@ -502,27 +492,6 @@ impl CacheData {
 pub struct DefaultCacheStore {
     store: HashMap<NodeId, CacheData>,
     invalidators: HashMap<NodeId, Vec<NodeId>>,
-}
-
-impl<T> CacheStore for &mut T
-where
-    T: CacheStore,
-{
-    fn store(&mut self, nid: NodeId, vid: impl Into<ValueId>) {
-        (**self).store(nid, vid);
-    }
-
-    fn value(&self, nid: NodeId) -> Option<CacheData> {
-        (**self).value(nid)
-    }
-
-    fn invalidate_by(&mut self, nid: NodeId) {
-        (**self).invalidate_by(nid)
-    }
-
-    fn invalidate_of(&mut self, nid: NodeId) {
-        (**self).invalidate_of(nid)
-    }
 }
 
 impl DefaultCacheStore {
@@ -555,7 +524,10 @@ impl DefaultCacheStore {
 }
 
 impl CacheStore for DefaultCacheStore {
-    fn store(&mut self, nid: NodeId, vid: impl Into<ValueId>) {
+    fn store<T>(&mut self, nid: NodeId, vid: T)
+    where
+        T: Into<ValueId>,
+    {
         self.store
             .entry(nid)
             .and_modify(|e| e.is_valid = true)
@@ -596,7 +568,11 @@ impl CacheSink {
 }
 
 impl CacheStore for CacheSink {
-    fn store(&mut self, _: NodeId, _: impl Into<ValueId>) {}
+    fn store<T>(&mut self, _: NodeId, _: T)
+    where
+        T: Into<ValueId>,
+    {
+    }
 
     fn value(&self, _: NodeId) -> Option<CacheData> {
         None

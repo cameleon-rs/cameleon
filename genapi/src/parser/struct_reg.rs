@@ -2,7 +2,7 @@ use crate::{
     elem_type::{AccessMode, BitMask, CachingMode, Endianness, IntegerRepresentation, Sign},
     node_base::{NodeAttributeBase, NodeElementBase},
     register_base::RegisterBase,
-    store::{NodeId, NodeStore, ValueStore},
+    store::{NodeId, WritableNodeStore, ValueStore},
     MaskedIntRegNode,
 };
 
@@ -38,7 +38,7 @@ impl StructRegNode {
 impl Parse for StructRegNode {
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         debug_assert_eq!(node.tag_name(), STRUCT_REG);
@@ -163,7 +163,7 @@ impl NodeElementBase {
 impl Parse for StructEntryNode {
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         debug_assert_eq!(node.tag_name(), STRUCT_ENTRY);

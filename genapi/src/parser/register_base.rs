@@ -1,6 +1,6 @@
 use crate::{
     elem_type::AccessMode,
-    store::{NodeStore, ValueStore},
+    store::{WritableNodeStore, ValueStore},
     RegisterBase,
 };
 
@@ -15,7 +15,7 @@ use super::{
 impl Parse for RegisterBase {
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         let elem_base = node.parse(node_store, value_store);

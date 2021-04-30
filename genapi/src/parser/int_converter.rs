@@ -1,5 +1,5 @@
 use crate::{
-    store::{NodeStore, ValueStore},
+    store::{WritableNodeStore, ValueStore},
     IntConverterNode,
 };
 
@@ -13,7 +13,7 @@ use super::{
 impl Parse for IntConverterNode {
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         debug_assert_eq!(node.tag_name(), INT_CONVERTER);

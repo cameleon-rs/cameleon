@@ -1,4 +1,4 @@
-use crate::store::{NodeStore, ValueStore};
+use crate::store::{WritableNodeStore, ValueStore};
 
 use super::{
     elem_name::{COMMENT, GROUP},
@@ -15,7 +15,7 @@ pub(super) struct GroupNode {
 impl Parse for GroupNode {
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         debug_assert_eq!(node.tag_name(), GROUP);

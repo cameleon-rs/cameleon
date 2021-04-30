@@ -1,5 +1,5 @@
 use crate::{
-    store::{NodeStore, ValueStore},
+    store::{WritableNodeStore, ValueStore},
     RegisterDescription,
 };
 
@@ -16,7 +16,7 @@ use super::{
 impl Parse for RegisterDescription {
     fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         debug_assert_eq!(node.tag_name(), REGISTER_DESCRIPTION);

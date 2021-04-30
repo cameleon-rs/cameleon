@@ -1,5 +1,5 @@
 use crate::{
-    store::{NodeStore, ValueStore},
+    store::{WritableNodeStore, ValueStore},
     EnumEntryNode, EnumerationNode,
 };
 
@@ -14,7 +14,7 @@ use super::{
 impl Parse for EnumerationNode {
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         debug_assert_eq!(node.tag_name(), ENUMERATION);
@@ -48,7 +48,7 @@ impl Parse for EnumerationNode {
 impl Parse for EnumEntryNode {
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         debug_assert_eq!(node.tag_name(), ENUM_ENTRY);

@@ -31,7 +31,7 @@ use struct_reg::StructRegNode;
 use thiserror::Error;
 
 use crate::{
-    store::{DefaultNodeStore, DefaultValueStore, NodeData, NodeStore, ValueStore},
+    store::{DefaultNodeStore, DefaultValueStore, NodeData, WritableNodeStore, ValueStore},
     RegisterDescription,
 };
 
@@ -76,7 +76,7 @@ impl<'a> Parser<'a> {
         mut value_store: U,
     ) -> ParseResult<RegisterDescription>
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         let mut node = self.document.root_node();
@@ -101,14 +101,14 @@ impl<'a> Parser<'a> {
 trait Parse {
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore;
 }
 
 impl Parse for Vec<NodeData> {
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         match node.tag_name() {

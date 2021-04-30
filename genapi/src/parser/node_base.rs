@@ -1,7 +1,7 @@
 use crate::{
     elem_type::AccessMode,
     node_base::{NodeAttributeBase, NodeElementBase},
-    store::{NodeStore, ValueStore},
+    store::{WritableNodeStore, ValueStore},
 };
 
 use super::{
@@ -18,7 +18,7 @@ use super::{
 impl Parse for NodeAttributeBase {
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, _: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         let name = node.attribute_of(NAME).unwrap();
@@ -47,7 +47,7 @@ impl Parse for NodeAttributeBase {
 impl Parse for NodeElementBase {
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
-        T: NodeStore,
+        T: WritableNodeStore,
         U: ValueStore,
     {
         // Ignore Extension element.

@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-use crate::store::{NodeStore, ValueStore};
+use crate::store::{WritableNodeStore, ValueStore};
 
 use super::{Parse, ParseResult};
 
@@ -34,7 +34,7 @@ impl<'a, 'input> Node<'a, 'input> {
     pub(super) fn parse<T, U, S>(&mut self, node_store: &mut U, value_store: &mut S) -> T
     where
         T: Parse,
-        U: NodeStore,
+        U: WritableNodeStore,
         S: ValueStore,
     {
         T::parse(self, node_store, value_store)
@@ -48,7 +48,7 @@ impl<'a, 'input> Node<'a, 'input> {
     ) -> Option<T>
     where
         T: Parse,
-        U: NodeStore,
+        U: WritableNodeStore,
         S: ValueStore,
     {
         if self.peek()?.tag_name() == tag_name {
@@ -66,7 +66,7 @@ impl<'a, 'input> Node<'a, 'input> {
     ) -> Vec<T>
     where
         T: Parse,
-        U: NodeStore,
+        U: WritableNodeStore,
         S: ValueStore,
     {
         let mut res = vec![];

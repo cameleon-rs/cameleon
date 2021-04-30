@@ -1,5 +1,5 @@
 use super::{
-    elem_type::{AccessMode, AddressKind, CachingMode, Endianness, ImmOrPNode, Sign},
+    elem_type::{AccessMode, AddressKind, CachingMode, ImmOrPNode},
     interface::{IPort, IRegister},
     node_base::NodeElementBase,
     store::{CacheStore, NodeId, NodeStore, ValueData, ValueStore},
