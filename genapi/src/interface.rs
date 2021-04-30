@@ -191,6 +191,20 @@ pub trait IString {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64>;
+
+    fn is_readable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool>;
+
+    fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool>;
 }
 
 pub trait IEnumeration {
@@ -656,6 +670,24 @@ impl<'a> IString for IStringKind<'a> {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         delegate_to_istring_variant!(self.max_length(device, store, cx))
+    }
+
+    fn is_readable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        delegate_to_istring_variant!(self.is_readable(device, store, cx))
+    }
+
+    fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        delegate_to_istring_variant!(self.is_writable(device, store, cx))
     }
 }
 
