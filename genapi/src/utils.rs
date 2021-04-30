@@ -91,50 +91,78 @@ pub(super) struct FormulaEnvCollector<'a, T> {
     p_variables: &'a [NamedValue<NodeId>],
     constants: &'a [NamedValue<T>],
     expressions: &'a [NamedValue<Expr>],
+    var_env: HashMap<&'a str, Cow<'a, Expr>>,
 }
 
 impl<'a, T: Copy + Into<Expr>> FormulaEnvCollector<'a, T> {
+    pub(super) fn new(
+        p_variables: &'a [NamedValue<NodeId>],
+        constants: &'a [NamedValue<T>],
+        expressions: &'a [NamedValue<Expr>],
+    ) -> Self {
+        Self {
+            p_variables,
+            constants,
+            expressions,
+            var_env: HashMap::new(),
+        }
+    }
     pub(super) fn collect<U: ValueStore, S: CacheStore>(
-        &self,
+        mut self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<U, S>,
     ) -> GenApiResult<HashMap<&'a str, Cow<'a, Expr>>> {
         // Collect variables.
-        let mut var_env = self.collect_variables(device, store, cx)?;
+        self.collect_variables(device, store, cx)?;
 
         // Collect constatns.
         for constant in self.constants {
             let name = constant.name();
             let value: Expr = (constant.value()).into();
-            var_env.insert(name, Cow::Owned(value));
+            self.var_env.insert(name, Cow::Owned(value));
         }
 
         // Collect expressions.
         for expr in self.expressions {
             let name = expr.name();
             let value = expr.value_ref();
-            var_env.insert(name, Cow::Borrowed(value));
+            self.var_env.insert(name, Cow::Borrowed(value));
         }
 
-        Ok(var_env)
+        Ok(self.var_env)
     }
 
-    fn collect_variables<U: ValueStore, S: CacheStore>(
-        &self,
+    pub(super) fn insert<U: ValueStore, S: CacheStore>(
+        &mut self,
+        name: &'a str,
+        nid: NodeId,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<HashMap<&'a str, Cow<'a, Expr>>> {
-        let mut var_env = HashMap::new();
+    ) -> GenApiResult<()> {
+        let expr = expr_from_node_id(nid, device, store, cx)?;
+        self.insert_imm(name, expr);
+        Ok(())
+    }
 
+    pub(super) fn insert_imm(&mut self, name: &'a str, imm: impl Into<Expr>) {
+        self.var_env.insert(name, Cow::Owned(imm.into()));
+    }
+
+    fn collect_variables<U: ValueStore, S: CacheStore>(
+        &mut self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<U, S>,
+    ) -> GenApiResult<()> {
         for variable in self.p_variables {
             let name = variable.name();
             let nid = variable.value();
             let expr = VariableKind::from_str(name).get_value(nid, device, store, cx)?;
-            var_env.insert(name, Cow::Owned(expr));
+            self.var_env.insert(name, Cow::Owned(expr));
         }
-        Ok(var_env)
+        Ok(())
     }
 }
 

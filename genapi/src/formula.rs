@@ -17,6 +17,14 @@ impl Formula {
     pub fn expr(&self) -> &Expr {
         &self.expr
     }
+
+    pub fn eval<K, V>(&self, var_env: &HashMap<K, V>) -> EvaluationResult
+    where
+        K: Borrow<str> + Eq + Hash,
+        V: Borrow<Expr>,
+    {
+        self.expr.eval(var_env)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -107,7 +115,8 @@ impl EvaluationResult {
         }
     }
 
-    fn as_bool(self) -> bool {
+    #[must_use]
+    pub fn as_bool(self) -> bool {
         match self {
             Self::Integer(i) => i != 0,
             Self::Float(f) => f != 0.,
