@@ -367,33 +367,16 @@ pub trait ValueStore {
     where
         T: From<ValueId>;
 
-    fn value_opt(&self, id: impl Into<ValueId>) -> Option<&ValueData>;
+    fn value_opt(&self, id: impl Into<ValueId>) -> Option<ValueData>;
 
-    fn value_mut_opt(&mut self, id: impl Into<ValueId>) -> Option<&mut ValueData>;
+    fn update(&mut self, id: impl Into<ValueId>, value: impl Into<ValueData>) -> Option<ValueData>;
 
-    fn value(&self, id: impl Into<ValueId>) -> &ValueData {
+    fn value(&self, id: impl Into<ValueId>) -> ValueData {
         self.value_opt(id).unwrap()
-    }
-
-    fn value_mut(&mut self, id: impl Into<ValueId>) -> &mut ValueData {
-        self.value_mut_opt(id).unwrap()
-    }
-
-    fn update(&mut self, id: impl Into<ValueId>, value: impl Into<ValueData>) -> Option<ValueData> {
-        let mut prev = self.value_mut_opt(id)?;
-        Some(std::mem::replace(&mut prev, value.into()))
     }
 
     fn integer_value(&self, id: IntegerId) -> Option<i64> {
         if let ValueData::Integer(i) = self.value_opt(id)? {
-            Some(*i)
-        } else {
-            None
-        }
-    }
-
-    fn integer_value_mut(&mut self, id: IntegerId) -> Option<&mut i64> {
-        if let ValueData::Integer(i) = self.value_mut_opt(id)? {
             Some(i)
         } else {
             None
@@ -402,21 +385,13 @@ pub trait ValueStore {
 
     fn float_value(&self, id: FloatId) -> Option<f64> {
         if let ValueData::Float(f) = self.value_opt(id)? {
-            Some(*f)
-        } else {
-            None
-        }
-    }
-
-    fn float_value_mut(&mut self, id: FloatId) -> Option<&mut f64> {
-        if let ValueData::Float(f) = self.value_mut_opt(id)? {
             Some(f)
         } else {
             None
         }
     }
 
-    fn str_value(&self, id: StringId) -> Option<&str> {
+    fn str_value(&self, id: StringId) -> Option<String> {
         if let ValueData::Str(s) = self.value_opt(id)? {
             Some(s)
         } else {
@@ -426,23 +401,7 @@ pub trait ValueStore {
 
     fn boolean_value(&self, id: BooleanId) -> Option<bool> {
         if let ValueData::Boolean(b) = self.value_opt(id)? {
-            Some(*b)
-        } else {
-            None
-        }
-    }
-
-    fn boolean_value_mut(&mut self, id: BooleanId) -> Option<&mut bool> {
-        if let ValueData::Boolean(b) = self.value_mut_opt(id)? {
             Some(b)
-        } else {
-            None
-        }
-    }
-
-    fn str_value_mut(&mut self, id: StringId) -> Option<&mut str> {
-        if let ValueData::Str(s) = self.value_mut_opt(id)? {
-            Some(s)
         } else {
             None
         }
@@ -460,12 +419,12 @@ where
         (*self).store(data)
     }
 
-    fn value_opt(&self, id: impl Into<ValueId>) -> Option<&ValueData> {
+    fn value_opt(&self, id: impl Into<ValueId>) -> Option<ValueData> {
         (**self).value_opt(id)
     }
 
-    fn value_mut_opt(&mut self, id: impl Into<ValueId>) -> Option<&mut ValueData> {
-        (*self).value_mut_opt(id)
+    fn update(&mut self, id: impl Into<ValueId>, value: impl Into<ValueData>) -> Option<ValueData> {
+        (*self).update(id, value)
     }
 }
 
@@ -506,12 +465,14 @@ impl ValueStore for DefaultValueStore {
         id.into()
     }
 
-    fn value_opt(&self, id: impl Into<ValueId>) -> Option<&ValueData> {
-        self.0.get(id.into().0 as usize)
+    fn value_opt(&self, id: impl Into<ValueId>) -> Option<ValueData> {
+        self.0.get(id.into().0 as usize).cloned()
     }
 
-    fn value_mut_opt(&mut self, id: impl Into<ValueId>) -> Option<&mut ValueData> {
-        self.0.get_mut(id.into().0 as usize)
+    fn update(&mut self, id: impl Into<ValueId>, value: impl Into<ValueData>) -> Option<ValueData> {
+        self.0
+            .get_mut(id.into().0 as usize)
+            .map(|old| std::mem::replace(old, value.into()))
     }
 }
 

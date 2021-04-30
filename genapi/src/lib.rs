@@ -160,7 +160,7 @@ where
         }
     }
 
-    pub fn get_cached(&self, nid: store::NodeId) -> Option<&store::ValueData> {
+    pub fn get_cached(&self, nid: store::NodeId) -> Option<store::ValueData> {
         let cache_data = self.cache_store.value(nid)?;
         self.value_store.value_opt(cache_data.value_id)
     }

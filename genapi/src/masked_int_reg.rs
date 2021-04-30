@@ -72,7 +72,7 @@ impl IInteger for MaskedIntRegNode {
     ) -> GenApiResult<i64> {
         let nid = self.node_base().id();
         if let Some(ValueData::Integer(i)) = cx.get_cached(nid) {
-            return Ok(*i);
+            return Ok(i);
         }
 
         // Get register value.
