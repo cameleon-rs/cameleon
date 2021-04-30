@@ -273,6 +273,13 @@ pub trait ICommand {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool>;
+
+    fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool>;
 }
 
 pub trait IBoolean {
@@ -743,6 +750,15 @@ impl<'a> ICommand for ICommandKind<'a> {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
         delegate_to_icommand_variant!(self.is_done(device, store, cx))
+    }
+
+    fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        delegate_to_icommand_variant!(self.is_writable(device, store, cx))
     }
 }
 

@@ -56,4 +56,13 @@ impl ICommand for CommandNode {
     ) -> GenApiResult<bool> {
         todo!()
     }
+
+    fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        todo!()
+    }
 }
