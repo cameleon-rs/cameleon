@@ -3,7 +3,7 @@ use super::{
     interface::IString,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, NodeStore, StringId, ValueStore},
-    Device, GenApiResult, ValueCtxt,
+    Device, GenApiError, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -39,7 +39,11 @@ impl IString for StringNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<String> {
-        todo!()
+        self.elem_base.verify_is_readable(device, store, cx)?;
+        match self.value {
+            ImmOrPNode::Imm(vid) => Ok(cx.value_store().str_value(vid).unwrap()),
+            ImmOrPNode::PNode(nid) => nid.expect_istring_kind(store)?.value(device, store, cx),
+        }
     }
 
     fn set_value<T: ValueStore, U: CacheStore>(
@@ -49,7 +53,22 @@ impl IString for StringNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        self.elem_base.verify_is_writable(device, store, cx)?;
+        cx.invalidate_cache_by(self.node_base().id());
+        if value.len() > self.max_length(device, store, cx)? as usize {
+            return Err(GenApiError::InvalidData(
+                "The data to write exceeds the maximum length allowed by the node.".into(),
+            ));
+        };
+        match self.value {
+            ImmOrPNode::Imm(vid) => {
+                cx.value_store_mut().update(vid, value.to_string());
+                Ok(())
+            }
+            ImmOrPNode::PNode(nid) => nid
+                .expect_istring_kind(store)?
+                .set_value(value, device, store, cx),
+        }
     }
 
     fn max_length<T: ValueStore, U: CacheStore>(
@@ -58,7 +77,12 @@ impl IString for StringNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
-        todo!()
+        match self.value {
+            ImmOrPNode::Imm(_) => Ok(i64::MAX),
+            ImmOrPNode::PNode(nid) => nid
+                .expect_istring_kind(store)?
+                .max_length(device, store, cx),
+        }
     }
 
     fn is_readable<T: ValueStore, U: CacheStore>(
