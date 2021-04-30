@@ -372,7 +372,7 @@ pub trait ValueStore {
         T: Into<ValueData>,
         U: From<ValueId>;
 
-    fn value_opt<T>(&self, id: T) -> Option<ValueData>
+    fn value_opt<T>(&self, id: T) -> Option<&ValueData>
     where
         T: Into<ValueId>;
 
@@ -381,13 +381,13 @@ pub trait ValueStore {
         T: Into<ValueId>,
         U: Into<ValueData>;
 
-    fn value(&self, id: impl Into<ValueId>) -> ValueData {
+    fn value(&self, id: impl Into<ValueId>) -> &ValueData {
         self.value_opt(id).unwrap()
     }
 
     fn integer_value(&self, id: IntegerId) -> Option<i64> {
         if let ValueData::Integer(i) = self.value_opt(id)? {
-            Some(i)
+            Some(*i)
         } else {
             None
         }
@@ -395,13 +395,13 @@ pub trait ValueStore {
 
     fn float_value(&self, id: FloatId) -> Option<f64> {
         if let ValueData::Float(f) = self.value_opt(id)? {
-            Some(f)
+            Some(*f)
         } else {
             None
         }
     }
 
-    fn str_value(&self, id: StringId) -> Option<String> {
+    fn str_value(&self, id: StringId) -> Option<&String> {
         if let ValueData::Str(s) = self.value_opt(id)? {
             Some(s)
         } else {
@@ -411,7 +411,7 @@ pub trait ValueStore {
 
     fn boolean_value(&self, id: BooleanId) -> Option<bool> {
         if let ValueData::Boolean(b) = self.value_opt(id)? {
-            Some(b)
+            Some(*b)
         } else {
             None
         }
@@ -456,11 +456,11 @@ impl ValueStore for DefaultValueStore {
         id.into()
     }
 
-    fn value_opt<T>(&self, id: T) -> Option<ValueData>
+    fn value_opt<T>(&self, id: T) -> Option<&ValueData>
     where
         T: Into<ValueId>,
     {
-        self.0.get(id.into().0 as usize).cloned()
+        self.0.get(id.into().0 as usize)
     }
 
     fn update<T, U>(&mut self, id: T, value: U) -> Option<ValueData>

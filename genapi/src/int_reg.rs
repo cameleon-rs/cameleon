@@ -3,7 +3,7 @@ use super::{
     interface::{IInteger, IRegister, ISelector, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase},
     register_base::RegisterBase,
-    store::{CacheStore, NodeId, NodeStore, ValueData, ValueStore},
+    store::{CacheStore, NodeId, NodeStore, ValueStore},
     utils, Device, GenApiError, GenApiResult, ValueCtxt,
 };
 
