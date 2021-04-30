@@ -231,14 +231,14 @@ pub trait NodeStore {
 
     fn name_by_id(&self, nid: NodeId) -> Option<&str>;
 
-    fn node_opt(&self, id: NodeId) -> Option<&NodeData>;
+    fn node_opt(&self, nid: NodeId) -> Option<&NodeData>;
 
-    fn store_node(&mut self, id: NodeId, data: NodeData);
+    fn store_node(&mut self, nid: NodeId, data: NodeData);
 
     fn visit_nodes(&self, f: impl FnMut(&NodeData));
 
-    fn node(&self, id: NodeId) -> &NodeData {
-        self.node_opt(id).unwrap()
+    fn node(&self, nid: NodeId) -> &NodeData {
+        self.node_opt(nid).unwrap()
     }
 }
 
@@ -254,12 +254,12 @@ where
         (**self).name_by_id(nid)
     }
 
-    fn node_opt(&self, id: NodeId) -> Option<&NodeData> {
-        (**self).node_opt(id)
+    fn node_opt(&self, nid: NodeId) -> Option<&NodeData> {
+        (**self).node_opt(nid)
     }
 
-    fn store_node(&mut self, id: NodeId, data: NodeData) {
-        (*self).store_node(id, data)
+    fn store_node(&mut self, nid: NodeId, data: NodeData) {
+        (*self).store_node(nid, data)
     }
 
     fn visit_nodes(&self, f: impl FnMut(&NodeData)) {
@@ -292,12 +292,12 @@ impl NodeStore for DefaultNodeStore {
         self.interner.resolve(nid)
     }
 
-    fn node_opt(&self, id: NodeId) -> Option<&NodeData> {
-        self.store.get(id.to_usize())?.as_ref()
+    fn node_opt(&self, nid: NodeId) -> Option<&NodeData> {
+        self.store.get(nid.to_usize())?.as_ref()
     }
 
-    fn store_node(&mut self, id: NodeId, data: NodeData) {
-        let id = id.to_usize();
+    fn store_node(&mut self, nid: NodeId, data: NodeData) {
+        let id = nid.to_usize();
         if self.store.len() <= id {
             self.store.resize(id + 1, None)
         }
@@ -342,8 +342,8 @@ macro_rules! declare_value_id {
         }
 
         impl From<ValueId> for $name {
-            fn from(id: ValueId) -> Self {
-                Self(id.0)
+            fn from(vid: ValueId) -> Self {
+                Self(vid.0)
             }
         }
     };
@@ -477,11 +477,13 @@ impl ValueStore for DefaultValueStore {
 }
 
 pub trait CacheStore {
-    fn store(&mut self, node_id: NodeId, value_id: impl Into<ValueId>);
+    fn store(&mut self, nid: NodeId, vid: impl Into<ValueId>);
 
-    fn value(&self, node_id: NodeId) -> Option<CacheData>;
+    fn value(&self, nid: NodeId) -> Option<CacheData>;
 
-    fn invalidate_by(&mut self, id: NodeId);
+    fn invalidate_by(&mut self, nid: NodeId);
+
+    fn invalidate_of(&mut self, nid: NodeId);
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -506,16 +508,20 @@ impl<T> CacheStore for &mut T
 where
     T: CacheStore,
 {
-    fn store(&mut self, node_id: NodeId, value_id: impl Into<ValueId>) {
-        (**self).store(node_id, value_id);
+    fn store(&mut self, nid: NodeId, vid: impl Into<ValueId>) {
+        (**self).store(nid, vid);
     }
 
-    fn value(&self, node_id: NodeId) -> Option<CacheData> {
-        (**self).value(node_id)
+    fn value(&self, nid: NodeId) -> Option<CacheData> {
+        (**self).value(nid)
     }
 
-    fn invalidate_by(&mut self, id: NodeId) {
-        (**self).invalidate_by(id)
+    fn invalidate_by(&mut self, nid: NodeId) {
+        (**self).invalidate_by(nid)
+    }
+
+    fn invalidate_of(&mut self, nid: NodeId) {
+        (**self).invalidate_of(nid)
     }
 }
 
@@ -549,28 +555,30 @@ impl DefaultCacheStore {
 }
 
 impl CacheStore for DefaultCacheStore {
-    fn store(&mut self, node_id: NodeId, value_id: impl Into<ValueId>) {
+    fn store(&mut self, nid: NodeId, vid: impl Into<ValueId>) {
         self.store
-            .entry(node_id)
+            .entry(nid)
             .and_modify(|e| e.is_valid = true)
-            .or_insert(CacheData::new(value_id.into(), true));
+            .or_insert(CacheData::new(vid.into(), true));
     }
 
-    fn value(&self, node_id: NodeId) -> Option<CacheData> {
-        self.store.get(&node_id).copied()
+    fn value(&self, nid: NodeId) -> Option<CacheData> {
+        self.store.get(&nid).copied()
     }
 
-    fn invalidate_by(&mut self, id: NodeId) {
-        if let Some(target_nodes) = self.invalidators.get(&id) {
-            for n in target_nodes {
-                if let Some(CacheData {
-                    value_id: _,
-                    is_valid,
-                }) = self.store.get_mut(&n)
-                {
+    fn invalidate_by(&mut self, nid: NodeId) {
+        if let Some(target_nodes) = self.invalidators.get(&nid) {
+            for nid in target_nodes {
+                if let Some(CacheData { is_valid, .. }) = self.store.get_mut(&nid) {
                     *is_valid = false;
                 }
             }
+        }
+    }
+
+    fn invalidate_of(&mut self, nid: NodeId) {
+        if let Some(entry) = self.store.get_mut(&nid) {
+            entry.is_valid = false;
         }
     }
 }
@@ -595,4 +603,6 @@ impl CacheStore for CacheSink {
     }
 
     fn invalidate_by(&mut self, _: NodeId) {}
+
+    fn invalidate_of(&mut self, _: NodeId) {}
 }

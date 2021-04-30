@@ -1,6 +1,6 @@
 use super::{
     elem_type::ImmOrPNode,
-    interface::ICommand,
+    interface::{ICommand, IInteger},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, IntegerId, NodeStore, ValueStore},
     Device, GenApiResult, ValueCtxt,
@@ -45,7 +45,11 @@ impl ICommand for CommandNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        self.elem_base.verify_is_writable(device, store, cx)?;
+        cx.invalidate_cache_by(self.node_base().id());
+
+        let value = self.command_value.value(device, store, cx)?;
+        self.value.set_value(value, device, store, cx)
     }
 
     fn is_done<T: ValueStore, U: CacheStore>(
@@ -54,7 +58,20 @@ impl ICommand for CommandNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        todo!()
+        let nid = match self.value {
+            ImmOrPNode::Imm(..) => return Ok(true),
+            ImmOrPNode::PNode(nid) => nid,
+        };
+
+        cx.invalidate_cache_of(nid);
+        let node = nid.expect_iinteger_kind(store)?;
+        if !node.is_readable(device, store, cx)? {
+            Ok(true)
+        } else {
+            let command_value = self.command_value.value(device, store, cx)?;
+            let reg_value = node.value(device, store, cx)?;
+            Ok(command_value != reg_value)
+        }
     }
 
     fn is_writable<T: ValueStore, U: CacheStore>(
@@ -63,6 +80,6 @@ impl ICommand for CommandNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        todo!()
+        self.elem_base.is_writable(device, store, cx)
     }
 }

@@ -168,4 +168,8 @@ where
     pub fn invalidate_cache_by(&mut self, nid: store::NodeId) {
         self.cache_store.invalidate_by(nid)
     }
+
+    pub fn invalidate_cache_of(&mut self, nid: store::NodeId) {
+        self.cache_store.invalidate_of(nid)
+    }
 }
