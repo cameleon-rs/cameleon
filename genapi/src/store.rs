@@ -231,6 +231,10 @@ impl NodeData {
 pub trait NodeStore {
     fn name_by_id(&self, nid: NodeId) -> Option<&str>;
 
+    fn id_by_name<T>(&self, s: T) -> Option<NodeId>
+    where
+        T: AsRef<str>;
+
     fn node_opt(&self, nid: NodeId) -> Option<&NodeData>;
 
     fn node(&self, nid: NodeId) -> &NodeData {
@@ -270,6 +274,13 @@ impl DefaultNodeStore {
 impl NodeStore for DefaultNodeStore {
     fn name_by_id(&self, nid: NodeId) -> Option<&str> {
         self.interner.resolve(nid)
+    }
+
+    fn id_by_name<T>(&self, s: T) -> Option<NodeId>
+    where
+        T: AsRef<str>,
+    {
+        self.interner.get(s)
     }
 
     fn node_opt(&self, nid: NodeId) -> Option<&NodeData> {
