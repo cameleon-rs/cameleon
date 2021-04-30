@@ -137,19 +137,12 @@ where
         &mut self.cache_store
     }
 
-    pub fn cache_data(&mut self, nid: store::NodeId, value: impl Into<store::ValueData>) {
-        if let Some(data) = self.cache_store.value(nid) {
-            self.value_store.update(data.value_id, value);
-            self.cache_store.store(nid, data.value_id)
-        } else {
-            let vid: store::ValueId = self.value_store.store(value);
-            self.cache_store.store(nid, vid)
-        }
+    pub fn cache_data(&mut self, nid: store::NodeId, value: &[u8]) {
+        self.cache_store.store(nid, value);
     }
 
-    pub fn get_cached(&self, nid: store::NodeId) -> Option<store::ValueData> {
-        let cache_data = self.cache_store.value(nid)?;
-        self.value_store.value_opt(cache_data.value_id)
+    pub fn get_cached(&self, nid: store::NodeId) -> Option<&[u8]> {
+        self.cache_store.value(nid)
     }
 
     pub fn invalidate_cache_by(&mut self, nid: store::NodeId) {

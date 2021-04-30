@@ -81,7 +81,8 @@ impl IRegister for StringRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.register_base().read(buf, device, store, cx)
+        self.register_base()
+            .read_then_cache_with_buf(self.node_base().id(), buf, device, store, cx)
     }
 
     fn write<T: ValueStore, U: CacheStore>(
@@ -91,7 +92,8 @@ impl IRegister for StringRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.register_base().write(buf, device, store, cx)
+        self.register_base()
+            .write_then_cache(self.node_base().id(), buf, device, store, cx)
     }
 
     fn address<T: ValueStore, U: CacheStore>(

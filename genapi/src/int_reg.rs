@@ -65,17 +65,20 @@ impl IInteger for IntRegNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         let nid = self.node_base().id();
-        if let Some(ValueData::Integer(i)) = cx.get_cached(nid) {
-            return Ok(i);
-        }
-
         let reg = self.register_base();
-        let res = utils::int_from_slice(
-            &reg.alloc_read(device, store, cx)?,
-            self.endianness,
-            self.sign,
-        )?;
-        reg.cache(nid, res, cx, true);
+
+        let res = if let Some(cache) = cx.get_cached(nid) {
+            let res = utils::int_from_slice(cache, self.endianness, self.sign)?;
+            // Avoid a lifetime problem.
+            reg.elem_base.verify_is_readable(device, store, cx)?;
+            res
+        } else {
+            utils::int_from_slice(
+                &reg.read_then_cache(nid, device, store, cx)?,
+                self.endianness,
+                self.sign,
+            )?
+        };
         Ok(res)
     }
 
@@ -93,8 +96,7 @@ impl IInteger for IntRegNode {
         let len = reg.length(device, store, cx)?;
         let mut buf = vec![0u8; len as usize];
         utils::bytes_from_int(value, &mut buf, self.endianness, self.sign)?;
-        reg.write(&buf, device, store, cx)?;
-        reg.cache(nid, value, cx, false);
+        reg.write_then_cache(nid, &buf, device, store, cx)?;
         Ok(())
     }
 
@@ -199,7 +201,8 @@ impl IRegister for IntRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.register_base().read(buf, device, store, cx)
+        self.register_base()
+            .read_then_cache_with_buf(self.node_base().id(), buf, device, store, cx)
     }
 
     fn write<T: ValueStore, U: CacheStore>(
@@ -209,7 +212,8 @@ impl IRegister for IntRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.register_base().write(buf, device, store, cx)
+        self.register_base()
+            .write_then_cache(self.node_base().id(), buf, device, store, cx)
     }
 
     fn address<T: ValueStore, U: CacheStore>(

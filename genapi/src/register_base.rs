@@ -1,8 +1,8 @@
 use super::{
     elem_type::{AccessMode, AddressKind, CachingMode, ImmOrPNode},
-    interface::{IPort, IRegister},
+    interface::IPort,
     node_base::NodeElementBase,
-    store::{CacheStore, NodeId, NodeStore, ValueData, ValueStore},
+    store::{CacheStore, NodeId, NodeStore, ValueStore},
     Device, GenApiError, GenApiResult, ValueCtxt,
 };
 
@@ -61,42 +61,27 @@ impl RegisterBase {
         &self.p_invalidators
     }
 
-    pub(super) fn cache<T: ValueStore, U: CacheStore>(
+    pub(super) fn read_then_cache<T: ValueStore, U: CacheStore>(
         &self,
         nid: NodeId,
-        data: impl Into<ValueData>,
-        cx: &mut ValueCtxt<T, U>,
-        on_read: bool,
-    ) {
-        match (self.cacheable, on_read) {
-            (CachingMode::WriteThrough, _) => cx.cache_data(nid, data),
-            (CachingMode::WriteAround, true) => cx.cache_data(nid, data),
-            _ => {}
-        }
-    }
-
-    pub(super) fn alloc_read<T: ValueStore, U: CacheStore>(
-        &self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Vec<u8>> {
         let len = self.length(device, store, cx)? as usize;
         let mut buf = vec![0; len];
-        self.read(&mut buf, device, store, cx)?;
+        self.read_then_cache_with_buf(nid, &mut buf, device, store, cx);
         Ok(buf)
     }
-}
 
-impl IRegister for RegisterBase {
-    fn read<T: ValueStore, U: CacheStore>(
+    pub(super) fn read_then_cache_with_buf<T: ValueStore, U: CacheStore>(
         &self,
+        nid: NodeId,
         buf: &mut [u8],
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.elem_base.verify_is_readable(device, store, cx)?;
         if buf.len() != self.length(device, store, cx)? as usize {
             return Err(GenApiError::InvalidBuffer(
                 "given buffer length doesn't same as the register length".into(),
@@ -106,11 +91,17 @@ impl IRegister for RegisterBase {
         let addr = self.address(device, store, cx)?;
         self.p_port
             .expect_iport_kind(store)?
-            .read(addr, buf, device, store, cx)
+            .read(addr, buf, device, store, cx)?;
+
+        if self.cacheable != CachingMode::NoCache {
+            cx.cache_data(nid, &buf);
+        }
+        Ok(())
     }
 
-    fn write<T: ValueStore, U: CacheStore>(
+    pub(super) fn write_then_cache<T: ValueStore, U: CacheStore>(
         &self,
+        nid: NodeId,
         buf: &[u8],
         device: &mut impl Device,
         store: &impl NodeStore,
@@ -126,10 +117,15 @@ impl IRegister for RegisterBase {
         let addr = self.address(device, store, cx)?;
         self.p_port
             .expect_iport_kind(store)?
-            .write(addr, buf, device, store, cx)
+            .write(addr, buf, device, store, cx)?;
+
+        if self.cacheable == CachingMode::WriteThrough {
+            cx.cache_data(nid, &buf);
+        }
+        Ok(())
     }
 
-    fn address<T: ValueStore, U: CacheStore>(
+    pub(super) fn address<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
@@ -142,7 +138,7 @@ impl IRegister for RegisterBase {
         Ok(address)
     }
 
-    fn length<T: ValueStore, U: CacheStore>(
+    pub(super) fn length<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,

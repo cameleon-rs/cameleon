@@ -476,32 +476,18 @@ impl ValueStore for DefaultValueStore {
 
 #[auto_impl(&mut, Box)]
 pub trait CacheStore {
-    fn store<T>(&mut self, nid: NodeId, vid: T)
-    where
-        T: Into<ValueId>;
+    fn store(&mut self, nid: NodeId, data: &[u8]);
 
-    fn value(&self, nid: NodeId) -> Option<CacheData>;
+    fn value(&self, nid: NodeId) -> Option<&[u8]>;
 
     fn invalidate_by(&mut self, nid: NodeId);
 
     fn invalidate_of(&mut self, nid: NodeId);
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct CacheData {
-    pub value_id: ValueId,
-    pub is_valid: bool,
-}
-
-impl CacheData {
-    fn new(value_id: ValueId, is_valid: bool) -> Self {
-        Self { value_id, is_valid }
-    }
-}
-
 #[derive(Debug)]
 pub struct DefaultCacheStore {
-    store: HashMap<NodeId, CacheData>,
+    store: HashMap<NodeId, Option<Vec<u8>>>,
     invalidators: HashMap<NodeId, Vec<NodeId>>,
 }
 
@@ -535,33 +521,30 @@ impl DefaultCacheStore {
 }
 
 impl CacheStore for DefaultCacheStore {
-    fn store<T>(&mut self, nid: NodeId, vid: T)
-    where
-        T: Into<ValueId>,
-    {
+    fn store(&mut self, nid: NodeId, data: &[u8]) {
         self.store
             .entry(nid)
-            .and_modify(|e| e.is_valid = true)
-            .or_insert(CacheData::new(vid.into(), true));
+            .and_modify(|cache| *cache = Some(data.to_vec()))
+            .or_insert(Some(data.to_owned()));
     }
 
-    fn value(&self, nid: NodeId) -> Option<CacheData> {
-        self.store.get(&nid).copied()
+    fn value(&self, nid: NodeId) -> Option<&[u8]> {
+        self.store.get(&nid)?.as_deref()
     }
 
     fn invalidate_by(&mut self, nid: NodeId) {
         if let Some(target_nodes) = self.invalidators.get(&nid) {
             for nid in target_nodes {
-                if let Some(CacheData { is_valid, .. }) = self.store.get_mut(&nid) {
-                    *is_valid = false;
+                if let Some(cache) = self.store.get_mut(&nid) {
+                    *cache = None;
                 }
             }
         }
     }
 
     fn invalidate_of(&mut self, nid: NodeId) {
-        if let Some(entry) = self.store.get_mut(&nid) {
-            entry.is_valid = false;
+        if let Some(cache) = self.store.get_mut(&nid) {
+            *cache = None;
         }
     }
 }
@@ -579,13 +562,9 @@ impl CacheSink {
 }
 
 impl CacheStore for CacheSink {
-    fn store<T>(&mut self, _: NodeId, _: T)
-    where
-        T: Into<ValueId>,
-    {
-    }
+    fn store(&mut self, _: NodeId, _: &[u8]) {}
 
-    fn value(&self, _: NodeId) -> Option<CacheData> {
+    fn value(&self, _: NodeId) -> Option<&[u8]> {
         None
     }
 
