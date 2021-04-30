@@ -23,8 +23,12 @@ impl Parse for BooleanNode {
             .parse_if(STREAMABLE, node_store, value_store)
             .unwrap_or_default();
         let value = node.parse(node_store, value_store);
-        let on_value = node.parse_if(ON_VALUE, node_store, value_store);
-        let off_value = node.parse_if(OFF_VALUE, node_store, value_store);
+        let on_value = node
+            .parse_if(ON_VALUE, node_store, value_store)
+            .unwrap_or(1);
+        let off_value = node
+            .parse_if(OFF_VALUE, node_store, value_store)
+            .unwrap_or(0);
         let p_selected = node.parse_while(P_SELECTED, node_store, value_store);
 
         Self {
@@ -68,8 +72,8 @@ mod tests {
             node.value_elem(),
             ImmOrPNode::PNode(node_store.id_by_name("Node"))
         );
-        assert_eq!(node.on_value(), Some(1));
-        assert_eq!(node.off_value(), Some(0));
+        assert_eq!(node.on_value(), 1);
+        assert_eq!(node.off_value(), 0);
     }
 
     #[test]
