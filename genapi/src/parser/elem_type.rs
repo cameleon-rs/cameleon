@@ -5,7 +5,7 @@ use crate::{
         NamedValue, PIndex, PValue, RegPIndex, Sign, Slope, StandardNameSpace, ValueIndexed,
         ValueKind, Visibility,
     },
-    store::{BooleanId, FloatId, IntegerId, NodeData, NodeId, WritableNodeStore, ValueStore},
+    store::{BooleanId, FloatId, IntegerId, NodeData, NodeId, ValueStore, WritableNodeStore},
     IntSwissKnifeNode,
 };
 

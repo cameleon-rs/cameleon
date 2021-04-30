@@ -1,6 +1,6 @@
 use crate::{
     formula::{parse, Expr, Formula},
-    store::{WritableNodeStore, ValueStore},
+    store::{ValueStore, WritableNodeStore},
 };
 
 use super::{xml, Parse};

@@ -1,5 +1,5 @@
 use crate::{
-    store::{WritableNodeStore, ValueStore},
+    store::{ValueStore, WritableNodeStore},
     SwissKnifeNode,
 };
 

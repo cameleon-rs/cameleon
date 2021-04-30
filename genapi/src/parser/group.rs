@@ -1,4 +1,4 @@
-use crate::store::{WritableNodeStore, ValueStore};
+use crate::store::{ValueStore, WritableNodeStore};
 
 use super::{
     elem_name::{COMMENT, GROUP},

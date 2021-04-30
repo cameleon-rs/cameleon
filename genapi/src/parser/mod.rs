@@ -31,7 +31,7 @@ use struct_reg::StructRegNode;
 use thiserror::Error;
 
 use crate::{
-    store::{DefaultNodeStore, DefaultValueStore, NodeData, WritableNodeStore, ValueStore},
+    store::{DefaultNodeStore, DefaultValueStore, NodeData, ValueStore, WritableNodeStore},
     RegisterDescription,
 };
 

@@ -1,6 +1,6 @@
 use crate::{
     elem_type::{ImmOrPNode, IntegerRepresentation},
-    store::{NodeId, WritableNodeStore, ValueStore},
+    store::{NodeId, ValueStore, WritableNodeStore},
     IntegerNode,
 };
 

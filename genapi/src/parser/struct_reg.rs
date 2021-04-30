@@ -2,7 +2,7 @@ use crate::{
     elem_type::{AccessMode, BitMask, CachingMode, Endianness, IntegerRepresentation, Sign},
     node_base::{NodeAttributeBase, NodeElementBase},
     register_base::RegisterBase,
-    store::{NodeId, WritableNodeStore, ValueStore},
+    store::{NodeId, ValueStore, WritableNodeStore},
     MaskedIntRegNode,
 };
 

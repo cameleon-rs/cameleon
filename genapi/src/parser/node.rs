@@ -1,6 +1,6 @@
 use crate::{
     node_base::{NodeAttributeBase, NodeElementBase},
-    store::{WritableNodeStore, ValueStore},
+    store::{ValueStore, WritableNodeStore},
     Node,
 };
 

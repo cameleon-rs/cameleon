@@ -1,6 +1,6 @@
 use crate::{
     elem_type::AccessMode,
-    store::{WritableNodeStore, ValueStore},
+    store::{ValueStore, WritableNodeStore},
     RegisterBase,
 };
 

@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-use crate::store::{WritableNodeStore, ValueStore};
+use crate::store::{ValueStore, WritableNodeStore};
 
 use super::{Parse, ParseResult};
 
