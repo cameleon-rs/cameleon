@@ -3,7 +3,7 @@ use super::{
     interface::{IFloat, IRegister, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase},
     store::{CacheStore, NodeStore, ValueStore},
-    Device, GenApiResult, RegisterBase, ValueCtxt,
+    utils, Device, GenApiError, GenApiResult, RegisterBase, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -63,7 +63,20 @@ impl IFloat for FloatRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
-        todo!()
+        let nid = self.node_base().id();
+        let reg = self.register_base();
+
+        let res = if let Some(cache) = cx.get_cached(nid) {
+            let res = utils::float_from_slice(cache, self.endianness)?;
+            reg.elem_base.verify_is_readable(device, store, cx)?;
+            res
+        } else {
+            utils::float_from_slice(
+                &reg.read_then_cache(nid, device, store, cx)?,
+                self.endianness,
+            )?
+        };
+        Ok(res)
     }
 
     fn set_value<T: ValueStore, U: CacheStore>(
@@ -73,79 +86,86 @@ impl IFloat for FloatRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo! {}
+        let nid = self.node_base().id();
+        cx.invalidate_cache_by(nid);
+
+        let reg = self.register_base();
+        let len = reg.length(device, store, cx)?;
+        let mut buf = vec![0u8; len as usize];
+        utils::bytes_from_float(value, &mut buf, self.endianness)?;
+        reg.write_then_cache(nid, &buf, device, store, cx)?;
+        Ok(())
     }
 
     fn min<T: ValueStore, U: CacheStore>(
         &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
+        _: &mut impl Device,
+        _: &impl NodeStore,
+        _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
-        todo!()
+        Ok(f64::MIN)
     }
 
     fn max<T: ValueStore, U: CacheStore>(
         &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
+        _: &mut impl Device,
+        _: &impl NodeStore,
+        _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
-        todo!()
+        Ok(f64::MAX)
     }
 
-    fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
-        todo!()
+    fn inc_mode(&self, _: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
+        Ok(None)
     }
 
     fn inc<T: ValueStore, U: CacheStore>(
         &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
+        _: &mut impl Device,
+        _: &impl NodeStore,
+        _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Option<f64>> {
-        todo!()
+        Ok(None)
     }
 
-    /// NOTE: `ValidValueSet` is not supported in `GenApiSchema Version 1.1` yet.
-    fn valid_value_set(&self, store: &impl NodeStore) -> &[f64] {
-        todo!()
+    fn representation(&self, _: &impl NodeStore) -> FloatRepresentation {
+        self.representation
     }
 
-    fn representation(&self, store: &impl NodeStore) -> FloatRepresentation {
-        todo!()
+    fn unit(&self, _: &impl NodeStore) -> Option<&str> {
+        self.unit_elem()
     }
 
-    fn unit(&self, store: &impl NodeStore) -> Option<&str> {
-        todo!()
+    fn display_notation(&self, _: &impl NodeStore) -> DisplayNotation {
+        self.display_notation
     }
 
-    fn display_notation(&self, store: &impl NodeStore) -> DisplayNotation {
-        todo!()
-    }
-
-    fn display_precision(&self, store: &impl NodeStore) -> i64 {
-        todo! {}
+    fn display_precision(&self, _: &impl NodeStore) -> i64 {
+        self.display_precision
     }
 
     fn set_min<T: ValueStore, U: CacheStore>(
         &self,
-        value: f64,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
+        _: f64,
+        _: &mut impl Device,
+        _: &impl NodeStore,
+        _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        Err(GenApiError::AccessDenied(
+            "can't set value to register's min elem".into(),
+        ))
     }
 
     fn set_max<T: ValueStore, U: CacheStore>(
         &self,
-        value: f64,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
+        _: f64,
+        _: &mut impl Device,
+        _: &impl NodeStore,
+        _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        Err(GenApiError::AccessDenied(
+            "can't set value to register's max elem".into(),
+        ))
     }
 
     fn is_readable<T: ValueStore, U: CacheStore>(
@@ -154,7 +174,9 @@ impl IFloat for FloatRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        todo!()
+        self.register_base()
+            .elem_base
+            .is_readable(device, store, cx)
     }
 
     fn is_writable<T: ValueStore, U: CacheStore>(
@@ -163,7 +185,9 @@ impl IFloat for FloatRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        todo!()
+        self.register_base()
+            .elem_base
+            .is_writable(device, store, cx)
     }
 }
 

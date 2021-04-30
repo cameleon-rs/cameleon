@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use crate::{
     builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder},
     elem_type::{
@@ -190,7 +192,8 @@ macro_rules! impl_parse_for_imm_or_pnode_id {
                 value_builder: &mut impl ValueStoreBuilder,
                 cache_builder: &mut impl CacheStoreBuilder,
             ) -> Self {
-                let node: ImmOrPNode<$value_ty> = node.parse(node_builder, value_builder, cache_builder);
+                let node: ImmOrPNode<$value_ty> =
+                    node.parse(node_builder, value_builder, cache_builder);
                 match node {
                     ImmOrPNode::Imm(b) => {
                         let id = value_builder.store(b);
@@ -516,7 +519,7 @@ where
     }
 }
 
-impl Parse for PValue {
+impl<T> Parse for PValue<T> {
     fn parse(
         node: &mut xml::Node,
         node_builder: &mut impl NodeStoreBuilder,
@@ -536,6 +539,7 @@ impl Parse for PValue {
         Self {
             p_value,
             p_value_copies,
+            phantom: PhantomData,
         }
     }
 }
@@ -597,7 +601,9 @@ impl Parse for AddressKind {
     ) -> Self {
         let peeked_node = node.peek().unwrap();
         match peeked_node.tag_name() {
-            ADDRESS | P_ADDRESS => Self::Address(node.parse(node_builder, value_builder, cache_builder)),
+            ADDRESS | P_ADDRESS => {
+                Self::Address(node.parse(node_builder, value_builder, cache_builder))
+            }
             INT_SWISS_KNIFE => {
                 let swiss_knife: IntSwissKnifeNode =
                     node.next()

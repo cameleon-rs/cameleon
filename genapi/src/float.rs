@@ -3,7 +3,7 @@ use super::{
     interface::{IFloat, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, FloatId, NodeStore, ValueStore},
-    Device, GenApiResult, ValueCtxt,
+    utils, Device, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -81,7 +81,8 @@ impl IFloat for FloatNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
-        todo!()
+        self.elem_base.verify_is_readable(device, store, cx)?;
+        self.value_kind().value(device, store, cx)
     }
 
     fn set_value<T: ValueStore, U: CacheStore>(
@@ -91,7 +92,14 @@ impl IFloat for FloatNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo! {}
+        self.elem_base.verify_is_writable(device, store, cx)?;
+        cx.invalidate_cache_by(self.node_base().id());
+
+        let min = self.min(device, store, cx)?;
+        let max = self.max(device, store, cx)?;
+        utils::verify_value_in_range(value, min, max)?;
+
+        self.value_kind().set_value(value, device, store, cx)
     }
 
     fn min<T: ValueStore, U: CacheStore>(
@@ -100,7 +108,7 @@ impl IFloat for FloatNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
-        todo!()
+        self.min.value(device, store, cx)
     }
 
     fn max<T: ValueStore, U: CacheStore>(
@@ -109,11 +117,11 @@ impl IFloat for FloatNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
-        todo!()
+        self.max.value(device, store, cx)
     }
 
-    fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
-        todo!()
+    fn inc_mode(&self, _store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
+        Ok(Some(IncrementMode::FixedIncrement))
     }
 
     fn inc<T: ValueStore, U: CacheStore>(
@@ -122,28 +130,23 @@ impl IFloat for FloatNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Option<f64>> {
-        todo!()
+        self.inc.map(|n| n.value(device, store, cx)).transpose()
     }
 
-    /// NOTE: `ValidValueSet` is not supported in `GenApiSchema Version 1.1` yet.
-    fn valid_value_set(&self, store: &impl NodeStore) -> &[f64] {
-        todo!()
+    fn representation(&self, _store: &impl NodeStore) -> FloatRepresentation {
+        self.representation_elem()
     }
 
-    fn representation(&self, store: &impl NodeStore) -> FloatRepresentation {
-        todo!()
+    fn unit(&self, _store: &impl NodeStore) -> Option<&str> {
+        self.unit_elem()
     }
 
-    fn unit(&self, store: &impl NodeStore) -> Option<&str> {
-        todo!()
+    fn display_notation(&self, _store: &impl NodeStore) -> DisplayNotation {
+        self.display_notation_elem()
     }
 
-    fn display_notation(&self, store: &impl NodeStore) -> DisplayNotation {
-        todo!()
-    }
-
-    fn display_precision(&self, store: &impl NodeStore) -> i64 {
-        todo! {}
+    fn display_precision(&self, _store: &impl NodeStore) -> i64 {
+        self.display_precision_elem()
     }
 
     fn set_min<T: ValueStore, U: CacheStore>(
@@ -153,7 +156,7 @@ impl IFloat for FloatNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        self.min.set_value(value, device, store, cx)
     }
 
     fn set_max<T: ValueStore, U: CacheStore>(
@@ -163,7 +166,7 @@ impl IFloat for FloatNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        self.max.set_value(value, device, store, cx)
     }
 
     fn is_readable<T: ValueStore, U: CacheStore>(
@@ -172,7 +175,7 @@ impl IFloat for FloatNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        todo!()
+        self.elem_base.is_readable(device, store, cx)
     }
 
     fn is_writable<T: ValueStore, U: CacheStore>(
@@ -181,6 +184,6 @@ impl IFloat for FloatNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        todo!()
+        self.elem_base.is_writable(device, store, cx)
     }
 }
