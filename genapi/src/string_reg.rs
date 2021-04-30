@@ -34,15 +34,22 @@ impl IString for StringRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<String> {
-        self.register_base
-            .elem_base
-            .verify_is_readable(device, store, cx)?;
-        let bytes = self.register_base.alloc_read(device, store, cx)?;
-        let len = bytes
-            .iter()
-            .position(|c| *c == 0_u8)
-            .unwrap_or_else(|| bytes.len());
-        Ok(String::from_utf8_lossy(&bytes[0..len]).to_string())
+        let nid = self.node_base().id();
+        let reg = self.register_base();
+        let res = if let Some(cache) = cx.get_cached(nid) {
+            let res = String::from_utf8_lossy(cache).to_string();
+            // Avoid a lifetime problem.
+            reg.elem_base.verify_is_readable(device, store, cx)?;
+            res
+        } else {
+            let bytes = reg.read_then_cache(nid, device, store, cx)?;
+            let len = bytes
+                .iter()
+                .position(|c| *c == 0)
+                .unwrap_or_else(|| bytes.len());
+            String::from_utf8_lossy(&bytes[0..len]).to_string()
+        };
+        Ok(res.into())
     }
 
     fn set_value<T: ValueStore, U: CacheStore>(
@@ -52,19 +59,23 @@ impl IString for StringRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.register_base
-            .elem_base
-            .verify_is_writable(device, store, cx)?;
-        if value.len() > self.max_length(device, store, cx)? as usize {
+        if !value.is_ascii() {
             return Err(GenApiError::InvalidData(
-                "The data to write exceeds the maximum length allowed by the node.".into(),
+                "the data to write must be an ascii string".into(),
             ));
         }
-        cx.invalidate_cache_by(self.node_base().id());
+        if value.len() > self.max_length(device, store, cx)? as usize {
+            return Err(GenApiError::InvalidData(
+                "the data to write exceeds the maximum length allowed by the node.".into(),
+            ));
+        }
+        let nid = self.node_base().id();
+        cx.invalidate_cache_by(nid);
+        let reg = self.register_base();
         let mut buf = vec![0_u8; self.length(device, store, cx)? as usize];
-        let bytes = value.as_bytes().to_owned();
-        buf.splice(0..value.len(), bytes.into_iter());
-        self.write(&buf, device, store, cx)
+        let bytes = value.as_bytes();
+        buf[0..bytes.len()].copy_from_slice(bytes);
+        reg.write_then_cache(nid, &buf, device, store, cx)
     }
 
     fn max_length<T: ValueStore, U: CacheStore>(
@@ -82,7 +93,9 @@ impl IString for StringRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        todo!()
+        self.register_base()
+            .elem_base
+            .is_readable(device, store, cx)
     }
 
     fn is_writable<T: ValueStore, U: CacheStore>(
@@ -91,7 +104,9 @@ impl IString for StringRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        todo!()
+        self.register_base()
+            .elem_base
+            .is_writable(device, store, cx)
     }
 }
 

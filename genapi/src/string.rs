@@ -41,7 +41,7 @@ impl IString for StringNode {
     ) -> GenApiResult<String> {
         self.elem_base.verify_is_readable(device, store, cx)?;
         match self.value {
-            ImmOrPNode::Imm(vid) => Ok(cx.value_store().str_value(vid).unwrap()),
+            ImmOrPNode::Imm(vid) => Ok(cx.value_store().str_value(vid).unwrap().clone()),
             ImmOrPNode::PNode(nid) => nid.expect_istring_kind(store)?.value(device, store, cx),
         }
     }
@@ -54,12 +54,17 @@ impl IString for StringNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         self.elem_base.verify_is_writable(device, store, cx)?;
-        cx.invalidate_cache_by(self.node_base().id());
+        if !value.is_ascii() {
+            return Err(GenApiError::InvalidData(
+                "the data to write must be an ascii string".into(),
+            ));
+        }
         if value.len() > self.max_length(device, store, cx)? as usize {
             return Err(GenApiError::InvalidData(
-                "The data to write exceeds the maximum length allowed by the node.".into(),
+                "the data to write exceeds the maximum length allowed by the node.".into(),
             ));
         };
+        cx.invalidate_cache_by(self.node_base().id());
         match self.value {
             ImmOrPNode::Imm(vid) => {
                 cx.value_store_mut().update(vid, value.to_string());
@@ -91,7 +96,7 @@ impl IString for StringNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        todo!()
+        self.elem_base.is_readable(device, store, cx)
     }
 
     fn is_writable<T: ValueStore, U: CacheStore>(
@@ -100,6 +105,6 @@ impl IString for StringNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        todo!()
+        self.elem_base.is_writable(device, store, cx)
     }
 }
