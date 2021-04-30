@@ -171,17 +171,7 @@ impl<'a> VariableKind<'a> {
         }
 
         let expr: Expr = match self {
-            Self::Value => {
-                if let Some(node) = nid.as_iinteger_kind(store) {
-                    node.value(device, store, cx)?.into()
-                } else if let Some(node) = nid.as_ifloat_kind(store) {
-                    node.value(device, store, cx)?.into()
-                } else if let Some(node) = nid.as_iboolean_kind(store) {
-                    node.value(device, store, cx)?.into()
-                } else {
-                    return Err(error(nid, store));
-                }
-            }
+            Self::Value => expr_from_node_id(nid, device, store, cx)?,
             Self::Min => {
                 if let Some(node) = nid.as_iinteger_kind(store) {
                     node.min(device, store, cx)?.into()
@@ -226,5 +216,24 @@ impl<'a> VariableKind<'a> {
         };
 
         Ok(expr)
+    }
+}
+
+pub(super) fn expr_from_node_id<T: ValueStore, U: CacheStore>(
+    nid: NodeId,
+    device: &mut impl Device,
+    store: &impl NodeStore,
+    cx: &mut ValueCtxt<T, U>,
+) -> GenApiResult<Expr> {
+    if let Some(node) = nid.as_iinteger_kind(store) {
+        Ok(node.value(device, store, cx)?.into())
+    } else if let Some(node) = nid.as_ifloat_kind(store) {
+        Ok(node.value(device, store, cx)?.into())
+    } else if let Some(node) = nid.as_iboolean_kind(store) {
+        Ok(node.value(device, store, cx)?.into())
+    } else {
+        Err(GenApiError::InvalidNode(
+            format!("invalid `pVariable: {}`", nid.name(store)).into(),
+        ))
     }
 }
