@@ -243,6 +243,20 @@ pub trait IEnumeration {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
+
+    fn is_readable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool>;
+
+    fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool>;
 }
 
 pub trait ICommand {
@@ -785,6 +799,24 @@ impl<'a> IEnumeration for IEnumerationKind<'a> {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         delegate_to_ienumeration_variant!(self.set_entry_by_idx(idx, device, store, cx))
+    }
+
+    fn is_readable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        delegate_to_ienumeration_variant!(self.is_readable(device, store, cx))
+    }
+
+    fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        delegate_to_ienumeration_variant!(self.is_writable(device, store, cx))
     }
 }
 

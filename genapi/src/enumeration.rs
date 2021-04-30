@@ -83,6 +83,24 @@ impl IEnumeration for EnumerationNode {
     ) -> GenApiResult<()> {
         todo!()
     }
+
+    fn is_readable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        todo!()
+    }
+
+    fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        todo!()
+    }
 }
 
 #[derive(Debug, Clone)]
