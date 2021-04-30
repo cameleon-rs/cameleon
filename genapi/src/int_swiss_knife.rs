@@ -4,7 +4,7 @@ use super::{
     interface::{IInteger, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, NodeId, NodeStore, ValueStore},
-    Device, GenApiResult, ValueCtxt,
+    utils, Device, GenApiError, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -70,17 +70,25 @@ impl IInteger for IntSwissKnifeNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
-        todo!()
+        self.elem_base.verify_is_readable(device, store, cx)?;
+
+        let var_env =
+            utils::FormulaEnvCollector::new(&self.p_variables, &self.constants, &self.expressions)
+                .collect(device, store, cx)?;
+        let eval_result = self.formula.eval(&var_env);
+        Ok(eval_result.as_integer())
     }
 
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
-        value: i64,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
+        _: i64,
+        _: &mut impl Device,
+        _: &impl NodeStore,
+        _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        Err(GenApiError::AccessDenied(
+            "write to `IntSwissKnifeNode` is forbidden".into(),
+        ))
     }
 
     fn min<T: ValueStore, U: CacheStore>(
@@ -89,7 +97,7 @@ impl IInteger for IntSwissKnifeNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
-        todo!()
+        self.value(device, store, cx)
     }
 
     fn max<T: ValueStore, U: CacheStore>(
@@ -98,51 +106,55 @@ impl IInteger for IntSwissKnifeNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
-        todo! {}
+        self.value(device, store, cx)
     }
 
-    fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
-        todo!()
+    fn inc_mode(&self, _: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
+        Ok(None)
     }
 
     fn inc<T: ValueStore, U: CacheStore>(
         &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
+        _: &mut impl Device,
+        _: &impl NodeStore,
+        _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Option<i64>> {
-        todo!()
+        Ok(None)
     }
 
-    fn valid_value_set(&self, store: &impl NodeStore) -> &[i64] {
-        todo!()
+    fn valid_value_set(&self, _: &impl NodeStore) -> &[i64] {
+        &[]
     }
 
-    fn representation(&self, store: &impl NodeStore) -> IntegerRepresentation {
-        todo!()
+    fn representation(&self, _: &impl NodeStore) -> IntegerRepresentation {
+        self.representation
     }
 
-    fn unit(&self, store: &impl NodeStore) -> Option<&str> {
-        todo!()
+    fn unit(&self, _: &impl NodeStore) -> Option<&str> {
+        self.unit_elem()
     }
 
     fn set_min<T: ValueStore, U: CacheStore>(
         &self,
-        value: i64,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
+        _: i64,
+        _: &mut impl Device,
+        _: &impl NodeStore,
+        _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        Err(GenApiError::AccessDenied(
+            "write to `IntSwissKnifeNode` is forbidden".into(),
+        ))
     }
 
     fn set_max<T: ValueStore, U: CacheStore>(
         &self,
-        value: i64,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
+        _: i64,
+        _: &mut impl Device,
+        _: &impl NodeStore,
+        _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        Err(GenApiError::AccessDenied(
+            "write to `IntSwissKnifeNode` is forbidden".into(),
+        ))
     }
 }
