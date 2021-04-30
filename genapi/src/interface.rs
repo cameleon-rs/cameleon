@@ -297,6 +297,20 @@ pub trait IBoolean {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
+
+    fn is_readable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool>;
+
+    fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool>;
 }
 
 pub trait IRegister {
@@ -875,6 +889,24 @@ impl<'a> IBoolean for IBooleanKind<'a> {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         delegate_to_iboolean_variant!(self.set_value(value, device, store, cx))
+    }
+
+    fn is_readable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        delegate_to_iboolean_variant!(self.is_readable(device, store, cx))
+    }
+
+    fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        delegate_to_iboolean_variant!(self.is_writable(device, store, cx))
     }
 }
 

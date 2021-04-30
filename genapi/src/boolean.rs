@@ -59,7 +59,7 @@ impl IBoolean for BooleanNode {
     ) -> GenApiResult<bool> {
         self.elem_base.verify_is_readable(device, store, cx)?;
         match self.value {
-            ImmOrPNode::Imm(bid) => Ok(cx.value_store().boolean_value(bid).unwrap()),
+            ImmOrPNode::Imm(vid) => Ok(cx.value_store().boolean_value(vid).unwrap()),
             ImmOrPNode::PNode(nid) => {
                 let value = nid.expect_iinteger_kind(store)?.value(device, store, cx)?;
                 if value == self.on_value {
@@ -85,8 +85,8 @@ impl IBoolean for BooleanNode {
         self.elem_base.verify_is_writable(device, store, cx)?;
         cx.invalidate_cache_by(self.node_base().id());
         match self.value {
-            ImmOrPNode::Imm(bid) => {
-                cx.value_store_mut().update(bid, value);
+            ImmOrPNode::Imm(vid) => {
+                cx.value_store_mut().update(vid, value);
                 Ok(())
             }
             ImmOrPNode::PNode(nid) => {
@@ -95,6 +95,24 @@ impl IBoolean for BooleanNode {
                     .set_value(value, device, store, cx)
             }
         }
+    }
+
+    fn is_readable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        self.elem_base.is_readable(device, store, cx)
+    }
+
+    fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        self.elem_base.is_writable(device, store, cx)
     }
 }
 
