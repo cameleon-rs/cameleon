@@ -158,6 +158,24 @@ impl IInteger for IntegerNode {
     ) -> GenApiResult<()> {
         self.max.set_value(value, device, store, cx)
     }
+
+    fn is_readable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        self.elem_base.is_readable(device, store, cx)
+    }
+
+    fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        self.elem_base.is_writable(device, store, cx)
+    }
 }
 
 impl ISelector for IntegerNode {

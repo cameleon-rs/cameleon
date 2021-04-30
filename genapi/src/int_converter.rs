@@ -180,7 +180,7 @@ impl IInteger for IntConverterNode {
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         Err(GenApiError::AccessDenied(
-            "can't set value to `int_converter`'s min elem".into(),
+            "can't set value to min elem of `IntConverterNode`".into(),
         ))
     }
 
@@ -192,7 +192,25 @@ impl IInteger for IntConverterNode {
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         Err(GenApiError::AccessDenied(
-            "can't set value to `int_converter`'s max elem".into(),
+            "can't set value to max elem of `IntConverterNode`".into(),
         ))
+    }
+
+    fn is_readable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        self.elem_base.is_readable(device, store, cx)
+    }
+
+    fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        self.elem_base.is_writable(device, store, cx)
     }
 }

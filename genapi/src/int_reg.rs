@@ -167,6 +167,28 @@ impl IInteger for IntRegNode {
             "can't set value to register's max elem".into(),
         ))
     }
+
+    fn is_readable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        self.register_base()
+            .elem_base
+            .is_readable(device, store, cx)
+    }
+
+    fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        self.register_base()
+            .elem_base
+            .is_writable(device, store, cx)
+    }
 }
 
 impl IRegister for IntRegNode {
