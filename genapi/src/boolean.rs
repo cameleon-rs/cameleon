@@ -1,9 +1,9 @@
 use super::{
     elem_type::ImmOrPNode,
-    interface::{IBoolean, ISelector},
+    interface::{IBoolean, IInteger, ISelector},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{BooleanId, CacheStore, NodeId, NodeStore, ValueStore},
-    Device, GenApiResult, ValueCtxt,
+    Device, GenApiError, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -13,8 +13,8 @@ pub struct BooleanNode {
 
     pub(crate) streamable: bool,
     pub(crate) value: ImmOrPNode<BooleanId>,
-    pub(crate) on_value: Option<i64>,
-    pub(crate) off_value: Option<i64>,
+    pub(crate) on_value: i64,
+    pub(crate) off_value: i64,
     pub(crate) p_selected: Vec<NodeId>,
 }
 
@@ -35,12 +35,12 @@ impl BooleanNode {
     }
 
     #[must_use]
-    pub fn on_value(&self) -> Option<i64> {
+    pub fn on_value(&self) -> i64 {
         self.on_value
     }
 
     #[must_use]
-    pub fn off_value(&self) -> Option<i64> {
+    pub fn off_value(&self) -> i64 {
         self.off_value
     }
 
@@ -57,7 +57,22 @@ impl IBoolean for BooleanNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        todo!()
+        self.elem_base.verify_is_readable(device, store, cx)?;
+        match self.value {
+            ImmOrPNode::Imm(bid) => Ok(cx.value_store().boolean_value(bid).unwrap()),
+            ImmOrPNode::PNode(nid) => {
+                let value = nid.expect_iinteger_kind(store)?.value(device, store, cx)?;
+                if value == self.on_value {
+                    Ok(true)
+                } else if value == self.off_value {
+                    Ok(false)
+                } else {
+                    Err(GenApiError::InvalidNode(
+                        "the internal integer value cannot be interpreted as boolean".into(),
+                    ))
+                }
+            }
+        }
     }
 
     fn set_value<T: ValueStore, U: CacheStore>(
@@ -67,12 +82,24 @@ impl IBoolean for BooleanNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        self.elem_base.verify_is_writable(device, store, cx)?;
+        cx.invalidate_cache_by(self.node_base().id());
+        match self.value {
+            ImmOrPNode::Imm(bid) => {
+                cx.value_store_mut().update(bid, value);
+                Ok(())
+            }
+            ImmOrPNode::PNode(nid) => {
+                let value = if value { self.on_value } else { self.off_value };
+                nid.expect_iinteger_kind(store)?
+                    .set_value(value, device, store, cx)
+            }
+        }
     }
 }
 
 impl ISelector for BooleanNode {
-    fn selecting_nodes(&self, store: &impl NodeStore) -> GenApiResult<&[NodeId]> {
+    fn selecting_nodes(&self, _store: &impl NodeStore) -> GenApiResult<&[NodeId]> {
         Ok(self.p_selected())
     }
 }
