@@ -153,6 +153,20 @@ pub trait IFloat {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
+
+    fn is_readable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool>;
+
+    fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool>;
 }
 
 pub trait IString {
@@ -433,7 +447,7 @@ impl<'a> IInteger for IIntegerKind<'a> {
         delegate_to_iinteger_variant!(self.set_max(value, device, store, cx))
     }
 
-    fn is_writable<T: ValueStore, U: CacheStore>(
+    fn is_readable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
@@ -442,7 +456,7 @@ impl<'a> IInteger for IIntegerKind<'a> {
         delegate_to_iinteger_variant!(self.is_readable(device, store, cx))
     }
 
-    fn is_readable<T: ValueStore, U: CacheStore>(
+    fn is_writable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
@@ -570,6 +584,24 @@ impl<'a> IFloat for IFloatKind<'a> {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         delegate_to_ifloat_variant!(self.set_max(value, device, store, cx))
+    }
+
+    fn is_readable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        delegate_to_ifloat_variant!(self.is_readable(device, store, cx))
+    }
+
+    fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        delegate_to_ifloat_variant!(self.is_readable(device, store, cx))
     }
 }
 

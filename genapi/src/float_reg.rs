@@ -147,6 +147,24 @@ impl IFloat for FloatRegNode {
     ) -> GenApiResult<()> {
         todo!()
     }
+
+    fn is_readable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        todo!()
+    }
+
+    fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        todo!()
+    }
 }
 
 impl IRegister for FloatRegNode {
