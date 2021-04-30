@@ -3,7 +3,7 @@ use super::{
     interface::IPort,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, NodeStore, ValueStore},
-    Device, GenApiResult, ValueCtxt,
+    Device, GenApiError, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -47,7 +47,16 @@ impl IPort for PortNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        self.elem_base.verify_is_readable(device, store, cx)?;
+
+        if self.chunk_id.is_some() {
+            // TODO: Implement chunk parser.
+            todo!()
+        } else {
+            device
+                .read_mem(address, buf)
+                .map_err(|e| GenApiError::Device(Box::new(e)))
+        }
     }
 
     fn write<T: ValueStore, U: CacheStore>(
@@ -58,6 +67,16 @@ impl IPort for PortNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        self.elem_base.verify_is_writable(device, store, cx)?;
+        cx.invalidate_cache_by(self.node_base().id());
+
+        if self.chunk_id.is_some() {
+            // TODO: Implement chunk parser.
+            todo!()
+        } else {
+            device
+                .write_mem(address, buf)
+                .map_err(|e| GenApiError::Device(Box::new(e)))
+        }
     }
 }

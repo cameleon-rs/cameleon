@@ -58,6 +58,8 @@ pub use swiss_knife::SwissKnifeNode;
 
 use std::borrow::Cow;
 
+use auto_impl::auto_impl;
+
 pub mod prelude {
     pub use super::interface::{
         IBoolean, ICategory, ICommand, IEnumeration, IFloat, IInteger, IPort, IRegister, ISelector,
@@ -65,32 +67,17 @@ pub mod prelude {
     };
 }
 
+#[auto_impl(&mut, Box)]
 pub trait Device {
-    type Error: std::error::Error;
+    type Error: std::error::Error + 'static;
 
-    fn read_mem(&mut self, address: u64, buf: &mut [u8]) -> Result<(), Self::Error>;
+    fn read_mem(&mut self, address: i64, buf: &mut [u8]) -> Result<(), Self::Error>;
 
-    fn write_mem(&mut self, address: u64, data: &[u8]) -> Result<(), Self::Error>;
-}
-
-impl<T> Device for &mut T
-where
-    T: Device,
-{
-    type Error = T::Error;
-
-    fn read_mem(&mut self, address: u64, buf: &mut [u8]) -> Result<(), Self::Error> {
-        (**self).read_mem(address, buf)
-    }
-
-    fn write_mem(&mut self, address: u64, data: &[u8]) -> Result<(), Self::Error> {
-        (**self).write_mem(address, data)
-    }
+    fn write_mem(&mut self, address: i64, data: &[u8]) -> Result<(), Self::Error>;
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum GenApiError {
-    /// Device I/O error.
     #[error("device I/O error: {}", 0)]
     Device(Box<dyn std::error::Error>),
 
