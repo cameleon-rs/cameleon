@@ -3,7 +3,7 @@ use super::{
     interface::{IEnumeration, ISelector},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, IntegerId, NodeId, NodeStore, ValueStore},
-    Device, GenApiResult, ValueCtxt,
+    Device, GenApiError, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -57,11 +57,25 @@ impl IEnumeration for EnumerationNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<&EnumEntryNode> {
-        todo!()
+        self.elem_base.verify_is_readable(device, store, cx)?;
+
+        let value = self.value.value(device, store, cx)?;
+        self.entries(store)?
+            .into_iter()
+            .find(|ent| ent.value() == value)
+            .ok_or_else(|| {
+                GenApiError::InvalidNode(
+                    format!(
+                        "no entry found corresponding to the current value of {}",
+                        store.name_by_id(self.node_base().id()).unwrap()
+                    )
+                    .into(),
+                )
+            })
     }
 
-    fn entries(&self, store: &impl NodeStore) -> GenApiResult<&[EnumEntryNode]> {
-        todo!()
+    fn entries(&self, _: &impl NodeStore) -> GenApiResult<&[EnumEntryNode]> {
+        Ok(&self.entries)
     }
 
     fn set_entry_by_name<T: ValueStore, U: CacheStore>(
@@ -71,7 +85,24 @@ impl IEnumeration for EnumerationNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        let ent_id = store.id_by_name(name).ok_or_else(|| {
+            GenApiError::InvalidData(format! {"no `EnumEntryNode`: {} not found", name}.into())
+        })?;
+
+        let idx = self
+            .entries(store)?
+            .into_iter()
+            .position(|ent| ent.node_base().id() == ent_id)
+            .ok_or_else(|| {
+                GenApiError::InvalidData(
+                    format! {"no `EenumEntryNode`: {} not found in {}",
+                    name,
+                    store.name_by_id(self.node_base().id()).unwrap()}
+                    .into(),
+                )
+            })?;
+
+        self.set_entry_by_idx(idx, device, store, cx)
     }
 
     fn set_entry_by_idx<T: ValueStore, U: CacheStore>(
@@ -81,7 +112,15 @@ impl IEnumeration for EnumerationNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        self.elem_base.verify_is_writable(device, store, cx)?;
+        let ent = self
+            .entries(store)?
+            .get(idx)
+            .ok_or_else(|| GenApiError::InvalidData("entry index is out of range".into()))?;
+
+        cx.invalidate_cache_by(self.node_base().id());
+        let value = ent.value();
+        self.value.set_value(value, device, store, cx)
     }
 
     fn is_readable<T: ValueStore, U: CacheStore>(
@@ -90,7 +129,7 @@ impl IEnumeration for EnumerationNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        todo!()
+        self.elem_base.is_readable(device, store, cx)
     }
 
     fn is_writable<T: ValueStore, U: CacheStore>(
@@ -99,7 +138,7 @@ impl IEnumeration for EnumerationNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        todo!()
+        self.elem_base.is_writable(device, store, cx)
     }
 }
 
@@ -146,7 +185,7 @@ impl EnumEntryNode {
 }
 
 impl ISelector for EnumerationNode {
-    fn selecting_nodes(&self, store: &impl NodeStore) -> GenApiResult<&[NodeId]> {
+    fn selecting_nodes(&self, _: &impl NodeStore) -> GenApiResult<&[NodeId]> {
         Ok(self.p_selected())
     }
 }
