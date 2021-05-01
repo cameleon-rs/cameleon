@@ -1,11 +1,12 @@
 #![allow(clippy::upper_case_acronyms)]
+use std::marker::PhantomData;
+
 use super::{
-    interface::{IFloat, IInteger},
+    interface::IInteger,
     ivalue::IValue,
-    store::{CacheStore, FloatId, IntegerId, NodeId, NodeStore, ValueStore},
+    store::{CacheStore, NodeId, NodeStore, ValueStore},
     Device, GenApiResult, ValueCtxt,
 };
-use std::marker::PhantomData;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NameSpace {

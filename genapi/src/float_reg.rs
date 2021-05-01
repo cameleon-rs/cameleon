@@ -57,6 +57,9 @@ impl FloatRegNode {
 }
 
 impl IFloat for FloatRegNode {
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn value<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -66,7 +69,7 @@ impl IFloat for FloatRegNode {
         let nid = self.node_base().id();
         let reg = self.register_base();
 
-        let res = if let Some(cache) = cx.get_cached(nid) {
+        let res = if let Some(cache) = cx.get_cache(nid) {
             let res = utils::float_from_slice(cache, self.endianness)?;
             reg.elem_base.verify_is_readable(device, store, cx)?;
             res
@@ -79,6 +82,9 @@ impl IFloat for FloatRegNode {
         Ok(res)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: f64,
@@ -144,26 +150,32 @@ impl IFloat for FloatRegNode {
         self.display_precision
     }
 
+    #[tracing::instrument(skip(self, store),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_min<T: ValueStore, U: CacheStore>(
         &self,
         _: f64,
         _: &mut impl Device,
-        _: &impl NodeStore,
+        store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::AccessDenied(
+        Err(GenApiError::access_denied(
             "can't set value to register's min elem".into(),
         ))
     }
 
+    #[tracing::instrument(skip(self, store),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_max<T: ValueStore, U: CacheStore>(
         &self,
         _: f64,
         _: &mut impl Device,
-        _: &impl NodeStore,
+        store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::AccessDenied(
+        Err(GenApiError::access_denied(
             "can't set value to register's max elem".into(),
         ))
     }

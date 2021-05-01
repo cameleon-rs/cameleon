@@ -76,6 +76,9 @@ impl FloatNode {
 }
 
 impl IFloat for FloatNode {
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn value<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -86,6 +89,9 @@ impl IFloat for FloatNode {
         self.value_kind().value(device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: f64,
@@ -103,6 +109,9 @@ impl IFloat for FloatNode {
         self.value_kind().set_value(value, device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn min<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -112,6 +121,9 @@ impl IFloat for FloatNode {
         self.min.value(device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn max<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -125,6 +137,9 @@ impl IFloat for FloatNode {
         Ok(Some(IncrementMode::FixedIncrement))
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn inc<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -150,6 +165,9 @@ impl IFloat for FloatNode {
         self.display_precision_elem()
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_min<T: ValueStore, U: CacheStore>(
         &self,
         value: f64,
@@ -160,6 +178,9 @@ impl IFloat for FloatNode {
         self.min.set_value(value, device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_max<T: ValueStore, U: CacheStore>(
         &self,
         value: f64,

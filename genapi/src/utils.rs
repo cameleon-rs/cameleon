@@ -39,7 +39,7 @@ pub(super) fn int_from_slice(
                     ($len, Endianness::BE, Sign::Signed) => Ok(<$signed_ty>::from_be_bytes(slice.try_into().unwrap()) as i64),
                     ($len, Endianness::BE, Sign::Unsigned) => Ok(<$unsigned_ty>::from_be_bytes(slice.try_into().unwrap()) as i64),
                 )*
-                _ => Err(GenApiError::invalid_buffer("buffer lenght must be either 1/2/4/8 to convert to i64".into()))
+                _ => Err(GenApiError::invalid_buffer("buffer length must be either 1/2/4/8 to convert to i64".into()))
             }
         }
     }
@@ -62,7 +62,7 @@ pub(super) fn bytes_from_int(
                     ($len, Endianness::BE, Sign::Signed) => Ok(buf.copy_from_slice(&(value as $signed_ty).to_be_bytes())),
                     ($len, Endianness::BE, Sign::Unsigned) => Ok(buf.copy_from_slice(&(value as $unsigned_ty).to_be_bytes())),
                 )*
-                _ => Err(GenApiError::invalid_buffer("buffer lenght must be either 1/2/4/8 to convert to i64".into()))
+                _ => Err(GenApiError::invalid_buffer("buffer length must be either 1/2/4/8 to convert to i64".into()))
             }
         }
     }
@@ -76,8 +76,8 @@ pub(super) fn float_from_slice(slice: &[u8], endianness: Endianness) -> GenApiRe
         (8, Endianness::BE) => Ok(f64::from_be_bytes(slice.try_into().unwrap())),
         (4, Endianness::LE) => Ok(f32::from_le_bytes(slice.try_into().unwrap()) as f64),
         (4, Endianness::BE) => Ok(f32::from_be_bytes(slice.try_into().unwrap()) as f64),
-        _ => Err(GenApiError::InvalidBuffer(
-            "buffer lenght must be either 4/8 to convert to f64".into(),
+        _ => Err(GenApiError::invalid_buffer(
+            "buffer length must be either 4/8 to convert to f64".into(),
         )),
     }
 }
@@ -92,8 +92,8 @@ pub(super) fn bytes_from_float(
         (8, Endianness::BE) => Ok(buf.copy_from_slice(&value.to_be_bytes())),
         (4, Endianness::LE) => Ok(buf.copy_from_slice(&value.to_le_bytes())),
         (4, Endianness::BE) => Ok(buf.copy_from_slice(&value.to_be_bytes())),
-        _ => Err(GenApiError::InvalidBuffer(
-            "buffer lenght must be either 4/8 to convert from f64".into(),
+        _ => Err(GenApiError::invalid_buffer(
+            "buffer length must be either 4/8 to convert from f64".into(),
         )),
     }
 }

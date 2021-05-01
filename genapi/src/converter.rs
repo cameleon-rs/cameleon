@@ -100,6 +100,9 @@ impl ConverterNode {
 }
 
 impl IFloat for ConverterNode {
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn value<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -117,6 +120,9 @@ impl IFloat for ConverterNode {
         Ok(eval_result.as_float())
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: f64,
@@ -141,7 +147,7 @@ impl IFloat for ConverterNode {
         } else if let Some(node) = nid.as_iboolean_kind(store) {
             node.set_value(eval_result.as_bool(), device, store, cx)?;
         } else {
-            return Err(GenApiError::InvalidNode(
+            return Err(GenApiError::invalid_node(
                 "`pValue` elem of `ConverterNode` doesn't implement `IInteger`/`IFloat`/`IBoolean`"
                     .into(),
             ));
@@ -197,26 +203,32 @@ impl IFloat for ConverterNode {
         self.display_precision
     }
 
+    #[tracing::instrument(skip(self, store),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_min<T: ValueStore, U: CacheStore>(
         &self,
         _: f64,
         _: &mut impl Device,
-        _: &impl NodeStore,
+        store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::AccessDenied(
+        Err(GenApiError::access_denied(
             "can't set value to min elem of `ConverterNode`".into(),
         ))
     }
 
+    #[tracing::instrument(skip(self, store),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_max<T: ValueStore, U: CacheStore>(
         &self,
         _: f64,
         _: &mut impl Device,
-        _: &impl NodeStore,
+        store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::AccessDenied(
+        Err(GenApiError::access_denied(
             "can't set value to max elem of `ConverterNode`".into(),
         ))
     }

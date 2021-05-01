@@ -91,7 +91,7 @@ impl IValue<i64> for i64 {
         _: &impl NodeStore,
         _: &mut ValueCtxt<U, S>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::AccessDenied(
+        Err(GenApiError::access_denied(
             "cannot rewrite the constant".into(),
         ))
     }
@@ -158,7 +158,7 @@ impl IValue<f64> for f64 {
         _: &impl NodeStore,
         _: &mut ValueCtxt<U, S>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::AccessDenied(
+        Err(GenApiError::access_denied(
             "cannot rewrite the constant".into(),
         ))
     }
