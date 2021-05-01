@@ -1,6 +1,7 @@
 use super::{
     elem_type::{DisplayNotation, FloatRepresentation, ImmOrPNode, ValueKind},
     interface::{IFloat, IncrementMode},
+    ivalue::IValue,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, FloatId, NodeStore, ValueStore},
     utils, Device, GenApiResult, ValueCtxt,

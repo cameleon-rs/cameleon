@@ -1,6 +1,7 @@
 use super::{
     elem_type::ImmOrPNode,
     interface::{ICommand, IInteger},
+    ivalue::IValue,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, IntegerId, NodeStore, ValueStore},
     Device, GenApiResult, ValueCtxt,

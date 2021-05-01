@@ -23,6 +23,7 @@ mod int_converter;
 mod int_reg;
 mod int_swiss_knife;
 mod integer;
+mod ivalue;
 mod masked_int_reg;
 mod node;
 mod node_base;

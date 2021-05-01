@@ -1,6 +1,7 @@
 #![allow(clippy::upper_case_acronyms)]
 use super::{
     interface::{IFloat, IInteger},
+    ivalue::IValue,
     store::{CacheStore, FloatId, IntegerId, NodeId, NodeStore, ValueStore},
     Device, GenApiResult, ValueCtxt,
 };
@@ -52,98 +53,6 @@ impl<T> ImmOrPNode<T> {
         match self {
             Self::PNode(node) => Some(node),
             _ => None,
-        }
-    }
-}
-
-impl ImmOrPNode<i64> {
-    pub(super) fn value<T: ValueStore, U: CacheStore>(
-        self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<i64> {
-        match self {
-            Self::Imm(i) => Ok(i),
-            Self::PNode(nid) => nid.expect_iinteger_kind(store)?.value(device, store, cx),
-        }
-    }
-}
-
-impl ImmOrPNode<f64> {
-    pub(super) fn value<T: ValueStore, U: CacheStore>(
-        self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<f64> {
-        match self {
-            Self::Imm(i) => Ok(i),
-            Self::PNode(nid) => nid.expect_ifloat_kind(store)?.value(device, store, cx),
-        }
-    }
-}
-
-impl ImmOrPNode<IntegerId> {
-    pub(super) fn value<T: ValueStore, U: CacheStore>(
-        self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<i64> {
-        match self {
-            Self::Imm(vid) => Ok(cx.value_store().integer_value(vid).unwrap()),
-            Self::PNode(nid) => nid.expect_iinteger_kind(store)?.value(device, store, cx),
-        }
-    }
-
-    pub(super) fn set_value<T: ValueStore, U: CacheStore>(
-        self,
-        value: i64,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<()> {
-        match self {
-            Self::Imm(vid) => {
-                cx.value_store_mut().update(vid, value);
-                Ok(())
-            }
-            Self::PNode(nid) => nid
-                .expect_iinteger_kind(store)?
-                .set_value(value, device, store, cx),
-        }
-    }
-}
-
-impl ImmOrPNode<FloatId> {
-    pub(super) fn value<T: ValueStore, U: CacheStore>(
-        self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<f64> {
-        match self {
-            Self::Imm(vid) => Ok(cx.value_store().float_value(vid).unwrap()),
-            Self::PNode(nid) => nid.expect_ifloat_kind(store)?.value(device, store, cx),
-        }
-    }
-
-    pub(super) fn set_value<T: ValueStore, U: CacheStore>(
-        self,
-        value: f64,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<()> {
-        match self {
-            Self::Imm(vid) => {
-                cx.value_store_mut().update(vid, value);
-                Ok(())
-            }
-            Self::PNode(nid) => nid
-                .expect_ifloat_kind(store)?
-                .set_value(value, device, store, cx),
         }
     }
 }
@@ -284,135 +193,11 @@ impl<T> ValueKind<T> {
     }
 }
 
-impl ValueKind<IntegerId> {
-    pub(super) fn value<T: ValueStore, U: CacheStore>(
-        &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<i64> {
-        match self {
-            Self::Value(vid) => Ok(cx.value_store().integer_value(*vid).unwrap()),
-            Self::PValue(p_value) => p_value.value(device, store, cx),
-            Self::PIndex(p_index) => p_index.value(device, store, cx),
-        }
-    }
-
-    pub(super) fn set_value<T: ValueStore, U: CacheStore>(
-        &self,
-        value: i64,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<()> {
-        match self {
-            Self::Value(vid) => {
-                cx.value_store_mut().update(*vid, value);
-                Ok(())
-            }
-            Self::PValue(p_value) => p_value.set_value(value, device, store, cx),
-            Self::PIndex(p_index) => p_index.set_value(value, device, store, cx),
-        }
-    }
-}
-
-impl ValueKind<FloatId> {
-    pub(super) fn value<T: ValueStore, U: CacheStore>(
-        &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<f64> {
-        match self {
-            Self::Value(vid) => Ok(cx.value_store().float_value(*vid).unwrap()),
-            Self::PValue(p_value) => p_value.value(device, store, cx),
-            Self::PIndex(p_index) => p_index.value(device, store, cx),
-        }
-    }
-
-    pub(super) fn set_value<T: ValueStore, U: CacheStore>(
-        &self,
-        value: f64,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<()> {
-        match self {
-            Self::Value(vid) => {
-                cx.value_store_mut().update(*vid, value);
-                Ok(())
-            }
-            Self::PValue(p_value) => p_value.set_value(value, device, store, cx),
-            Self::PIndex(p_index) => p_index.set_value(value, device, store, cx),
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct PValue<T> {
     pub(crate) p_value: NodeId,
     pub(crate) p_value_copies: Vec<NodeId>,
     pub(crate) phantom: PhantomData<T>,
-}
-
-impl PValue<IntegerId> {
-    pub(super) fn value<T: ValueStore, U: CacheStore>(
-        &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<i64> {
-        self.p_value
-            .expect_iinteger_kind(store)?
-            .value(device, store, cx)
-    }
-
-    pub(super) fn set_value<T: ValueStore, U: CacheStore>(
-        &self,
-        value: i64,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<()> {
-        self.p_value
-            .expect_iinteger_kind(store)?
-            .set_value(value, device, store, cx)?;
-        for nid in &self.p_value_copies {
-            nid.expect_iinteger_kind(store)?
-                .set_value(value, device, store, cx)?;
-        }
-        Ok(())
-    }
-}
-
-impl PValue<FloatId> {
-    pub(super) fn value<T: ValueStore, U: CacheStore>(
-        &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<f64> {
-        self.p_value
-            .expect_ifloat_kind(store)?
-            .value(device, store, cx)
-    }
-
-    pub(super) fn set_value<T: ValueStore, U: CacheStore>(
-        &self,
-        value: f64,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<()> {
-        self.p_value
-            .expect_ifloat_kind(store)?
-            .set_value(value, device, store, cx)?;
-        for nid in &self.p_value_copies {
-            nid.expect_ifloat_kind(store)?
-                .set_value(value, device, store, cx)?;
-        }
-        Ok(())
-    }
 }
 
 impl<T> PValue<T> {
@@ -451,80 +236,6 @@ impl<T> PIndex<T> {
         T: Copy,
     {
         self.value_default
-    }
-}
-
-impl PIndex<IntegerId> {
-    pub(super) fn value<T: ValueStore, U: CacheStore>(
-        &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<i64> {
-        let index = self
-            .p_index
-            .expect_iinteger_kind(store)?
-            .value(device, store, cx)?;
-        if let Some(value_indexed) = self.value_indexed.iter().find(|vi| vi.index == index) {
-            value_indexed.indexed.value(device, store, cx)
-        } else {
-            self.value_default.value(device, store, cx)
-        }
-    }
-
-    pub(super) fn set_value<T: ValueStore, U: CacheStore>(
-        &self,
-        value: i64,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<()> {
-        let index = self
-            .p_index
-            .expect_iinteger_kind(store)?
-            .value(device, store, cx)?;
-        if let Some(value_indexed) = self.value_indexed.iter().find(|vi| vi.index == index) {
-            value_indexed.indexed.set_value(value, device, store, cx)
-        } else {
-            self.value_default.set_value(value, device, store, cx)
-        }
-    }
-}
-
-impl PIndex<FloatId> {
-    pub(super) fn value<T: ValueStore, U: CacheStore>(
-        &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<f64> {
-        let index = self
-            .p_index
-            .expect_iinteger_kind(store)?
-            .value(device, store, cx)?;
-        if let Some(value_indexed) = self.value_indexed.iter().find(|vi| vi.index == index) {
-            value_indexed.indexed.value(device, store, cx)
-        } else {
-            self.value_default.value(device, store, cx)
-        }
-    }
-
-    pub(super) fn set_value<T: ValueStore, U: CacheStore>(
-        &self,
-        value: f64,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<()> {
-        let index = self
-            .p_index
-            .expect_iinteger_kind(store)?
-            .value(device, store, cx)?;
-        if let Some(value_indexed) = self.value_indexed.iter().find(|vi| vi.index == index) {
-            value_indexed.indexed.set_value(value, device, store, cx)
-        } else {
-            self.value_default.set_value(value, device, store, cx)
-        }
     }
 }
 
