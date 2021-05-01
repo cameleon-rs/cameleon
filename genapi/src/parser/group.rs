@@ -1,3 +1,5 @@
+use tracing::debug;
+
 use crate::store::{ValueStore, WritableNodeStore};
 
 use super::{
@@ -13,11 +15,13 @@ pub(super) struct GroupNode {
 }
 
 impl Parse for GroupNode {
+    #[tracing::instrument(level = "trace", skip(node_store, value_store))]
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
         T: WritableNodeStore,
         U: ValueStore,
     {
+        debug!("start parsing `GroupNode`");
         debug_assert_eq!(node.tag_name(), GROUP);
         let comment = node.attribute_of(COMMENT).unwrap().into();
 

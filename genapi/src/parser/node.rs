@@ -1,3 +1,5 @@
+use tracing::debug;
+
 use crate::{
     node_base::{NodeAttributeBase, NodeElementBase},
     store::{ValueStore, WritableNodeStore},
@@ -7,11 +9,13 @@ use crate::{
 use super::{elem_name::NODE, xml, Parse};
 
 impl Parse for Node {
+    #[tracing::instrument(level = "trace", skip(node_store, value_store))]
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
         T: WritableNodeStore,
         U: ValueStore,
     {
+        debug!("start parsing `Node`");
         debug_assert_eq!(node.tag_name(), NODE);
 
         let attr_base = NodeAttributeBase::parse(node, node_store, value_store);

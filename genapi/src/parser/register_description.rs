@@ -1,3 +1,5 @@
+use tracing::debug;
+
 use crate::{
     store::{ValueStore, WritableNodeStore},
     RegisterDescription,
@@ -14,11 +16,13 @@ use super::{
 };
 
 impl Parse for RegisterDescription {
+    #[tracing::instrument(level = "trace")]
     fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
     where
         T: WritableNodeStore,
         U: ValueStore,
     {
+        debug!("start parsing `RegisterDescription`");
         debug_assert_eq!(node.tag_name(), REGISTER_DESCRIPTION);
 
         let model_name = node.attribute_of(MODEL_NAME).unwrap().into();

@@ -1,3 +1,5 @@
+use tracing::debug;
+
 use crate::{
     elem_type::{ImmOrPNode, IntegerRepresentation},
     store::{NodeId, ValueStore, WritableNodeStore},
@@ -12,11 +14,13 @@ use super::{
 };
 
 impl Parse for IntegerNode {
+    #[tracing::instrument(level = "trace", skip(node_store, value_store))]
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
         T: WritableNodeStore,
         U: ValueStore,
     {
+        debug!("start parsing `IntegerNode`");
         debug_assert_eq!(node.tag_name(), INTEGER);
 
         let attr_base = node.parse(node_store, value_store);

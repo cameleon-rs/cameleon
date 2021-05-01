@@ -7,6 +7,8 @@
 
 use std::{borrow::Borrow, collections::HashMap, hash::Hash, str::FromStr};
 
+use tracing::debug;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Formula {
     pub(crate) expr: Expr,
@@ -317,7 +319,9 @@ pub enum UnOpKind {
 }
 
 #[must_use]
+#[tracing::instrument(level = "trace")]
 pub fn parse(s: &str) -> Expr {
+    debug!("start parsing expression in `formula`");
     let lexer = Lexer::new(s);
     Parser { lexer }.expr()
 }

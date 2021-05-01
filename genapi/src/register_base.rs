@@ -70,7 +70,7 @@ impl RegisterBase {
     ) -> GenApiResult<Vec<u8>> {
         let len = self.length(device, store, cx)? as usize;
         let mut buf = vec![0; len];
-        self.read_then_cache_with_buf(nid, &mut buf, device, store, cx);
+        self.read_then_cache_with_buf(nid, &mut buf, device, store, cx)?;
         Ok(buf)
     }
 

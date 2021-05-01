@@ -1,3 +1,5 @@
+use tracing::debug;
+
 use crate::{
     elem_type::{AccessMode, BitMask, CachingMode, Endianness, IntegerRepresentation, Sign},
     node_base::{NodeAttributeBase, NodeElementBase},
@@ -36,11 +38,13 @@ impl StructRegNode {
 }
 
 impl Parse for StructRegNode {
+    #[tracing::instrument(level = "trace", skip(node_store, value_store))]
     fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
     where
         T: WritableNodeStore,
         U: ValueStore,
     {
+        debug!("start parsing `StructRegNode`");
         debug_assert_eq!(node.tag_name(), STRUCT_REG);
 
         let comment = node.attribute_of(COMMENT).unwrap().into();

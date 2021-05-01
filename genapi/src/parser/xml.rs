@@ -1,4 +1,6 @@
-use std::iter::Peekable;
+use std::{fmt, iter::Peekable};
+
+use tracing::error;
 
 use crate::store::{ValueStore, WritableNodeStore};
 
@@ -16,7 +18,7 @@ impl<'input> Document<'input> {
 
     pub(super) fn root_node<'a>(&'a self) -> Node<'a, 'input> {
         let root = self.document.root_element();
-        Node::from_xmltree_node(root)
+        Node::from_xmltree_node(root, self.inner_str())
     }
 
     pub(super) fn inner_str(&self) -> &'input str {
@@ -28,6 +30,7 @@ pub(super) struct Node<'a, 'input> {
     inner: roxmltree::Node<'a, 'input>,
     children: Peekable<roxmltree::Children<'a, 'input>>,
     attributes: Attributes<'a, 'input>,
+    src: &'input str,
 }
 
 impl<'a, 'input> Node<'a, 'input> {
@@ -104,7 +107,7 @@ impl<'a, 'input> Node<'a, 'input> {
             }
             self.children.next();
         }
-        let node = Self::from_xmltree_node(*inner);
+        let node = Self::from_xmltree_node(*inner, self.src);
 
         Some(node)
     }
@@ -121,7 +124,7 @@ impl<'a, 'input> Node<'a, 'input> {
         self.inner.text().unwrap()
     }
 
-    fn from_xmltree_node(node: roxmltree::Node<'a, 'input>) -> Self {
+    fn from_xmltree_node(node: roxmltree::Node<'a, 'input>, src: &'input str) -> Self {
         debug_assert!(node.node_type() == roxmltree::NodeType::Element);
         let children = node.children().peekable();
         let attributes = Attributes::from_xmltree_attrs(node.attributes());
@@ -130,7 +133,16 @@ impl<'a, 'input> Node<'a, 'input> {
             inner: node,
             children,
             attributes,
+            src,
         }
+    }
+}
+
+impl<'a, 'input> fmt::Debug for Node<'a, 'input> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let span = self.inner.range();
+        let node_src = std::str::from_utf8(&self.src.as_bytes()[span]).unwrap();
+        write!(f, "{}", node_src)
     }
 }
 
