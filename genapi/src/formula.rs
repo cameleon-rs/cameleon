@@ -5,7 +5,7 @@
     clippy::cast_possible_truncation
 )]
 
-use std::{borrow::Borrow, collections::HashMap, hash::Hash, ops::Neg, str::FromStr};
+use std::{borrow::Borrow, collections::HashMap, hash::Hash, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Formula {
@@ -236,12 +236,14 @@ impl Expr {
         K: Borrow<str> + Eq + Hash,
         V: Borrow<Expr>,
     {
+        use std::ops::Neg;
+
         let res = self.eval(&var_env);
         macro_rules! apply_op {
             ($f:ident) => {
                 match res {
-                    EvaluationResult::Integer(i) => i.$f().into(),
-                    EvaluationResult::Float(f) => f.$f().into(),
+                    EvaluationResult::Integer(i) => EvaluationResult::from(i.$f()),
+                    EvaluationResult::Float(f) => EvaluationResult::from(f.$f()),
                 }
             };
         }
@@ -429,12 +431,20 @@ impl<'a> Parser<'a> {
 
     fn not(&mut self) -> Expr {
         if self.eat(&Token::Tilde) {
-            let expr = self.pow();
+            let expr = self.not();
             Expr::UnOp {
                 kind: UnOpKind::Not,
                 expr: expr.into(),
             }
+        } else if self.eat(&Token::Minus) {
+            let expr = self.not();
+            Expr::UnOp {
+                kind: UnOpKind::Neg,
+                expr: expr.into(),
+            }
         } else {
+            // Eat unary `+` if exists.
+            self.eat(&Token::Plus);
             self.pow()
         }
     }
