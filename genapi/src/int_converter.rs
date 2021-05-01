@@ -98,7 +98,7 @@ impl IInteger for IntConverterNode {
         collector.insert("FROM", self.p_value(), device, store, cx)?;
         let var_env = collector.collect(device, store, cx)?;
 
-        let eval_result = self.formula_from.eval(&var_env);
+        let eval_result = self.formula_from.eval(&var_env)?;
         Ok(eval_result.as_integer())
     }
 
@@ -120,7 +120,7 @@ impl IInteger for IntConverterNode {
         collector.insert_imm("TO", value);
         let var_env = collector.collect(device, store, cx)?;
 
-        let eval_result = self.formula_to.eval(&var_env);
+        let eval_result = self.formula_to.eval(&var_env)?;
         let nid = self.p_value();
         if let Some(node) = nid.as_iinteger_kind(store) {
             node.set_value(eval_result.as_integer(), device, store, cx)?;

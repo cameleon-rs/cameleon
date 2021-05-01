@@ -78,7 +78,7 @@ impl IInteger for IntSwissKnifeNode {
         let var_env =
             utils::FormulaEnvCollector::new(&self.p_variables, &self.constants, &self.expressions)
                 .collect(device, store, cx)?;
-        let eval_result = self.formula.eval(&var_env);
+        let eval_result = self.formula.eval(&var_env)?;
         Ok(eval_result.as_integer())
     }
 

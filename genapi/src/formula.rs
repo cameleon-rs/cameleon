@@ -5,9 +5,11 @@
     clippy::cast_possible_truncation
 )]
 
-use std::{borrow::Borrow, collections::HashMap, hash::Hash, str::FromStr};
+use std::{borrow::Borrow, collections::HashMap, fmt, hash::Hash, str::FromStr};
 
 use tracing::debug;
+
+use super::{GenApiError, GenApiResult};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Formula {
@@ -20,10 +22,10 @@ impl Formula {
         &self.expr
     }
 
-    pub fn eval<K, V>(&self, var_env: &HashMap<K, V>) -> EvaluationResult
+    pub fn eval<K, V>(&self, var_env: &HashMap<K, V>) -> GenApiResult<EvaluationResult>
     where
-        K: Borrow<str> + Eq + Hash,
-        V: Borrow<Expr>,
+        K: Borrow<str> + Eq + Hash + fmt::Debug,
+        V: Borrow<Expr> + fmt::Debug,
     {
         self.expr.eval(var_env)
     }
@@ -132,24 +134,33 @@ impl EvaluationResult {
 
 impl Expr {
     #[must_use]
-    pub fn eval<K, V>(&self, var_env: &HashMap<K, V>) -> EvaluationResult
+    #[tracing::instrument(level = "trace")]
+    pub fn eval<K, V>(&self, var_env: &HashMap<K, V>) -> GenApiResult<EvaluationResult>
     where
-        K: Borrow<str> + Eq + Hash,
-        V: Borrow<Expr>,
+        K: Borrow<str> + Eq + Hash + fmt::Debug,
+        V: Borrow<Expr> + fmt::Debug,
     {
         match self {
             Self::BinOp { kind, lhs, rhs } => lhs.eval_binop(*kind, rhs, var_env),
             Self::UnOp { kind, expr } => expr.eval_unop(*kind, var_env),
             Self::If { cond, then, else_ } => {
-                if cond.eval(var_env).as_bool() {
+                if cond.eval(var_env)?.as_bool() {
                     then.eval(var_env)
                 } else {
                     else_.eval(var_env)
                 }
             }
-            &Self::Integer(i) => i.into(),
-            &Self::Float(f) => f.into(),
-            Self::Ident(s) => var_env.get(s.as_str()).unwrap().borrow().eval(var_env),
+            &Self::Integer(i) => Ok(i.into()),
+            &Self::Float(f) => Ok(f.into()),
+            Self::Ident(s) => var_env
+                .get(s.as_str())
+                .ok_or_else(|| {
+                    GenApiError::invalid_node(
+                        format!("ident not found in variable env: {} not found", s).into(),
+                    )
+                })?
+                .borrow()
+                .eval(var_env),
         }
     }
 
@@ -158,20 +169,22 @@ impl Expr {
         op: BinOpKind,
         rhs: &Self,
         var_env: &HashMap<K, V>,
-    ) -> EvaluationResult
+    ) -> GenApiResult<EvaluationResult>
     where
-        K: Borrow<str> + Eq + Hash,
-        V: Borrow<Expr>,
+        K: Borrow<str> + Eq + Hash + fmt::Debug,
+        V: Borrow<Expr> + fmt::Debug,
     {
         use std::ops::{Add, Div, Mul, Rem, Sub};
 
-        match op {
-            BinOpKind::And => (self.eval(var_env).as_bool() && rhs.eval(var_env).as_bool()).into(),
-            BinOpKind::Or => (self.eval(var_env).as_bool() || rhs.eval(var_env).as_bool()).into(),
+        Ok(match op {
+            BinOpKind::And => {
+                (self.eval(var_env)?.as_bool() && rhs.eval(var_env)?.as_bool()).into()
+            }
+            BinOpKind::Or => (self.eval(var_env)?.as_bool() || rhs.eval(var_env)?.as_bool()).into(),
 
             _ => {
-                let lhs = self.eval(var_env);
-                let rhs = rhs.eval(var_env);
+                let lhs = self.eval(var_env)?;
+                let rhs = rhs.eval(var_env)?;
 
                 macro_rules! apply_arithmetic_op {
                     ($fint:ident, $ffloat:ident) => {{
@@ -230,17 +243,21 @@ impl Expr {
                     _ => unreachable!(),
                 }
             }
-        }
+        })
     }
 
-    fn eval_unop<K, V>(&self, op: UnOpKind, var_env: &HashMap<K, V>) -> EvaluationResult
+    fn eval_unop<K, V>(
+        &self,
+        op: UnOpKind,
+        var_env: &HashMap<K, V>,
+    ) -> GenApiResult<EvaluationResult>
     where
-        K: Borrow<str> + Eq + Hash,
-        V: Borrow<Expr>,
+        K: Borrow<str> + Eq + Hash + fmt::Debug,
+        V: Borrow<Expr> + fmt::Debug,
     {
         use std::ops::Neg;
 
-        let res = self.eval(&var_env);
+        let res = self.eval(&var_env)?;
         macro_rules! apply_op {
             ($f:ident) => {
                 match res {
@@ -250,7 +267,7 @@ impl Expr {
             };
         }
 
-        match op {
+        Ok(match op {
             UnOpKind::Not => (!res.as_integer()).into(),
             UnOpKind::Abs => apply_op!(abs),
             UnOpKind::Sgn => apply_op!(signum),
@@ -269,7 +286,7 @@ impl Expr {
             UnOpKind::Floor => res.as_float().floor().into(),
             UnOpKind::Ceil => res.as_float().ceil().into(),
             UnOpKind::Round => res.as_float().round().into(),
-        }
+        })
     }
 }
 
@@ -847,7 +864,10 @@ mod tests {
 
     fn test_eval_impl(expr: &str, var_env: &HashMap<&str, Expr>) {
         let expr = parse(expr);
-        assert!(matches!(expr.eval(var_env), EvaluationResult::Integer(1)));
+        assert!(matches!(
+            expr.eval(var_env).unwrap(),
+            EvaluationResult::Integer(1)
+        ));
     }
 
     fn test_eval_no_var_impl(expr: &str) {
