@@ -82,6 +82,9 @@ impl IntConverterNode {
 }
 
 impl IInteger for IntConverterNode {
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn value<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -99,6 +102,9 @@ impl IInteger for IntConverterNode {
         Ok(eval_result.as_integer())
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: i64,
@@ -123,7 +129,7 @@ impl IInteger for IntConverterNode {
         } else if let Some(node) = nid.as_iboolean_kind(store) {
             node.set_value(eval_result.as_bool(), device, store, cx)?;
         } else {
-            return Err(GenApiError::InvalidNode("`pValue` elem of `IntConverterNode` doesn't implement `IInteger`/`IFloat`/`IBoolean`".into()));
+            return Err(GenApiError::invalid_node("`pValue` elem of `IntConverterNode` doesn't implement `IInteger`/`IFloat`/`IBoolean`".into()));
         }
 
         Ok(())
@@ -172,26 +178,32 @@ impl IInteger for IntConverterNode {
         todo!()
     }
 
+    #[tracing::instrument(skip(self, store),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_min<T: ValueStore, U: CacheStore>(
         &self,
         _: i64,
         _: &mut impl Device,
-        _: &impl NodeStore,
+        store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::AccessDenied(
+        Err(GenApiError::access_denied(
             "can't set value to min elem of `IntConverterNode`".into(),
         ))
     }
 
+    #[tracing::instrument(skip(self, store),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_max<T: ValueStore, U: CacheStore>(
         &self,
         _: i64,
         _: &mut impl Device,
-        _: &impl NodeStore,
+        store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::AccessDenied(
+        Err(GenApiError::access_denied(
             "can't set value to max elem of `IntConverterNode`".into(),
         ))
     }

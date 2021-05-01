@@ -59,6 +59,7 @@ pub use swiss_knife::SwissKnifeNode;
 use std::borrow::Cow;
 
 use auto_impl::auto_impl;
+use tracing::error;
 
 pub mod prelude {
     pub use super::interface::{
@@ -102,6 +103,44 @@ pub enum GenApiError {
     /// Invalid buffer.
     #[error("invalid buffer: {}", 0)]
     InvalidBuffer(Cow<'static, str>),
+}
+
+impl GenApiError {
+    fn device(inner: Box<dyn std::error::Error>) -> Self {
+        let err = GenApiError::Device(inner);
+        error!("{}", err);
+        err
+    }
+
+    fn access_denied(inner: Cow<'static, str>) -> Self {
+        let err = GenApiError::AccessDenied(inner);
+        error!("{}", err);
+        err
+    }
+
+    fn invalid_node(inner: Cow<'static, str>) -> Self {
+        let err = GenApiError::InvalidNode(inner);
+        error!("{}", err);
+        err
+    }
+
+    fn invalid_data(inner: Cow<'static, str>) -> Self {
+        let err = GenApiError::InvalidData(inner);
+        error!("{}", err);
+        err
+    }
+
+    fn chunk_data_missing() -> Self {
+        let err = GenApiError::ChunkDataMissing;
+        error!("{}", err);
+        err
+    }
+
+    fn invalid_buffer(inner: Cow<'static, str>) -> Self {
+        let err = GenApiError::InvalidBuffer(inner);
+        error!("{}", err);
+        err
+    }
 }
 
 pub type GenApiResult<T> = std::result::Result<T, GenApiError>;

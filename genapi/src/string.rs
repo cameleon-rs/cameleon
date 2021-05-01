@@ -33,6 +33,9 @@ impl StringNode {
 }
 
 impl IString for StringNode {
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn value<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -46,6 +49,9 @@ impl IString for StringNode {
         }
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: &str,
@@ -55,12 +61,12 @@ impl IString for StringNode {
     ) -> GenApiResult<()> {
         self.elem_base.verify_is_writable(device, store, cx)?;
         if !value.is_ascii() {
-            return Err(GenApiError::InvalidData(
+            return Err(GenApiError::invalid_data(
                 "the data to write must be an ascii string".into(),
             ));
         }
         if value.len() > self.max_length(device, store, cx)? as usize {
-            return Err(GenApiError::InvalidData(
+            return Err(GenApiError::invalid_data(
                 "the data to write exceeds the maximum length allowed by the node.".into(),
             ));
         };
@@ -76,6 +82,9 @@ impl IString for StringNode {
         }
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn max_length<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,

@@ -51,6 +51,9 @@ impl BooleanNode {
 }
 
 impl IBoolean for BooleanNode {
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn value<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -67,7 +70,7 @@ impl IBoolean for BooleanNode {
                 } else if value == self.off_value {
                     Ok(false)
                 } else {
-                    Err(GenApiError::InvalidNode(
+                    Err(GenApiError::invalid_node(
                         "the internal integer value cannot be interpreted as boolean".into(),
                     ))
                 }
@@ -75,6 +78,9 @@ impl IBoolean for BooleanNode {
         }
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: bool,

@@ -69,6 +69,9 @@ impl IntegerNode {
 }
 
 impl IInteger for IntegerNode {
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn value<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -79,6 +82,9 @@ impl IInteger for IntegerNode {
         self.value_kind().value(device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: i64,
@@ -96,6 +102,9 @@ impl IInteger for IntegerNode {
         self.value_kind().set_value(value, device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn min<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -105,6 +114,9 @@ impl IInteger for IntegerNode {
         self.min.value(device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn max<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -118,6 +130,9 @@ impl IInteger for IntegerNode {
         Ok(Some(IncrementMode::FixedIncrement))
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn inc<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -139,6 +154,9 @@ impl IInteger for IntegerNode {
         self.unit_elem()
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_min<T: ValueStore, U: CacheStore>(
         &self,
         value: i64,
@@ -149,6 +167,9 @@ impl IInteger for IntegerNode {
         self.min.set_value(value, device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_max<T: ValueStore, U: CacheStore>(
         &self,
         value: i64,

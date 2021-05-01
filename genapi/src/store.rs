@@ -46,7 +46,7 @@ impl NodeId {
         self,
         store: &'a impl NodeStore,
     ) -> GenApiResult<IIntegerKind<'a>> {
-        self.as_iinteger_kind(store).ok_or(GenApiError::InvalidNode(
+        self.as_iinteger_kind(store).ok_or(GenApiError::invalid_node(
             "the node doesn't implement `IInteger`".into(),
         ))
     }
@@ -56,7 +56,7 @@ impl NodeId {
     }
 
     pub fn expect_ifloat_kind<'a>(self, store: &'a impl NodeStore) -> GenApiResult<IFloatKind<'a>> {
-        self.as_ifloat_kind(store).ok_or(GenApiError::InvalidNode(
+        self.as_ifloat_kind(store).ok_or(GenApiError::invalid_node(
             "the node doesn't implement `IFloat`".into(),
         ))
     }
@@ -69,7 +69,7 @@ impl NodeId {
         self,
         store: &'a impl NodeStore,
     ) -> GenApiResult<IStringKind<'a>> {
-        self.as_istring_kind(store).ok_or(GenApiError::InvalidNode(
+        self.as_istring_kind(store).ok_or(GenApiError::invalid_node(
             "the node doesn't implement `IString`".into(),
         ))
     }
@@ -82,7 +82,7 @@ impl NodeId {
         self,
         store: &'a impl NodeStore,
     ) -> GenApiResult<ICommandKind<'a>> {
-        self.as_icommand_kind(store).ok_or(GenApiError::InvalidNode(
+        self.as_icommand_kind(store).ok_or(GenApiError::invalid_node(
             "the node doesn't implement `ICommand`".into(),
         ))
     }
@@ -99,7 +99,7 @@ impl NodeId {
         store: &'a impl NodeStore,
     ) -> GenApiResult<IEnumerationKind<'a>> {
         self.as_ienumeration_kind(store)
-            .ok_or(GenApiError::InvalidNode(
+            .ok_or(GenApiError::invalid_node(
                 "the node doesn't implement `IEnumeration`".into(),
             ))
     }
@@ -112,7 +112,7 @@ impl NodeId {
         self,
         store: &'a impl NodeStore,
     ) -> GenApiResult<IBooleanKind<'a>> {
-        self.as_iboolean_kind(store).ok_or(GenApiError::InvalidNode(
+        self.as_iboolean_kind(store).ok_or(GenApiError::invalid_node(
             "the node doesn't implement `IBoolean`".into(),
         ))
     }
@@ -126,7 +126,7 @@ impl NodeId {
         store: &'a impl NodeStore,
     ) -> GenApiResult<IRegisterKind<'a>> {
         self.as_iregister_kind(store)
-            .ok_or(GenApiError::InvalidNode(
+            .ok_or(GenApiError::invalid_node(
                 "the node doesn't implement `IRegister`".into(),
             ))
     }
@@ -140,7 +140,7 @@ impl NodeId {
         store: &'a impl NodeStore,
     ) -> GenApiResult<ICategoryKind<'a>> {
         self.as_icategory_kind(store)
-            .ok_or(GenApiError::InvalidNode(
+            .ok_or(GenApiError::invalid_node(
                 "the node doesn't implement `ICategory`".into(),
             ))
     }
@@ -150,7 +150,7 @@ impl NodeId {
     }
 
     pub fn expect_iport_kind<'a>(self, store: &'a impl NodeStore) -> GenApiResult<IPortKind<'a>> {
-        self.as_iport_kind(store).ok_or(GenApiError::InvalidNode(
+        self.as_iport_kind(store).ok_or(GenApiError::invalid_node(
             "the node doesn't implement `IPort`".into(),
         ))
     }
@@ -164,7 +164,7 @@ impl NodeId {
         store: &'a impl NodeStore,
     ) -> GenApiResult<ISelectorKind<'a>> {
         self.as_iselector_kind(store)
-            .ok_or(GenApiError::InvalidNode(
+            .ok_or(GenApiError::invalid_node(
                 "the node doesn't implement `ISelector`".into(),
             ))
     }

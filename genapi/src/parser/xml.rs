@@ -1,7 +1,5 @@
 use std::{fmt, iter::Peekable};
 
-use tracing::error;
-
 use crate::store::{ValueStore, WritableNodeStore};
 
 use super::{Parse, ParseResult};

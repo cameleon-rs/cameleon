@@ -58,6 +58,9 @@ impl IntRegNode {
 }
 
 impl IInteger for IntRegNode {
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn value<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -82,6 +85,9 @@ impl IInteger for IntRegNode {
         Ok(res)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: i64,
@@ -146,26 +152,32 @@ impl IInteger for IntRegNode {
         self.unit_elem()
     }
 
+    #[tracing::instrument(skip(self, store),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_min<T: ValueStore, U: CacheStore>(
         &self,
         _: i64,
         _: &mut impl Device,
-        _: &impl NodeStore,
+        store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::AccessDenied(
+        Err(GenApiError::access_denied(
             "can't set value to register's min elem".into(),
         ))
     }
 
+    #[tracing::instrument(skip(self, store),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_max<T: ValueStore, U: CacheStore>(
         &self,
         _: i64,
         _: &mut impl Device,
-        _: &impl NodeStore,
+        store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::AccessDenied(
+        Err(GenApiError::access_denied(
             "can't set value to register's max elem".into(),
         ))
     }

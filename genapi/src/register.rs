@@ -26,6 +26,9 @@ impl RegisterNode {
 }
 
 impl IRegister for RegisterNode {
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn read<T: ValueStore, U: CacheStore>(
         &self,
         buf: &mut [u8],
@@ -37,6 +40,9 @@ impl IRegister for RegisterNode {
             .read_then_cache_with_buf(self.node_base().id(), buf, device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn write<T: ValueStore, U: CacheStore>(
         &self,
         buf: &[u8],
@@ -48,6 +54,9 @@ impl IRegister for RegisterNode {
             .write_then_cache(self.node_base().id(), buf, device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn address<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -57,6 +66,9 @@ impl IRegister for RegisterNode {
         self.register_base().address(device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn length<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,

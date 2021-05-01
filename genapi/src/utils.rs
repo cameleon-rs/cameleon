@@ -19,7 +19,7 @@ pub(super) fn bool_from_id<T: ValueStore, U: CacheStore>(
     } else if let Some(node) = node_id.as_iinteger_kind(store) {
         Ok(node.value(device, store, cx)? == 1)
     } else {
-        Err(GenApiError::InvalidNode(
+        Err(GenApiError::invalid_node(
             "the node doesn't implement `IInteger` nor `IBoolean".into(),
         ))
     }
@@ -39,7 +39,7 @@ pub(super) fn int_from_slice(
                     ($len, Endianness::BE, Sign::Signed) => Ok(<$signed_ty>::from_be_bytes(slice.try_into().unwrap()) as i64),
                     ($len, Endianness::BE, Sign::Unsigned) => Ok(<$unsigned_ty>::from_be_bytes(slice.try_into().unwrap()) as i64),
                 )*
-                _ => Err(GenApiError::InvalidBuffer("buffer lenght must be either 1/2/4/8 to convert to i64".into()))
+                _ => Err(GenApiError::invalid_buffer("buffer lenght must be either 1/2/4/8 to convert to i64".into()))
             }
         }
     }
@@ -62,7 +62,7 @@ pub(super) fn bytes_from_int(
                     ($len, Endianness::BE, Sign::Signed) => Ok(buf.copy_from_slice(&(value as $signed_ty).to_be_bytes())),
                     ($len, Endianness::BE, Sign::Unsigned) => Ok(buf.copy_from_slice(&(value as $unsigned_ty).to_be_bytes())),
                 )*
-                _ => Err(GenApiError::InvalidBuffer("buffer lenght must be either 1/2/4/8 to convert to i64".into()))
+                _ => Err(GenApiError::invalid_buffer("buffer lenght must be either 1/2/4/8 to convert to i64".into()))
             }
         }
     }
@@ -75,11 +75,11 @@ where
     T: PartialOrd,
 {
     if value < min {
-        Err(GenApiError::InvalidData(
+        Err(GenApiError::invalid_data(
             "given data is smaller than min value of the node".into(),
         ))
     } else if value > max {
-        Err(GenApiError::InvalidData(
+        Err(GenApiError::invalid_data(
             "given data is larger than max value of the node".into(),
         ))
     } else {
@@ -195,7 +195,7 @@ impl<'a> VariableKind<'a> {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Expr> {
         fn error(nid: NodeId, store: &impl NodeStore) -> GenApiError {
-            GenApiError::InvalidNode(format!("invalid `pVariable: {}`", nid.name(store)).into())
+            GenApiError::invalid_node(format!("invalid `pVariable: {}`", nid.name(store)).into())
         }
 
         let expr: Expr = match self {
@@ -260,7 +260,7 @@ pub(super) fn expr_from_node_id<T: ValueStore, U: CacheStore>(
     } else if let Some(node) = nid.as_iboolean_kind(store) {
         Ok(node.value(device, store, cx)?.into())
     } else {
-        Err(GenApiError::InvalidNode(
+        Err(GenApiError::invalid_node(
             format!("invalid `pVariable: {}`", nid.name(store)).into(),
         ))
     }

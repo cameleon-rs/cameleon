@@ -64,6 +64,9 @@ impl IntSwissKnifeNode {
 }
 
 impl IInteger for IntSwissKnifeNode {
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn value<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -79,18 +82,24 @@ impl IInteger for IntSwissKnifeNode {
         Ok(eval_result.as_integer())
     }
 
+    #[tracing::instrument(skip(self, store),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         _: i64,
         _: &mut impl Device,
-        _: &impl NodeStore,
+        store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::AccessDenied(
+        Err(GenApiError::access_denied(
             "write to `IntSwissKnifeNode` is forbidden".into(),
         ))
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn min<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -100,6 +109,9 @@ impl IInteger for IntSwissKnifeNode {
         self.value(device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn max<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -134,26 +146,32 @@ impl IInteger for IntSwissKnifeNode {
         self.unit_elem()
     }
 
+    #[tracing::instrument(skip(self, store),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_min<T: ValueStore, U: CacheStore>(
         &self,
         _: i64,
         _: &mut impl Device,
-        _: &impl NodeStore,
+        store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::AccessDenied(
+        Err(GenApiError::access_denied(
             "write to `IntSwissKnifeNode` is forbidden".into(),
         ))
     }
 
+    #[tracing::instrument(skip(self, store),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_max<T: ValueStore, U: CacheStore>(
         &self,
         _: i64,
         _: &mut impl Device,
-        _: &impl NodeStore,
+        store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::AccessDenied(
+        Err(GenApiError::access_denied(
             "write to `IntSwissKnifeNode` is forbidden".into(),
         ))
     }
@@ -169,9 +187,9 @@ impl IInteger for IntSwissKnifeNode {
 
     fn is_writable<T: ValueStore, U: CacheStore>(
         &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
+        _: &mut impl Device,
+        _: &impl NodeStore,
+        _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
         Ok(false)
     }

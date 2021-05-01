@@ -64,6 +64,9 @@ impl MaskedIntRegNode {
 }
 
 impl IInteger for MaskedIntRegNode {
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn value<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -96,6 +99,9 @@ impl IInteger for MaskedIntRegNode {
         Ok(res)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
         value: i64,
@@ -135,6 +141,9 @@ impl IInteger for MaskedIntRegNode {
         Ok(())
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn min<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -145,6 +154,9 @@ impl IInteger for MaskedIntRegNode {
         Ok(self.bit_mask.min(len, self.endianness, self.sign))
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn max<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -180,26 +192,32 @@ impl IInteger for MaskedIntRegNode {
         self.unit_elem()
     }
 
+    #[tracing::instrument(skip(self, store),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_min<T: ValueStore, U: CacheStore>(
         &self,
         _: i64,
         _: &mut impl Device,
-        _: &impl NodeStore,
+        store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::AccessDenied(
+        Err(GenApiError::access_denied(
             "can't set value to register's min elem".into(),
         ))
     }
 
+    #[tracing::instrument(skip(self, store),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_max<T: ValueStore, U: CacheStore>(
         &self,
         _: i64,
         _: &mut impl Device,
-        _: &impl NodeStore,
+        store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::AccessDenied(
+        Err(GenApiError::access_denied(
             "can't set value to register's max elem".into(),
         ))
     }
@@ -228,6 +246,9 @@ impl IInteger for MaskedIntRegNode {
 }
 
 impl IRegister for MaskedIntRegNode {
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn read<T: ValueStore, U: CacheStore>(
         &self,
         buf: &mut [u8],
@@ -239,6 +260,9 @@ impl IRegister for MaskedIntRegNode {
             .read_then_cache_with_buf(self.node_base().id(), buf, device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn write<T: ValueStore, U: CacheStore>(
         &self,
         buf: &[u8],
@@ -250,6 +274,9 @@ impl IRegister for MaskedIntRegNode {
             .write_then_cache(self.node_base().id(), buf, device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn address<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -259,6 +286,9 @@ impl IRegister for MaskedIntRegNode {
         self.register_base().address(device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn length<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,

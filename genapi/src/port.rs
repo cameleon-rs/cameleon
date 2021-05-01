@@ -39,6 +39,9 @@ impl PortNode {
 }
 
 impl IPort for PortNode {
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn read<T: ValueStore, U: CacheStore>(
         &self,
         address: i64,
@@ -50,15 +53,17 @@ impl IPort for PortNode {
         self.elem_base.verify_is_readable(device, store, cx)?;
 
         if self.chunk_id.is_some() {
-            // TODO: Implement chunk parser.
-            todo!()
+            Err(GenApiError::chunk_data_missing())
         } else {
             device
                 .read_mem(address, buf)
-                .map_err(|e| GenApiError::Device(Box::new(e)))
+                .map_err(|e| GenApiError::device(Box::new(e)))
         }
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn write<T: ValueStore, U: CacheStore>(
         &self,
         address: i64,
@@ -76,7 +81,7 @@ impl IPort for PortNode {
         } else {
             device
                 .write_mem(address, buf)
-                .map_err(|e| GenApiError::Device(Box::new(e)))
+                .map_err(|e| GenApiError::device(Box::new(e)))
         }
     }
 }

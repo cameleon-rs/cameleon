@@ -83,7 +83,7 @@ impl RegisterBase {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         if buf.len() != self.length(device, store, cx)? as usize {
-            return Err(GenApiError::InvalidBuffer(
+            return Err(GenApiError::invalid_buffer(
                 "given buffer length doesn't same as the register length".into(),
             ));
         }
@@ -109,7 +109,7 @@ impl RegisterBase {
     ) -> GenApiResult<()> {
         self.elem_base.verify_is_writable(device, store, cx)?;
         if buf.len() != self.length(device, store, cx)? as usize {
-            return Err(GenApiError::InvalidBuffer(
+            return Err(GenApiError::invalid_buffer(
                 "given buffer length doesn't same as the register length".into(),
             ));
         }

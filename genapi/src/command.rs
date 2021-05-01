@@ -39,6 +39,8 @@ impl CommandNode {
 }
 
 impl ICommand for CommandNode {
+    #[tracing::instrument(skip(self, device, store, cx),
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn execute<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -52,6 +54,8 @@ impl ICommand for CommandNode {
         self.value.set_value(value, device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_done<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
