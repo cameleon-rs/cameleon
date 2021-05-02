@@ -184,14 +184,14 @@ impl<T, U> ValueCtxt<T, U> {
     where
         U: store::CacheStore,
     {
-        self.cache_store.store(nid, value);
+        self.cache_store.cache(nid, value);
     }
 
-    pub fn get_cached(&self, nid: store::NodeId) -> Option<&[u8]>
+    pub fn get_cache(&self, nid: store::NodeId) -> Option<&[u8]>
     where
         U: store::CacheStore,
     {
-        self.cache_store.value(nid)
+        self.cache_store.get_cache(nid)
     }
 
     pub fn invalidate_cache_by(&mut self, nid: store::NodeId)

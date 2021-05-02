@@ -70,7 +70,7 @@ impl IInteger for IntRegNode {
         let nid = self.node_base().id();
         let reg = self.register_base();
 
-        let res = if let Some(cache) = cx.get_cached(nid) {
+        let res = if let Some(cache) = cx.get_cache(nid) {
             let res = utils::int_from_slice(cache, self.endianness, self.sign)?;
             // Avoid a lifetime problem.
             reg.elem_base.verify_is_readable(device, store, cx)?;

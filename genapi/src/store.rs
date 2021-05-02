@@ -19,6 +19,113 @@ use super::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct NodeId(u32);
 
+#[derive(Debug, Clone)]
+pub enum NodeData {
+    Node(Box<Node>),
+    Category(Box<CategoryNode>),
+    Integer(Box<IntegerNode>),
+    IntReg(Box<IntRegNode>),
+    MaskedIntReg(Box<MaskedIntRegNode>),
+    Boolean(Box<BooleanNode>),
+    Command(Box<CommandNode>),
+    Enumeration(Box<EnumerationNode>),
+    Float(Box<FloatNode>),
+    FloatReg(Box<FloatRegNode>),
+    String(Box<StringNode>),
+    StringReg(Box<StringRegNode>),
+    Register(Box<RegisterNode>),
+    Converter(Box<ConverterNode>),
+    IntConverter(Box<IntConverterNode>),
+    SwissKnife(Box<SwissKnifeNode>),
+    IntSwissKnife(Box<IntSwissKnifeNode>),
+    Port(Box<PortNode>),
+
+    // TODO: Implement DCAM specific ndoes.
+    ConfRom(()),
+    TextDesc(()),
+    IntKey(()),
+    AdvFeatureLock(()),
+    SmartFeature(()),
+}
+
+#[auto_impl(&, &mut, Box, Rc, Arc)]
+pub trait NodeStore {
+    fn name_by_id(&self, nid: NodeId) -> Option<&str>;
+
+    fn id_by_name<T>(&self, s: T) -> Option<NodeId>
+    where
+        T: AsRef<str>;
+
+    fn node_opt(&self, nid: NodeId) -> Option<&NodeData>;
+
+    fn node(&self, nid: NodeId) -> &NodeData {
+        self.node_opt(nid).unwrap()
+    }
+
+    fn visit_nodes<F>(&self, f: F)
+    where
+        F: FnMut(&NodeData);
+}
+
+#[auto_impl(&mut, Box)]
+pub trait ValueStore {
+    fn value_opt<T>(&self, id: T) -> Option<&ValueData>
+    where
+        T: Into<ValueId>;
+
+    fn update<T, U>(&mut self, id: T, value: U) -> Option<ValueData>
+    where
+        T: Into<ValueId>,
+        U: Into<ValueData>;
+
+    fn value(&self, id: impl Into<ValueId>) -> &ValueData {
+        self.value_opt(id).unwrap()
+    }
+
+    fn integer_value(&self, id: IntegerId) -> Option<i64> {
+        if let ValueData::Integer(i) = self.value_opt(id)? {
+            Some(*i)
+        } else {
+            None
+        }
+    }
+
+    fn float_value(&self, id: FloatId) -> Option<f64> {
+        if let ValueData::Float(f) = self.value_opt(id)? {
+            Some(*f)
+        } else {
+            None
+        }
+    }
+
+    fn str_value(&self, id: StringId) -> Option<&String> {
+        if let ValueData::Str(s) = self.value_opt(id)? {
+            Some(s)
+        } else {
+            None
+        }
+    }
+
+    fn boolean_value(&self, id: BooleanId) -> Option<bool> {
+        if let ValueData::Boolean(b) = self.value_opt(id)? {
+            Some(*b)
+        } else {
+            None
+        }
+    }
+}
+
+#[auto_impl(&mut, Box)]
+pub trait CacheStore {
+    fn cache(&mut self, nid: NodeId, data: &[u8]);
+
+    fn get_cache(&self, nid: NodeId) -> Option<&[u8]>;
+
+    fn invalidate_by(&mut self, nid: NodeId);
+
+    fn invalidate_of(&mut self, nid: NodeId);
+}
+
 impl Symbol for NodeId {
     fn try_from_usize(index: usize) -> Option<Self> {
         if ((u32::MAX - 1) as usize) < index {
@@ -174,35 +281,6 @@ impl NodeId {
     }
 }
 
-#[derive(Debug, Clone)]
-pub enum NodeData {
-    Node(Box<Node>),
-    Category(Box<CategoryNode>),
-    Integer(Box<IntegerNode>),
-    IntReg(Box<IntRegNode>),
-    MaskedIntReg(Box<MaskedIntRegNode>),
-    Boolean(Box<BooleanNode>),
-    Command(Box<CommandNode>),
-    Enumeration(Box<EnumerationNode>),
-    Float(Box<FloatNode>),
-    FloatReg(Box<FloatRegNode>),
-    String(Box<StringNode>),
-    StringReg(Box<StringRegNode>),
-    Register(Box<RegisterNode>),
-    Converter(Box<ConverterNode>),
-    IntConverter(Box<IntConverterNode>),
-    SwissKnife(Box<SwissKnifeNode>),
-    IntSwissKnife(Box<IntSwissKnifeNode>),
-    Port(Box<PortNode>),
-
-    // TODO: Implement DCAM specific ndoes.
-    ConfRom(()),
-    TextDesc(()),
-    IntKey(()),
-    AdvFeatureLock(()),
-    SmartFeature(()),
-}
-
 impl NodeData {
     #[allow(clippy::missing_panics_doc)]
     #[must_use]
@@ -229,25 +307,6 @@ impl NodeData {
             _ => todo!(),
         }
     }
-}
-
-#[auto_impl(&, &mut, Box, Rc, Arc)]
-pub trait NodeStore {
-    fn name_by_id(&self, nid: NodeId) -> Option<&str>;
-
-    fn id_by_name<T>(&self, s: T) -> Option<NodeId>
-    where
-        T: AsRef<str>;
-
-    fn node_opt(&self, nid: NodeId) -> Option<&NodeData>;
-
-    fn node(&self, nid: NodeId) -> &NodeData {
-        self.node_opt(nid).unwrap()
-    }
-
-    fn visit_nodes<F>(&self, f: F)
-    where
-        F: FnMut(&NodeData);
 }
 
 #[derive(Debug)]
@@ -366,54 +425,6 @@ pub enum ValueData {
     Boolean(bool),
 }
 
-#[auto_impl(&mut, Box)]
-pub trait ValueStore {
-    fn value_opt<T>(&self, id: T) -> Option<&ValueData>
-    where
-        T: Into<ValueId>;
-
-    fn update<T, U>(&mut self, id: T, value: U) -> Option<ValueData>
-    where
-        T: Into<ValueId>,
-        U: Into<ValueData>;
-
-    fn value(&self, id: impl Into<ValueId>) -> &ValueData {
-        self.value_opt(id).unwrap()
-    }
-
-    fn integer_value(&self, id: IntegerId) -> Option<i64> {
-        if let ValueData::Integer(i) = self.value_opt(id)? {
-            Some(*i)
-        } else {
-            None
-        }
-    }
-
-    fn float_value(&self, id: FloatId) -> Option<f64> {
-        if let ValueData::Float(f) = self.value_opt(id)? {
-            Some(*f)
-        } else {
-            None
-        }
-    }
-
-    fn str_value(&self, id: StringId) -> Option<&String> {
-        if let ValueData::Str(s) = self.value_opt(id)? {
-            Some(s)
-        } else {
-            None
-        }
-    }
-
-    fn boolean_value(&self, id: BooleanId) -> Option<bool> {
-        if let ValueData::Boolean(b) = self.value_opt(id)? {
-            Some(*b)
-        } else {
-            None
-        }
-    }
-}
-
 macro_rules! impl_value_data_conversion {
     ($ty:ty, $ctor:expr) => {
         impl From<$ty> for ValueData {
@@ -478,17 +489,6 @@ impl ValueStore for DefaultValueStore {
     }
 }
 
-#[auto_impl(&mut, Box)]
-pub trait CacheStore {
-    fn store(&mut self, nid: NodeId, data: &[u8]);
-
-    fn value(&self, nid: NodeId) -> Option<&[u8]>;
-
-    fn invalidate_by(&mut self, nid: NodeId);
-
-    fn invalidate_of(&mut self, nid: NodeId);
-}
-
 #[derive(Debug, Default)]
 pub struct DefaultCacheStore {
     store: HashMap<NodeId, Option<Vec<u8>>>,
@@ -516,14 +516,14 @@ impl builder::CacheStoreBuilder for DefaultCacheStore {
 }
 
 impl CacheStore for DefaultCacheStore {
-    fn store(&mut self, nid: NodeId, data: &[u8]) {
+    fn cache(&mut self, nid: NodeId, data: &[u8]) {
         self.store
             .entry(nid)
             .and_modify(|cache| *cache = Some(data.to_vec()))
             .or_insert(Some(data.to_owned()));
     }
 
-    fn value(&self, nid: NodeId) -> Option<&[u8]> {
+    fn get_cache(&self, nid: NodeId) -> Option<&[u8]> {
         self.store.get(&nid)?.as_deref()
     }
 
@@ -568,9 +568,9 @@ impl builder::CacheStoreBuilder for CacheSink {
 }
 
 impl CacheStore for CacheSink {
-    fn store(&mut self, _: NodeId, _: &[u8]) {}
+    fn cache(&mut self, _: NodeId, _: &[u8]) {}
 
-    fn value(&self, _: NodeId) -> Option<&[u8]> {
+    fn get_cache(&self, _: NodeId) -> Option<&[u8]> {
         None
     }
 

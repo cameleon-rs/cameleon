@@ -39,7 +39,7 @@ impl IString for StringRegNode {
     ) -> GenApiResult<String> {
         let nid = self.node_base().id();
         let reg = self.register_base();
-        let res = if let Some(cache) = cx.get_cached(nid) {
+        let res = if let Some(cache) = cx.get_cache(nid) {
             let res = String::from_utf8_lossy(cache).to_string();
             // Avoid a lifetime problem.
             reg.elem_base.verify_is_readable(device, store, cx)?;

@@ -77,7 +77,7 @@ impl IInteger for MaskedIntRegNode {
         let reg = self.register_base();
 
         // Get register value.
-        let reg_value = if let Some(cache) = cx.get_cached(nid) {
+        let reg_value = if let Some(cache) = cx.get_cache(nid) {
             let res = utils::int_from_slice(cache, self.endianness, self.sign)?;
             // Avoid a lifetime problem.
             reg.elem_base.verify_is_readable(device, store, cx)?;
@@ -117,7 +117,7 @@ impl IInteger for MaskedIntRegNode {
         utils::verify_value_in_range(value, min, max)?;
 
         let reg = self.register_base();
-        let old_reg_value = if let Some(cache) = cx.get_cached(nid) {
+        let old_reg_value = if let Some(cache) = cx.get_cache(nid) {
             let res = utils::int_from_slice(cache, self.endianness, self.sign)?;
             // Avoid a lifetime problem.
             reg.elem_base.verify_is_readable(device, store, cx)?;
