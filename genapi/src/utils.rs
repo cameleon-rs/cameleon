@@ -159,7 +159,7 @@ impl<'a, T: Copy + Into<Expr>> FormulaEnvCollector<'a, T> {
         for variable in self.p_variables {
             let name = variable.name();
             let nid = variable.value();
-            let expr = VariableKind::from_str(name).get_value(nid, device, store, cx)?;
+            let expr = VariableKind::from_str(name)?.get_value(nid, device, store, cx)?;
             self.var_env.insert(name, Cow::Owned(expr));
         }
         Ok(())
@@ -175,16 +175,18 @@ enum VariableKind<'a> {
 }
 
 impl<'a> VariableKind<'a> {
-    fn from_str(s: &'a str) -> Self {
+    fn from_str(s: &'a str) -> GenApiResult<Self> {
         let split: Vec<&'a str> = s.splitn(3, '.').collect();
-        match split.as_slice() {
+        Ok(match split.as_slice() {
             [_] | [_, "Value"] => Self::Value,
             [_, "Min"] => Self::Min,
             [_, "Max"] => Self::Max,
             [_, "Inc"] => Self::Inc,
             [_, "Enum", name] => Self::Enum(name),
-            _ => panic!("invalid `pVariable`: {}", s),
-        }
+            _ => Err(GenApiError::invalid_node(
+                format!("invalid `pVariable`: {}", s).into(),
+            ))?,
+        })
     }
 
     fn get_value<T: ValueStore, U: CacheStore>(
