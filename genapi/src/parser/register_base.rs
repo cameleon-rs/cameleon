@@ -1,6 +1,7 @@
 use crate::{
+    builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder},
     elem_type::AccessMode,
-    store::{ValueStore, WritableNodeStore},
+    store::NodeId,
     RegisterBase,
 };
 
@@ -12,36 +13,49 @@ use super::{
     xml, Parse,
 };
 
+impl RegisterBase {
+    pub(super) fn store_invalidators(
+        &self,
+        target: NodeId,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) {
+        for invalidator in &self.p_invalidators {
+            cache_builder.store_invalidator(*invalidator, target);
+        }
+    }
+}
+
 impl Parse for RegisterBase {
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
-        let elem_base = node.parse(node_store, value_store);
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
+        let elem_base = node.parse(node_builder, value_builder, cache_builder);
 
         let streamable = node
-            .parse_if(STREAMABLE, node_store, value_store)
+            .parse_if(STREAMABLE, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
         let mut address_kinds = vec![];
         while let Some(addr_kind) = node
-            .parse_if(ADDRESS, node_store, value_store)
-            .or_else(|| node.parse_if(INT_SWISS_KNIFE, node_store, value_store))
-            .or_else(|| node.parse_if(P_ADDRESS, node_store, value_store))
-            .or_else(|| node.parse_if(P_INDEX, node_store, value_store))
+            .parse_if(ADDRESS, node_builder, value_builder, cache_builder)
+            .or_else(|| node.parse_if(INT_SWISS_KNIFE, node_builder, value_builder, cache_builder))
+            .or_else(|| node.parse_if(P_ADDRESS, node_builder, value_builder, cache_builder))
+            .or_else(|| node.parse_if(P_INDEX, node_builder, value_builder, cache_builder))
         {
             address_kinds.push(addr_kind);
         }
-        let length = node.parse(node_store, value_store);
+        let length = node.parse(node_builder, value_builder, cache_builder);
         let access_mode = node
-            .parse_if(ACCESS_MODE, node_store, value_store)
+            .parse_if(ACCESS_MODE, node_builder, value_builder, cache_builder)
             .unwrap_or(AccessMode::RO);
-        let p_port = node.parse(node_store, value_store);
+        let p_port = node.parse(node_builder, value_builder, cache_builder);
         let cacheable = node
-            .parse_if(CACHEABLE, node_store, value_store)
+            .parse_if(CACHEABLE, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
-        let polling_time = node.parse_if(POLLING_TIME, node_store, value_store);
-        let p_invalidators = node.parse_while(P_INVALIDATOR, node_store, value_store);
+        let polling_time = node.parse_if(POLLING_TIME, node_builder, value_builder, cache_builder);
+        let p_invalidators = node.parse_while(P_INVALIDATOR, node_builder, value_builder, cache_builder);
 
         Self {
             elem_base,

@@ -24,6 +24,7 @@ mod string;
 mod string_reg;
 mod struct_reg;
 mod swiss_knife;
+mod utils;
 mod xml;
 
 use group::GroupNode;
@@ -31,7 +32,8 @@ use struct_reg::StructRegNode;
 use thiserror::Error;
 
 use crate::{
-    store::{DefaultNodeStore, DefaultValueStore, NodeData, ValueStore, WritableNodeStore},
+    builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder},
+    store::NodeData,
     RegisterDescription,
 };
 
@@ -52,173 +54,147 @@ pub enum ParseError {
 
 pub type ParseResult<T> = std::result::Result<T, ParseError>;
 
-pub struct Parser<'a> {
-    document: xml::Document<'a>,
-}
-
-impl<'a> Parser<'a> {
-    pub fn from_bytes(input: &'a impl AsRef<[u8]>) -> ParseResult<Self> {
-        let input = std::str::from_utf8(input.as_ref())?;
-        let document = xml::Document::from_str(input)?;
-        Ok(Self { document })
-    }
-
-    pub fn parse(&self) -> ParseResult<(RegisterDescription, DefaultNodeStore, DefaultValueStore)> {
-        let mut node_store = DefaultNodeStore::new();
-        let mut value_store = DefaultValueStore::new();
-        let reg_desc = self.parse_with_store(&mut node_store, &mut value_store)?;
-        Ok((reg_desc, node_store, value_store))
-    }
-
-    pub fn parse_with_store<T, U>(
-        &self,
-        mut node_store: T,
-        mut value_store: U,
-    ) -> ParseResult<RegisterDescription>
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
-        let mut node = self.document.root_node();
-        let reg_desc = node.parse(&mut node_store, &mut value_store);
-        while let Some(ref mut child) = node.next() {
-            let children: Vec<NodeData> = child.parse(&mut node_store, &mut value_store);
-            for child in children {
-                let id = child.node_base().id();
-                node_store.store_node(id, child);
-            }
+pub fn parse(
+    xml: &impl AsRef<str>,
+    node_builder: &mut impl NodeStoreBuilder,
+    value_builder: &mut impl ValueStoreBuilder,
+    cache_builder: &mut impl CacheStoreBuilder,
+) -> ParseResult<RegisterDescription> {
+    let document = xml::Document::from_str(xml.as_ref())?;
+    let mut node = document.root_node();
+    let reg_desc = node.parse(node_builder, value_builder, cache_builder);
+    while let Some(ref mut child) = node.next() {
+        let children: Vec<NodeData> = child.parse(node_builder, value_builder, cache_builder);
+        for child in children {
+            let id = child.node_base().id();
+            node_builder.store_node(id, child);
         }
-
-        Ok(reg_desc)
     }
 
-    #[must_use]
-    pub fn inner_str(&self) -> &'a str {
-        self.document.inner_str()
-    }
+    Ok(reg_desc)
 }
 
 trait Parse {
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore;
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self;
 }
 
 impl Parse for Vec<NodeData> {
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         match node.tag_name() {
-            NODE => vec![NodeData::Node(Box::new(
-                node.parse(node_store, value_store),
-            ))],
-            CATEGORY => vec![NodeData::Category(Box::new(
-                node.parse(node_store, value_store),
-            ))],
-            INTEGER => vec![NodeData::Integer(Box::new(
-                node.parse(node_store, value_store),
-            ))],
-            INT_REG => vec![NodeData::IntReg(Box::new(
-                node.parse(node_store, value_store),
-            ))],
-            MASKED_INT_REG => vec![NodeData::MaskedIntReg(Box::new(
-                node.parse(node_store, value_store),
-            ))],
-            BOOLEAN => vec![NodeData::Boolean(Box::new(
-                node.parse(node_store, value_store),
-            ))],
-            COMMAND => vec![NodeData::Command(Box::new(
-                node.parse(node_store, value_store),
-            ))],
-            ENUMERATION => vec![NodeData::Enumeration(Box::new(
-                node.parse(node_store, value_store),
-            ))],
-            FLOAT => vec![NodeData::Float(Box::new(
-                node.parse(node_store, value_store),
-            ))],
-            FLOAT_REG => vec![NodeData::FloatReg(Box::new(
-                node.parse(node_store, value_store),
-            ))],
-            STRING => vec![NodeData::String(Box::new(
-                node.parse(node_store, value_store),
-            ))],
-            STRING_REG => vec![NodeData::StringReg(Box::new(
-                node.parse(node_store, value_store),
-            ))],
-            REGISTER => vec![NodeData::Register(Box::new(
-                node.parse(node_store, value_store),
-            ))],
-            CONVERTER => vec![NodeData::Converter(Box::new(
-                node.parse(node_store, value_store),
-            ))],
-            INT_CONVERTER => vec![NodeData::IntConverter(Box::new(
-                node.parse(node_store, value_store),
-            ))],
-            SWISS_KNIFE => vec![NodeData::SwissKnife(Box::new(
-                node.parse(node_store, value_store),
-            ))],
-            INT_SWISS_KNIFE => vec![NodeData::IntSwissKnife(Box::new(
-                node.parse(node_store, value_store),
-            ))],
-            PORT => vec![NodeData::Port(Box::new(
-                node.parse(node_store, value_store),
-            ))],
+            NODE => vec![NodeData::Node(Box::new(node.parse(
+                node_builder,
+                value_builder,
+                cache_builder,
+            )))],
+            CATEGORY => vec![NodeData::Category(Box::new(node.parse(
+                node_builder,
+                value_builder,
+                cache_builder,
+            )))],
+            INTEGER => vec![NodeData::Integer(Box::new(node.parse(
+                node_builder,
+                value_builder,
+                cache_builder,
+            )))],
+            INT_REG => vec![NodeData::IntReg(Box::new(node.parse(
+                node_builder,
+                value_builder,
+                cache_builder,
+            )))],
+            MASKED_INT_REG => vec![NodeData::MaskedIntReg(Box::new(node.parse(
+                node_builder,
+                value_builder,
+                cache_builder,
+            )))],
+            BOOLEAN => vec![NodeData::Boolean(Box::new(node.parse(
+                node_builder,
+                value_builder,
+                cache_builder,
+            )))],
+            COMMAND => vec![NodeData::Command(Box::new(node.parse(
+                node_builder,
+                value_builder,
+                cache_builder,
+            )))],
+            ENUMERATION => vec![NodeData::Enumeration(Box::new(node.parse(
+                node_builder,
+                value_builder,
+                cache_builder,
+            )))],
+            FLOAT => vec![NodeData::Float(Box::new(node.parse(
+                node_builder,
+                value_builder,
+                cache_builder,
+            )))],
+            FLOAT_REG => vec![NodeData::FloatReg(Box::new(node.parse(
+                node_builder,
+                value_builder,
+                cache_builder,
+            )))],
+            STRING => vec![NodeData::String(Box::new(node.parse(
+                node_builder,
+                value_builder,
+                cache_builder,
+            )))],
+            STRING_REG => vec![NodeData::StringReg(Box::new(node.parse(
+                node_builder,
+                value_builder,
+                cache_builder,
+            )))],
+            REGISTER => vec![NodeData::Register(Box::new(node.parse(
+                node_builder,
+                value_builder,
+                cache_builder,
+            )))],
+            CONVERTER => vec![NodeData::Converter(Box::new(node.parse(
+                node_builder,
+                value_builder,
+                cache_builder,
+            )))],
+            INT_CONVERTER => vec![NodeData::IntConverter(Box::new(node.parse(
+                node_builder,
+                value_builder,
+                cache_builder,
+            )))],
+            SWISS_KNIFE => vec![NodeData::SwissKnife(Box::new(node.parse(
+                node_builder,
+                value_builder,
+                cache_builder,
+            )))],
+            INT_SWISS_KNIFE => vec![NodeData::IntSwissKnife(Box::new(node.parse(
+                node_builder,
+                value_builder,
+                cache_builder,
+            )))],
+            PORT => vec![NodeData::Port(Box::new(node.parse(
+                node_builder,
+                value_builder,
+                cache_builder,
+            )))],
             STRUCT_REG => {
-                let node: StructRegNode = node.parse(node_store, value_store);
-                node.into_masked_int_regs()
+                let node: StructRegNode = node.parse(node_builder, value_builder, cache_builder);
+                node.into_masked_int_regs(cache_builder)
                     .into_iter()
                     .map(|node| NodeData::MaskedIntReg(node.into()))
                     .collect()
             }
             GROUP => {
-                let node: GroupNode = node.parse(node_store, value_store);
+                let node: GroupNode = node.parse(node_builder, value_builder, cache_builder);
                 node.nodes
             }
             // TODO: Implement DCAM specific ndoes.
             CONF_ROM | TEXT_DESC | INT_KEY | ADV_FEATURE_LOCK | SMART_FEATURE => todo!(),
             _ => unreachable!(),
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_parser() {
-        let xml = r#"
-        <RegisterDescription
-          ModelName="CameleonModel"
-          VendorName="CameleonVendor"
-          StandardNameSpace="None"
-          SchemaMajorVersion="1"
-          SchemaMinorVersion="1"
-          SchemaSubMinorVersion="0"
-          MajorVersion="1"
-          MinorVersion="2"
-          SubMinorVersion="3"
-          ToolTip="ToolTiptest"
-          ProductGuid="01234567-0123-0123-0123-0123456789ab"
-          VersionGuid="76543210-3210-3210-3210-ba9876543210"
-          xmlns="http://www.genicam.org/GenApi/Version_1_0"
-          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-          xsi:schemaLocation="http://www.genicam.org/GenApi/Version_1_0 GenApiSchema.xsd">
-
-            <Category Name="Root" NameSpace="Standard">
-                <pFeature>MyInt</pFeature>
-            </Category>
-
-            <Integer Name="MyInt">
-                <Value>10</Value>
-            </Integer>
-
-        </RegisterDescription>
-        "#;
-        let parser = Parser::from_bytes(&xml).unwrap();
-        parser.parse().unwrap();
     }
 }

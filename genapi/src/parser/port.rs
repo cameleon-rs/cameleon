@@ -1,8 +1,8 @@
 use tracing::debug;
 
 use crate::{
+    builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder},
     elem_type::ImmOrPNode,
-    store::{ValueStore, WritableNodeStore},
     PortNode,
 };
 
@@ -12,22 +12,23 @@ use super::{
 };
 
 impl Parse for PortNode {
-    #[tracing::instrument(level = "trace", skip(node_store, value_store))]
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    #[tracing::instrument(level = "trace", skip(node_builder, value_builder, cache_builder))]
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         debug!("start parsing `PortNode`");
         debug_assert_eq!(node.tag_name(), PORT);
 
-        let attr_base = node.parse(node_store, value_store);
-        let elem_base = node.parse(node_store, value_store);
+        let attr_base = node.parse(node_builder, value_builder, cache_builder);
+        let elem_base = node.parse(node_builder, value_builder, cache_builder);
 
         let chunk_id = node.next_if(CHUNK_ID).map_or_else(
             || {
                 node.next_if(P_CHUNK_ID)
-                    .map(|next_node| ImmOrPNode::PNode(node_store.id_by_name(next_node.text())))
+                    .map(|next_node| ImmOrPNode::PNode(node_builder.get_or_intern(next_node.text())))
             },
             |next_node| {
                 Some(ImmOrPNode::Imm(
@@ -36,10 +37,10 @@ impl Parse for PortNode {
             },
         );
         let swap_endianness = node
-            .parse_if(SWAP_ENDIANNESS, node_store, value_store)
+            .parse_if(SWAP_ENDIANNESS, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
         let cache_chunk_data = node
-            .parse_if(CACHE_CHUNK_DATA, node_store, value_store)
+            .parse_if(CACHE_CHUNK_DATA, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
 
         Self {
@@ -54,9 +55,7 @@ impl Parse for PortNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::store::{DefaultNodeStore, DefaultValueStore};
-
-    use super::*;
+    use super::{super::utils::tests::parse_default, *};
 
     #[test]
     fn test_port_node_with_imm() {
@@ -67,13 +66,7 @@ mod tests {
             <Port>
             "#;
 
-        let mut node_store = DefaultNodeStore::new();
-        let mut value_store = DefaultValueStore::new();
-        let node: PortNode = xml::Document::from_str(&xml)
-            .unwrap()
-            .root_node()
-            .parse(&mut node_store, &mut value_store);
-
+        let (node, ..): (PortNode, _, _, _) = parse_default(xml);
         assert_eq!(node.chunk_id().unwrap(), &ImmOrPNode::Imm(0x00FD_3219));
         assert_eq!(node.swap_endianness(), true);
     }
@@ -86,16 +79,10 @@ mod tests {
             <Port>
             "#;
 
-        let mut node_store = DefaultNodeStore::new();
-        let mut value_store = DefaultValueStore::new();
-        let node: PortNode = xml::Document::from_str(&xml)
-            .unwrap()
-            .root_node()
-            .parse(&mut node_store, &mut value_store);
-
+        let (node, mut node_builder, ..): (PortNode, _, _, _) = parse_default(xml);
         assert_eq!(
             node.chunk_id().unwrap(),
-            &ImmOrPNode::PNode(node_store.id_by_name("Fd3219"))
+            &ImmOrPNode::PNode(node_builder.get_or_intern("Fd3219"))
         );
     }
 
@@ -107,13 +94,7 @@ mod tests {
             <Port>
             "#;
 
-        let mut node_store = DefaultNodeStore::new();
-        let mut value_store = DefaultValueStore::new();
-        let node: PortNode = xml::Document::from_str(&xml)
-            .unwrap()
-            .root_node()
-            .parse(&mut node_store, &mut value_store);
-
+        let (node, ..): (PortNode, _, _, _) = parse_default(xml);
         assert_eq!(node.chunk_id(), None);
         assert_eq!(node.cache_chunk_data(), true);
     }

@@ -1,8 +1,8 @@
 use tracing::debug;
 
 use crate::{
+    builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder},
     elem_type::ImmOrPNode,
-    store::{ValueStore, WritableNodeStore},
     FloatNode,
 };
 
@@ -15,48 +15,49 @@ use super::{
 };
 
 impl Parse for FloatNode {
-    #[tracing::instrument(level = "trace", skip(node_store, value_store))]
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    #[tracing::instrument(level = "trace", skip(node_builder, value_builder, cache_builder))]
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         debug!("start parsing `FloatNode`");
         debug_assert_eq!(node.tag_name(), FLOAT);
 
-        let attr_base = node.parse(node_store, value_store);
-        let elem_base = node.parse(node_store, value_store);
+        let attr_base = node.parse(node_builder, value_builder, cache_builder);
+        let elem_base = node.parse(node_builder, value_builder, cache_builder);
 
         let streamable = node
-            .parse_if(STREAMABLE, node_store, value_store)
+            .parse_if(STREAMABLE, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
-        let value_kind = node.parse(node_store, value_store);
+        let value_kind = node.parse(node_builder, value_builder, cache_builder);
         let min = node
-            .parse_if(MIN, node_store, value_store)
-            .or_else(|| node.parse_if(P_MIN, node_store, value_store))
+            .parse_if(MIN, node_builder, value_builder, cache_builder)
+            .or_else(|| node.parse_if(P_MIN, node_builder, value_builder, cache_builder))
             .unwrap_or_else(|| {
-                let id = value_store.store(f64::MIN);
+                let id = value_builder.store(f64::MIN);
                 ImmOrPNode::Imm(id)
             });
         let max = node
-            .parse_if(MAX, node_store, value_store)
-            .or_else(|| node.parse_if(P_MAX, node_store, value_store))
+            .parse_if(MAX, node_builder, value_builder, cache_builder)
+            .or_else(|| node.parse_if(P_MAX, node_builder, value_builder, cache_builder))
             .unwrap_or_else(|| {
-                let id = value_store.store(f64::MAX);
+                let id = value_builder.store(f64::MAX);
                 ImmOrPNode::Imm(id)
             });
         let inc = node
-            .parse_if(INC, node_store, value_store)
-            .or_else(|| node.parse_if(P_INC, node_store, value_store));
-        let unit = node.parse_if(UNIT, node_store, value_store);
+            .parse_if(INC, node_builder, value_builder, cache_builder)
+            .or_else(|| node.parse_if(P_INC, node_builder, value_builder, cache_builder));
+        let unit = node.parse_if(UNIT, node_builder, value_builder, cache_builder);
         let representation = node
-            .parse_if(REPRESENTATION, node_store, value_store)
+            .parse_if(REPRESENTATION, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
         let display_notation = node
-            .parse_if(DISPLAY_NOTATION, node_store, value_store)
+            .parse_if(DISPLAY_NOTATION, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
         let display_precision = node
-            .parse_if(DISPLAY_PRECISION, node_store, value_store)
+            .parse_if(DISPLAY_PRECISION, node_builder, value_builder, cache_builder)
             .unwrap_or(6);
 
         Self {
@@ -79,10 +80,10 @@ impl Parse for FloatNode {
 mod test {
     use crate::{
         elem_type::{DisplayNotation, FloatRepresentation, ValueKind},
-        store::{DefaultNodeStore, DefaultValueStore},
+        store::ValueStore,
     };
 
-    use super::*;
+    use super::{super::utils::tests::parse_default, *};
 
     #[test]
     fn test_float_node() {
@@ -100,20 +101,15 @@ mod test {
             </Float>
             "#;
 
-        let mut node_store = DefaultNodeStore::new();
-        let mut value_store = DefaultValueStore::new();
-        let node: FloatNode = xml::Document::from_str(xml)
-            .unwrap()
-            .root_node()
-            .parse(&mut node_store, &mut value_store);
+        let (node, _, value_builder, _): (FloatNode, _, _, _) = parse_default(xml);
 
         assert!(node.streamable());
         assert!(matches! {node.value_kind(), ValueKind::Value(_)});
-        let min_value = value_store
+        let min_value = value_builder
             .float_value(node.min_elem().imm().unwrap())
             .unwrap();
         assert!(min_value.is_infinite() && min_value.is_sign_negative());
-        let max_value = value_store
+        let max_value = value_builder
             .float_value(node.max_elem().imm().unwrap())
             .unwrap();
         assert!(max_value.is_infinite() && max_value.is_sign_positive());

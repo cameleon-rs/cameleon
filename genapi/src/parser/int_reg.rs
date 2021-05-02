@@ -1,7 +1,7 @@
 use tracing::debug;
 
 use crate::{
-    store::{ValueStore, WritableNodeStore},
+    builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder},
     IntRegNode,
 };
 
@@ -11,31 +11,32 @@ use super::{
 };
 
 impl Parse for IntRegNode {
-    #[tracing::instrument(level = "trace", skip(node_store, value_store))]
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    #[tracing::instrument(level = "trace", skip(node_builder, value_builder, cache_builder))]
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         debug!("start parsing `IntRegNode`");
         debug_assert_eq!(node.tag_name(), INT_REG);
 
-        let attr_base = node.parse(node_store, value_store);
-        let register_base = node.parse(node_store, value_store);
+        let attr_base = node.parse(node_builder, value_builder, cache_builder);
+        let register_base = node.parse(node_builder, value_builder, cache_builder);
 
         let sign = node
-            .parse_if(SIGN, node_store, value_store)
+            .parse_if(SIGN, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
         let endianness = node
-            .parse_if(ENDIANNESS, node_store, value_store)
+            .parse_if(ENDIANNESS, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
-        let unit = node.parse_if(UNIT, node_store, value_store);
+        let unit = node.parse_if(UNIT, node_builder, value_builder, cache_builder);
         let representation = node
-            .parse_if(REPRESENTATION, node_store, value_store)
+            .parse_if(REPRESENTATION, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
-        let p_selected = node.parse_while(P_SELECTED, node_store, value_store);
+        let p_selected = node.parse_while(P_SELECTED, node_builder, value_builder, cache_builder);
 
-        Self {
+        let node = Self {
             attr_base,
             register_base,
             sign,
@@ -43,18 +44,18 @@ impl Parse for IntRegNode {
             unit,
             representation,
             p_selected,
-        }
+        };
+        node.register_base
+            .store_invalidators(node.attr_base.id, cache_builder);
+        node
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        elem_type::{Endianness, IntegerRepresentation, Sign},
-        store::{DefaultNodeStore, DefaultValueStore},
-    };
+    use crate::elem_type::{Endianness, IntegerRepresentation, Sign};
 
-    use super::*;
+    use super::{super::utils::tests::parse_default, *};
 
     #[test]
     fn test_int_reg() {
@@ -71,12 +72,7 @@ mod tests {
         </IntReg>
         "#;
 
-        let mut node_store = DefaultNodeStore::new();
-        let mut value_store = DefaultValueStore::new();
-        let node: IntRegNode = xml::Document::from_str(&xml)
-            .unwrap()
-            .root_node()
-            .parse(&mut node_store, &mut value_store);
+        let (node, ..): (IntRegNode, _, _, _) = parse_default(xml);
 
         assert_eq!(node.sign(), Sign::Signed);
         assert_eq!(node.endianness(), Endianness::BE);

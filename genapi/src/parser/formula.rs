@@ -1,27 +1,29 @@
 use crate::{
+    builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder},
     formula::{parse, Expr, Formula},
-    store::{ValueStore, WritableNodeStore},
 };
 
 use super::{xml, Parse};
 
 impl Parse for Formula {
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
-        let expr = node.parse(node_store, value_store);
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
+        let expr = node.parse(node_builder, value_builder, cache_builder);
         Formula { expr }
     }
 }
 
 impl Parse for Expr {
-    fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        _: &mut impl NodeStoreBuilder,
+        _: &mut impl ValueStoreBuilder,
+        _: &mut impl CacheStoreBuilder,
+    ) -> Self {
         let text = node.next_text().unwrap();
         parse(text)
     }

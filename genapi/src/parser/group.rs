@@ -1,6 +1,6 @@
 use tracing::debug;
 
-use crate::store::{ValueStore, WritableNodeStore};
+use crate::builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder};
 
 use super::{
     elem_name::{COMMENT, GROUP},
@@ -15,19 +15,20 @@ pub(super) struct GroupNode {
 }
 
 impl Parse for GroupNode {
-    #[tracing::instrument(level = "trace", skip(node_store, value_store))]
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    #[tracing::instrument(level = "trace", skip(node_builder, value_builder, cache_builder))]
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         debug!("start parsing `GroupNode`");
         debug_assert_eq!(node.tag_name(), GROUP);
         let comment = node.attribute_of(COMMENT).unwrap().into();
 
         let mut nodes = vec![];
         while let Some(ref mut child) = node.next() {
-            let children: Vec<NodeData> = child.parse(node_store, value_store);
+            let children: Vec<NodeData> = child.parse(node_builder, value_builder, cache_builder);
             for data in children {
                 nodes.push(data);
             }
@@ -39,9 +40,7 @@ impl Parse for GroupNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::store::{DefaultNodeStore, DefaultValueStore};
-
-    use super::*;
+    use super::{super::utils::tests::parse_default, *};
 
     #[test]
     fn test_group_node() {
@@ -59,12 +58,7 @@ mod tests {
             </Group>
             "#;
 
-        let mut node_store = DefaultNodeStore::new();
-        let mut value_store = DefaultValueStore::new();
-        let node: GroupNode = xml::Document::from_str(&xml)
-            .unwrap()
-            .root_node()
-            .parse(&mut node_store, &mut value_store);
+        let (node, ..): (GroupNode, _, _, _) = parse_default(xml);
 
         assert_eq!(node.comment, "Nothing to say");
         assert_eq!(node.nodes.len(), 2);

@@ -1,25 +1,26 @@
 use tracing::debug;
 
 use crate::{
+    builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder},
     node_base::{NodeAttributeBase, NodeElementBase},
-    store::{ValueStore, WritableNodeStore},
     Node,
 };
 
 use super::{elem_name::NODE, xml, Parse};
 
 impl Parse for Node {
-    #[tracing::instrument(level = "trace", skip(node_store, value_store))]
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    #[tracing::instrument(level = "trace", skip(node_builder, value_builder, cache_builder))]
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         debug!("start parsing `Node`");
         debug_assert_eq!(node.tag_name(), NODE);
 
-        let attr_base = NodeAttributeBase::parse(node, node_store, value_store);
-        let elem_base = NodeElementBase::parse(node, node_store, value_store);
+        let attr_base = NodeAttributeBase::parse(node, node_builder, value_builder, cache_builder);
+        let elem_base = NodeElementBase::parse(node, node_builder, value_builder, cache_builder);
 
         Self {
             attr_base,
@@ -30,25 +31,9 @@ impl Parse for Node {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        elem_type::{AccessMode, MergePriority, NameSpace, Visibility},
-        store::{DefaultNodeStore, DefaultValueStore},
-    };
+    use crate::elem_type::{AccessMode, MergePriority, NameSpace, Visibility};
 
-    use super::*;
-
-    fn node_from_str(xml: &str) -> (Node, DefaultNodeStore, DefaultValueStore) {
-        let mut node_store = DefaultNodeStore::new();
-        let mut value_store = DefaultValueStore::new();
-        let document = xml::Document::from_str(xml).unwrap();
-        (
-            document
-                .root_node()
-                .parse(&mut node_store, &mut value_store),
-            node_store,
-            value_store,
-        )
-    }
+    use super::{super::utils::tests::parse_default, *};
 
     #[test]
     fn test_all_fields_filled() {
@@ -73,9 +58,9 @@ mod tests {
             </Node>
             "#;
 
-        let (node, mut node_store, _) = node_from_str(&xml);
+        let (node, mut node_builder, ..): (Node, _, _, _) = parse_default(xml);
         let node_base = node.node_base();
-        assert_eq!(node_base.id(), node_store.id_by_name("TestNode"));
+        assert_eq!(node_base.id(), node_builder.get_or_intern("TestNode"));
         assert_eq!(node_base.name_space(), NameSpace::Standard);
         assert_eq!(node_base.merge_priority(), MergePriority::High);
         assert_eq!(node_base.expose_static().unwrap(), false);
@@ -89,37 +74,37 @@ mod tests {
         assert_eq!(node_base.event_id(), Some(0xF1));
         assert_eq!(
             node_base.p_is_implemented().unwrap(),
-            node_store.id_by_name("AnotherNode0")
+            node_builder.get_or_intern("AnotherNode0")
         );
         assert_eq!(
             node_base.p_is_available().unwrap(),
-            node_store.id_by_name("AnotherNode1")
+            node_builder.get_or_intern("AnotherNode1")
         );
         assert_eq!(
             node_base.p_is_locked().unwrap(),
-            node_store.id_by_name("AnotherNode2")
+            node_builder.get_or_intern("AnotherNode2")
         );
         assert_eq!(
             node_base.p_block_polling().unwrap(),
-            node_store.id_by_name("AnotherNode3")
+            node_builder.get_or_intern("AnotherNode3")
         );
         assert_eq!(node_base.imposed_access_mode(), AccessMode::RO);
         assert_eq!(node_base.p_errors().len(), 2);
         assert_eq!(
             node_base.p_errors()[0],
-            node_store.id_by_name("AnotherErr0")
+            node_builder.get_or_intern("AnotherErr0")
         );
         assert_eq!(
             node_base.p_errors()[1],
-            node_store.id_by_name("AnotherErr1")
+            node_builder.get_or_intern("AnotherErr1")
         );
         assert_eq!(
             node_base.p_alias().unwrap(),
-            node_store.id_by_name("AnotherNode5")
+            node_builder.get_or_intern("AnotherNode5")
         );
         assert_eq!(
             node_base.p_cast_alias().unwrap(),
-            node_store.id_by_name("AnotherNode6")
+            node_builder.get_or_intern("AnotherNode6")
         );
     }
 
@@ -130,9 +115,9 @@ mod tests {
             </Node>
             "#;
 
-        let (node, mut node_store, _) = node_from_str(&xml);
+        let (node, mut node_builder, ..): (Node, _, _, _) = parse_default(xml);
         let node_base = node.node_base();
-        assert_eq!(node_base.id(), node_store.id_by_name("TestNode"));
+        assert_eq!(node_base.id(), node_builder.get_or_intern("TestNode"));
         assert_eq!(node_base.name_space(), NameSpace::Custom);
         assert_eq!(node_base.merge_priority(), MergePriority::Mid);
         assert!(node_base.expose_static().is_none());

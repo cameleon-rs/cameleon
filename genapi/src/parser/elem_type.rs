@@ -1,11 +1,12 @@
 use crate::{
+    builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder},
     elem_type::{
         AccessMode, AddressKind, BitMask, CachingMode, DisplayNotation, Endianness,
         FloatRepresentation, ImmOrPNode, IntegerRepresentation, MergePriority, NameSpace,
         NamedValue, PIndex, PValue, RegPIndex, Sign, Slope, StandardNameSpace, ValueIndexed,
         ValueKind, Visibility,
     },
-    store::{BooleanId, FloatId, IntegerId, NodeData, NodeId, ValueStore, WritableNodeStore},
+    store::{BooleanId, FloatId, IntegerId, NodeData, NodeId},
     IntSwissKnifeNode,
 };
 
@@ -34,11 +35,12 @@ impl From<&str> for NameSpace {
 }
 
 impl Parse for NameSpace {
-    fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        _: &mut impl NodeStoreBuilder,
+        _: &mut impl ValueStoreBuilder,
+        _: &mut impl CacheStoreBuilder,
+    ) -> Self {
         node.next_text().unwrap().into()
     }
 }
@@ -62,11 +64,12 @@ impl From<&str> for Visibility {
 }
 
 impl Parse for Visibility {
-    fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        _: &mut impl NodeStoreBuilder,
+        _: &mut impl ValueStoreBuilder,
+        _: &mut impl CacheStoreBuilder,
+    ) -> Self {
         node.next_text().unwrap().into()
     }
 }
@@ -89,11 +92,12 @@ impl Default for MergePriority {
 }
 
 impl Parse for MergePriority {
-    fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        _: &mut impl NodeStoreBuilder,
+        _: &mut impl ValueStoreBuilder,
+        _: &mut impl CacheStoreBuilder,
+    ) -> Self {
         node.next_text().unwrap().into()
     }
 }
@@ -110,36 +114,39 @@ impl From<&str> for AccessMode {
 }
 
 impl Parse for AccessMode {
-    fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        _: &mut impl NodeStoreBuilder,
+        _: &mut impl ValueStoreBuilder,
+        _: &mut impl CacheStoreBuilder,
+    ) -> Self {
         node.next_text().unwrap().into()
     }
 }
 
 impl Parse for ImmOrPNode<i64> {
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         let peeked_text = node.peek().unwrap().text();
         if peeked_text.chars().next().unwrap().is_alphabetic() {
-            Self::PNode(node.parse(node_store, value_store))
+            Self::PNode(node.parse(node_builder, value_builder, cache_builder))
         } else {
-            Self::Imm(node.parse(node_store, value_store))
+            Self::Imm(node.parse(node_builder, value_builder, cache_builder))
         }
     }
 }
 
 impl Parse for ImmOrPNode<f64> {
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         let peeked_text = node.peek().unwrap().text();
 
         if peeked_text == "INF"
@@ -147,28 +154,29 @@ impl Parse for ImmOrPNode<f64> {
             || peeked_text == "NaN"
             || !peeked_text.chars().next().unwrap().is_alphabetic()
         {
-            Self::Imm(node.parse(node_store, value_store))
+            Self::Imm(node.parse(node_builder, value_builder, cache_builder))
         } else {
-            Self::PNode(node.parse(node_store, value_store))
+            Self::PNode(node.parse(node_builder, value_builder, cache_builder))
         }
     }
 }
 
 impl Parse for ImmOrPNode<bool> {
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         let peeked_text = node.peek().unwrap().text();
         if peeked_text == "Yes"
             || peeked_text == "No"
             || peeked_text == "true"
             || peeked_text == "false"
         {
-            Self::Imm(node.parse(node_store, value_store))
+            Self::Imm(node.parse(node_builder, value_builder, cache_builder))
         } else {
-            Self::PNode(node.parse(node_store, value_store))
+            Self::PNode(node.parse(node_builder, value_builder, cache_builder))
         }
     }
 }
@@ -176,15 +184,16 @@ impl Parse for ImmOrPNode<bool> {
 macro_rules! impl_parse_for_imm_or_pnode_id {
     ($id:ty, $value_ty:ty) => {
         impl Parse for ImmOrPNode<$id> {
-            fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-            where
-                T: WritableNodeStore,
-                U: ValueStore,
-            {
-                let node: ImmOrPNode<$value_ty> = node.parse(node_store, value_store);
+            fn parse(
+                node: &mut xml::Node,
+                node_builder: &mut impl NodeStoreBuilder,
+                value_builder: &mut impl ValueStoreBuilder,
+                cache_builder: &mut impl CacheStoreBuilder,
+            ) -> Self {
+                let node: ImmOrPNode<$value_ty> = node.parse(node_builder, value_builder, cache_builder);
                 match node {
                     ImmOrPNode::Imm(b) => {
-                        let id = value_store.store(b);
+                        let id = value_builder.store(b);
                         ImmOrPNode::Imm(id)
                     }
                     ImmOrPNode::PNode(id) => ImmOrPNode::PNode(id),
@@ -205,11 +214,12 @@ impl Default for IntegerRepresentation {
 }
 
 impl Parse for IntegerRepresentation {
-    fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        _: &mut impl NodeStoreBuilder,
+        _: &mut impl ValueStoreBuilder,
+        _: &mut impl CacheStoreBuilder,
+    ) -> Self {
         use IntegerRepresentation::{
             Boolean, HexNumber, IpV4Address, Linear, Logarithmic, MacAddress, PureNumber,
         };
@@ -229,11 +239,12 @@ impl Parse for IntegerRepresentation {
 }
 
 impl Parse for FloatRepresentation {
-    fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        _: &mut impl NodeStoreBuilder,
+        _: &mut impl ValueStoreBuilder,
+        _: &mut impl CacheStoreBuilder,
+    ) -> Self {
         let value = node.next_text().unwrap();
         match value {
             "Linear" => Self::Linear,
@@ -251,11 +262,12 @@ impl Default for FloatRepresentation {
 }
 
 impl Parse for Slope {
-    fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        _: &mut impl NodeStoreBuilder,
+        _: &mut impl ValueStoreBuilder,
+        _: &mut impl CacheStoreBuilder,
+    ) -> Self {
         let value = node.next_text().unwrap();
         match value {
             "Increasing" => Self::Increasing,
@@ -280,11 +292,12 @@ impl Default for DisplayNotation {
 }
 
 impl Parse for DisplayNotation {
-    fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        _: &mut impl NodeStoreBuilder,
+        _: &mut impl ValueStoreBuilder,
+        _: &mut impl CacheStoreBuilder,
+    ) -> Self {
         let value = node.next_text().unwrap();
         match value {
             "Automatic" => Self::Automatic,
@@ -326,11 +339,12 @@ impl From<&str> for CachingMode {
 }
 
 impl Parse for CachingMode {
-    fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        _: &mut impl NodeStoreBuilder,
+        _: &mut impl ValueStoreBuilder,
+        _: &mut impl CacheStoreBuilder,
+    ) -> Self {
         let text = node.next_text().unwrap();
         text.into()
     }
@@ -340,13 +354,14 @@ impl<T> Parse for NamedValue<T>
 where
     T: Clone + PartialEq + Parse,
 {
-    fn parse<U, S>(node: &mut xml::Node, node_store: &mut U, value_store: &mut S) -> Self
-    where
-        U: WritableNodeStore,
-        S: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         let name = node.peek().unwrap().attribute_of(NAME).unwrap().into();
-        let value = node.parse(node_store, value_store);
+        let value = node.parse(node_builder, value_builder, cache_builder);
         Self { name, value }
     }
 }
@@ -360,11 +375,12 @@ pub(super) fn convert_to_bool(value: &str) -> bool {
 }
 
 impl Parse for bool {
-    fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        _: &mut impl NodeStoreBuilder,
+        _: &mut impl ValueStoreBuilder,
+        _: &mut impl CacheStoreBuilder,
+    ) -> Self {
         let text = node.next_text().unwrap();
         convert_to_bool(text)
     }
@@ -387,33 +403,36 @@ pub(super) fn convert_to_uint(value: &str) -> u64 {
 }
 
 impl Parse for i64 {
-    fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        _: &mut impl NodeStoreBuilder,
+        _: &mut impl ValueStoreBuilder,
+        _: &mut impl CacheStoreBuilder,
+    ) -> Self {
         let value = node.next_text().unwrap();
         convert_to_int(value)
     }
 }
 
 impl Parse for u64 {
-    fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        _: &mut impl NodeStoreBuilder,
+        _: &mut impl ValueStoreBuilder,
+        _: &mut impl CacheStoreBuilder,
+    ) -> Self {
         let value = node.next_text().unwrap();
         convert_to_uint(value)
     }
 }
 
 impl Parse for f64 {
-    fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        _: &mut impl NodeStoreBuilder,
+        _: &mut impl ValueStoreBuilder,
+        _: &mut impl CacheStoreBuilder,
+    ) -> Self {
         let value = node.next_text().unwrap();
         if value == "INF" {
             f64::INFINITY
@@ -426,37 +445,40 @@ impl Parse for f64 {
 }
 
 impl Parse for String {
-    fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        _: &mut impl NodeStoreBuilder,
+        _: &mut impl ValueStoreBuilder,
+        _: &mut impl CacheStoreBuilder,
+    ) -> Self {
         let text = node.next_text().unwrap();
         text.into()
     }
 }
 
 impl Parse for NodeId {
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, _: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        _: &mut impl ValueStoreBuilder,
+        _: &mut impl CacheStoreBuilder,
+    ) -> Self {
         let text = node.next_text().unwrap();
-        node_store.id_by_name(text)
+        node_builder.get_or_intern(text)
     }
 }
 
 macro_rules! impl_parse_for_value_id {
     ($id:ty, $value_ty:ty) => {
         impl Parse for $id {
-            fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-            where
-                T: WritableNodeStore,
-                U: ValueStore,
-            {
-                let value: $value_ty = node.parse(node_store, value_store);
-                let id = value_store.store(value);
+            fn parse(
+                node: &mut xml::Node,
+                node_builder: &mut impl NodeStoreBuilder,
+                value_builder: &mut impl ValueStoreBuilder,
+                cache_builder: &mut impl CacheStoreBuilder,
+            ) -> Self {
+                let value: $value_ty = node.parse(node_builder, value_builder, cache_builder);
+                let id = value_builder.store(value);
                 id
             }
         }
@@ -472,20 +494,21 @@ where
     T: Clone + Parse + PartialEq,
     ImmOrPNode<T>: Parse,
 {
-    fn parse<U, S>(node: &mut xml::Node, node_store: &mut U, value_store: &mut S) -> Self
-    where
-        U: WritableNodeStore,
-        S: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         let peek = node.peek().unwrap();
         match peek.tag_name() {
-            VALUE => ValueKind::Value(node.parse(node_store, value_store)),
+            VALUE => ValueKind::Value(node.parse(node_builder, value_builder, cache_builder)),
             P_VALUE_COPY | P_VALUE => {
-                let p_value = node.parse(node_store, value_store);
+                let p_value = node.parse(node_builder, value_builder, cache_builder);
                 ValueKind::PValue(p_value)
             }
             P_INDEX => {
-                let p_index = node.parse(node_store, value_store);
+                let p_index = node.parse(node_builder, value_builder, cache_builder);
                 ValueKind::PIndex(p_index)
             }
             _ => unreachable!(),
@@ -494,17 +517,20 @@ where
 }
 
 impl Parse for PValue {
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         // NOTE: The pValue can be sandwiched between two pValueCopy sequence.
-        let mut p_value_copies = node.parse_while(P_VALUE_COPY, node_store, value_store);
+        let mut p_value_copies =
+            node.parse_while(P_VALUE_COPY, node_builder, value_builder, cache_builder);
 
-        let p_value = node.parse(node_store, value_store);
+        let p_value = node.parse(node_builder, value_builder, cache_builder);
 
-        let node_ids: Vec<NodeId> = node.parse_while(P_VALUE_COPY, node_store, value_store);
+        let node_ids: Vec<NodeId> =
+            node.parse_while(P_VALUE_COPY, node_builder, value_builder, cache_builder);
         p_value_copies.extend(node_ids);
 
         Self {
@@ -519,22 +545,23 @@ where
     T: Clone + PartialEq + Parse,
     ImmOrPNode<T>: Parse,
 {
-    fn parse<U, S>(node: &mut xml::Node, node_store: &mut U, value_store: &mut S) -> Self
-    where
-        U: WritableNodeStore,
-        S: ValueStore,
-    {
-        let p_index = node.parse(node_store, value_store);
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
+        let p_index = node.parse(node_builder, value_builder, cache_builder);
 
         let mut value_indexed = vec![];
         while let Some(indexed) = node
-            .parse_if(VALUE_INDEXED, node_store, value_store)
-            .or_else(|| node.parse_if(P_VALUE_INDEXED, node_store, value_store))
+            .parse_if(VALUE_INDEXED, node_builder, value_builder, cache_builder)
+            .or_else(|| node.parse_if(P_VALUE_INDEXED, node_builder, value_builder, cache_builder))
         {
             value_indexed.push(indexed);
         }
 
-        let value_default = node.parse(node_store, value_store);
+        let value_default = node.parse(node_builder, value_builder, cache_builder);
 
         Self {
             p_index,
@@ -549,45 +576,50 @@ where
     T: Clone + PartialEq + Parse,
     ImmOrPNode<T>: Parse,
 {
-    fn parse<U, S>(node: &mut xml::Node, node_store: &mut U, value_store: &mut S) -> Self
-    where
-        U: WritableNodeStore,
-        S: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         let index = convert_to_int(node.peek().unwrap().attribute_of(INDEX).unwrap());
-        let indexed = node.parse(node_store, value_store);
+        let indexed = node.parse(node_builder, value_builder, cache_builder);
         Self { index, indexed }
     }
 }
 
 impl Parse for AddressKind {
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         let peeked_node = node.peek().unwrap();
         match peeked_node.tag_name() {
-            ADDRESS | P_ADDRESS => Self::Address(node.parse(node_store, value_store)),
+            ADDRESS | P_ADDRESS => Self::Address(node.parse(node_builder, value_builder, cache_builder)),
             INT_SWISS_KNIFE => {
                 let swiss_knife: IntSwissKnifeNode =
-                    node.next().unwrap().parse(node_store, value_store);
+                    node.next()
+                        .unwrap()
+                        .parse(node_builder, value_builder, cache_builder);
                 let id = swiss_knife.node_base().id();
-                node_store.store_node(id, NodeData::IntSwissKnife(swiss_knife.into()));
+                node_builder.store_node(id, NodeData::IntSwissKnife(swiss_knife.into()));
                 Self::IntSwissKnife(id)
             }
-            P_INDEX => Self::PIndex(node.parse(node_store, value_store)),
+            P_INDEX => Self::PIndex(node.parse(node_builder, value_builder, cache_builder)),
             _ => unreachable!(),
         }
     }
 }
 
 impl Parse for RegPIndex {
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         let next_node = node.peek().unwrap();
 
         let imm_offset = next_node
@@ -595,10 +627,10 @@ impl Parse for RegPIndex {
             .map(|s| ImmOrPNode::Imm(convert_to_int(s)));
         let pnode_offset = next_node
             .attribute_of(P_OFFSET)
-            .map(|s| ImmOrPNode::PNode(node_store.id_by_name(s)));
+            .map(|s| ImmOrPNode::PNode(node_builder.get_or_intern(s)));
         let offset = imm_offset.xor(pnode_offset);
 
-        let p_index = node.parse(node_store, value_store);
+        let p_index = node.parse(node_builder, value_builder, cache_builder);
 
         Self { offset, p_index }
     }
@@ -611,11 +643,12 @@ impl Default for Endianness {
 }
 
 impl Parse for Endianness {
-    fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        _: &mut impl NodeStoreBuilder,
+        _: &mut impl ValueStoreBuilder,
+        _: &mut impl CacheStoreBuilder,
+    ) -> Self {
         match node.next_text().unwrap() {
             "LittleEndian" => Self::LE,
             "BigEndian" => Self::BE,
@@ -631,11 +664,12 @@ impl Default for Sign {
 }
 
 impl Parse for Sign {
-    fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        _: &mut impl NodeStoreBuilder,
+        _: &mut impl ValueStoreBuilder,
+        _: &mut impl CacheStoreBuilder,
+    ) -> Self {
         match node.next_text().unwrap() {
             "Signed" => Self::Signed,
             "Unsigned" => Self::Unsigned,
@@ -645,18 +679,20 @@ impl Parse for Sign {
 }
 
 impl Parse for BitMask {
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
-        node.parse_if(BIT, node_store, value_store).map_or_else(
-            || {
-                let lsb = node.parse(node_store, value_store);
-                let msb = node.parse(node_store, value_store);
-                Self::Range { lsb, msb }
-            },
-            Self::SingleBit,
-        )
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
+        node.parse_if(BIT, node_builder, value_builder, cache_builder)
+            .map_or_else(
+                || {
+                    let lsb = node.parse(node_builder, value_builder, cache_builder);
+                    let msb = node.parse(node_builder, value_builder, cache_builder);
+                    Self::Range { lsb, msb }
+                },
+                Self::SingleBit,
+            )
     }
 }

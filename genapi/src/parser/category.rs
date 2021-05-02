@@ -1,7 +1,7 @@
 use tracing::debug;
 
 use crate::{
-    store::{ValueStore, WritableNodeStore},
+    builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder},
     CategoryNode,
 };
 
@@ -11,19 +11,20 @@ use super::{
 };
 
 impl Parse for CategoryNode {
-    #[tracing::instrument(level = "trace", skip(node_store, value_store))]
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    #[tracing::instrument(level = "trace", skip(node_builder, value_builder, cache_builder))]
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         debug!("start parsing `CategoryNode`");
         debug_assert_eq!(node.tag_name(), CATEGORY);
 
-        let attr_base = node.parse(node_store, value_store);
-        let elem_base = node.parse(node_store, value_store);
+        let attr_base = node.parse(node_builder, value_builder, cache_builder);
+        let elem_base = node.parse(node_builder, value_builder, cache_builder);
 
-        let p_features = node.parse_while(P_FEATURE, node_store, value_store);
+        let p_features = node.parse_while(P_FEATURE, node_builder, value_builder, cache_builder);
 
         Self {
             attr_base,
@@ -35,22 +36,7 @@ impl Parse for CategoryNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::store::{DefaultNodeStore, DefaultValueStore};
-
-    use super::*;
-
-    fn category_node_from_str(xml: &str) -> (CategoryNode, DefaultNodeStore, DefaultValueStore) {
-        let document = xml::Document::from_str(xml).unwrap();
-        let mut node_store = DefaultNodeStore::new();
-        let mut value_store = DefaultValueStore::new();
-        (
-            document
-                .root_node()
-                .parse(&mut node_store, &mut value_store),
-            node_store,
-            value_store,
-        )
-    }
+    use super::{super::utils::tests::parse_default, *};
 
     #[test]
     fn test_category_node_filled() {
@@ -61,12 +47,11 @@ mod tests {
             </Category>
             "#;
 
-        let (node, mut node_store, _) = category_node_from_str(&xml);
-
+        let (node, mut node_builder, ..): (CategoryNode, _, _, _) = parse_default(xml);
         let p_features = node.p_features();
         assert_eq!(p_features.len(), 2);
-        assert_eq!(p_features[0], node_store.id_by_name("FeatureNode0"));
-        assert_eq!(p_features[1], node_store.id_by_name("FeatureNode1"));
+        assert_eq!(p_features[0], node_builder.get_or_intern("FeatureNode0"));
+        assert_eq!(p_features[1], node_builder.get_or_intern("FeatureNode1"));
     }
 
     #[test]
@@ -76,8 +61,7 @@ mod tests {
             </Category>
             "#;
 
-        let (node, ..) = category_node_from_str(&xml);
-
+        let (node, ..): (CategoryNode, _, _, _) = parse_default(xml);
         let p_features = node.p_features();
         assert!(p_features.is_empty());
     }

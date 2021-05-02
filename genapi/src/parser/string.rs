@@ -1,8 +1,8 @@
 use tracing::debug;
 
 use crate::{
+    builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder},
     elem_type::ImmOrPNode,
-    store::{ValueStore, WritableNodeStore},
     StringNode,
 };
 
@@ -12,25 +12,26 @@ use super::{
 };
 
 impl Parse for StringNode {
-    #[tracing::instrument(level = "trace", skip(node_store, value_store))]
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    #[tracing::instrument(level = "trace", skip(node_builder, value_builder, cache_builder))]
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         debug!("start parsing `StringNode`");
         debug_assert_eq!(node.tag_name(), STRING);
 
-        let attr_base = node.parse(node_store, value_store);
-        let elem_base = node.parse(node_store, value_store);
+        let attr_base = node.parse(node_builder, value_builder, cache_builder);
+        let elem_base = node.parse(node_builder, value_builder, cache_builder);
 
         let streamable = node
-            .parse_if(STREAMABLE, node_store, value_store)
+            .parse_if(STREAMABLE, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
         let value = node.next_if(VALUE).map_or_else(
-            || ImmOrPNode::PNode(node_store.id_by_name(node.next_text().unwrap())),
+            || ImmOrPNode::PNode(node_builder.get_or_intern(node.next_text().unwrap())),
             |next_node| {
-                let id = value_store.store(String::from(next_node.text()));
+                let id = value_builder.store(String::from(next_node.text()));
                 ImmOrPNode::Imm(id)
             },
         );
@@ -46,9 +47,9 @@ impl Parse for StringNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::store::{DefaultNodeStore, DefaultValueStore};
+    use crate::store::ValueStore;
 
-    use super::*;
+    use super::{super::utils::tests::parse_default, *};
 
     #[test]
     fn test_string_with_imm() {
@@ -59,15 +60,9 @@ mod tests {
         </String>
         "#;
 
-        let mut node_store = DefaultNodeStore::new();
-        let mut value_store = DefaultValueStore::new();
-        let node: StringNode = xml::Document::from_str(&xml)
-            .unwrap()
-            .root_node()
-            .parse(&mut node_store, &mut value_store);
-
+        let (node, _, value_builder, _): (StringNode, _, _, _) = parse_default(xml);
         assert_eq!(node.streamable(), true);
-        let value = value_store
+        let value = value_builder
             .str_value(node.value_elem().imm().unwrap())
             .unwrap();
         assert_eq!(value, "Immediate String");
@@ -81,17 +76,11 @@ mod tests {
         </String>
         "#;
 
-        let mut node_store = DefaultNodeStore::new();
-        let mut value_store = DefaultValueStore::new();
-        let node: StringNode = xml::Document::from_str(&xml)
-            .unwrap()
-            .root_node()
-            .parse(&mut node_store, &mut value_store);
-
+        let (node, mut node_builder, ..): (StringNode, _, _, _) = parse_default(xml);
         assert_eq!(node.streamable(), false);
         assert_eq!(
             node.value_elem(),
-            ImmOrPNode::PNode(node_store.id_by_name("AnotherStringNode"))
+            ImmOrPNode::PNode(node_builder.get_or_intern("AnotherStringNode"))
         );
     }
 }

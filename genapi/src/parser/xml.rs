@@ -1,6 +1,6 @@
 use std::{fmt, iter::Peekable};
 
-use crate::store::{ValueStore, WritableNodeStore};
+use crate::builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder};
 
 use super::{Parse, ParseResult};
 
@@ -32,46 +32,38 @@ pub(super) struct Node<'a, 'input> {
 }
 
 impl<'a, 'input> Node<'a, 'input> {
-    pub(super) fn parse<T, U, S>(&mut self, node_store: &mut U, value_store: &mut S) -> T
-    where
-        T: Parse,
-        U: WritableNodeStore,
-        S: ValueStore,
-    {
-        T::parse(self, node_store, value_store)
+    pub(super) fn parse<T: Parse>(
+        &mut self,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> T {
+        T::parse(self, node_builder, value_builder, cache_builder)
     }
 
-    pub(super) fn parse_if<T, U, S>(
+    pub(super) fn parse_if<T: Parse>(
         &mut self,
         tag_name: &str,
-        node_store: &mut U,
-        value_store: &mut S,
-    ) -> Option<T>
-    where
-        T: Parse,
-        U: WritableNodeStore,
-        S: ValueStore,
-    {
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Option<T> {
         if self.peek()?.tag_name() == tag_name {
-            Some(self.parse(node_store, value_store))
+            Some(self.parse(node_builder, value_builder, cache_builder))
         } else {
             None
         }
     }
 
-    pub(super) fn parse_while<T, U, S>(
+    pub(super) fn parse_while<T: Parse>(
         &mut self,
         tag_name: &str,
-        node_store: &mut U,
-        value_store: &mut S,
-    ) -> Vec<T>
-    where
-        T: Parse,
-        U: WritableNodeStore,
-        S: ValueStore,
-    {
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Vec<T> {
         let mut res = vec![];
-        while let Some(parsed) = self.parse_if(tag_name, node_store, value_store) {
+        while let Some(parsed) = self.parse_if(tag_name, node_builder, value_builder, cache_builder) {
             res.push(parsed);
         }
         res

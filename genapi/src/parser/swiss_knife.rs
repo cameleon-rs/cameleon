@@ -1,7 +1,7 @@
 use tracing::debug;
 
 use crate::{
-    store::{ValueStore, WritableNodeStore},
+    builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder},
     SwissKnifeNode,
 };
 
@@ -14,34 +14,35 @@ use super::{
 };
 
 impl Parse for SwissKnifeNode {
-    #[tracing::instrument(level = "trace", skip(node_store, value_store))]
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    #[tracing::instrument(level = "trace", skip(node_builder, value_builder, cache_builder))]
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         debug!("start parsing `SwissKnifeNode`");
         debug_assert_eq!(node.tag_name(), SWISS_KNIFE);
 
-        let attr_base = node.parse(node_store, value_store);
-        let elem_base = node.parse(node_store, value_store);
+        let attr_base = node.parse(node_builder, value_builder, cache_builder);
+        let elem_base = node.parse(node_builder, value_builder, cache_builder);
 
         let streamable = node
-            .parse_if(STREAMABLE, node_store, value_store)
+            .parse_if(STREAMABLE, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
-        let p_variables = node.parse_while(P_VARIABLE, node_store, value_store);
-        let constants = node.parse_while(CONSTANT, node_store, value_store);
-        let expressions = node.parse_while(EXPRESSION, node_store, value_store);
-        let formula = node.parse(node_store, value_store);
-        let unit = node.parse_if(UNIT, node_store, value_store);
+        let p_variables = node.parse_while(P_VARIABLE, node_builder, value_builder, cache_builder);
+        let constants = node.parse_while(CONSTANT, node_builder, value_builder, cache_builder);
+        let expressions = node.parse_while(EXPRESSION, node_builder, value_builder, cache_builder);
+        let formula = node.parse(node_builder, value_builder, cache_builder);
+        let unit = node.parse_if(UNIT, node_builder, value_builder, cache_builder);
         let representation = node
-            .parse_if(REPRESENTATION, node_store, value_store)
+            .parse_if(REPRESENTATION, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
         let display_notation = node
-            .parse_if(DISPLAY_NOTATION, node_store, value_store)
+            .parse_if(DISPLAY_NOTATION, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
         let display_precision = node
-            .parse_if(DISPLAY_PRECISION, node_store, value_store)
+            .parse_if(DISPLAY_PRECISION, node_builder, value_builder, cache_builder)
             .unwrap_or(6);
 
         Self {
@@ -62,9 +63,7 @@ impl Parse for SwissKnifeNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::store::{DefaultNodeStore, DefaultValueStore};
-
-    use super::*;
+    use super::{super::utils::tests::parse_default, *};
 
     #[test]
     fn test_swiss_knife() {
@@ -78,19 +77,13 @@ mod tests {
              </SwissKnife>
              "#;
 
-        let mut node_store = DefaultNodeStore::new();
-        let mut value_store = DefaultValueStore::new();
-        let node: SwissKnifeNode = xml::Document::from_str(&xml)
-            .unwrap()
-            .root_node()
-            .parse(&mut node_store, &mut value_store);
-
+        let (node, mut node_builder, ..): (SwissKnifeNode, _, _, _) = parse_default(xml);
         let p_variables = node.p_variables();
         assert_eq!(p_variables.len(), 2);
         assert_eq!(p_variables[0].name(), "Var1");
-        assert_eq!(p_variables[0].value(), node_store.id_by_name("pValue1"));
+        assert_eq!(p_variables[0].value(), node_builder.get_or_intern("pValue1"));
         assert_eq!(p_variables[1].name(), "Var2");
-        assert_eq!(p_variables[1].value(), node_store.id_by_name("pValue2"));
+        assert_eq!(p_variables[1].value(), node_builder.get_or_intern("pValue2"));
 
         let constants = node.constants();
         assert_eq!(constants.len(), 1);

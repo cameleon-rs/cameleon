@@ -1,7 +1,7 @@
 use tracing::debug;
 
 use crate::{
-    store::{ValueStore, WritableNodeStore},
+    builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder},
     FloatRegNode,
 };
 
@@ -11,33 +11,34 @@ use super::{
 };
 
 impl Parse for FloatRegNode {
-    #[tracing::instrument(level = "trace", skip(node_store, value_store))]
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    #[tracing::instrument(level = "trace", skip(node_builder, value_builder, cache_builder))]
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         debug!("start parsing `FloatRegNode`");
         debug_assert_eq!(node.tag_name(), FLOAT_REG);
 
-        let attr_base = node.parse(node_store, value_store);
-        let register_base = node.parse(node_store, value_store);
+        let attr_base = node.parse(node_builder, value_builder, cache_builder);
+        let register_base = node.parse(node_builder, value_builder, cache_builder);
 
         let endianness = node
-            .parse_if(ENDIANNESS, node_store, value_store)
+            .parse_if(ENDIANNESS, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
-        let unit = node.parse_if(UNIT, node_store, value_store);
+        let unit = node.parse_if(UNIT, node_builder, value_builder, cache_builder);
         let representation = node
-            .parse_if(REPRESENTATION, node_store, value_store)
+            .parse_if(REPRESENTATION, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
         let display_notation = node
-            .parse_if(DISPLAY_NOTATION, node_store, value_store)
+            .parse_if(DISPLAY_NOTATION, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
         let display_precision = node
-            .parse_if(DISPLAY_PRECISION, node_store, value_store)
+            .parse_if(DISPLAY_PRECISION, node_builder, value_builder, cache_builder)
             .unwrap_or(6);
 
-        Self {
+        let node = Self {
             attr_base,
             register_base,
             endianness,
@@ -45,18 +46,18 @@ impl Parse for FloatRegNode {
             representation,
             display_notation,
             display_precision,
-        }
+        };
+        node.register_base
+            .store_invalidators(node.attr_base.id, cache_builder);
+        node
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{super::utils::tests::parse_default, *};
 
-    use crate::{
-        elem_type::{DisplayNotation, Endianness, FloatRepresentation},
-        store::{DefaultNodeStore, DefaultValueStore},
-    };
+    use crate::elem_type::{DisplayNotation, Endianness, FloatRepresentation};
 
     #[test]
     fn test_float_reg() {
@@ -73,12 +74,7 @@ mod tests {
         </FloatReg>
         "#;
 
-        let mut node_store = DefaultNodeStore::new();
-        let mut value_store = DefaultValueStore::new();
-        let node: FloatRegNode = xml::Document::from_str(&xml)
-            .unwrap()
-            .root_node()
-            .parse(&mut node_store, &mut value_store);
+        let (node, ..): (FloatRegNode, _, _, _) = parse_default(xml);
 
         assert_eq!(node.endianness(), Endianness::BE);
         assert_eq!(node.unit_elem().unwrap(), "Hz");

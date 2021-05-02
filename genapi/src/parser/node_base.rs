@@ -1,7 +1,7 @@
 use crate::{
+    builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder},
     elem_type::AccessMode,
     node_base::{NodeAttributeBase, NodeElementBase},
-    store::{ValueStore, WritableNodeStore},
 };
 
 use super::{
@@ -16,13 +16,14 @@ use super::{
 };
 
 impl Parse for NodeAttributeBase {
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, _: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        _: &mut impl ValueStoreBuilder,
+        _: &mut impl CacheStoreBuilder,
+    ) -> Self {
         let name = node.attribute_of(NAME).unwrap();
-        let id = node_store.id_by_name(&name);
+        let id = node_builder.get_or_intern(&name);
         let name_space = node
             .attribute_of(NAME_SPACE)
             .map(|text| text.into())
@@ -45,37 +46,39 @@ impl Parse for NodeAttributeBase {
 }
 
 impl Parse for NodeElementBase {
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         // Ignore Extension element.
-        let _: Option<String> = node.parse_if(EXTENSION, node_store, value_store);
+        let _: Option<String> = node.parse_if(EXTENSION, node_builder, value_builder, cache_builder);
 
-        let tool_tip = node.parse_if(TOOL_TIP, node_store, value_store);
-        let description = node.parse_if(DESCRIPTION, node_store, value_store);
-        let display_name = node.parse_if(DISPLAY_NAME, node_store, value_store);
+        let tool_tip = node.parse_if(TOOL_TIP, node_builder, value_builder, cache_builder);
+        let description = node.parse_if(DESCRIPTION, node_builder, value_builder, cache_builder);
+        let display_name = node.parse_if(DISPLAY_NAME, node_builder, value_builder, cache_builder);
         let visibility = node
-            .parse_if(VISIBILITY, node_store, value_store)
+            .parse_if(VISIBILITY, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
-        let docu_url = node.parse_if(DOCU_URL, node_store, value_store);
+        let docu_url = node.parse_if(DOCU_URL, node_builder, value_builder, cache_builder);
         let is_deprecated = node
-            .parse_if(IS_DEPRECATED, node_store, value_store)
+            .parse_if(IS_DEPRECATED, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
         let event_id = node
             .next_if(EVENT_ID)
             .map(|n| u64::from_str_radix(n.text(), 16).unwrap());
-        let p_is_implemented = node.parse_if(P_IS_IMPLEMENTED, node_store, value_store);
-        let p_is_available = node.parse_if(P_IS_AVAILABLE, node_store, value_store);
-        let p_is_locked = node.parse_if(P_IS_LOCKED, node_store, value_store);
-        let p_block_polling = node.parse_if(P_BLOCK_POLLING, node_store, value_store);
+        let p_is_implemented =
+            node.parse_if(P_IS_IMPLEMENTED, node_builder, value_builder, cache_builder);
+        let p_is_available = node.parse_if(P_IS_AVAILABLE, node_builder, value_builder, cache_builder);
+        let p_is_locked = node.parse_if(P_IS_LOCKED, node_builder, value_builder, cache_builder);
+        let p_block_polling = node.parse_if(P_BLOCK_POLLING, node_builder, value_builder, cache_builder);
         let imposed_access_mode = node
-            .parse_if(IMPOSED_ACCESS_MODE, node_store, value_store)
+            .parse_if(IMPOSED_ACCESS_MODE, node_builder, value_builder, cache_builder)
             .unwrap_or(AccessMode::RW);
-        let p_errors = node.parse_while(P_ERROR, node_store, value_store);
-        let p_alias = node.parse_if(P_ALIAS, node_store, value_store);
-        let p_cast_alias = node.parse_if(P_CAST_ALIAS, node_store, value_store);
+        let p_errors = node.parse_while(P_ERROR, node_builder, value_builder, cache_builder);
+        let p_alias = node.parse_if(P_ALIAS, node_builder, value_builder, cache_builder);
+        let p_cast_alias = node.parse_if(P_CAST_ALIAS, node_builder, value_builder, cache_builder);
 
         Self {
             tool_tip,

@@ -1,7 +1,7 @@
 use tracing::debug;
 
 use crate::{
-    store::{ValueStore, WritableNodeStore},
+    builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder},
     RegisterDescription,
 };
 
@@ -17,11 +17,12 @@ use super::{
 
 impl Parse for RegisterDescription {
     #[tracing::instrument(level = "trace")]
-    fn parse<T, U>(node: &mut xml::Node, _: &mut T, _: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    fn parse(
+        node: &mut xml::Node,
+        _: &mut impl NodeStoreBuilder,
+        _: &mut impl ValueStoreBuilder,
+        _: &mut impl CacheStoreBuilder,
+    ) -> Self {
         debug!("start parsing `RegisterDescription`");
         debug_assert_eq!(node.tag_name(), REGISTER_DESCRIPTION);
 
@@ -60,11 +61,9 @@ impl Parse for RegisterDescription {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{
-        elem_type::StandardNameSpace,
-        store::{DefaultNodeStore, DefaultValueStore},
-    };
+    use crate::elem_type::StandardNameSpace;
+
+    use super::{super::utils::tests::parse_default, *};
 
     #[test]
     #[allow(clippy::too_many_lines)]
@@ -238,13 +237,7 @@ mod tests {
         </RegisterDescription>
         "#;
 
-        let document = xml::Document::from_str(xml).unwrap();
-        let mut node_store = DefaultNodeStore::new();
-        let mut value_store = DefaultValueStore::new();
-        let reg_desc: RegisterDescription = document
-            .root_node()
-            .parse(&mut node_store, &mut value_store);
-
+        let (reg_desc, ..): (RegisterDescription, _, _, _) = parse_default(xml);
         assert_eq!(reg_desc.model_name(), "CameleonModel");
         assert_eq!(reg_desc.vendor_name(), "CameleonVendor");
         assert_eq!(reg_desc.standard_name_space(), StandardNameSpace::None);

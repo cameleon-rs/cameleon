@@ -1,7 +1,7 @@
 use tracing::debug;
 
 use crate::{
-    store::{ValueStore, WritableNodeStore},
+    builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder},
     EnumEntryNode, EnumerationNode,
 };
 
@@ -14,28 +14,29 @@ use super::{
 };
 
 impl Parse for EnumerationNode {
-    #[tracing::instrument(level = "trace", skip(node_store, value_store))]
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    #[tracing::instrument(level = "trace", skip(node_builder, value_builder, cache_builder))]
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         debug!("start parsing `EnumerationNode`");
         debug_assert_eq!(node.tag_name(), ENUMERATION);
 
-        let attr_base = node.parse(node_store, value_store);
-        let elem_base = node.parse(node_store, value_store);
+        let attr_base = node.parse(node_builder, value_builder, cache_builder);
+        let elem_base = node.parse(node_builder, value_builder, cache_builder);
 
         let streamable = node
-            .parse_if(STREAMABLE, node_store, value_store)
+            .parse_if(STREAMABLE, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
         let mut entries = vec![];
         while let Some(mut ent_node) = node.next_if(ENUM_ENTRY) {
-            entries.push(ent_node.parse(node_store, value_store));
+            entries.push(ent_node.parse(node_builder, value_builder, cache_builder));
         }
-        let value = node.parse(node_store, value_store);
-        let p_selected = node.parse_while(P_SELECTED, node_store, value_store);
-        let polling_time = node.parse_if(POLLING_TIME, node_store, value_store);
+        let value = node.parse(node_builder, value_builder, cache_builder);
+        let p_selected = node.parse_while(P_SELECTED, node_builder, value_builder, cache_builder);
+        let polling_time = node.parse_if(POLLING_TIME, node_builder, value_builder, cache_builder);
 
         Self {
             attr_base,
@@ -50,23 +51,24 @@ impl Parse for EnumerationNode {
 }
 
 impl Parse for EnumEntryNode {
-    #[tracing::instrument(level = "trace", skip(node_store, value_store))]
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    #[tracing::instrument(level = "trace", skip(node_builder, value_builder, cache_builder))]
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         debug!("start parsing `EnumEntryNode`");
         debug_assert_eq!(node.tag_name(), ENUM_ENTRY);
 
-        let attr_base = node.parse(node_store, value_store);
-        let elem_base = node.parse(node_store, value_store);
+        let attr_base = node.parse(node_builder, value_builder, cache_builder);
+        let elem_base = node.parse(node_builder, value_builder, cache_builder);
 
-        let value = node.parse(node_store, value_store);
-        let numeric_values = node.parse_while(NUMERIC_VALUE, node_store, value_store);
-        let symbolic = node.parse_if(SYMBOLIC, node_store, value_store);
+        let value = node.parse(node_builder, value_builder, cache_builder);
+        let numeric_values = node.parse_while(NUMERIC_VALUE, node_builder, value_builder, cache_builder);
+        let symbolic = node.parse_if(SYMBOLIC, node_builder, value_builder, cache_builder);
         let is_self_clearing = node
-            .parse_if(IS_SELF_CLEARING, node_store, value_store)
+            .parse_if(IS_SELF_CLEARING, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
 
         Self {
@@ -82,12 +84,9 @@ impl Parse for EnumEntryNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        elem_type::ImmOrPNode,
-        store::{DefaultNodeStore, DefaultValueStore},
-    };
+    use crate::elem_type::ImmOrPNode;
 
-    use super::*;
+    use super::{super::utils::tests::parse_default, *};
 
     #[test]
     fn test_enumeration() {
@@ -107,16 +106,11 @@ mod tests {
             </Enumeration>
             "#;
 
-        let mut node_store = DefaultNodeStore::new();
-        let mut value_store = DefaultValueStore::new();
-        let node: EnumerationNode = xml::Document::from_str(&xml)
-            .unwrap()
-            .root_node()
-            .parse(&mut node_store, &mut value_store);
+        let (node, mut node_builder, ..): (EnumerationNode, _, _, _) = parse_default(xml);
 
         assert_eq!(
             node.value_elem(),
-            ImmOrPNode::PNode(node_store.id_by_name("MyNode"))
+            ImmOrPNode::PNode(node_builder.get_or_intern("MyNode"))
         );
         assert_eq!(node.polling_time(), Some(10));
 

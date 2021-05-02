@@ -1,40 +1,41 @@
 use tracing::debug;
 
 use crate::{
-    store::{ValueStore, WritableNodeStore},
+    builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder},
     RegisterNode,
 };
 
 use super::{elem_name::REGISTER, xml, Parse};
 
 impl Parse for RegisterNode {
-    #[tracing::instrument(level = "trace", skip(node_store, value_store))]
-    fn parse<T, U>(node: &mut xml::Node, node_store: &mut T, value_store: &mut U) -> Self
-    where
-        T: WritableNodeStore,
-        U: ValueStore,
-    {
+    #[tracing::instrument(level = "trace", skip(node_builder, value_builder, cache_builder))]
+    fn parse(
+        node: &mut xml::Node,
+        node_builder: &mut impl NodeStoreBuilder,
+        value_builder: &mut impl ValueStoreBuilder,
+        cache_builder: &mut impl CacheStoreBuilder,
+    ) -> Self {
         debug!("start parsing `RegisterNode`");
         debug_assert_eq!(node.tag_name(), REGISTER);
 
-        let attr_base = node.parse(node_store, value_store);
-        let register_base = node.parse(node_store, value_store);
+        let attr_base = node.parse(node_builder, value_builder, cache_builder);
+        let register_base = node.parse(node_builder, value_builder, cache_builder);
 
-        Self {
+        let node = Self {
             attr_base,
             register_base,
-        }
+        };
+        node.register_base
+            .store_invalidators(node.attr_base.id, cache_builder);
+        node
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        elem_type::{AccessMode, AddressKind, CachingMode, ImmOrPNode},
-        store::{DefaultNodeStore, DefaultValueStore},
-    };
+    use crate::elem_type::{AccessMode, AddressKind, CachingMode, ImmOrPNode};
 
-    use super::*;
+    use super::{super::utils::tests::parse_default, *};
 
     #[test]
     fn test_register() {
@@ -65,12 +66,7 @@ mod tests {
         </Register>
         "#;
 
-        let mut node_store = DefaultNodeStore::new();
-        let mut value_store = DefaultValueStore::new();
-        let node: RegisterNode = xml::Document::from_str(&xml)
-            .unwrap()
-            .root_node()
-            .parse(&mut node_store, &mut value_store);
+        let (node, mut node_builder, ..): (RegisterNode, _, _, _) = parse_default(xml);
         let reg_base = node.register_base();
 
         let address_kinds = reg_base.address_kinds();
@@ -87,7 +83,7 @@ mod tests {
         match &address_kinds[3] {
             AddressKind::PIndex(p_index) => {
                 assert!(matches!(p_index.offset().unwrap(), ImmOrPNode::Imm(10)));
-                assert_eq!(p_index.p_index(), node_store.id_by_name("IndexNode"));
+                assert_eq!(p_index.p_index(), node_builder.get_or_intern("IndexNode"));
             }
             _ => panic!(),
         }

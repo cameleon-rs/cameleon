@@ -4,6 +4,7 @@ use auto_impl::auto_impl;
 use string_interner::{StringInterner, Symbol};
 
 use super::{
+    builder,
     interface::{
         IBooleanKind, ICategoryKind, ICommandKind, IEnumerationKind, IFloatKind, IIntegerKind,
         IPortKind, IRegisterKind, ISelectorKind, IStringKind,
@@ -46,9 +47,10 @@ impl NodeId {
         self,
         store: &'a impl NodeStore,
     ) -> GenApiResult<IIntegerKind<'a>> {
-        self.as_iinteger_kind(store).ok_or(GenApiError::invalid_node(
-            "the node doesn't implement `IInteger`".into(),
-        ))
+        self.as_iinteger_kind(store)
+            .ok_or(GenApiError::invalid_node(
+                "the node doesn't implement `IInteger`".into(),
+            ))
     }
 
     pub fn as_ifloat_kind<'a>(self, store: &'a impl NodeStore) -> Option<IFloatKind<'a>> {
@@ -82,9 +84,10 @@ impl NodeId {
         self,
         store: &'a impl NodeStore,
     ) -> GenApiResult<ICommandKind<'a>> {
-        self.as_icommand_kind(store).ok_or(GenApiError::invalid_node(
-            "the node doesn't implement `ICommand`".into(),
-        ))
+        self.as_icommand_kind(store)
+            .ok_or(GenApiError::invalid_node(
+                "the node doesn't implement `ICommand`".into(),
+            ))
     }
 
     pub fn as_ienumeration_kind<'a>(
@@ -112,9 +115,10 @@ impl NodeId {
         self,
         store: &'a impl NodeStore,
     ) -> GenApiResult<IBooleanKind<'a>> {
-        self.as_iboolean_kind(store).ok_or(GenApiError::invalid_node(
-            "the node doesn't implement `IBoolean`".into(),
-        ))
+        self.as_iboolean_kind(store)
+            .ok_or(GenApiError::invalid_node(
+                "the node doesn't implement `IBoolean`".into(),
+            ))
     }
 
     pub fn as_iregister_kind<'a>(self, store: &'a impl NodeStore) -> Option<IRegisterKind<'a>> {
@@ -246,19 +250,10 @@ pub trait NodeStore {
         F: FnMut(&NodeData);
 }
 
-#[auto_impl(&mut, Box)]
-pub trait WritableNodeStore {
-    fn store_node(&mut self, nid: NodeId, data: NodeData);
-
-    fn id_by_name<T>(&mut self, s: T) -> NodeId
-    where
-        T: AsRef<str>;
-}
-
 #[derive(Debug)]
 pub struct DefaultNodeStore {
-    interner: StringInterner<NodeId>,
-    store: Vec<Option<NodeData>>,
+    pub(super) interner: StringInterner<NodeId>,
+    pub(super) store: Vec<Option<NodeData>>,
 }
 
 impl DefaultNodeStore {
@@ -299,8 +294,14 @@ impl NodeStore for DefaultNodeStore {
     }
 }
 
-impl WritableNodeStore for DefaultNodeStore {
-    fn id_by_name<T>(&mut self, s: T) -> NodeId
+impl builder::NodeStoreBuilder for DefaultNodeStore {
+    type Store = Self;
+
+    fn build(self) -> Self {
+        self
+    }
+
+    fn get_or_intern<T>(&mut self, s: T) -> NodeId
     where
         T: AsRef<str>,
     {
@@ -367,11 +368,6 @@ pub enum ValueData {
 
 #[auto_impl(&mut, Box)]
 pub trait ValueStore {
-    fn store<T, U>(&mut self, data: T) -> U
-    where
-        T: Into<ValueData>,
-        U: From<ValueId>;
-
     fn value_opt<T>(&self, id: T) -> Option<&ValueData>
     where
         T: Into<ValueId>;
@@ -443,7 +439,13 @@ impl DefaultValueStore {
     }
 }
 
-impl ValueStore for DefaultValueStore {
+impl builder::ValueStoreBuilder for DefaultValueStore {
+    type Store = Self;
+
+    fn build(self) -> Self {
+        self
+    }
+
     fn store<T, U>(&mut self, data: T) -> U
     where
         T: Into<ValueData>,
@@ -455,7 +457,9 @@ impl ValueStore for DefaultValueStore {
         self.0.push(data.into());
         id.into()
     }
+}
 
+impl ValueStore for DefaultValueStore {
     fn value_opt<T>(&self, id: T) -> Option<&ValueData>
     where
         T: Into<ValueId>,
@@ -485,7 +489,7 @@ pub trait CacheStore {
     fn invalidate_of(&mut self, nid: NodeId);
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct DefaultCacheStore {
     store: HashMap<NodeId, Option<Vec<u8>>>,
     invalidators: HashMap<NodeId, Vec<NodeId>>,
@@ -493,30 +497,21 @@ pub struct DefaultCacheStore {
 
 impl DefaultCacheStore {
     #[must_use]
-    pub fn new(node_store: &impl NodeStore) -> Self {
-        let mut invalidators: HashMap<NodeId, Vec<NodeId>> = HashMap::new();
-        macro_rules! push_invalidators {
-            ($node:ident) => {{
-                let id = $node.node_base().id();
-                for invalidator in $node.register_base().p_invalidators() {
-                    let entry = invalidators.entry(*invalidator).or_default();
-                    entry.push(id);
-                }
-            }};
-        }
-        node_store.visit_nodes(|node| match node {
-            NodeData::IntReg(n) => push_invalidators!(n),
-            NodeData::MaskedIntReg(n) => push_invalidators!(n),
-            NodeData::FloatReg(n) => push_invalidators!(n),
-            NodeData::StringReg(n) => push_invalidators!(n),
-            NodeData::Register(n) => push_invalidators!(n),
-            _ => {}
-        });
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
 
-        Self {
-            store: HashMap::new(),
-            invalidators,
-        }
+impl builder::CacheStoreBuilder for DefaultCacheStore {
+    type Store = Self;
+
+    fn build(self) -> Self {
+        self
+    }
+
+    fn store_invalidator(&mut self, invalidator: NodeId, target: NodeId) {
+        let entry = self.invalidators.entry(invalidator).or_default();
+        entry.push(target)
     }
 }
 
@@ -559,6 +554,17 @@ impl CacheSink {
     pub fn new() -> Self {
         Self::default()
     }
+}
+
+impl builder::CacheStoreBuilder for CacheSink {
+    type Store = Self;
+
+    fn build(self) -> Self {
+        self
+    }
+
+    /// Store invalidator and its target to be invalidated.
+    fn store_invalidator(&mut self, _: NodeId, _: NodeId) {}
 }
 
 impl CacheStore for CacheSink {
