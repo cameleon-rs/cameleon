@@ -212,7 +212,7 @@ impl Expr {
                     BinOpKind::Div => apply_arithmetic_op!(overflowing_div, div),
                     BinOpKind::Rem => apply_arithmetic_op!(overflowing_rem, rem),
                     BinOpKind::Pow => {
-                        if lhs.is_integer() && rhs.is_integer() {
+                        if lhs.is_integer() && rhs.is_integer() && rhs.as_integer() >= 0 {
                             lhs.as_integer()
                                 .overflowing_pow(rhs.as_integer() as u32)
                                 .0
@@ -443,22 +443,22 @@ impl<'a> Parser<'a> {
 
     fn factor(&mut self) -> Expr {
         parse_binop!(
-            self.not,
+            self.unop,
             (Token::Star, BinOpKind::Mul),
             (Token::Slash, BinOpKind::Div),
             (Token::Percent, BinOpKind::Rem)
         )
     }
 
-    fn not(&mut self) -> Expr {
+    fn unop(&mut self) -> Expr {
         if self.eat(&Token::Tilde) {
-            let expr = self.not();
+            let expr = self.unop();
             Expr::UnOp {
                 kind: UnOpKind::Not,
                 expr: expr.into(),
             }
         } else if self.eat(&Token::Minus) {
-            let expr = self.not();
+            let expr = self.unop();
             Expr::UnOp {
                 kind: UnOpKind::Neg,
                 expr: expr.into(),
@@ -473,7 +473,7 @@ impl<'a> Parser<'a> {
     fn pow(&mut self) -> Expr {
         let expr = self.call();
         if self.eat(&Token::DoubleStar) {
-            let rhs = self.pow();
+            let rhs = self.unop();
             Expr::BinOp {
                 kind: BinOpKind::Pow,
                 lhs: expr.into(),
@@ -881,6 +881,7 @@ mod tests {
         test_eval_no_var_impl("(10 % 3) = 1");
         test_eval_no_var_impl("(2 * 3 ** 2) = 18");
         test_eval_no_var_impl("(2 ** 3 ** 2) = 512");
+        test_eval_no_var_impl("-1 ** 2 = -1");
         test_eval_no_var_impl("(1 << 2 + 2 >> 1) = 8");
         test_eval_no_var_impl("(1 || 1 && 0) = 1");
         test_eval_no_var_impl("((1 <> 0) + (1 = 1)) = 2");
@@ -901,7 +902,10 @@ mod tests {
         .into_iter()
         .collect();
 
-        test_eval_impl("((SIN(PI) - VAR1) < EPS) = 1", &env);
-        test_eval_impl("(LN(E) - 1 < EPS) = 1", &env);
+        test_eval_impl("ABS(SIN(PI / 2) - VAR1) < EPS", &env);
+        test_eval_impl("ABS(LN(E) - 1) < EPS", &env);
+        test_eval_impl("ABS(1. / 2. - 0.5) < EPS", &env);
+        test_eval_impl("ABS(2 ** -1 - 1. / 2.) < EPS", &env);
+        test_eval_impl("ABS(2 ** -1 ** 2 - 1. / 2.) < EPS", &env);
     }
 }
