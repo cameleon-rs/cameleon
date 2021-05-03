@@ -1,6 +1,7 @@
 use super::{
     elem_type::{AccessMode, AddressKind, CachingMode, ImmOrPNode},
     interface::IPort,
+    ivalue::IValue,
     node_base::NodeElementBase,
     store::{CacheStore, NodeId, NodeStore, ValueStore},
     Device, GenApiError, GenApiResult, ValueCtxt,

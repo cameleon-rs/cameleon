@@ -4,7 +4,7 @@ use super::{
     interface::{IFloat, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, NodeId, NodeStore, ValueStore},
-    Device, GenApiResult, ValueCtxt,
+    utils, Device, GenApiError, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -76,95 +76,120 @@ impl SwissKnifeNode {
 }
 
 impl IFloat for SwissKnifeNode {
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn value<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
-        todo!()
+        self.elem_base.verify_is_readable(device, store, cx)?;
+
+        let var_env =
+            utils::FormulaEnvCollector::new(&self.p_variables, &self.constants, &self.expressions)
+                .collect(device, store, cx)?;
+        let eval_result = self.formula.eval(&var_env)?;
+        Ok(eval_result.as_float())
     }
 
+    #[tracing::instrument(skip(self, store),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
-        value: f64,
-        device: &mut impl Device,
+        _: f64,
+        _: &mut impl Device,
         store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
+        _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo! {}
+        Err(GenApiError::access_denied(
+            "write to `SwissKnifeNode` is forbidden".into(),
+        ))
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn min<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
-        todo!()
+        self.value(device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn max<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
-        todo!()
+        self.value(device, store, cx)
     }
 
-    fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
-        todo!()
+    fn inc_mode(&self, _: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
+        Ok(None)
     }
 
     fn inc<T: ValueStore, U: CacheStore>(
         &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
+        _: &mut impl Device,
+        _: &impl NodeStore,
+        _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Option<f64>> {
-        todo!()
+        Ok(None)
     }
 
-    /// NOTE: `ValidValueSet` is not supported in `GenApiSchema Version 1.1` yet.
-    fn valid_value_set(&self, store: &impl NodeStore) -> &[f64] {
-        todo!()
+    fn representation(&self, _: &impl NodeStore) -> FloatRepresentation {
+        self.representation
     }
 
-    fn representation(&self, store: &impl NodeStore) -> FloatRepresentation {
-        todo!()
+    fn unit(&self, _: &impl NodeStore) -> Option<&str> {
+        self.unit_elem()
     }
 
-    fn unit(&self, store: &impl NodeStore) -> Option<&str> {
-        todo!()
+    fn display_notation(&self, _: &impl NodeStore) -> DisplayNotation {
+        self.display_notation
     }
 
-    fn display_notation(&self, store: &impl NodeStore) -> DisplayNotation {
-        todo!()
+    fn display_precision(&self, _: &impl NodeStore) -> i64 {
+        self.display_precision
     }
 
-    fn display_precision(&self, store: &impl NodeStore) -> i64 {
-        todo! {}
-    }
-
+    #[tracing::instrument(skip(self, store),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_min<T: ValueStore, U: CacheStore>(
         &self,
-        value: f64,
-        device: &mut impl Device,
+        _: f64,
+        _: &mut impl Device,
         store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
+        _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        Err(GenApiError::access_denied(
+            "write to `SwissKnifeNode` is forbidden".into(),
+        ))
     }
 
+    #[tracing::instrument(skip(self, store),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_max<T: ValueStore, U: CacheStore>(
         &self,
-        value: f64,
-        device: &mut impl Device,
+        _: f64,
+        _: &mut impl Device,
         store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
+        _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        todo!()
+        Err(GenApiError::access_denied(
+            "write to `SwissKnifeNode` is forbidden".into(),
+        ))
     }
 
     fn is_readable<T: ValueStore, U: CacheStore>(
@@ -173,15 +198,15 @@ impl IFloat for SwissKnifeNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        todo!()
+        self.elem_base.is_readable(device, store, cx)
     }
 
     fn is_writable<T: ValueStore, U: CacheStore>(
         &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
+        _: &mut impl Device,
+        _: &impl NodeStore,
+        _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        todo!()
+        Ok(false)
     }
 }

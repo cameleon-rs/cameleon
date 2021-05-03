@@ -127,9 +127,6 @@ pub trait IFloat {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Option<f64>>;
 
-    /// NOTE: `ValidValueSet` is not supported in `GenApiSchema Version 1.1` yet.
-    fn valid_value_set(&self, store: &impl NodeStore) -> &[f64];
-
     fn representation(&self, store: &impl NodeStore) -> FloatRepresentation;
 
     fn unit(&self, store: &impl NodeStore) -> Option<&str>;
@@ -593,10 +590,6 @@ impl<'a> IFloat for IFloatKind<'a> {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Option<f64>> {
         delegate_to_ifloat_variant!(self.inc(device, store, cx))
-    }
-
-    fn valid_value_set(&self, store: &impl NodeStore) -> &[f64] {
-        delegate_to_ifloat_variant!(self.valid_value_set(store))
     }
 
     fn representation(&self, store: &impl NodeStore) -> FloatRepresentation {
