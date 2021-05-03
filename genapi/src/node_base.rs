@@ -160,7 +160,9 @@ impl NodeElementBase {
         if self.is_readable(device, store, cx)? {
             Ok(())
         } else {
-            Err(GenApiError::access_denied("the node is not readable".into()))
+            Err(GenApiError::access_denied(
+                "the node is not readable".into(),
+            ))
         }
     }
 
@@ -173,7 +175,9 @@ impl NodeElementBase {
         if self.is_writable(device, store, cx)? {
             Ok(())
         } else {
-            Err(GenApiError::access_denied("the node is not writable".into()))
+            Err(GenApiError::access_denied(
+                "the node is not writable".into(),
+            ))
         }
     }
 
@@ -183,11 +187,8 @@ impl NodeElementBase {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        if let Some(nid) = self.p_is_locked {
-            bool_from_id(nid, device, store, cx)
-        } else {
-            Ok(false)
-        }
+        self.p_is_locked
+            .map_or(Ok(false), |nid| bool_from_id(nid, device, store, cx))
     }
 
     fn is_implemented<T: ValueStore, U: CacheStore>(
@@ -196,11 +197,8 @@ impl NodeElementBase {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        if let Some(nid) = self.p_is_implemented {
-            bool_from_id(nid, device, store, cx)
-        } else {
-            Ok(false)
-        }
+        self.p_is_implemented
+            .map_or(Ok(true), |nid| bool_from_id(nid, device, store, cx))
     }
 
     fn is_available<T: ValueStore, U: CacheStore>(
@@ -209,10 +207,7 @@ impl NodeElementBase {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        if let Some(nid) = self.p_is_available {
-            bool_from_id(nid, device, store, cx)
-        } else {
-            Ok(false)
-        }
+        self.p_is_available
+            .map_or(Ok(true), |nid| bool_from_id(nid, device, store, cx))
     }
 }
