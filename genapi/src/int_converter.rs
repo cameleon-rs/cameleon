@@ -95,7 +95,7 @@ impl IInteger for IntConverterNode {
 
         let mut collector =
             utils::FormulaEnvCollector::new(&self.p_variables, &self.constants, &self.expressions);
-        collector.insert("FROM", self.p_value(), device, store, cx)?;
+        collector.insert("TO", self.p_value(), device, store, cx)?;
         let var_env = collector.collect(device, store, cx)?;
 
         let eval_result = self.formula_from.eval(&var_env)?;
@@ -117,7 +117,7 @@ impl IInteger for IntConverterNode {
 
         let mut collector =
             utils::FormulaEnvCollector::new(&self.p_variables, &self.constants, &self.expressions);
-        collector.insert_imm("TO", value);
+        collector.insert_imm("FROM", value);
         let var_env = collector.collect(device, store, cx)?;
 
         let eval_result = self.formula_to.eval(&var_env)?;
