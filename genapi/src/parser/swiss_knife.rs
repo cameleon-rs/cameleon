@@ -42,7 +42,12 @@ impl Parse for SwissKnifeNode {
             .parse_if(DISPLAY_NOTATION, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
         let display_precision = node
-            .parse_if(DISPLAY_PRECISION, node_builder, value_builder, cache_builder)
+            .parse_if(
+                DISPLAY_PRECISION,
+                node_builder,
+                value_builder,
+                cache_builder,
+            )
             .unwrap_or(6);
 
         Self {
@@ -81,9 +86,15 @@ mod tests {
         let p_variables = node.p_variables();
         assert_eq!(p_variables.len(), 2);
         assert_eq!(p_variables[0].name(), "Var1");
-        assert_eq!(p_variables[0].value(), node_builder.get_or_intern("pValue1"));
+        assert_eq!(
+            p_variables[0].value(),
+            node_builder.get_or_intern("pValue1")
+        );
         assert_eq!(p_variables[1].name(), "Var2");
-        assert_eq!(p_variables[1].value(), node_builder.get_or_intern("pValue2"));
+        assert_eq!(
+            p_variables[1].value(),
+            node_builder.get_or_intern("pValue2")
+        );
 
         let constants = node.constants();
         assert_eq!(constants.len(), 1);

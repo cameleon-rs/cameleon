@@ -98,7 +98,7 @@ impl IInteger for IntegerNode {
 
         let min = self.min(device, store, cx)?;
         let max = self.max(device, store, cx)?;
-        utils::verify_value_in_range(value, min, max)?;
+        utils::verify_value_in_range(&value, &min, &max)?;
 
         self.value_kind().set_value(value, device, store, cx)
     }

@@ -27,8 +27,9 @@ impl Parse for PortNode {
 
         let chunk_id = node.next_if(CHUNK_ID).map_or_else(
             || {
-                node.next_if(P_CHUNK_ID)
-                    .map(|next_node| ImmOrPNode::PNode(node_builder.get_or_intern(next_node.text())))
+                node.next_if(P_CHUNK_ID).map(|next_node| {
+                    ImmOrPNode::PNode(node_builder.get_or_intern(next_node.text()))
+                })
             },
             |next_node| {
                 Some(ImmOrPNode::Imm(

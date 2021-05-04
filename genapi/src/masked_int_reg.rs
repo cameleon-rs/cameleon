@@ -114,7 +114,7 @@ impl IInteger for MaskedIntRegNode {
 
         let min = self.min(device, store, cx)?;
         let max = self.max(device, store, cx)?;
-        utils::verify_value_in_range(value, min, max)?;
+        utils::verify_value_in_range(&value, &min, &max)?;
 
         let reg = self.register_base();
         let old_reg_value = if let Some(cache) = cx.get_cache(nid) {
@@ -134,7 +134,7 @@ impl IInteger for MaskedIntRegNode {
         let new_reg_value = self
             .bit_mask
             .masked_value(old_reg_value, value, len, self.endianness);
-        let mut buf = vec![0u8; len as usize];
+        let mut buf = vec![0; len as usize];
         utils::bytes_from_int(new_reg_value, &mut buf, self.endianness, self.sign)?;
         reg.write_then_cache(nid, &buf, device, store, cx)?;
 
@@ -420,12 +420,13 @@ impl BitMask {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::shadow_unrelated)]
     use super::*;
 
     #[test]
     fn test_bit_mask_8bit_single_bit() {
         let reg_len = 1;
-        let reg_value = 0b11001011;
+        let reg_value = 0b1100_1011;
         let endianness = Endianness::LE;
         let mask = BitMask::SingleBit(3);
 
@@ -435,7 +436,7 @@ mod tests {
         let value = mask.apply_mask(reg_value, reg_len, endianness, sign);
         assert_eq!(value, 1);
         let new_value = mask.masked_value(reg_value, 0, reg_len, endianness);
-        assert_eq!(new_value, 0b11000011);
+        assert_eq!(new_value, 0b1100_0011);
 
         let sign = Sign::Signed;
         assert_eq!(mask.min(reg_len, endianness, sign), -1);
@@ -443,13 +444,13 @@ mod tests {
         let value = mask.apply_mask(reg_value, reg_len, endianness, sign);
         assert_eq!(value, -1);
         let new_value = mask.masked_value(reg_value, 0, reg_len, endianness);
-        assert_eq!(new_value, 0b11000011);
+        assert_eq!(new_value, 0b1100_0011);
     }
 
     #[test]
     fn test_bit_mask_8bit_le() {
         let reg_len = 1;
-        let reg_value = 0b11001011;
+        let reg_value = 0b1100_1011;
         let endianness = Endianness::LE;
         let mask = BitMask::Range { lsb: 0, msb: 3 };
 
@@ -459,7 +460,7 @@ mod tests {
         let value = mask.apply_mask(reg_value, reg_len, endianness, sign);
         assert_eq!(value, 0b1011);
         let new_value = mask.masked_value(reg_value, 0b0110, reg_len, endianness);
-        assert_eq!(new_value, 0b11000110);
+        assert_eq!(new_value, 0b1100_0110);
 
         let sign = Sign::Signed;
         let value = mask.apply_mask(reg_value, reg_len, endianness, sign);
@@ -467,13 +468,13 @@ mod tests {
         assert_eq!(mask.max(reg_len, endianness, sign), 7);
         assert_eq!(value, -5);
         let new_value = mask.masked_value(reg_value, -1, reg_len, endianness);
-        assert_eq!(new_value, 0b11001111);
+        assert_eq!(new_value, 0b1100_1111);
     }
 
     #[test]
     fn test_bit_mask_8bit_be() {
         let reg_len = 1;
-        let reg_value = 0b11001011;
+        let reg_value = 0b1100_1011;
         let endianness = Endianness::BE;
         let mask = BitMask::Range { lsb: 7, msb: 4 };
 
@@ -481,13 +482,13 @@ mod tests {
         let value = mask.apply_mask(reg_value, reg_len, endianness, sign);
         assert_eq!(value, 0b1011);
         let new_value = mask.masked_value(reg_value, 0b0110, reg_len, endianness);
-        assert_eq!(new_value, 0b11000110);
+        assert_eq!(new_value, 0b1100_0110);
 
         let sign = Sign::Signed;
         let value = mask.apply_mask(reg_value, reg_len, endianness, sign);
         assert_eq!(value, -5);
         let new_value = mask.masked_value(reg_value, -1, reg_len, endianness);
-        assert_eq!(new_value, 0b11001111);
+        assert_eq!(new_value, 0b1100_1111);
     }
 
     #[test]

@@ -2,7 +2,10 @@
     clippy::module_name_repetitions,
     clippy::similar_names,
     clippy::missing_errors_doc,
-    clippy::option_if_let_else
+    clippy::missing_panics_doc,
+    clippy::option_if_let_else,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_truncation
 )]
 
 pub mod builder;

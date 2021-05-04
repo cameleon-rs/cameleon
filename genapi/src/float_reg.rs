@@ -97,7 +97,7 @@ impl IFloat for FloatRegNode {
 
         let reg = self.register_base();
         let len = reg.length(device, store, cx)?;
-        let mut buf = vec![0u8; len as usize];
+        let mut buf = vec![0; len as usize];
         utils::bytes_from_float(value, &mut buf, self.endianness)?;
         reg.write_then_cache(nid, &buf, device, store, cx)?;
         Ok(())

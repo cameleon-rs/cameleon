@@ -26,7 +26,7 @@ impl CategoryNode {
 }
 
 impl ICategory for CategoryNode {
-    fn nodes(&self, store: &impl NodeStore) -> GenApiResult<&[NodeId]> {
+    fn nodes(&self, _: &impl NodeStore) -> GenApiResult<&[NodeId]> {
         Ok(self.p_features())
     }
 }

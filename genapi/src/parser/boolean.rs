@@ -82,10 +82,10 @@ mod tests {
             "#;
 
         let (node, _, value_builder, ..): (BooleanNode, _, _, _) = parse_default(xml1);
-        let value = value_builder
+        let value1 = value_builder
             .boolean_value(node.value_elem().imm().unwrap())
             .unwrap();
-        assert_eq!(value, true);
+        assert_eq!(value1, true);
 
         let xml2 = r#"
             <Boolean Name="TestNode">
@@ -94,9 +94,9 @@ mod tests {
             "#;
 
         let (node, _, value_builder2, ..): (BooleanNode, _, _, _) = parse_default(xml2);
-        let value = value_builder2
+        let value2 = value_builder2
             .boolean_value(node.value_elem().imm().unwrap())
             .unwrap();
-        assert_eq!(value, false);
+        assert_eq!(value2, false);
     }
 }

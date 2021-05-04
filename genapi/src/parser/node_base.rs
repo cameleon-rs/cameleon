@@ -53,7 +53,8 @@ impl Parse for NodeElementBase {
         cache_builder: &mut impl CacheStoreBuilder,
     ) -> Self {
         // Ignore Extension element.
-        let _: Option<String> = node.parse_if(EXTENSION, node_builder, value_builder, cache_builder);
+        let _: Option<String> =
+            node.parse_if(EXTENSION, node_builder, value_builder, cache_builder);
 
         let tool_tip = node.parse_if(TOOL_TIP, node_builder, value_builder, cache_builder);
         let description = node.parse_if(DESCRIPTION, node_builder, value_builder, cache_builder);
@@ -70,11 +71,18 @@ impl Parse for NodeElementBase {
             .map(|n| u64::from_str_radix(n.text(), 16).unwrap());
         let p_is_implemented =
             node.parse_if(P_IS_IMPLEMENTED, node_builder, value_builder, cache_builder);
-        let p_is_available = node.parse_if(P_IS_AVAILABLE, node_builder, value_builder, cache_builder);
+        let p_is_available =
+            node.parse_if(P_IS_AVAILABLE, node_builder, value_builder, cache_builder);
         let p_is_locked = node.parse_if(P_IS_LOCKED, node_builder, value_builder, cache_builder);
-        let p_block_polling = node.parse_if(P_BLOCK_POLLING, node_builder, value_builder, cache_builder);
+        let p_block_polling =
+            node.parse_if(P_BLOCK_POLLING, node_builder, value_builder, cache_builder);
         let imposed_access_mode = node
-            .parse_if(IMPOSED_ACCESS_MODE, node_builder, value_builder, cache_builder)
+            .parse_if(
+                IMPOSED_ACCESS_MODE,
+                node_builder,
+                value_builder,
+                cache_builder,
+            )
             .unwrap_or(AccessMode::RW);
         let p_errors = node.parse_while(P_ERROR, node_builder, value_builder, cache_builder);
         let p_alias = node.parse_if(P_ALIAS, node_builder, value_builder, cache_builder);

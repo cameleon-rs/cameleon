@@ -65,7 +65,8 @@ impl Parse for EnumEntryNode {
         let elem_base = node.parse(node_builder, value_builder, cache_builder);
 
         let value = node.parse(node_builder, value_builder, cache_builder);
-        let numeric_values = node.parse_while(NUMERIC_VALUE, node_builder, value_builder, cache_builder);
+        let numeric_values =
+            node.parse_while(NUMERIC_VALUE, node_builder, value_builder, cache_builder);
         let symbolic = node.parse_if(SYMBOLIC, node_builder, value_builder, cache_builder);
         let is_self_clearing = node
             .parse_if(IS_SELF_CLEARING, node_builder, value_builder, cache_builder)

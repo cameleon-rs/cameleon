@@ -63,7 +63,8 @@ impl<'a, 'input> Node<'a, 'input> {
         cache_builder: &mut impl CacheStoreBuilder,
     ) -> Vec<T> {
         let mut res = vec![];
-        while let Some(parsed) = self.parse_if(tag_name, node_builder, value_builder, cache_builder) {
+        while let Some(parsed) = self.parse_if(tag_name, node_builder, value_builder, cache_builder)
+        {
             res.push(parsed);
         }
         res

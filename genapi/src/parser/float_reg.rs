@@ -35,7 +35,12 @@ impl Parse for FloatRegNode {
             .parse_if(DISPLAY_NOTATION, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
         let display_precision = node
-            .parse_if(DISPLAY_PRECISION, node_builder, value_builder, cache_builder)
+            .parse_if(
+                DISPLAY_PRECISION,
+                node_builder,
+                value_builder,
+                cache_builder,
+            )
             .unwrap_or(6);
 
         let node = Self {

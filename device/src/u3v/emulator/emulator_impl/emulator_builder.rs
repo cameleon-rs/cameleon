@@ -29,10 +29,6 @@ pub type BuilderResult<T> = std::result::Result<T, BuilderError>;
 /// Emulators in the device pool can be found by [`cameleon_device::u3v::enumerate_devices`] and controlled via
 /// [`cameleon_device::u3v::Device`] in the same way as real device.
 ///
-/// [`cameleon_device::u3v::enumerate_devices`]: fn.enumerate_devices.html
-/// [`cameleon_device::u3v::Device`]: struct.Device.html
-/// [`build`]: ./struct.EmulatorBuilder.html#method.build
-///
 /// # Example
 /// ```rust
 /// use cameleon_device::u3v::{EmulatorBuilder, enumerate_devices};

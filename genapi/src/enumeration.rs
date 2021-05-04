@@ -65,7 +65,7 @@ impl IEnumeration for EnumerationNode {
 
         let value = self.value.value(device, store, cx)?;
         self.entries(store)?
-            .into_iter()
+            .iter()
             .find(|ent| ent.value() == value)
             .ok_or_else(|| {
                 GenApiError::invalid_node(
@@ -98,7 +98,7 @@ impl IEnumeration for EnumerationNode {
 
         let idx = self
             .entries(store)?
-            .into_iter()
+            .iter()
             .position(|ent| ent.node_base().id() == ent_id)
             .ok_or_else(|| {
                 GenApiError::invalid_data(

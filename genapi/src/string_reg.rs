@@ -52,7 +52,7 @@ impl IString for StringRegNode {
                 .unwrap_or_else(|| bytes.len());
             String::from_utf8_lossy(&bytes[0..len]).to_string()
         };
-        Ok(res.into())
+        Ok(res)
     }
 
     #[tracing::instrument(skip(self, device, store, cx),

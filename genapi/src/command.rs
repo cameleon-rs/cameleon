@@ -70,12 +70,12 @@ impl ICommand for CommandNode {
 
         cx.invalidate_cache_of(nid);
         let node = nid.expect_iinteger_kind(store)?;
-        if !node.is_readable(device, store, cx)? {
-            Ok(true)
-        } else {
+        if node.is_readable(device, store, cx)? {
             let command_value = self.command_value.value(device, store, cx)?;
             let reg_value = node.value(device, store, cx)?;
             Ok(command_value != reg_value)
+        } else {
+            Ok(true)
         }
     }
 

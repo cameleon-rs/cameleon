@@ -1,15 +1,3 @@
-use crate::{builder::CacheStoreBuilder, store::NodeId};
-
-pub(super) fn store_invalidators(
-    invalidators: &[NodeId],
-    target: NodeId,
-    cache_builder: &mut impl CacheStoreBuilder,
-) {
-    for invalidator in invalidators {
-        cache_builder.store_invalidator(*invalidator, target);
-    }
-}
-
 #[cfg(test)]
 pub(super) mod tests {
     use super::super::{xml, Parse};

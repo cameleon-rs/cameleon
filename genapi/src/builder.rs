@@ -23,11 +23,10 @@ impl Default for GenApiBuilder {
     }
 }
 
+pub type BuildResult<T, U, S> = parser::ParseResult<(RegisterDescription, T, ValueCtxt<U, S>)>;
+
 impl<T, U, S> GenApiBuilder<T, U, S> {
-    pub fn build(
-        mut self,
-        xml: &impl AsRef<str>,
-    ) -> parser::ParseResult<(RegisterDescription, T::Store, ValueCtxt<U::Store, S::Store>)>
+    pub fn build(mut self, xml: &impl AsRef<str>) -> BuildResult<T::Store, U::Store, S::Store>
     where
         T: NodeStoreBuilder,
         U: ValueStoreBuilder,

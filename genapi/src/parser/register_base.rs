@@ -55,7 +55,8 @@ impl Parse for RegisterBase {
             .parse_if(CACHEABLE, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
         let polling_time = node.parse_if(POLLING_TIME, node_builder, value_builder, cache_builder);
-        let p_invalidators = node.parse_while(P_INVALIDATOR, node_builder, value_builder, cache_builder);
+        let p_invalidators =
+            node.parse_while(P_INVALIDATOR, node_builder, value_builder, cache_builder);
 
         Self {
             elem_base,

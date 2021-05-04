@@ -84,6 +84,7 @@ trait Parse {
 }
 
 impl Parse for Vec<NodeData> {
+    #[allow(clippy::too_many_lines)]
     fn parse(
         node: &mut xml::Node,
         node_builder: &mut impl NodeStoreBuilder,
