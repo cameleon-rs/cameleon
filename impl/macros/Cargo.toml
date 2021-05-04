@@ -9,6 +9,6 @@ publish = false
 proc-macro = true
 
 [dependencies]
-syn = { version = "1.0.40", features = ["full"] }
-proc-macro2 = "1.0.21"
-quote = "1.0.7"
+syn = { version = "1.0.72", features = ["full"] }
+proc-macro2 = "1.0.26"
+quote = "1.0.9"
