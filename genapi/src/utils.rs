@@ -35,7 +35,7 @@ pub(super) fn int_from_slice(
             match (slice.len(), endianness, sign) {
                 $(
                     ($len, Endianness::LE, Sign::Signed) => Ok(<$signed_ty>::from_le_bytes(slice.try_into().unwrap()) as i64),
-                    ($len, Endianness::LE, Sign::Unsigned) => Ok(<$unsigned_ty>::from_be_bytes(slice.try_into().unwrap()) as i64),
+                    ($len, Endianness::LE, Sign::Unsigned) => Ok(<$unsigned_ty>::from_le_bytes(slice.try_into().unwrap()) as i64),
                     ($len, Endianness::BE, Sign::Signed) => Ok(<$signed_ty>::from_be_bytes(slice.try_into().unwrap()) as i64),
                     ($len, Endianness::BE, Sign::Unsigned) => Ok(<$unsigned_ty>::from_be_bytes(slice.try_into().unwrap()) as i64),
                 )*
