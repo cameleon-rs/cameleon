@@ -5,7 +5,7 @@ use super::{
     Device, GenApiError, GenApiResult, ValueCtxt,
 };
 
-pub trait IValue<T> {
+pub(super) trait IValue<T> {
     fn value<U: ValueStore, S: CacheStore>(
         &self,
         device: &mut impl Device,
