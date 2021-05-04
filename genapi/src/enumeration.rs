@@ -158,7 +158,7 @@ pub struct EnumEntryNode {
     pub(crate) elem_base: NodeElementBase,
 
     pub(crate) value: i64,
-    pub(crate) numeric_values: Vec<f64>,
+    pub(crate) numeric_value: Option<f64>,
     pub(crate) symbolic: Option<String>,
     pub(crate) is_self_clearing: bool,
 }
@@ -175,8 +175,9 @@ impl EnumEntryNode {
     }
 
     #[must_use]
-    pub fn numeric_values(&self) -> &[f64] {
-        &self.numeric_values
+    #[allow(clippy::cast_precision_loss)]
+    pub fn numeric_value(&self) -> f64 {
+        self.numeric_value.unwrap_or_else(|| self.value as f64)
     }
 
     #[must_use]

@@ -198,6 +198,7 @@ impl<'a, T: Copy + Into<Expr>> FormulaEnvCollector<'a, T> {
     }
 }
 
+#[derive(Debug)]
 enum VariableKind<'a> {
     Value,
     Min,
@@ -295,6 +296,11 @@ pub(super) fn expr_from_node_id<T: ValueStore, U: CacheStore>(
         Ok(node.value(device, store, cx)?.into())
     } else if let Some(node) = nid.as_iboolean_kind(store) {
         Ok(node.value(device, store, cx)?.into())
+    } else if let Some(node) = nid.as_ienumeration_kind(store) {
+        Ok(node
+            .current_entry(device, store, cx)?
+            .numeric_value()
+            .into())
     } else {
         Err(GenApiError::invalid_node(
             format!("invalid `pVariable: {}`", nid.name(store)).into(),

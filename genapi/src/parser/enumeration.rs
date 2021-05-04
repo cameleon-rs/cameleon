@@ -65,8 +65,8 @@ impl Parse for EnumEntryNode {
         let elem_base = node.parse(node_builder, value_builder, cache_builder);
 
         let value = node.parse(node_builder, value_builder, cache_builder);
-        let numeric_values =
-            node.parse_while(NUMERIC_VALUE, node_builder, value_builder, cache_builder);
+        let numeric_value =
+            node.parse_if(NUMERIC_VALUE, node_builder, value_builder, cache_builder);
         let symbolic = node.parse_if(SYMBOLIC, node_builder, value_builder, cache_builder);
         let is_self_clearing = node
             .parse_if(IS_SELF_CLEARING, node_builder, value_builder, cache_builder)
@@ -76,7 +76,7 @@ impl Parse for EnumEntryNode {
             attr_base,
             elem_base,
             value,
-            numeric_values,
+            numeric_value,
             symbolic,
             is_self_clearing,
         }
@@ -96,11 +96,11 @@ mod tests {
                 <EnumEntry Name="Entry0">
                     <Value>0</Value>
                     <NumericValue>1.0</NumericValue>
-                    <NumericValue>10.0</NumericValue>
                     <IsSelfClearing>Yes</IsSelfClearing>
                 </EnumEntry>
                 <EnumEntry Name="Entry1">
                     <Value>1</Value>
+                    <NumericValue>10.0</NumericValue>
                 </EnumEntry>
                 <pValue>MyNode</pValue>
             <PollingTime>10</PollingTime>
@@ -120,12 +120,12 @@ mod tests {
 
         let entry0 = &entries[0];
         assert_eq!(entry0.value(), 0);
-        assert!((entry0.numeric_values()[0] - 1.0).abs() < f64::EPSILON);
-        assert!((entry0.numeric_values()[1] - 10.0).abs() < f64::EPSILON);
+        assert!((entry0.numeric_value() - 1.0).abs() < f64::EPSILON);
         assert_eq!(entry0.is_self_clearing(), true);
 
         let entry1 = &entries[1];
         assert_eq!(entry1.value(), 1);
+        assert!((entry1.numeric_value() - 10.0).abs() < f64::EPSILON);
         assert_eq!(entry1.is_self_clearing(), false);
     }
 }
