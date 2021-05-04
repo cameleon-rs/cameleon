@@ -81,21 +81,21 @@ pub trait Device {
 
 #[derive(Debug, thiserror::Error)]
 pub enum GenApiError {
-    #[error("device I/O error: {}", 0)]
+    #[error("device I/O error: {0}")]
     Device(Box<dyn std::error::Error>),
 
     /// Read/Write access to the `GenApi` node is denied.
-    #[error("access is denied: {}", 0)]
+    #[error("access is denied: {0}")]
     AccessDenied(Cow<'static, str>),
 
     /// Invalid node.
-    #[error("invalid node: {}", 0)]
+    #[error("invalid node: {0}")]
     InvalidNode(Cow<'static, str>),
 
     /// Try to write invalid value to the node.
     ///
     /// e.g. try to write the value that exceeds the max value of the node.
-    #[error("invalid data: {}", 0)]
+    #[error("invalid data: {0}")]
     InvalidData(Cow<'static, str>),
 
     /// Operation on the node failed due to the lack of chunk data where it's required to complete the operation.
@@ -103,7 +103,7 @@ pub enum GenApiError {
     ChunkDataMissing,
 
     /// Invalid buffer.
-    #[error("invalid buffer: {}", 0)]
+    #[error("invalid buffer: {0}")]
     InvalidBuffer(Cow<'static, str>),
 }
 

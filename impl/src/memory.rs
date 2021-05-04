@@ -17,7 +17,7 @@ pub enum MemoryError {
     #[error("attempt to access non-existent memory location")]
     InvalidAddress,
 
-    #[error("invalid register data: {}", 0)]
+    #[error("invalid register data: {0}")]
     InvalidRegisterData(std::borrow::Cow<'static, str>),
 }
 

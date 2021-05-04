@@ -47,7 +47,7 @@ pub(crate) enum GenTlError {
     InvalidHandle,
 
     /// ID doesn't reference any module or remote device.
-    #[error("given ID doesn't reference any module or remote device: {}", 0)]
+    #[error("given ID doesn't reference any module or remote device: {0}")]
     InvalidId(String),
 
     /// The function has no data to work on or the data does not provide reliable information corresponding with the request.
@@ -61,7 +61,7 @@ pub(crate) enum GenTlError {
     InvalidParameter,
 
     /// Communication error or connection lost.
-    #[error("communication error or connection lost: {}", 0)]
+    #[error("communication error or connection lost: {0}")]
     Io(Box<dyn std::error::Error>),
 
     /// Operation timed out.
@@ -97,7 +97,7 @@ pub(crate) enum GenTlError {
     ParsingChunkData,
 
     /// An invalid value has been written.
-    #[error("an invalid value has been written: {}", 0)]
+    #[error("an invalid value has been written: {0}")]
     InvalidValue(std::borrow::Cow<'static, str>),
 
     /// A requested resource is exhausted.

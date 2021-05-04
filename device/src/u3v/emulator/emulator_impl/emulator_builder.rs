@@ -14,7 +14,7 @@ use cameleon_impl::memory::prelude::*;
 
 #[derive(Debug, Error)]
 pub enum BuilderError {
-    #[error("invalid string: {}", 0)]
+    #[error("invalid string: {0}")]
     InvalidString(String),
 }
 

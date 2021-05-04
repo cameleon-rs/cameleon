@@ -4,7 +4,7 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub(super) enum ProtocolError {
-    #[error("packet is broken: {}", 0)]
+    #[error("packet is broken: {0}")]
     InvalidPacket(Cow<'static, str>),
 
     #[error("internal buffer for a packet is something wrong")]

@@ -45,10 +45,10 @@ use elem_name::{
 
 #[derive(Debug, Error)]
 pub enum ParseError {
-    #[error("encodings must be UTF8: {}", 0)]
+    #[error("encodings must be UTF8: {0}")]
     Utf8Error(#[from] std::str::Utf8Error),
 
-    #[error("invalid XML syntax: {}", 0)]
+    #[error("invalid XML syntax: {0}")]
     InvalidSyntax(#[from] roxmltree::Error),
 }
 
