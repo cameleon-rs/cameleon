@@ -1,4 +1,4 @@
-#![deny(missing_docs)]
+#![warn(missing_docs)]
 #![allow(
     clippy::module_name_repetitions,
     clippy::similar_names,

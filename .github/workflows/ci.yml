@@ -10,7 +10,7 @@ on:
 
 jobs:
   doc:
-    name: Doc and deadlinks check
+    name: Doc
     runs-on: ubuntu-latest
 
     steps:
@@ -18,17 +18,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/*
-          key: ${{ runner.os }}-cargo-doc-cache
 
-      - name: Install cargo-deadlinks
-        run: cargo install cargo-deadlinks
-
-      - run: RUST_FLAGS="--D warnings" cargo doc --no-deps
-      - run: cargo deadlinks
+      - run: cargo doc --no-deps
 
   lint:
     name: Rustfmt and clippy
@@ -44,10 +35,10 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Clippy with default features
-        run: RUST_FLAGS="--D warnings" cargo clippy --all-targets -- -D clippy::all -D clippy::pedantic
+        run: cargo clippy --all-targets -- -D clippy::all -D clippy::pedantic
 
       - name: Clippy for cameleon-device with libusb
-        run: RUST_FLAGS="--D warnings" cargo clippy --all-targets --features libusb -- -D clippy::all -D clippy::pedantic # Check with libusb feature.
+        run:  cargo clippy --all-targets --features libusb -- -D clippy::all -D clippy::pedantic # Check with libusb feature.
         working-directory: device
 
   test-default-feature:

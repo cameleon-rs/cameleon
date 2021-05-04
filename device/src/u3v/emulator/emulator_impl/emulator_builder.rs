@@ -24,10 +24,10 @@ pub type BuilderResult<T> = std::result::Result<T, BuilderError>;
 /// All initial configuration of the device must be done via this builder.
 ///
 /// An emulator is passed to the device pool and user can't control the emulator itself directly
-/// once build process is finished by calling [`build`].
+/// once build process is finished by calling [`EmulatorBuilder::build`].
 ///
-/// Emulators in the device pool can be found by [`cameleon_device::u3v::enumerate_devices`] and controlled via
-/// [`cameleon_device::u3v::Device`] in the same way as real device.
+/// Emulators in the device pool can be found by [`crate::u3v::enumerate_devices`] and controlled via
+/// [`crate::u3v::Device`] in the same way as real device.
 ///
 /// # Example
 /// ```rust
@@ -69,11 +69,8 @@ impl EmulatorBuilder {
     /// Build an emulator and pass it to the device pool. User can't control the emulator itself
     /// directly once call this method.
     ///
-    /// Emulators in the device pool can be found by [`cameleon_device::u3v::enumerate_devices`] and controlled via
-    /// [`cameleon_device::u3v::Device`] in the same way as real device.
-    ///
-    /// [`cameleon_device::u3v::enumerate_devices`]: fn.enumerate_devices.html
-    /// [`cameleon_device::u3v::Device`]: struct.Device.html
+    /// Emulators in the device pool can be found by [`crate::u3v::enumerate_devices`] and controlled via
+    /// [`crate::u3v::Device`] in the same way as real device.
     ///
     /// # Example
     /// ```rust

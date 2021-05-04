@@ -1,7 +1,5 @@
 use cameleon_impl::memory::*;
 
-const SBRM_ADDRESS: u64 = 0x1000;
-
 #[memory]
 pub struct Memory {
     le: LE,
