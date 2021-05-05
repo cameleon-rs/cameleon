@@ -1,4 +1,4 @@
-use cameleon::device::CompressionType;
+use cameleon::CompressionType;
 use semver::Version;
 
 use crate::GenTlResult;

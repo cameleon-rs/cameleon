@@ -6,7 +6,7 @@
 //! # Examples
 //!
 //! ```no_run
-//! use cameleon::device::u3v;
+//! use cameleon::u3v;
 //! // Enumerate devices connected to the host.
 //! let mut devices = u3v::enumerate_devices().unwrap();
 //!
@@ -46,7 +46,7 @@ use cameleon_device::u3v::{
     register_map::{abrm, manifest_entry, sbrm, sirm},
 };
 
-use crate::device::{CompressionType, DeviceError, DeviceResult, GenICamFileType};
+use crate::{CompressionType, DeviceError, DeviceResult, GenICamFileType};
 
 use super::control_handle::ControlHandle;
 
@@ -60,7 +60,7 @@ use super::control_handle::ControlHandle;
 /// # Examples
 ///
 /// ```no_run
-/// use cameleon::device::u3v;
+/// use cameleon::u3v;
 /// // Enumerate devices connected to the host.
 /// let mut devices = u3v::enumerate_devices().unwrap();
 ///
@@ -105,10 +105,10 @@ impl<'a> Abrm<'a> {
     /// # Examples
     ///
     /// ```no_run
-    /// # use cameleon::device::u3v;
+    /// # use cameleon::u3v;
     /// # let mut devices = u3v::enumerate_devices().unwrap();
     /// # let device = devices.pop().unwrap();
-    /// use cameleon::device::u3v::register_map::Abrm;
+    /// use cameleon::u3v::register_map::Abrm;
     ///
     /// // Construct `Abrm` from control handle of the device directly.
     /// let control_handle = device.control_handle();
@@ -199,7 +199,7 @@ impl<'a> Abrm<'a> {
     /// # Examples
     ///
     /// ```no_run
-    /// # use cameleon::device::u3v;
+    /// # use cameleon::u3v;
     /// # let mut devices = u3v::enumerate_devices().unwrap();
     /// # let device = devices.pop().unwrap();
     /// # let handle = device.control_handle();
@@ -237,7 +237,7 @@ impl<'a> Abrm<'a> {
     /// # Examples
     ///
     /// ```no_run
-    /// # use cameleon::device::u3v;
+    /// # use cameleon::u3v;
     /// # let mut devices = u3v::enumerate_devices().unwrap();
     /// # let device = devices.pop().unwrap();
     /// # let handle = device.control_handle();
@@ -283,7 +283,7 @@ impl<'a> Abrm<'a> {
     /// # Examples
     ///
     /// ```no_run
-    /// # use cameleon::device::u3v;
+    /// # use cameleon::u3v;
     /// # let mut devices = u3v::enumerate_devices().unwrap();
     /// # let device = devices.pop().unwrap();
     /// # let handle = device.control_handle();
@@ -344,7 +344,7 @@ impl<'a> Abrm<'a> {
     /// # Examples
     ///
     /// ```no_run
-    /// # use cameleon::device::u3v;
+    /// # use cameleon::u3v;
     /// # let mut devices = u3v::enumerate_devices().unwrap();
     /// # let device = devices.pop().unwrap();
     /// # let handle = device.control_handle();
@@ -367,7 +367,7 @@ impl<'a> Abrm<'a> {
     /// # Examples
     ///
     /// ```no_run
-    /// # use cameleon::device::u3v;
+    /// # use cameleon::u3v;
     /// # let mut devices = u3v::enumerate_devices().unwrap();
     /// # let device = devices.pop().unwrap();
     /// # let handle = device.control_handle();
@@ -413,7 +413,7 @@ impl<'a> Abrm<'a> {
 /// # Examples
 ///
 /// ```no_run
-/// use cameleon::device::u3v;
+/// use cameleon::u3v;
 /// // Enumerate devices connected to the host.
 /// let mut devices = u3v::enumerate_devices().unwrap();
 ///
@@ -590,7 +590,7 @@ impl<'a> Sbrm<'a> {
 /// # Examples
 ///
 /// ```no_run
-/// use cameleon::device::u3v;
+/// use cameleon::u3v;
 /// // Enumerate devices connected to the host.
 /// let mut devices = u3v::enumerate_devices().unwrap();
 ///
@@ -797,7 +797,7 @@ impl<'a> Sirm<'a> {
 ///
 /// # Examples
 /// ```no_run
-/// # use cameleon::device::u3v;
+/// # use cameleon::u3v;
 /// # let mut devices = u3v::enumerate_devices().unwrap();
 /// # let device = devices.pop().unwrap();
 /// # let handle = device.control_handle();
@@ -853,7 +853,7 @@ impl<'a> ManifestTable<'a> {
 /// # Examples
 ///
 /// ```no_run
-/// # use cameleon::device::u3v;
+/// # use cameleon::u3v;
 /// # let mut devices = u3v::enumerate_devices().unwrap();
 /// # let device = devices.pop().unwrap();
 /// # let handle = device.control_handle();
@@ -972,7 +972,7 @@ macro_rules! unset_bit {
 /// # Examples
 ///
 /// ```no_run
-/// # use cameleon::device::u3v;
+/// # use cameleon::u3v;
 /// # let mut devices = u3v::enumerate_devices().unwrap();
 /// # let device = devices.pop().unwrap();
 /// # let handle = device.control_handle();
@@ -1018,7 +1018,7 @@ impl DeviceConfiguration {
 /// # Examples
 ///
 /// ```no_run
-/// # use cameleon::device::u3v;
+/// # use cameleon::u3v;
 /// # let mut devices = u3v::enumerate_devices().unwrap();
 /// # let device = devices.pop().unwrap();
 /// # let handle = device.control_handle();
@@ -1081,7 +1081,7 @@ impl DeviceCapability {
 /// # Examples
 ///
 /// ```no_run
-/// # use cameleon::device::u3v;
+/// # use cameleon::u3v;
 /// # let mut devices = u3v::enumerate_devices().unwrap();
 /// # let device = devices.pop().unwrap();
 /// # let handle = device.control_handle();
@@ -1130,7 +1130,7 @@ impl U3VCapablitiy {
 /// # Examples
 ///
 /// ```no_run
-/// # use cameleon::device::u3v;
+/// # use cameleon::u3v;
 /// # let mut devices = u3v::enumerate_devices().unwrap();
 /// # let device = devices.pop().unwrap();
 /// # let handle = device.control_handle();

@@ -19,5 +19,5 @@ trybuild = "1.0.42"
 libusb = ["cameleon-device/libusb"]
 
 [[example]]
-name = "u3v_device_register_map"
-path = "examples/device/u3v/register_map.rs"
+name = "u3v_register_map"
+path = "examples/u3v/register_map.rs"

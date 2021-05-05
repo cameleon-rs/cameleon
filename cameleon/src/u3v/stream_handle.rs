@@ -8,7 +8,7 @@ use cameleon_device::u3v::{
     protocol::stream::{Leader, Trailer},
 };
 
-use crate::device::{DeviceError, DeviceResult};
+use crate::{DeviceError, DeviceResult};
 
 use super::register_map::Sirm;
 

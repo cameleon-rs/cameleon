@@ -1,6 +1,6 @@
 use cameleon_device::u3v;
 
-use crate::device::DeviceResult;
+use crate::DeviceResult;
 
 use super::{control_handle::ControlHandle, stream_handle::StreamHandle};
 
@@ -16,7 +16,7 @@ pub type DeviceInfo = u3v::DeviceInfo;
 /// # Examples
 ///
 /// ```no_run
-/// use cameleon::device::u3v::enumerate_devices;
+/// use cameleon::u3v::enumerate_devices;
 ///
 /// // Enumerate devices connected to the host.
 /// let mut devices = enumerate_devices().unwrap();
@@ -57,7 +57,7 @@ impl Device {
     ///
     /// # Examples
     /// ```no_run
-    /// use cameleon::device::u3v::enumerate_devices;
+    /// use cameleon::u3v::enumerate_devices;
     ///
     /// // Enumerate devices connected to the host.
     /// let mut devices = enumerate_devices().unwrap();
@@ -96,7 +96,7 @@ impl Device {
 ///
 /// # Examples
 /// ```no_run
-/// use cameleon::device::u3v::enumerate_devices;
+/// use cameleon::u3v::enumerate_devices;
 ///
 /// // Enumerate devices connected to the host.
 /// let mut devices = enumerate_devices().unwrap();

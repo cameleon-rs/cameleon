@@ -4,7 +4,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use cameleon::device::CompressionType;
+use cameleon::CompressionType;
 use cameleon_impl::memory::{prelude::*, MemoryObserver};
 
 use crate::{

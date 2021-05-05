@@ -3,7 +3,7 @@
 //! # Examples
 //!
 //! ```no_run
-//! use cameleon::device::u3v;
+//! use cameleon::u3v;
 //! // Enumerate devices connected to the host.
 //! let mut devices = u3v::enumerate_devices().unwrap();
 //!

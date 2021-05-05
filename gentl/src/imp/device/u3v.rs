@@ -1,7 +1,7 @@
 use std::{convert::TryFrom, sync::Mutex};
 
-use cameleon::device::u3v;
-use cameleon::device::CompressionType;
+use cameleon::u3v;
+use cameleon::CompressionType;
 use cameleon_impl::memory::prelude::*;
 
 use crate::{

@@ -11,7 +11,7 @@ use cameleon_device::{
 
 use super::register_map::Abrm;
 
-use crate::device::{DeviceError, DeviceResult};
+use crate::{DeviceError, DeviceResult};
 
 /// Initial timeout duration for transaction between device and host.
 /// This value is temporarily used until the device's bootstrap register value is read.
@@ -35,7 +35,7 @@ const INITIAL_MAXIMUM_ACK_LENGTH: u32 = 128;
 /// # Examples
 ///
 /// ```no_run
-/// use cameleon::device::u3v::enumerate_devices;
+/// use cameleon::u3v::enumerate_devices;
 ///
 /// // Enumerate devices connected to the host.
 /// let mut devices = enumerate_devices().unwrap();
@@ -82,7 +82,7 @@ impl ControlHandle {
     /// # Examples
     ///
     /// ```no_run
-    /// # use cameleon::device::u3v::enumerate_devices;
+    /// # use cameleon::u3v::enumerate_devices;
     /// # let mut devices = enumerate_devices().unwrap();
     /// # if devices.is_empty() {
     /// #     return;
@@ -107,7 +107,7 @@ impl ControlHandle {
     /// # Examples
     ///
     /// ```no_run
-    /// # use cameleon::device::u3v::enumerate_devices;
+    /// # use cameleon::u3v::enumerate_devices;
     ///
     /// # // Enumerate devices connected to the host.
     /// # let mut devices = enumerate_devices().unwrap();

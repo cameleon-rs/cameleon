@@ -5,7 +5,7 @@ pub(super) mod system;
 
 mod genapi_common;
 
-use cameleon::device::DeviceError;
+use cameleon::DeviceError;
 use cameleon_impl::memory::MemoryError;
 
 use super::GenTlError;
