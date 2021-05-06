@@ -173,7 +173,7 @@ impl Expr {
         K: Borrow<str> + Eq + Hash + fmt::Debug,
         V: Borrow<Expr> + fmt::Debug,
     {
-        use std::ops::{Add, Div, Mul, Rem, Sub};
+        use std::ops::{Add, Mul, Rem, Sub};
 
         Ok(match op {
             BinOpKind::And => {
@@ -208,7 +208,11 @@ impl Expr {
                     BinOpKind::Add => apply_arithmetic_op!(overflowing_add, add),
                     BinOpKind::Sub => apply_arithmetic_op!(overflowing_sub, sub),
                     BinOpKind::Mul => apply_arithmetic_op!(overflowing_mul, mul),
-                    BinOpKind::Div => apply_arithmetic_op!(overflowing_div, div),
+                    BinOpKind::Div => {
+                        // Division must be treated as floating points.
+                        // e.g. Converter node with `<FormulaFrom>TO/(1&lt;&lt;P1)</FormulaFrom>` where `P1` points to integer node are commonplace.
+                        (lhs.as_float() / rhs.as_float()).into()
+                    }
                     BinOpKind::Rem => apply_arithmetic_op!(overflowing_rem, rem),
                     BinOpKind::Pow => {
                         if lhs.is_integer() && rhs.is_integer() && rhs.as_integer() >= 0 {
@@ -876,7 +880,6 @@ mod tests {
     #[test]
     fn test_eval_no_env() {
         test_eval_no_var_impl("(1 + 2 * 3 - 6) = 1 ");
-        test_eval_no_var_impl("(1 + 2 / 3) = 1");
         test_eval_no_var_impl("(10 % 3) = 1");
         test_eval_no_var_impl("(2 * 3 ** 2) = 18");
         test_eval_no_var_impl("(2 ** 3 ** 2) = 512");
@@ -906,5 +909,6 @@ mod tests {
         test_eval_impl("ABS(1. / 2. - 0.5) < EPS", &env);
         test_eval_impl("ABS(2 ** -1 - 1. / 2.) < EPS", &env);
         test_eval_impl("ABS(2 ** -1 ** 2 - 1. / 2.) < EPS", &env);
+        test_eval_impl("ABS(VAR1 + 1 / 4 - 1.25) < EPS", &env);
     }
 }
