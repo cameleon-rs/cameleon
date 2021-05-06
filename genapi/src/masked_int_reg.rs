@@ -338,7 +338,7 @@ impl BitMask {
     ) -> i64 {
         let mask = self.mask(reg_byte_len, endianness);
         let lsb = self.lsb(reg_byte_len, endianness);
-        (old_reg_value & !mask) | ((value & mask) << lsb)
+        (old_reg_value & !mask) | ((value << lsb) & mask)
     }
 
     fn lsb(self, reg_byte_len: usize, endianness: Endianness) -> usize {
@@ -452,23 +452,23 @@ mod tests {
         let reg_len = 1;
         let reg_value = 0b1100_1011;
         let endianness = Endianness::LE;
-        let mask = BitMask::Range { lsb: 0, msb: 3 };
+        let mask = BitMask::Range { lsb: 1, msb: 4 };
 
         let sign = Sign::Unsigned;
         assert_eq!(mask.min(reg_len, endianness, sign), 0);
         assert_eq!(mask.max(reg_len, endianness, sign), 15);
         let value = mask.apply_mask(reg_value, reg_len, endianness, sign);
-        assert_eq!(value, 0b1011);
+        assert_eq!(value, 0b0101);
         let new_value = mask.masked_value(reg_value, 0b0110, reg_len, endianness);
-        assert_eq!(new_value, 0b1100_0110);
+        assert_eq!(new_value, 0b1100_1101);
 
         let sign = Sign::Signed;
         let value = mask.apply_mask(reg_value, reg_len, endianness, sign);
         assert_eq!(mask.min(reg_len, endianness, sign), -8);
         assert_eq!(mask.max(reg_len, endianness, sign), 7);
-        assert_eq!(value, -5);
+        assert_eq!(value, 5);
         let new_value = mask.masked_value(reg_value, -1, reg_len, endianness);
-        assert_eq!(new_value, 0b1100_1111);
+        assert_eq!(new_value, 0b1101_1111);
     }
 
     #[test]
@@ -476,19 +476,19 @@ mod tests {
         let reg_len = 1;
         let reg_value = 0b1100_1011;
         let endianness = Endianness::BE;
-        let mask = BitMask::Range { lsb: 7, msb: 4 };
+        let mask = BitMask::Range { lsb: 6, msb: 3 };
 
         let sign = Sign::Unsigned;
         let value = mask.apply_mask(reg_value, reg_len, endianness, sign);
-        assert_eq!(value, 0b1011);
+        assert_eq!(value, 0b0101);
         let new_value = mask.masked_value(reg_value, 0b0110, reg_len, endianness);
-        assert_eq!(new_value, 0b1100_0110);
+        assert_eq!(new_value, 0b1100_1101);
 
         let sign = Sign::Signed;
         let value = mask.apply_mask(reg_value, reg_len, endianness, sign);
-        assert_eq!(value, -5);
+        assert_eq!(value, 5);
         let new_value = mask.masked_value(reg_value, -1, reg_len, endianness);
-        assert_eq!(new_value, 0b1100_1111);
+        assert_eq!(new_value, 0b1101_1111);
     }
 
     #[test]
