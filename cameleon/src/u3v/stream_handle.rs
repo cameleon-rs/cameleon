@@ -15,10 +15,6 @@ use crate::{DeviceError, DeviceResult};
 use super::{control_handle::U3VDeviceControl, register_map::Sirm};
 
 /// This type is used to receive stream packets from the device.
-///
-/// Parameters required to receive a packet is inferred from SIRM, but please make sure the
-/// parameters are set to right values before starting to call `read_*` methods.
-#[derive(Clone)]
 pub struct StreamHandle {
     channel: Arc<Mutex<u3v::ReceiveChannel>>,
     params: StreamParams,
