@@ -8,9 +8,12 @@ pub mod camera;
 pub mod payload;
 pub mod u3v;
 
-use std::num::TryFromIntError;
+use std::{borrow::Cow, num::TryFromIntError};
 
-/// The error type for manipulation of devices.
+/// A specialized `Result` type for device manipulation.
+pub type DeviceResult<T> = std::result::Result<T, DeviceError>;
+
+/// An error type for manipulation of devices.
 #[derive(Debug, thiserror::Error)]
 pub enum DeviceError {
     /// The device is busy, may be opened by another application.
@@ -47,8 +50,16 @@ pub enum DeviceError {
     Timeout,
 }
 
-/// A specialized `Result` type for device manipulation.
-pub type DeviceResult<T> = std::result::Result<T, DeviceError>;
+/// A specialized `Result` type for streaming.
+pub type StreamResult<T> = std::result::Result<T, StreamError>;
+
+/// An error type related to payload streaming.
+pub enum StreamError {
+    /// Failed to receive [`payload::Payload`].
+    ReceiveError(Cow<'static, str>),
+    /// Failed to send [`payload::Payload`].
+    SendError(Cow<'static, str>),
+}
 
 impl From<TryFromIntError> for DeviceError {
     fn from(e: TryFromIntError) -> Self {
