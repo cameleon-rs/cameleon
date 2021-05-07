@@ -51,10 +51,10 @@ pub use stream_handle::{StreamHandle, StreamParams};
 
 use cameleon_device::u3v;
 
-use super::DeviceError;
+use super::ControlError;
 
-impl From<u3v::Error> for DeviceError {
-    fn from(err: u3v::Error) -> DeviceError {
+impl From<u3v::Error> for ControlError {
+    fn from(err: u3v::Error) -> ControlError {
         use u3v::Error::{BufferIo, InvalidDevice, InvalidPacket, LibUsb};
 
         match &err {
@@ -65,14 +65,14 @@ impl From<u3v::Error> for DeviceError {
                 };
                 match libusb_error {
                     Io | InvalidParam | Access | Overflow | Pipe | Interrupted | NoMem
-                    | NotSupported | BadDescriptor | Other => DeviceError::Io(err.into()),
-                    Busy => DeviceError::Busy,
-                    NoDevice | NotFound => DeviceError::Disconnected,
-                    Timeout => DeviceError::Timeout,
+                    | NotSupported | BadDescriptor | Other => ControlError::Io(err.into()),
+                    Busy => ControlError::Busy,
+                    NoDevice | NotFound => ControlError::Disconnected,
+                    Timeout => ControlError::Timeout,
                 }
             }
 
-            BufferIo(_) | InvalidPacket(_) => DeviceError::Io(err.into()),
+            BufferIo(_) | InvalidPacket(_) => ControlError::Io(err.into()),
 
             InvalidDevice => panic!("device is broken"),
         }

@@ -10,7 +10,7 @@ use cameleon_device::u3v::{
     protocol::stream::{Leader, Trailer},
 };
 
-use crate::{DeviceError, DeviceResult};
+use crate::{ControlError, ControlResult};
 
 use super::{control_handle::U3VDeviceControl, register_map::Sirm};
 
@@ -22,12 +22,12 @@ pub struct StreamHandle {
 
 impl StreamHandle {
     /// Open the handle.
-    pub fn open(&self) -> DeviceResult<()> {
+    pub fn open(&self) -> ControlResult<()> {
         Ok(self.channel.lock().unwrap().open()?)
     }
 
     /// Close the handle.
-    pub fn close(&self) -> DeviceResult<()> {
+    pub fn close(&self) -> ControlResult<()> {
         Ok(self.channel.lock().unwrap().close()?)
     }
 
@@ -44,7 +44,7 @@ impl StreamHandle {
         &self,
         buf: &'a mut [u8],
         timeout: time::Duration,
-    ) -> DeviceResult<Leader<'a>> {
+    ) -> ControlResult<Leader<'a>> {
         let leader_size = self.params.leader_size;
         Self::recv(&self.channel.lock().unwrap(), buf, leader_size, timeout)?;
 
@@ -52,7 +52,7 @@ impl StreamHandle {
     }
 
     /// Read payload of a stream packet.
-    pub fn read_payload(&self, buf: &mut [u8], timeout: time::Duration) -> DeviceResult<usize> {
+    pub fn read_payload(&self, buf: &mut [u8], timeout: time::Duration) -> ControlResult<usize> {
         let guard = self.channel.lock().unwrap();
         let mut read_len = 0;
 
@@ -92,7 +92,7 @@ impl StreamHandle {
         &self,
         buf: &'a mut [u8],
         timeout: time::Duration,
-    ) -> DeviceResult<Trailer<'a>> {
+    ) -> ControlResult<Trailer<'a>> {
         let trailer_size = self.params.trailer_size as usize;
         Self::recv(&self.channel.lock().unwrap(), buf, trailer_size, timeout)?;
 
@@ -110,7 +110,7 @@ impl StreamHandle {
         &mut self.params
     }
 
-    pub(super) fn new(device: &u3v::Device) -> DeviceResult<Option<Self>> {
+    pub(super) fn new(device: &u3v::Device) -> ControlResult<Option<Self>> {
         let channel = device.stream_channel()?;
         Ok(channel.map(|channel| Self {
             channel: Arc::new(Mutex::new(channel)),
@@ -123,13 +123,13 @@ impl StreamHandle {
         buf: &mut [u8],
         len: usize,
         timeout: time::Duration,
-    ) -> DeviceResult<usize> {
+    ) -> ControlResult<usize> {
         if len == 0 {
             return Ok(0);
         }
 
         if buf.len() < len {
-            return Err(DeviceError::BufferTooSmall);
+            return Err(ControlError::BufferTooSmall);
         }
 
         Ok(channel_guard.recv(&mut buf[..len], timeout)?)
@@ -182,7 +182,7 @@ impl StreamParams {
     }
 
     /// Build `StreamParams` from [`Sirm`].
-    pub fn from_sirm(device: &mut impl U3VDeviceControl, sirm: Sirm) -> DeviceResult<Self> {
+    pub fn from_sirm(device: &mut impl U3VDeviceControl, sirm: Sirm) -> ControlResult<Self> {
         let leader_size = sirm.maximum_leader_size(device)? as usize;
         let trailer_size = sirm.maximum_trailer_size(device)? as usize;
 

@@ -1,7 +1,7 @@
 //! TODO: REMOVE this module.
 use cameleon_device::u3v;
 
-use crate::DeviceResult;
+use crate::ControlResult;
 
 use super::{control_handle::ControlHandle, stream_handle::StreamHandle};
 
@@ -81,7 +81,7 @@ impl Device {
     /// Construct device from `cameleon_device::u3v::Device`.
     ///
     /// In normal use case, use [`enumerate_devices`] to construct devices.
-    pub fn new(device: u3v::Device) -> DeviceResult<Self> {
+    pub fn new(device: u3v::Device) -> ControlResult<Self> {
         let ctrl_handle = ControlHandle::new(&device)?;
         let strm_handle = StreamHandle::new(&device)?;
 
@@ -102,7 +102,7 @@ impl Device {
 /// // Enumerate devices connected to the host.
 /// let mut devices = enumerate_devices().unwrap();
 /// ```
-pub fn enumerate_devices() -> DeviceResult<Vec<Device>> {
+pub fn enumerate_devices() -> ControlResult<Vec<Device>> {
     let devices = u3v::enumerate_devices()?;
 
     Ok(devices

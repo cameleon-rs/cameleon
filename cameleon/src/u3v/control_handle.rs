@@ -14,7 +14,7 @@ use cameleon_device::{
 
 use super::register_map::{self, Abrm, ManifestTable, Sbrm, Sirm};
 
-use crate::{camera::DeviceControl, DeviceError, DeviceResult};
+use crate::{camera::DeviceControl, ControlError, ControlResult};
 
 /// Initial timeout duration for transaction between device and host.
 /// This value is temporarily used until the device's bootstrap register value is read.
@@ -124,12 +124,12 @@ impl ControlHandle {
     }
 
     /// Return [`Abrm`].
-    pub fn abrm(&mut self) -> DeviceResult<Abrm> {
+    pub fn abrm(&mut self) -> ControlResult<Abrm> {
         Abrm::new(self)
     }
 
     /// Return [`Sbrm`].
-    pub fn sbrm(&mut self) -> DeviceResult<Sbrm> {
+    pub fn sbrm(&mut self) -> ControlResult<Sbrm> {
         let addr = if let Some(addr) = self.sbrm_addr {
             addr
         } else {
@@ -142,12 +142,12 @@ impl ControlHandle {
     }
 
     /// Return [`Sirm`].
-    pub fn sirm(&mut self) -> DeviceResult<Sirm> {
+    pub fn sirm(&mut self) -> ControlResult<Sirm> {
         let addr = if let Some(addr) = self.sirm_addr {
             addr
         } else {
             let addr = self.sbrm()?.sirm_address(self)?.ok_or_else(|| {
-                DeviceError::InternalError("the u3v device doesn't have `SIRM ADDRESS`".into())
+                ControlError::InternalError("the u3v device doesn't have `SIRM ADDRESS`".into())
             })?;
             self.sirm_addr = Some(addr);
             addr
@@ -157,7 +157,7 @@ impl ControlHandle {
     }
 
     /// Return [`ManifestTable`].
-    pub fn manifest_table(&mut self) -> DeviceResult<ManifestTable> {
+    pub fn manifest_table(&mut self) -> ControlResult<ManifestTable> {
         let addr = if let Some(addr) = self.manifest_addr {
             addr
         } else {
@@ -169,7 +169,7 @@ impl ControlHandle {
         Ok(ManifestTable::new(addr))
     }
 
-    pub(super) fn new(device: &u3v::Device) -> DeviceResult<Self> {
+    pub(super) fn new(device: &u3v::Device) -> ControlResult<Self> {
         let inner = device.control_channel()?;
 
         Ok(Self {
@@ -183,15 +183,15 @@ impl ControlHandle {
         })
     }
 
-    fn assert_open(&self) -> DeviceResult<()> {
+    fn assert_open(&self) -> ControlResult<()> {
         if self.is_opened() {
             Ok(())
         } else {
-            Err(DeviceError::NotOpened)
+            Err(ControlError::NotOpened)
         }
     }
 
-    fn initialize_config(&mut self) -> DeviceResult<()> {
+    fn initialize_config(&mut self) -> ControlResult<()> {
         let abrm = self.abrm()?;
         let sbrm = abrm.sbrm(self)?;
 
@@ -206,7 +206,7 @@ impl ControlHandle {
         Ok(())
     }
 
-    fn send_cmd<'a, T, U>(&'a mut self, cmd: T) -> DeviceResult<U>
+    fn send_cmd<'a, T, U>(&'a mut self, cmd: T) -> ControlResult<U>
     where
         T: cmd::CommandScd,
         U: ack::ParseScd<'a>,
@@ -254,34 +254,34 @@ impl ControlHandle {
                 .unwrap()
                 .scd_as()?)
         } else {
-            Err(DeviceError::Io(
+            Err(ControlError::Io(
                 "the number of times pending was returned exceeds the retry_count.".into(),
             ))
         }
     }
 
-    fn verify_ack(&self, ack: &ack::AckPacket) -> DeviceResult<()> {
+    fn verify_ack(&self, ack: &ack::AckPacket) -> ControlResult<()> {
         let status = ack.status().kind();
         if status != ack::StatusKind::GenCp(ack::GenCpStatus::Success) {
-            return Err(DeviceError::Io(
+            return Err(ControlError::Io(
                 format!("invalid status: {:?}", ack.status().kind()).into(),
             ));
         }
 
         if ack.request_id() != self.next_req_id {
-            return Err(DeviceError::Io("request id mismatch".into()));
+            return Err(ControlError::Io("request id mismatch".into()));
         }
 
         Ok(())
     }
 
-    fn verify_xml(&mut self, xml: &[u8], ent: register_map::ManifestEntry) -> DeviceResult<()> {
+    fn verify_xml(&mut self, xml: &[u8], ent: register_map::ManifestEntry) -> ControlResult<()> {
         use sha1::Digest;
 
         if let Some(hash) = ent.sha1_hash(self)? {
             let xml_hash = sha1::Sha1::digest(xml);
             if xml_hash.as_slice() != hash {
-                Err(DeviceError::InternalError(
+                Err(ControlError::InternalError(
                     "sha1 of retrieved xml file isn't same as entry's hash".into(),
                 ))
             } else {
@@ -294,7 +294,7 @@ impl ControlHandle {
 }
 
 impl DeviceControl for ControlHandle {
-    fn open(&mut self) -> DeviceResult<()> {
+    fn open(&mut self) -> ControlResult<()> {
         if self.is_opened() {
             return Ok(());
         }
@@ -312,7 +312,7 @@ impl DeviceControl for ControlHandle {
         self.inner.is_opened()
     }
 
-    fn close(&mut self) -> DeviceResult<()> {
+    fn close(&mut self) -> ControlResult<()> {
         if self.is_opened() {
             Ok(self.inner.close()?)
         } else {
@@ -320,7 +320,7 @@ impl DeviceControl for ControlHandle {
         }
     }
 
-    fn write_mem(&mut self, address: u64, data: &[u8]) -> DeviceResult<()> {
+    fn write_mem(&mut self, address: u64, data: &[u8]) -> ControlResult<()> {
         self.assert_open()?;
 
         let cmd = cmd::WriteMem::new(address, data)?;
@@ -331,7 +331,7 @@ impl DeviceControl for ControlHandle {
             let ack: ack::WriteMem = self.send_cmd(chunk)?;
 
             if ack.length as usize != chunk_data_len {
-                return Err(DeviceError::Io(
+                return Err(ControlError::Io(
                     "write mem failed: written length mismatch".into(),
                 ));
             }
@@ -340,7 +340,7 @@ impl DeviceControl for ControlHandle {
         Ok(())
     }
 
-    fn read_mem(&mut self, mut address: u64, buf: &mut [u8]) -> DeviceResult<()> {
+    fn read_mem(&mut self, mut address: u64, buf: &mut [u8]) -> ControlResult<()> {
         self.assert_open()?;
 
         // Chunks buffer if buffer length is larger than u16::MAX.
@@ -365,7 +365,7 @@ impl DeviceControl for ControlHandle {
         Ok(())
     }
 
-    fn gen_api(&mut self) -> DeviceResult<String> {
+    fn gen_api(&mut self) -> ControlResult<String> {
         let table = self.manifest_table()?;
         // Use newest version if there are more than one entries.
         let mut newest_ent = None;
@@ -383,7 +383,7 @@ impl DeviceControl for ControlHandle {
         }
 
         let (ent, _, file_info) = newest_ent.ok_or_else(|| {
-            DeviceError::InternalError("device doesn't have valid `ManifestEntry`".into())
+            ControlError::InternalError("device doesn't have valid `ManifestEntry`".into())
         })?;
 
         let file_address: u64 = ent.file_address(self)?;
@@ -399,8 +399,8 @@ impl DeviceControl for ControlHandle {
         // Verify retrieved xml has correct hash.
         self.verify_xml(&buf, ent)?;
 
-        fn zip_err(err: impl std::fmt::Debug) -> DeviceError {
-            DeviceError::InternalError(format!("zipped xml file is broken: {:?}", err).into())
+        fn zip_err(err: impl std::fmt::Debug) -> ControlError {
+            ControlError::InternalError(format!("zipped xml file is broken: {:?}", err).into())
         }
         match comp_type {
             register_map::CompressionType::Zip => {
@@ -418,12 +418,12 @@ impl DeviceControl for ControlHandle {
         }
     }
 
-    fn enable_streaming(&mut self) -> DeviceResult<()> {
+    fn enable_streaming(&mut self) -> ControlResult<()> {
         let sirm = self.sirm()?;
         sirm.enable_stream(self)
     }
 
-    fn disable_streaming(&mut self) -> DeviceResult<()> {
+    fn disable_streaming(&mut self) -> ControlResult<()> {
         let sirm = self.sirm()?;
         sirm.disable_stream(self)
     }
@@ -476,13 +476,13 @@ impl SharedControlHandle {
         /// Thread safe version of [`ContolHandle::set_retry_count`].
         pub fn set_retry_count(&self, count: u16) -> (),
         /// Thread safe version of [`ContolHandle::abrm`].
-        pub fn abrm(&self) -> DeviceResult<Abrm>,
+        pub fn abrm(&self) -> ControlResult<Abrm>,
         /// Thread safe version of [`ContolHandle::sbrm`].
-        pub fn sbrm(&self) -> DeviceResult<Sbrm>,
+        pub fn sbrm(&self) -> ControlResult<Sbrm>,
         /// Thread safe version of [`ContolHandle::sirm`].
-        pub fn sirm(&self) -> DeviceResult<Sirm>,
+        pub fn sirm(&self) -> ControlResult<Sirm>,
         /// Thread safe version of [`ContolHandle::manifest_table`].
-        pub fn manifest_table(&self) -> DeviceResult<ManifestTable>
+        pub fn manifest_table(&self) -> ControlResult<ManifestTable>
 
     );
 }
@@ -493,13 +493,13 @@ impl DeviceControl for SharedControlHandle {
     }
 
     impl_shared_control_handle! {
-        fn open(&mut self) -> DeviceResult<()>,
-        fn close(&mut self) -> DeviceResult<()>,
-        fn read_mem(&mut self, address: u64, buf: &mut [u8]) -> DeviceResult<()>,
-        fn write_mem(&mut self, address: u64, data: &[u8]) -> DeviceResult<()>,
-        fn gen_api(&mut self) -> DeviceResult<String>,
-        fn enable_streaming(&mut self) -> DeviceResult<()>,
-        fn disable_streaming(&mut self) -> DeviceResult<()>
+        fn open(&mut self) -> ControlResult<()>,
+        fn close(&mut self) -> ControlResult<()>,
+        fn read_mem(&mut self, address: u64, buf: &mut [u8]) -> ControlResult<()>,
+        fn write_mem(&mut self, address: u64, data: &[u8]) -> ControlResult<()>,
+        fn gen_api(&mut self) -> ControlResult<String>,
+        fn enable_streaming(&mut self) -> ControlResult<()>,
+        fn disable_streaming(&mut self) -> ControlResult<()>
     }
 }
 

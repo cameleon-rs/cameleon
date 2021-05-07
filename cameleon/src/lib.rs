@@ -10,12 +10,12 @@ pub mod u3v;
 
 use std::{borrow::Cow, num::TryFromIntError};
 
-/// A specialized `Result` type for device manipulation.
-pub type DeviceResult<T> = std::result::Result<T, DeviceError>;
+/// A specialized `Result` type for device control.
+pub type ControlResult<T> = std::result::Result<T, ControlError>;
 
-/// An error type for manipulation of devices.
+/// An error type for device control.
 #[derive(Debug, thiserror::Error)]
-pub enum DeviceError {
+pub enum ControlError {
     /// The device is busy, may be opened by another application.
     #[error("device is busy")]
     Busy,
@@ -61,7 +61,7 @@ pub enum StreamError {
     SendError(Cow<'static, str>),
 }
 
-impl From<TryFromIntError> for DeviceError {
+impl From<TryFromIntError> for ControlError {
     fn from(e: TryFromIntError) -> Self {
         Self::InternalError(format!("internal data has invalid num type: {}", e).into())
     }
