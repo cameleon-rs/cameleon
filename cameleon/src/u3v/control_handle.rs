@@ -28,6 +28,21 @@ const INITIAL_MAXIMUM_CMD_LENGTH: u32 = 128;
 /// This value is temporarily used until the device's bootstrap register value is read.
 const INITIAL_MAXIMUM_ACK_LENGTH: u32 = 128;
 
+/// A trait represents the handle is for `U3V`.
+pub trait U3VDeviceControl: DeviceControl {
+    /// Return [`Abrm`].
+    fn abrm(&mut self) -> ControlResult<Abrm>;
+
+    /// Return [`Sbrm`].
+    fn sbrm(&mut self) -> ControlResult<Sbrm>;
+
+    /// Return [`Sirm`].
+    fn sirm(&mut self) -> ControlResult<Sirm>;
+
+    /// Return [`ManifestTable`].
+    fn manifest_table(&mut self) -> ControlResult<ManifestTable>;
+}
+
 /// This handle provides low level API to read and write data from the device.  
 /// See [`ControlHandle::abrm`] and [`register_map`](super::register_map) which provide more
 /// convenient API to communicate with the device.
@@ -121,52 +136,6 @@ impl ControlHandle {
     /// device.
     pub fn set_retry_count(&mut self, count: u16) {
         self.config.retry_count = count;
-    }
-
-    /// Return [`Abrm`].
-    pub fn abrm(&mut self) -> ControlResult<Abrm> {
-        Abrm::new(self)
-    }
-
-    /// Return [`Sbrm`].
-    pub fn sbrm(&mut self) -> ControlResult<Sbrm> {
-        let addr = if let Some(addr) = self.sbrm_addr {
-            addr
-        } else {
-            let addr = self.abrm()?.sbrm_address(self)?;
-            self.sbrm_addr = Some(addr);
-            addr
-        };
-
-        Sbrm::new(self, addr)
-    }
-
-    /// Return [`Sirm`].
-    pub fn sirm(&mut self) -> ControlResult<Sirm> {
-        let addr = if let Some(addr) = self.sirm_addr {
-            addr
-        } else {
-            let addr = self.sbrm()?.sirm_address(self)?.ok_or_else(|| {
-                ControlError::InternalError("the u3v device doesn't have `SIRM ADDRESS`".into())
-            })?;
-            self.sirm_addr = Some(addr);
-            addr
-        };
-
-        Ok(Sirm::new(addr))
-    }
-
-    /// Return [`ManifestTable`].
-    pub fn manifest_table(&mut self) -> ControlResult<ManifestTable> {
-        let addr = if let Some(addr) = self.manifest_addr {
-            addr
-        } else {
-            let addr = self.abrm()?.manifest_table_address(self)?;
-            self.manifest_addr = Some(addr);
-            addr
-        };
-
-        Ok(ManifestTable::new(addr))
     }
 
     pub(super) fn new(device: &u3v::Device) -> ControlResult<Self> {
@@ -429,6 +398,50 @@ impl DeviceControl for ControlHandle {
     }
 }
 
+impl U3VDeviceControl for ControlHandle {
+    fn abrm(&mut self) -> ControlResult<Abrm> {
+        Abrm::new(self)
+    }
+
+    fn sbrm(&mut self) -> ControlResult<Sbrm> {
+        let addr = if let Some(addr) = self.sbrm_addr {
+            addr
+        } else {
+            let addr = self.abrm()?.sbrm_address(self)?;
+            self.sbrm_addr = Some(addr);
+            addr
+        };
+
+        Sbrm::new(self, addr)
+    }
+
+    fn sirm(&mut self) -> ControlResult<Sirm> {
+        let addr = if let Some(addr) = self.sirm_addr {
+            addr
+        } else {
+            let addr = self.sbrm()?.sirm_address(self)?.ok_or_else(|| {
+                ControlError::InternalError("the u3v device doesn't have `SIRM ADDRESS`".into())
+            })?;
+            self.sirm_addr = Some(addr);
+            addr
+        };
+
+        Ok(Sirm::new(addr))
+    }
+
+    fn manifest_table(&mut self) -> ControlResult<ManifestTable> {
+        let addr = if let Some(addr) = self.manifest_addr {
+            addr
+        } else {
+            let addr = self.abrm()?.manifest_table_address(self)?;
+            self.manifest_addr = Some(addr);
+            addr
+        };
+
+        Ok(ManifestTable::new(addr))
+    }
+}
+
 /// Thread safe version of [`ContolHandle`].
 #[derive(Clone)]
 pub struct SharedControlHandle(Arc<Mutex<ControlHandle>>);
@@ -474,16 +487,7 @@ impl SharedControlHandle {
         #[must_use]
         pub fn retry_count(&self) -> u16,
         /// Thread safe version of [`ContolHandle::set_retry_count`].
-        pub fn set_retry_count(&self, count: u16) -> (),
-        /// Thread safe version of [`ContolHandle::abrm`].
-        pub fn abrm(&self) -> ControlResult<Abrm>,
-        /// Thread safe version of [`ContolHandle::sbrm`].
-        pub fn sbrm(&self) -> ControlResult<Sbrm>,
-        /// Thread safe version of [`ContolHandle::sirm`].
-        pub fn sirm(&self) -> ControlResult<Sirm>,
-        /// Thread safe version of [`ContolHandle::manifest_table`].
-        pub fn manifest_table(&self) -> ControlResult<ManifestTable>
-
+        pub fn set_retry_count(&self, count: u16) -> ()
     );
 }
 
@@ -503,10 +507,14 @@ impl DeviceControl for SharedControlHandle {
     }
 }
 
-/// A marker trait represents the handle is for `U3V`.
-pub trait U3VDeviceControl: DeviceControl {}
-impl U3VDeviceControl for ControlHandle {}
-impl U3VDeviceControl for SharedControlHandle {}
+impl U3VDeviceControl for SharedControlHandle {
+    impl_shared_control_handle! {
+        fn abrm(&mut self) -> ControlResult<Abrm>,
+        fn sbrm(&mut self) -> ControlResult<Sbrm>,
+        fn sirm(&mut self) -> ControlResult<Sirm>,
+        fn manifest_table(&mut self) -> ControlResult<ManifestTable>
+    }
+}
 
 struct ConnectionConfig {
     /// Timeout duration of each transaction between device.
