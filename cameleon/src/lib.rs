@@ -1,14 +1,13 @@
-#![warn(missing_docs)]
-#![allow(
-    clippy::module_name_repetitions,
-    clippy::similar_names,
-    clippy::missing_errors_doc
-)]
-
 //! `cameleon` is a library for `GenICam` compatible cameras.
 //! TODO: TBW
 
+#![warn(missing_docs)]
+#![allow(clippy::similar_names, clippy::missing_errors_doc)]
+
+pub mod camera;
 pub mod u3v;
+
+use std::num::TryFromIntError;
 
 /// The error type for manipulation of devices.
 #[derive(Debug, thiserror::Error)]
@@ -34,7 +33,7 @@ pub enum DeviceError {
     InternalError(Box<dyn std::error::Error>),
 
     /// Buffer is too small to receive data.
-    #[error("buffer is too small to recive data")]
+    #[error("buffer is too small to recieve data")]
     BufferTooSmall,
 
     /// Try to write invalid data to the device.
@@ -50,20 +49,8 @@ pub enum DeviceError {
 /// A specialized `Result` type for device manipulation.
 pub type DeviceResult<T> = std::result::Result<T, DeviceError>;
 
-/// Represent file type of `GenICam` XML file on the device's memory.
-#[derive(Debug, Clone, Copy)]
-pub enum GenICamFileType {
-    /// This is the “normal” `GenICam` device XML containing all device features.
-    DeviceXml,
-    /// This is optional XML-file that contains only the chunkdata related nodes.
-    BufferXml,
-}
-
-/// Represent `CompressionType` of `GenICam` XML file on the device's memory.
-#[derive(Debug, Clone, Copy)]
-pub enum CompressionType {
-    /// Uncompressed `GenICam` XML file.
-    Uncompressed,
-    /// ZIP containing a single `GenICam` XML file.
-    Zip,
+impl From<TryFromIntError> for DeviceError {
+    fn from(e: TryFromIntError) -> Self {
+        Self::InternalError(format!("internal data has invalid num type: {}", e).into())
+    }
 }

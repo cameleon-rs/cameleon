@@ -41,9 +41,9 @@
 
 pub mod register_map;
 
-mod control_handle;
-mod device;
-mod stream_handle;
+pub mod control_handle;
+pub mod device;
+pub mod stream_handle;
 
 pub use control_handle::ControlHandle;
 pub use device::{enumerate_devices, Device, DeviceInfo};

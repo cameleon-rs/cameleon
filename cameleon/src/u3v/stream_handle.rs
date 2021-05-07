@@ -1,3 +1,5 @@
+//! TODO: TBW.
+
 use std::{
     sync::{Arc, Mutex, MutexGuard},
     time,
@@ -10,7 +12,7 @@ use cameleon_device::u3v::{
 
 use crate::{DeviceError, DeviceResult};
 
-use super::register_map::Sirm;
+use super::{control_handle::U3VDeviceControl, register_map::Sirm};
 
 /// This type is used to receive stream packets from the device.
 ///
@@ -140,7 +142,7 @@ impl StreamHandle {
 
 /// Parameters to receive stream packets.
 ///
-/// Both `StreamParams` and [`StreamHandle`] don't check integrity of the paremter. That's up to user.
+/// Both [`StreamHandle`] doesn't check the integrity of the parameters. That's up to user.
 #[derive(Debug, Clone, Default)]
 pub struct StreamParams {
     /// Maximum leader size.
@@ -184,14 +186,14 @@ impl StreamParams {
     }
 
     /// Build `StreamParams` from [`Sirm`].
-    pub fn from_sirm(sirm: &Sirm<'_>) -> DeviceResult<Self> {
-        let leader_size = sirm.maximum_leader_size()? as usize;
-        let trailer_size = sirm.maximum_trailer_size()? as usize;
+    pub fn from_sirm(device: &mut impl U3VDeviceControl, sirm: Sirm) -> DeviceResult<Self> {
+        let leader_size = sirm.maximum_leader_size(device)? as usize;
+        let trailer_size = sirm.maximum_trailer_size(device)? as usize;
 
-        let payload_size = sirm.payload_transfer_size()? as usize;
-        let payload_count = sirm.payload_transfer_count()? as usize;
-        let payload_final1_size = sirm.payload_final_transfer1_size()? as usize;
-        let payload_final2_size = sirm.payload_final_transfer2_size()? as usize;
+        let payload_size = sirm.payload_transfer_size(device)? as usize;
+        let payload_count = sirm.payload_transfer_count(device)? as usize;
+        let payload_final1_size = sirm.payload_final_transfer1_size(device)? as usize;
+        let payload_final2_size = sirm.payload_final_transfer2_size(device)? as usize;
 
         Ok(Self::new(
             leader_size,

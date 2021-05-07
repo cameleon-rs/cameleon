@@ -1,3 +1,4 @@
+//! TODO: REMOVE this module.
 use cameleon_device::u3v;
 
 use crate::DeviceResult;
