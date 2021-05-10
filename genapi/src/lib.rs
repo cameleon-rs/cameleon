@@ -153,8 +153,8 @@ pub type GenApiResult<T> = std::result::Result<T, GenApiError>;
 
 #[derive(Clone, Debug)]
 pub struct ValueCtxt<T, U> {
-    value_store: T,
-    cache_store: U,
+    pub value_store: T,
+    pub cache_store: U,
 }
 
 impl<T, U> ValueCtxt<T, U> {
