@@ -276,6 +276,8 @@ macro_rules! unwrap_or_log {
 }
 
 impl DeviceControl for ControlHandle {
+    type StrmParams = super::stream_handle::StreamParams;
+
     fn open(&mut self) -> ControlResult<()> {
         if self.is_opened() {
             return Ok(());
@@ -401,9 +403,59 @@ impl DeviceControl for ControlHandle {
         }
     }
 
-    fn enable_streaming(&mut self) -> ControlResult<()> {
+    fn enable_streaming(&mut self) -> ControlResult<Self::StrmParams> {
         let sirm = unwrap_or_log!(self.sirm());
-        sirm.enable_stream(self)
+        unwrap_or_log!(sirm.enable_stream(self));
+
+        let payload_alignment = unwrap_or_log!(sirm.payload_size_alignment(self));
+        macro_rules! align {
+            ($expr:expr, $ty: ty) => {
+                ($expr + (payload_alignment as $ty - 1)) & !(payload_alignment as $ty - 1)
+            };
+        }
+
+        let required_leader_size = unwrap_or_log!(sirm.required_leader_size(self));
+        let required_payload_size = unwrap_or_log!(sirm.required_payload_size(self));
+        let required_trailer_size = unwrap_or_log!(sirm.required_leader_size(self));
+
+        let payload_transfer_size = align!(required_leader_size, u32);
+        let payload_transfer_count = (required_payload_size / payload_transfer_size as u64) as u32;
+        let payload_final_transfer1_size =
+            align!(required_payload_size % payload_transfer_size as u64, u64) as u32;
+        let payload_final_transfer2_size = 0;
+
+        let maximum_leader_size = if required_leader_size != 0 {
+            required_leader_size
+        } else {
+            payload_transfer_size
+        };
+        let maximum_trailer_size = if required_trailer_size != 0 {
+            required_trailer_size
+        } else {
+            payload_transfer_size
+        };
+        let timeout =
+            unwrap_or_log!(unwrap_or_log!(self.abrm()).maximum_device_response_time(self));
+
+        unwrap_or_log!(sirm.set_payload_transfer_size(self, payload_transfer_size));
+        unwrap_or_log!(sirm.set_payload_transfer_count(self, payload_transfer_count));
+        unwrap_or_log!(sirm.set_payload_final_transfer1_size(self, payload_final_transfer1_size));
+        unwrap_or_log!(sirm.set_payload_final_transfer2_size(self, payload_final_transfer2_size));
+        unwrap_or_log!(sirm.set_maximum_leader_size(self, maximum_leader_size));
+        unwrap_or_log!(sirm.set_maximum_trailer_size(self, maximum_trailer_size));
+        unwrap_or_log!(sirm.enable_stream(self));
+
+        let params = super::stream_handle::StreamParams {
+            leader_size: maximum_leader_size as usize,
+            trailer_size: maximum_trailer_size as usize,
+            payload_size: payload_transfer_size as usize,
+            payload_count: payload_transfer_count as usize,
+            payload_final1_size: payload_final_transfer1_size as usize,
+            payload_final2_size: payload_final_transfer2_size as usize,
+            timeout,
+        };
+
+        Ok(params)
     }
 
     fn disable_streaming(&mut self) -> ControlResult<()> {
@@ -514,6 +566,8 @@ impl SharedControlHandle {
 }
 
 impl DeviceControl for SharedControlHandle {
+    type StrmParams = super::StreamParams;
+
     impl_shared_control_handle! {
         fn is_opened(&self) -> bool
     }
@@ -524,7 +578,7 @@ impl DeviceControl for SharedControlHandle {
         fn read_mem(&mut self, address: u64, buf: &mut [u8]) -> ControlResult<()>,
         fn write_mem(&mut self, address: u64, data: &[u8]) -> ControlResult<()>,
         fn gen_api(&mut self) -> ControlResult<String>,
-        fn enable_streaming(&mut self) -> ControlResult<()>,
+        fn enable_streaming(&mut self) -> ControlResult<Self::StrmParams>,
         fn disable_streaming(&mut self) -> ControlResult<()>
     }
 }
