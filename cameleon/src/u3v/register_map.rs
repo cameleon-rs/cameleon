@@ -685,9 +685,8 @@ impl Sirm {
         device: &mut impl U3VDeviceControl,
     ) -> ControlResult<usize> {
         let si_info: u32 = self.read_register(device, sirm::SI_INFO)?;
-        // Upper 8 bites specifies the exp of the alignment.
-        let exp = si_info >> 24;
-        Ok(2_usize.pow(exp))
+        // Upper 8 bits specifies the exp of the alignment.
+        Ok(1 << (si_info >> 24))
     }
 
     /// Enable stream.
