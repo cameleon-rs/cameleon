@@ -10,6 +10,33 @@ pub mod u3v;
 
 use std::{borrow::Cow, num::TryFromIntError};
 
+/// A specialized `Result` type.
+pub type CameleonResult<T> = std::result::Result<T, CameleonError>;
+
+/// An error type returned from the `camera::Camera`.
+#[derive(Debug, thiserror::Error)]
+pub enum CameleonError {
+    /// Error from device control.
+    #[error("control error: {0}")]
+    ControlError(ControlError),
+
+    /// Error from payload stream.
+    #[error("stream error: {0}")]
+    StreamError(StreamError),
+}
+
+impl From<ControlError> for CameleonError {
+    fn from(err: ControlError) -> Self {
+        Self::ControlError(err)
+    }
+}
+
+impl From<StreamError> for CameleonError {
+    fn from(err: StreamError) -> Self {
+        Self::StreamError(err)
+    }
+}
+
 /// A specialized `Result` type for device control.
 pub type ControlResult<T> = std::result::Result<T, ControlError>;
 
