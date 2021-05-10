@@ -61,7 +61,7 @@ impl ControlChannel {
 impl Drop for ControlChannel {
     // TODO: logging.
     fn drop(&mut self) {
-        let _ = self.close();
+        let _res = self.close();
     }
 }
 
@@ -117,6 +117,6 @@ impl ReceiveChannel {
 
 impl Drop for ReceiveChannel {
     fn drop(&mut self) {
-        let _ = self.close();
+        let _res = self.close();
     }
 }

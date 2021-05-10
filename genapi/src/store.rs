@@ -311,10 +311,8 @@ impl NodeStore for DefaultNodeStore {
     where
         F: FnMut(&NodeData),
     {
-        for data in &self.store {
-            if let Some(data) = data {
-                f(data);
-            }
+        for data in self.store.iter().flatten() {
+            f(data);
         }
     }
 }

@@ -118,7 +118,7 @@ impl SystemModule {
     pub(crate) fn close(&mut self) -> GenTlResult<()> {
         self.assert_open()?;
         for iface in &mut self.interfaces() {
-            let _ = iface.lock().unwrap().close();
+            let _res = iface.lock().unwrap().close();
         }
 
         Ok(())
