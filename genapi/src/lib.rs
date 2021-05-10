@@ -57,6 +57,7 @@ pub use port::PortNode;
 pub use register::RegisterNode;
 pub use register_base::RegisterBase;
 pub use register_description::RegisterDescription;
+pub use store::{CacheStore, NodeStore, ValueStore};
 pub use string::StringNode;
 pub use string_reg::StringRegNode;
 pub use swiss_knife::SwissKnifeNode;
