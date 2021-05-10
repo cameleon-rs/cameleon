@@ -15,6 +15,7 @@ sha-1 = "0.9.5"
 async-std = { version = "1.9.0", features = ["unstable"] }
 futures = "0.3.14"
 tracing = "0.1.26"
+auto_impl = "0.4.1"
 
 cameleon-device = { path = "../device" }
 cameleon-genapi = { path = "../genapi" }

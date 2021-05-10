@@ -1,9 +1,11 @@
 //! This module provides access to `GenApi` features of `GenICam` a compatible camera.
 use std::sync::{Arc, Mutex};
 
+use auto_impl::auto_impl;
 use cameleon_genapi::{store, CacheStore, NodeStore, ValueCtxt, ValueStore};
 
 /// The trait that provides accesss to `GenApi` context.
+#[auto_impl(&mut, Box)]
 pub trait GenApiCtxt {
     /// A type that implements [`NodeStore`]
     type NS: NodeStore;
@@ -61,6 +63,15 @@ impl GenApiCtxt for SharedDefaultGenApiCtxt {
     }
 }
 
+impl From<DefaultGenApiCtxt> for SharedDefaultGenApiCtxt {
+    fn from(ctxt: DefaultGenApiCtxt) -> Self {
+        Self {
+            node_store: Arc::new(ctxt.node_store),
+            value_ctxt: Arc::new(Mutex::new(ctxt.value_ctxt)),
+        }
+    }
+}
+
 /// `GenApi` context.  
 /// This context doesn't cache any value of `GenApi` nodes.
 #[derive(Debug)]
@@ -82,6 +93,15 @@ impl GenApiCtxt for NoCacheGenApiCtxt {
     }
 }
 
+impl From<DefaultGenApiCtxt> for NoCacheGenApiCtxt {
+    fn from(from: DefaultGenApiCtxt) -> Self {
+        Self {
+            node_store: from.node_store,
+            value_ctxt: ValueCtxt::new(from.value_ctxt.value_store, store::CacheSink::default()),
+        }
+    }
+}
+
 /// Sharable version of [`NoCacheGenApiCtxt`].
 #[derive(Clone, Debug)]
 pub struct SharedNoCacheGenApiCtxt {
@@ -99,5 +119,36 @@ impl GenApiCtxt for SharedNoCacheGenApiCtxt {
         F: Fn(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R,
     {
         f(&self.node_store, &mut self.value_ctxt.lock().unwrap())
+    }
+}
+
+impl From<NoCacheGenApiCtxt> for SharedNoCacheGenApiCtxt {
+    fn from(from: NoCacheGenApiCtxt) -> Self {
+        Self {
+            node_store: Arc::new(from.node_store),
+            value_ctxt: Arc::new(Mutex::new(from.value_ctxt)),
+        }
+    }
+}
+
+impl From<DefaultGenApiCtxt> for SharedNoCacheGenApiCtxt {
+    fn from(from: DefaultGenApiCtxt) -> Self {
+        let ctxt: NoCacheGenApiCtxt = from.into();
+        ctxt.into()
+    }
+}
+
+/// Provides easy-to-use access to `GenApi` features which are defined in `GenICam Standard Features Naming
+/// Convention (SFNC)`.
+#[derive(Clone, Debug)]
+pub struct CameraParams<Ctrl, Ctxt> {
+    ctrl: Ctrl,
+    ctxt: Ctxt,
+}
+
+impl<Ctrl, Ctxt> CameraParams<Ctrl, Ctxt> {
+    /// Constructs `CameraParams`.
+    pub fn new(ctrl: Ctrl, ctxt: Ctxt) -> Self {
+        Self { ctrl, ctxt }
     }
 }

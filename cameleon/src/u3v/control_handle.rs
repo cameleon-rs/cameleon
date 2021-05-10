@@ -544,6 +544,12 @@ macro_rules! impl_shared_control_handle {
     }
 }
 
+impl From<ControlHandle> for SharedControlHandle {
+    fn from(handle: ControlHandle) -> Self {
+        Self(Arc::new(Mutex::new(handle)))
+    }
+}
+
 impl SharedControlHandle {
     impl_shared_control_handle!(
         /// Thread safe version of [`ContolHandle::buffer_capacity`].
