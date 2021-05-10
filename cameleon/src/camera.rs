@@ -32,9 +32,18 @@ pub trait DeviceControl {
 
 /// This trait provides streaming capability.
 pub trait PayloadStream {
+    /// Open the handle.
+    fn open(&mut self) -> StreamResult<()>;
+
+    /// Close the handle.
+    fn close(&mut self) -> StreamResult<()>;
+
     /// Start streaming.
     fn run_streaming_loop(&mut self, sender: PayloadSender) -> StreamResult<()>;
 
     /// Stop streaming.
     fn stop_streaming_loop(&mut self) -> StreamResult<()>;
+
+    /// Return `true` if streaming loop is running.
+    fn is_loop_running(&self) -> bool;
 }

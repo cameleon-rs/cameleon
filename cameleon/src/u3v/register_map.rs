@@ -490,7 +490,10 @@ impl Sbrm {
     }
 
     /// Version of U3V of the device.
-    pub fn u3v_version(&self, device: &mut impl U3VDeviceControl) -> ControlResult<semver::Version> {
+    pub fn u3v_version(
+        &self,
+        device: &mut impl U3VDeviceControl,
+    ) -> ControlResult<semver::Version> {
         let u3v_version: u32 = self.read_register(device, sbrm::U3V_VERSION)?;
         let u3v_version_minor = u3v_version & 0xff;
         let u3v_version_major = (u3v_version >> 16) & 0xff;
@@ -599,7 +602,10 @@ impl Sbrm {
     }
 
     /// Current bus speed used to communication.
-    pub fn current_speed(&self, device: &mut impl U3VDeviceControl) -> ControlResult<u3v::BusSpeed> {
+    pub fn current_speed(
+        &self,
+        device: &mut impl U3VDeviceControl,
+    ) -> ControlResult<u3v::BusSpeed> {
         self.read_register(device, sbrm::CURRENT_SPEED)
     }
 

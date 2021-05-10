@@ -3,6 +3,8 @@
 //! `Payload` is an abstracted container that is mainly used to transfer an image, but also meta data of the image.
 //! See [`Payload`] and [`ImageInfo`] for more details.
 
+use std::time;
+
 use async_std::channel::{Receiver, Sender};
 use cameleon_device::PixelFormat;
 
@@ -27,21 +29,24 @@ pub struct ImageInfo {
     pub height: usize,
     /// X offset in pixels from the whole image origin. Some devices have capability of
     /// sending multiple extracted image regions, this fields used for the purpose.
-    pub offset_x: usize,
+    pub x_offset: usize,
     /// Y offset in pixels from the whole image origin. Some devices have capability of
     /// sending multiple extracted image regions, this fields used for the purpose.
-    pub offset_y: usize,
+    pub y_offset: usize,
     /// [`PixelFormat`] of the image.
-    pub pixel_format: Option<PixelFormat>,
+    pub pixel_format: PixelFormat,
     /// Size of image in bytes.
     pub image_size: usize,
 }
 
 /// Payload sent from the device.
 pub struct Payload {
-    payload_type: PayloadType,
-    info: Option<ImageInfo>,
-    payload: Vec<u8>,
+    pub(crate) id: u64,
+    pub(crate) payload_type: PayloadType,
+    pub(crate) image_info: Option<ImageInfo>,
+    pub(crate) payload: Vec<u8>,
+    pub(crate) valid_payload_size: usize,
+    pub(crate) timestamp: time::Duration,
 }
 
 impl Payload {
@@ -53,7 +58,7 @@ impl Payload {
     /// Return [`ImageInfo`] if `payload_type` is [`PayloadType::Image`] or
     /// [`PayloadType::ImageExtendedChunk`].
     pub fn image_info(&self) -> Option<&ImageInfo> {
-        self.info.as_ref()
+        self.image_info.as_ref()
     }
 
     /// Return the image bytes in the payload if `payload_type` is [`PayloadType::Image`]  or
@@ -66,7 +71,18 @@ impl Payload {
     /// Return the whole payload. Use [`Self::image`] instead if you interested only
     /// in image region of the payload.
     pub fn payload(&self) -> &[u8] {
-        &self.payload
+        &self.payload[..self.valid_payload_size]
+    }
+
+    /// Return unique id of `payload`, which sequentially incremented every time the device send a
+    /// `payload`.
+    pub fn id(&self) -> u64 {
+        self.id
+    }
+
+    /// Timestamp of the device when the payload is generated.
+    pub fn timestamp(&self) -> time::Duration {
+        self.timestamp
     }
 }
 

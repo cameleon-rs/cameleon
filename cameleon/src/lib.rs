@@ -54,11 +54,41 @@ pub enum ControlError {
 pub type StreamResult<T> = std::result::Result<T, StreamError>;
 
 /// An error type related to payload streaming.
+#[derive(Debug, thiserror::Error)]
 pub enum StreamError {
     /// Failed to receive [`payload::Payload`].
+    #[error("failed to receive payload: {0}")]
     ReceiveError(Cow<'static, str>),
+
     /// Failed to send [`payload::Payload`].
+    #[error("failed to send payload: {0}")]
     SendError(Cow<'static, str>),
+
+    /// Payload leader is invalid.
+    #[error("invalid leader: {0}")]
+    InvalidLeader(Box<dyn std::error::Error>),
+
+    /// Payload data is invalid.
+    #[error("invalid leader: {0}")]
+    InvalidPayloadData(Box<dyn std::error::Error>),
+
+    /// Payload trailer is invalid.
+    #[error("invalid trailer: {0}")]
+    InvalidTrailer(Box<dyn std::error::Error>),
+
+    /// Can't communicate with device.
+    #[error("can't communicate the device: {0}")]
+    Device(Box<dyn std::error::Error>),
+
+    /// Buffer is too small to receive data.
+    #[error("buffer is too small to recieve data")]
+    BufferTooSmall,
+
+    /// Streaming is already started.
+    #[error(
+        "streaming is already started. can't use the handle from the outside of streaming loop"
+    )]
+    InStreaming,
 }
 
 impl From<TryFromIntError> for ControlError {

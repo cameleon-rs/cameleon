@@ -17,6 +17,7 @@ use super::{
     },
 };
 
+#[derive(Debug)]
 pub(crate) struct DeviceHandle {
     device_id: u32,
     channel: Option<DevicePipe>,
