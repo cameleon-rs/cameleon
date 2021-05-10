@@ -102,6 +102,8 @@ impl StreamHandle {
 }
 
 impl PayloadStream for StreamHandle {
+    type StrmParams = StreamParams;
+
     fn open(&mut self) -> StreamResult<()> {
         unwrap_or_poisoned!(self.inner.lock())?.open().map_err(|e| {
             error!(?e);
@@ -121,7 +123,12 @@ impl PayloadStream for StreamHandle {
             })
     }
 
-    fn run_streaming_loop(&mut self, sender: PayloadSender) -> StreamResult<()> {
+    fn run_streaming_loop(
+        &mut self,
+        sender: PayloadSender,
+        params: Self::StrmParams,
+    ) -> StreamResult<()> {
+        self.params = params;
         if self.is_loop_running() {
             return Err(StreamError::InStreaming);
         }
@@ -207,7 +214,7 @@ impl StreamingLoop {
                 break;
             }
 
-            let maximum_payload_size = self.params.total_payload_size();
+            let maximum_payload_size = self.params.maximum_payload_size();
             let mut payload_buf = match payload_buf_opt.take() {
                 Some(payload_buf) => payload_buf,
                 None => match self.sender.try_recv() {
@@ -227,7 +234,7 @@ impl StreamingLoop {
                 read_leader(&mut inner, &self.params, &mut trailer_buf),
                 Some(payload_buf)
             );
-            let payload_len = unwrap_or_continue!(
+            unwrap_or_continue!(
                 read_payload(&mut inner, &self.params, &mut payload_buf),
                 Some(payload_buf)
             );
@@ -240,7 +247,6 @@ impl StreamingLoop {
                 PayloadBuilder {
                     leader,
                     payload_buf,
-                    payload_len,
                     trailer
                 }
                 .build(),
@@ -260,14 +266,17 @@ impl StreamingLoop {
 struct PayloadBuilder<'a> {
     leader: u3v_stream::Leader<'a>,
     payload_buf: Vec<u8>,
-    /// Actual received payload length.
-    payload_len: usize,
     trailer: u3v_stream::Trailer<'a>,
 }
 
 impl<'a> PayloadBuilder<'a> {
     fn build(self) -> StreamResult<Payload> {
-        self.verify_received_payload_data()?;
+        let payload_status = self.trailer.payload_status();
+        if payload_status != u3v_stream::PayloadStatus::Success {
+            return Err(StreamError::InvalidPayloadData(
+                format!("trailer status indicates error: {:?}", payload_status).into(),
+            ));
+        }
 
         match self.leader.payload_type() {
             u3v_stream::PayloadType::Image => self.build_image_payload(),
@@ -384,16 +393,6 @@ impl<'a> PayloadBuilder<'a> {
             .specific_trailer_as()
             .map_err(|e| StreamError::InvalidTrailer(e.into()))
     }
-
-    fn verify_received_payload_data(&self) -> StreamResult<()> {
-        if self.payload_len as u64 == self.trailer.valid_payload_size() {
-            Ok(())
-        } else {
-            Err(StreamError::InvalidPayloadData(
-                "payload length doesn't match `valid_payload_size` of trailer".into(),
-            ))
-        }
-    }
 }
 
 /// Parameters to receive stream packets.
@@ -424,8 +423,10 @@ pub struct StreamParams {
 }
 
 impl StreamParams {
-    /// Retrun total payload size calculated by current `StreamParams` values.
-    pub fn total_payload_size(&self) -> usize {
+    /// Return upper bound of payload size calculated by current `StreamParams` values.
+    ///
+    /// NOTE: Payload size may dynamically change according to settings of camera.
+    pub fn maximum_payload_size(&self) -> usize {
         self.payload_size * self.payload_count + self.payload_final1_size + self.payload_final2_size
     }
 }
