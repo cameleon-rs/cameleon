@@ -11,6 +11,7 @@ use cameleon_device::{
     u3v,
     u3v::protocol::{ack, cmd},
 };
+use tracing::error;
 
 use super::register_map::{self, Abrm, ManifestTable, Sbrm, Sirm};
 
@@ -262,17 +263,29 @@ impl ControlHandle {
     }
 }
 
+macro_rules! unwrap_or_log {
+    ($expr:expr) => {{
+        match $expr {
+            Ok(v) => v,
+            Err(e) => {
+                error!(?e);
+                return Err(e.into());
+            }
+        }
+    }};
+}
+
 impl DeviceControl for ControlHandle {
     fn open(&mut self) -> ControlResult<()> {
         if self.is_opened() {
             return Ok(());
         }
 
-        self.inner.open()?;
+        unwrap_or_log!(self.inner.open());
         // Clean up control channel state.
-        self.inner.set_halt(self.config.timeout_duration)?;
-        self.inner.clear_halt()?;
-        self.initialize_config()?;
+        unwrap_or_log!(self.inner.set_halt(self.config.timeout_duration));
+        unwrap_or_log!(self.inner.clear_halt());
+        unwrap_or_log!(self.initialize_config());
 
         Ok(())
     }
@@ -283,26 +296,26 @@ impl DeviceControl for ControlHandle {
 
     fn close(&mut self) -> ControlResult<()> {
         if self.is_opened() {
-            Ok(self.inner.close()?)
+            Ok(unwrap_or_log!(self.inner.close()))
         } else {
             Ok(())
         }
     }
 
     fn write_mem(&mut self, address: u64, data: &[u8]) -> ControlResult<()> {
-        self.assert_open()?;
+        unwrap_or_log!(self.assert_open());
 
-        let cmd = cmd::WriteMem::new(address, data)?;
+        let cmd = unwrap_or_log!(cmd::WriteMem::new(address, data));
         let maximum_cmd_length = self.config.maximum_cmd_length;
 
         for chunk in cmd.chunks(maximum_cmd_length as usize).unwrap() {
             let chunk_data_len = chunk.data_len();
-            let ack: ack::WriteMem = self.send_cmd(chunk)?;
+            let ack: ack::WriteMem = unwrap_or_log!(self.send_cmd(chunk));
 
             if ack.length as usize != chunk_data_len {
-                return Err(ControlError::Io(
-                    "write mem failed: written length mismatch".into(),
-                ));
+                let err_msg = "write mem failed: written length mismatch";
+                error!(err_msg);
+                return Err(ControlError::Io(err_msg.into()));
             }
         }
 
@@ -310,7 +323,7 @@ impl DeviceControl for ControlHandle {
     }
 
     fn read_mem(&mut self, mut address: u64, buf: &mut [u8]) -> ControlResult<()> {
-        self.assert_open()?;
+        unwrap_or_log!(self.assert_open());
 
         // Chunks buffer if buffer length is larger than u16::MAX.
         for buf_chunk in buf.chunks_mut(std::u16::MAX as usize) {
@@ -322,7 +335,7 @@ impl DeviceControl for ControlHandle {
             let mut total_read_len = 0;
             for cmd_chunk in cmd.chunks(maximum_ack_length as usize).unwrap() {
                 let read_len = cmd_chunk.read_length();
-                let ack: ack::ReadMem = self.send_cmd(cmd_chunk)?;
+                let ack: ack::ReadMem = unwrap_or_log!(self.send_cmd(cmd_chunk));
                 (&mut buf_chunk[total_read_len..total_read_len + read_len as usize])
                     .copy_from_slice(ack.data);
                 total_read_len += read_len as usize;
@@ -335,13 +348,13 @@ impl DeviceControl for ControlHandle {
     }
 
     fn gen_api(&mut self) -> ControlResult<String> {
-        let table = self.manifest_table()?;
+        let table = unwrap_or_log!(self.manifest_table());
         // Use newest version if there are more than one entries.
         let mut newest_ent = None;
-        for ent in table.entries(self)? {
-            let file_info = ent.file_info(self)?;
-            if file_info.file_type()? == register_map::GenICamFileType::DeviceXml {
-                let version = ent.genicam_file_version(self)?;
+        for ent in unwrap_or_log!(table.entries(self)) {
+            let file_info = unwrap_or_log!(ent.file_info(self));
+            if unwrap_or_log!(file_info.file_type()) == register_map::GenICamFileType::DeviceXml {
+                let version = unwrap_or_log!(ent.genicam_file_version(self));
                 match &newest_ent {
                     Some((_, cur_version, _)) if &version <= cur_version => {
                         // Current entry is newest.
@@ -351,22 +364,22 @@ impl DeviceControl for ControlHandle {
             }
         }
 
-        let (ent, _, file_info) = newest_ent.ok_or_else(|| {
+        let (ent, _, file_info) = unwrap_or_log!(newest_ent.ok_or_else(|| {
             ControlError::InternalError("device doesn't have valid `ManifestEntry`".into())
-        })?;
+        }));
 
-        let file_address: u64 = ent.file_address(self)?;
-        let file_size: usize = ent.file_size(self)?.try_into()?;
-        let comp_type = file_info.compression_type()?;
+        let file_address: u64 = unwrap_or_log!(ent.file_address(self));
+        let file_size: usize = unwrap_or_log!(unwrap_or_log!(ent.file_size(self)).try_into());
+        let comp_type = unwrap_or_log!(file_info.compression_type());
 
         // Store current capacity so that we can set back it after XML retrieval because this needs exceptional large size of internal buffer.
         let current_capacity = self.buffer_capacity();
         let mut buf = vec![0; file_size];
-        self.read_mem(file_address, &mut buf)?;
+        unwrap_or_log!(self.read_mem(file_address, &mut buf));
         self.resize_buffer(current_capacity);
 
         // Verify retrieved xml has correct hash.
-        self.verify_xml(&buf, ent)?;
+        unwrap_or_log!(self.verify_xml(&buf, ent));
 
         fn zip_err(err: impl std::fmt::Debug) -> ControlError {
             ControlError::InternalError(format!("zipped xml file is broken: {:?}", err).into())
@@ -377,9 +390,10 @@ impl DeviceControl for ControlHandle {
                 if zip.len() != 1 {
                     return Err(zip_err("more than one files in zipped GenApi XML"));
                 }
-                let mut file = zip.by_index(0).map_err(zip_err)?;
-                let mut xml = vec![0; file.size().try_into()?];
-                file.read_to_end(&mut xml).map_err(zip_err)?;
+                let mut file = unwrap_or_log!(zip.by_index(0).map_err(zip_err));
+                let file_size: usize = unwrap_or_log!(file.size().try_into());
+                let mut xml = vec![0; file_size];
+                unwrap_or_log!(file.read_to_end(&mut xml).map_err(zip_err));
                 Ok(String::from_utf8_lossy(&xml).into())
             }
 
@@ -388,12 +402,12 @@ impl DeviceControl for ControlHandle {
     }
 
     fn enable_streaming(&mut self) -> ControlResult<()> {
-        let sirm = self.sirm()?;
+        let sirm = unwrap_or_log!(self.sirm());
         sirm.enable_stream(self)
     }
 
     fn disable_streaming(&mut self) -> ControlResult<()> {
-        let sirm = self.sirm()?;
+        let sirm = unwrap_or_log!(self.sirm());
         sirm.disable_stream(self)
     }
 }
@@ -439,6 +453,14 @@ impl U3VDeviceControl for ControlHandle {
         };
 
         Ok(ManifestTable::new(addr))
+    }
+}
+
+impl Drop for ControlHandle {
+    fn drop(&mut self) {
+        if let Err(e) = self.close() {
+            error!(?e)
+        }
     }
 }
 
