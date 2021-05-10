@@ -103,9 +103,10 @@ impl StreamHandle {
 
 impl PayloadStream for StreamHandle {
     fn open(&mut self) -> StreamResult<()> {
-        unwrap_or_poisoned!(self.inner.lock())?
-            .open()
-            .map_err(|e| StreamError::Device(format!("{}", e).into()))
+        unwrap_or_poisoned!(self.inner.lock())?.open().map_err(|e| {
+            error!(?e);
+            StreamError::Device(format!("{}", e).into())
+        })
     }
 
     fn close(&mut self) -> StreamResult<()> {
@@ -114,7 +115,10 @@ impl PayloadStream for StreamHandle {
         }
         unwrap_or_poisoned!(self.inner.lock())?
             .close()
-            .map_err(|e| StreamError::Device(format!("{}", e).into()))
+            .map_err(|e| {
+                error!(?e);
+                StreamError::Device(format!("{}", e).into())
+            })
     }
 
     fn run_streaming_loop(&mut self, sender: PayloadSender) -> StreamResult<()> {
@@ -157,6 +161,14 @@ impl PayloadStream for StreamHandle {
     fn is_loop_running(&self) -> bool {
         debug_assert_eq!(self.completion_rx.is_some(), self.cancellation_tx.is_some());
         self.completion_rx.is_some()
+    }
+}
+
+impl Drop for StreamHandle {
+    fn drop(&mut self) {
+        if let Err(e) = self.close() {
+            error!(?e)
+        }
     }
 }
 
