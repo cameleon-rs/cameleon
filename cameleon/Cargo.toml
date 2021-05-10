@@ -14,9 +14,10 @@ zip = "0.5.12"
 sha-1 = "0.9.5"
 async-std = { version = "1.9.0", features = ["unstable"] }
 futures = "0.3.14"
+tracing = "0.1.26"
 
 cameleon-device = { path = "../device" }
-tracing = "0.1.26"
+cameleon-genapi = { path = "../genapi" }
 
 [dev-dependencies]
 trybuild = "1.0.42"

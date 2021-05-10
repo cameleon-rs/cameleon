@@ -5,6 +5,7 @@
 #![allow(clippy::similar_names, clippy::missing_errors_doc)]
 
 pub mod camera;
+pub mod genapi;
 pub mod payload;
 pub mod u3v;
 
