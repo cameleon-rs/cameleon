@@ -233,9 +233,9 @@ pub trait IEnumeration {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()>;
 
-    fn set_entry_by_idx<T: ValueStore, U: CacheStore>(
+    fn set_entry_by_value<T: ValueStore, U: CacheStore>(
         &self,
-        idx: usize,
+        value: i64,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
@@ -814,14 +814,14 @@ impl<'a> IEnumeration for IEnumerationKind<'a> {
         delegate_to_ienumeration_variant!(self.set_entry_by_name(name, device, store, cx))
     }
 
-    fn set_entry_by_idx<T: ValueStore, U: CacheStore>(
+    fn set_entry_by_value<T: ValueStore, U: CacheStore>(
         &self,
-        idx: usize,
+        value: i64,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        delegate_to_ienumeration_variant!(self.set_entry_by_idx(idx, device, store, cx))
+        delegate_to_ienumeration_variant!(self.set_entry_by_value(value, device, store, cx))
     }
 
     fn is_readable<T: ValueStore, U: CacheStore>(

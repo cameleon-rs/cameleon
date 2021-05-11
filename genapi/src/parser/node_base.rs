@@ -53,7 +53,7 @@ impl Parse for NodeElementBase {
         cache_builder: &mut impl CacheStoreBuilder,
     ) -> Self {
         // Ignore Extension element.
-        let _: Option<String> =
+        let _extension: Option<String> =
             node.parse_if(EXTENSION, node_builder, value_builder, cache_builder);
 
         let tool_tip = node.parse_if(TOOL_TIP, node_builder, value_builder, cache_builder);

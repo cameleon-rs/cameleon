@@ -96,10 +96,10 @@ impl IEnumeration for EnumerationNode {
             GenApiError::invalid_data(format! {"no `EnumEntryNode`: {} not found", name}.into())
         })?;
 
-        let idx = self
+        let value = self
             .entries(store)?
             .iter()
-            .position(|ent| ent.node_base().id() == ent_id)
+            .find(|ent| ent.node_base().id() == ent_id)
             .ok_or_else(|| {
                 GenApiError::invalid_data(
                     format! {"no `EenumEntryNode`: {} not found in {}",
@@ -107,29 +107,26 @@ impl IEnumeration for EnumerationNode {
                     store.name_by_id(self.node_base().id()).unwrap()}
                     .into(),
                 )
-            })?;
+            })?
+            .value();
 
-        self.set_entry_by_idx(idx, device, store, cx)
+        self.set_entry_by_value(value, device, store, cx)
     }
 
-    #[tracing::instrument(skip(self, device, store, cx),
-                          level = "trace",
-                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
-    fn set_entry_by_idx<T: ValueStore, U: CacheStore>(
+    fn set_entry_by_value<T: ValueStore, U: CacheStore>(
         &self,
-        idx: usize,
+        value: i64,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         self.elem_base.verify_is_writable(device, store, cx)?;
-        let ent = self
-            .entries(store)?
-            .get(idx)
-            .ok_or_else(|| GenApiError::invalid_data("entry index is out of range".into()))?;
-
+        if !self.entries(store)?.iter().any(|ent| ent.value() == value) {
+            return Err(GenApiError::invalid_data(
+                format!("not found entry with the value {}", value).into(),
+            ));
+        };
         cx.invalidate_cache_by(self.node_base().id());
-        let value = ent.value();
         self.value.set_value(value, device, store, cx)
     }
 
