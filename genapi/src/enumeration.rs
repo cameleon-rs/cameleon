@@ -102,7 +102,7 @@ impl IEnumeration for EnumerationNode {
             .find(|ent| ent.node_base().id() == ent_id)
             .ok_or_else(|| {
                 GenApiError::invalid_data(
-                    format! {"no `EenumEntryNode`: {} not found in {}",
+                    format! {"no `EenumEntryNode`: `{}` not found in `{}`",
                     name,
                     store.name_by_id(self.node_base().id()).unwrap()}
                     .into(),
@@ -123,7 +123,7 @@ impl IEnumeration for EnumerationNode {
         self.elem_base.verify_is_writable(device, store, cx)?;
         if !self.entries(store).iter().any(|ent| ent.value() == value) {
             return Err(GenApiError::invalid_data(
-                format!("not found entry with the value {}", value).into(),
+                format!("not found entry with the value `{}`", value).into(),
             ));
         };
         cx.invalidate_cache_by(self.node_base().id());
