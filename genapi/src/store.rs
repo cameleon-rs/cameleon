@@ -117,9 +117,9 @@ pub trait ValueStore {
 
 #[auto_impl(&mut, Box)]
 pub trait CacheStore {
-    fn cache(&mut self, nid: NodeId, data: &[u8]);
+    fn cache(&mut self, nid: NodeId, address: i64, length: i64, data: &[u8]);
 
-    fn get_cache(&self, nid: NodeId) -> Option<&[u8]>;
+    fn get_cache(&self, nid: NodeId, address: i64, length: i64) -> Option<&[u8]>;
 
     fn invalidate_by(&mut self, nid: NodeId);
 
@@ -455,7 +455,7 @@ impl ValueStore for DefaultValueStore {
 
 #[derive(Debug, Default)]
 pub struct DefaultCacheStore {
-    store: HashMap<NodeId, Option<Vec<u8>>>,
+    store: HashMap<NodeId, HashMap<(i64, i64), Vec<u8>>>,
     invalidators: HashMap<NodeId, Vec<NodeId>>,
 }
 
@@ -480,22 +480,31 @@ impl builder::CacheStoreBuilder for DefaultCacheStore {
 }
 
 impl CacheStore for DefaultCacheStore {
-    fn cache(&mut self, nid: NodeId, data: &[u8]) {
+    fn cache(&mut self, nid: NodeId, address: i64, length: i64, data: &[u8]) {
         self.store
             .entry(nid)
-            .and_modify(|cache| *cache = Some(data.to_vec()))
-            .or_insert_with(|| Some(data.to_owned()));
+            .and_modify(|level1| {
+                level1
+                    .entry((address, length))
+                    .and_modify(|level2| *level2 = data.to_owned())
+                    .or_insert_with(|| data.to_owned());
+            })
+            .or_insert_with(|| {
+                let mut level1 = HashMap::new();
+                level1.insert((address, length), data.to_owned());
+                level1
+            });
     }
 
-    fn get_cache(&self, nid: NodeId) -> Option<&[u8]> {
-        self.store.get(&nid)?.as_deref()
+    fn get_cache(&self, nid: NodeId, address: i64, length: i64) -> Option<&[u8]> {
+        Some(self.store.get(&nid)?.get(&(address, length))?.as_ref())
     }
 
     fn invalidate_by(&mut self, nid: NodeId) {
         if let Some(target_nodes) = self.invalidators.get(&nid) {
             for nid in target_nodes {
-                if let Some(cache) = self.store.get_mut(&nid) {
-                    *cache = None;
+                if let Some(cache) = self.store.get_mut(nid) {
+                    *cache = HashMap::new();
                 }
             }
         }
@@ -503,7 +512,7 @@ impl CacheStore for DefaultCacheStore {
 
     fn invalidate_of(&mut self, nid: NodeId) {
         if let Some(cache) = self.store.get_mut(&nid) {
-            *cache = None;
+            *cache = HashMap::new();
         }
     }
 }
@@ -532,9 +541,9 @@ impl builder::CacheStoreBuilder for CacheSink {
 }
 
 impl CacheStore for CacheSink {
-    fn cache(&mut self, _: NodeId, _: &[u8]) {}
+    fn cache(&mut self, _: NodeId, _: i64, _: i64, _: &[u8]) {}
 
-    fn get_cache(&self, _: NodeId) -> Option<&[u8]> {
+    fn get_cache(&self, _: NodeId, _: i64, _: i64) -> Option<&[u8]> {
         None
     }
 

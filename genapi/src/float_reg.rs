@@ -69,17 +69,9 @@ impl IFloat for FloatRegNode {
         let nid = self.node_base().id();
         let reg = self.register_base();
 
-        let res = if let Some(cache) = cx.get_cache(nid) {
-            let res = utils::float_from_slice(cache, self.endianness)?;
-            reg.elem_base.verify_is_readable(device, store, cx)?;
-            res
-        } else {
-            utils::float_from_slice(
-                &reg.read_then_cache(nid, device, store, cx)?,
-                self.endianness,
-            )?
-        };
-        Ok(res)
+        reg.with_cache_or_read(nid, device, store, cx, |data| {
+            utils::float_from_slice(data, self.endianness)
+        })
     }
 
     #[tracing::instrument(skip(self, device, store, cx),
@@ -99,7 +91,7 @@ impl IFloat for FloatRegNode {
         let len = reg.length(device, store, cx)?;
         let mut buf = vec![0; len as usize];
         utils::bytes_from_float(value, &mut buf, self.endianness)?;
-        reg.write_then_cache(nid, &buf, device, store, cx)?;
+        reg.write_and_cache(nid, &buf, device, store, cx)?;
         Ok(())
     }
 
@@ -211,8 +203,17 @@ impl IRegister for FloatRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.register_base()
-            .read_then_cache_with_buf(self.node_base().id(), buf, device, store, cx)
+        let address = self.address(device, store, cx)?;
+        let length = self.length(device, store, cx)?;
+        self.register_base().read_and_cache(
+            self.node_base().id(),
+            address,
+            length,
+            buf,
+            device,
+            store,
+            cx,
+        )
     }
 
     fn write<T: ValueStore, U: CacheStore>(
@@ -223,7 +224,7 @@ impl IRegister for FloatRegNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         self.register_base()
-            .write_then_cache(self.node_base().id(), buf, device, store, cx)
+            .write_and_cache(self.node_base().id(), buf, device, store, cx)
     }
 
     fn address<T: ValueStore, U: CacheStore>(

@@ -39,20 +39,9 @@ impl IString for StringRegNode {
     ) -> GenApiResult<String> {
         let nid = self.node_base().id();
         let reg = self.register_base();
-        let res = if let Some(cache) = cx.get_cache(nid) {
-            let res = String::from_utf8_lossy(cache).to_string();
-            // Avoid a lifetime problem.
-            reg.elem_base.verify_is_readable(device, store, cx)?;
-            res
-        } else {
-            let bytes = reg.read_then_cache(nid, device, store, cx)?;
-            let len = bytes
-                .iter()
-                .position(|c| *c == 0)
-                .unwrap_or_else(|| bytes.len());
-            String::from_utf8_lossy(&bytes[0..len]).to_string()
-        };
-        Ok(res)
+        reg.with_cache_or_read(nid, device, store, cx, |data| {
+            Ok(String::from_utf8_lossy(data).to_string())
+        })
     }
 
     #[tracing::instrument(skip(self, device, store, cx),
@@ -81,7 +70,7 @@ impl IString for StringRegNode {
         let mut buf = vec![0_u8; self.length(device, store, cx)? as usize];
         let bytes = value.as_bytes();
         buf[0..bytes.len()].copy_from_slice(bytes);
-        reg.write_then_cache(nid, &buf, device, store, cx)
+        reg.write_and_cache(nid, &buf, device, store, cx)
     }
 
     #[tracing::instrument(skip(self, device, store, cx),
@@ -127,8 +116,17 @@ impl IRegister for StringRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.register_base()
-            .read_then_cache_with_buf(self.node_base().id(), buf, device, store, cx)
+        let address = self.address(device, store, cx)?;
+        let length = self.length(device, store, cx)?;
+        self.register_base().read_and_cache(
+            self.node_base().id(),
+            address,
+            length,
+            buf,
+            device,
+            store,
+            cx,
+        )
     }
 
     fn write<T: ValueStore, U: CacheStore>(
@@ -139,7 +137,7 @@ impl IRegister for StringRegNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         self.register_base()
-            .write_then_cache(self.node_base().id(), buf, device, store, cx)
+            .write_and_cache(self.node_base().id(), buf, device, store, cx)
     }
 
     fn address<T: ValueStore, U: CacheStore>(

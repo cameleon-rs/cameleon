@@ -62,45 +62,53 @@ impl RegisterBase {
         &self.p_invalidators
     }
 
-    pub(super) fn read_then_cache<T: ValueStore, U: CacheStore>(
+    pub(super) fn with_cache_or_read<T: ValueStore, U: CacheStore, R>(
         &self,
         nid: NodeId,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<Vec<u8>> {
-        let len = self.length(device, store, cx)? as usize;
-        let mut buf = vec![0; len];
-        self.read_then_cache_with_buf(nid, &mut buf, device, store, cx)?;
-        Ok(buf)
+        f: impl FnOnce(&[u8]) -> GenApiResult<R>,
+    ) -> GenApiResult<R> {
+        let length = self.length(device, store, cx)?;
+        let address = self.address(device, store, cx)?;
+        if let Some(cache) = cx.get_cache(nid, length, address) {
+            f(cache)
+        } else {
+            let mut buf = vec![0; length as usize];
+            self.read_and_cache(nid, address, length, &mut buf, device, store, cx)?;
+            f(&buf)
+        }
     }
 
-    pub(super) fn read_then_cache_with_buf<T: ValueStore, U: CacheStore>(
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn read_and_cache<T: ValueStore, U: CacheStore>(
         &self,
         nid: NodeId,
+        address: i64,
+        length: i64,
         buf: &mut [u8],
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        if buf.len() != self.length(device, store, cx)? as usize {
+        // TODO: Check access in fix for #51. memo: we need to check `AccessMode`.
+        if buf.len() != length as usize {
             return Err(GenApiError::invalid_buffer(
                 "given buffer length doesn't same as the register length".into(),
             ));
         }
-
-        let addr = self.address(device, store, cx)?;
         self.p_port
             .expect_iport_kind(store)?
-            .read(addr, buf, device, store, cx)?;
-
+            .read(address, buf, device, store, cx)?;
         if self.cacheable != CachingMode::NoCache {
-            cx.cache_data(nid, &buf);
+            cx.cache_data(nid, address, length, &buf);
         }
+
         Ok(())
     }
 
-    pub(super) fn write_then_cache<T: ValueStore, U: CacheStore>(
+    pub(super) fn write_and_cache<T: ValueStore, U: CacheStore>(
         &self,
         nid: NodeId,
         buf: &[u8],
@@ -108,20 +116,22 @@ impl RegisterBase {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.elem_base.verify_is_writable(device, store, cx)?;
-        if buf.len() != self.length(device, store, cx)? as usize {
+        // TODO: Check access in fix for #51. memo: we need to check `AccessMode`.
+        let length = self.length(device, store, cx)?;
+
+        if buf.len() != length as usize {
             return Err(GenApiError::invalid_buffer(
                 "given buffer length doesn't same as the register length".into(),
             ));
         }
 
-        let addr = self.address(device, store, cx)?;
+        let address = self.address(device, store, cx)?;
         self.p_port
             .expect_iport_kind(store)?
-            .write(addr, buf, device, store, cx)?;
+            .write(address, buf, device, store, cx)?;
 
         if self.cacheable == CachingMode::WriteThrough {
-            cx.cache_data(nid, &buf);
+            cx.cache_data(nid, address, length, &buf);
         }
         Ok(())
     }
