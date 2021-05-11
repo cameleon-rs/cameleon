@@ -1,5 +1,7 @@
 use super::{
-    elem_type::{DisplayNotation, FloatRepresentation, IntegerRepresentation},
+    elem_type::{
+        DisplayNotation, FloatRepresentation, IntegerRepresentation, NameSpace, Visibility,
+    },
     store::{CacheStore, NodeData, NodeId, NodeStore, ValueStore},
     EnumEntryNode, {Device, GenApiResult, ValueCtxt},
 };
@@ -9,6 +11,41 @@ pub enum IncrementMode {
     FixedIncrement,
     /// NOTE: `ListIncrement` is not supported in `GenApiSchema Version 1.1` yet.
     ListIncrement,
+}
+
+pub trait INode {
+    fn name_space(&self, store: &impl NodeStore) -> NameSpace;
+
+    fn tool_tip(&self, store: &impl NodeStore) -> Option<&str>;
+    fn description(&self, store: &impl NodeStore) -> Option<&str>;
+    fn display_name(&self, store: &impl NodeStore) -> &str;
+    fn visibility(&self) -> Visibility;
+    fn event_id(&self) -> Option<u64>;
+
+    fn is_deprecated<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> bool;
+    fn is_available<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> bool;
+    fn is_locked<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> bool;
+    fn is_implemented<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> bool;
 }
 
 pub trait IInteger {
