@@ -71,7 +71,7 @@ pub trait U3VDeviceControl: DeviceControl {
 /// // Read 64bytes from address 0x0184.
 /// let address = 0x0184;
 /// let mut buffer = vec![0; 64];
-/// handle.read_mem(address, &mut buffer).unwrap();
+/// handle.read(address, &mut buffer).unwrap();
 /// ```
 pub struct ControlHandle {
     inner: u3v::ControlChannel,
@@ -109,7 +109,7 @@ impl ControlHandle {
 
     /// Timeout duration of each transaction between device.
     ///
-    /// NOTE: [`ControlHandle::read_mem`] and [`ControlHandle::write_mem`] may send multiple
+    /// NOTE: [`ControlHandle::read`] and [`ControlHandle::write`] may send multiple
     /// requests in a single call. In that case, Timeout is reflected to each request.
     #[must_use]
     pub fn timeout_duration(&self) -> Duration {
@@ -118,7 +118,7 @@ impl ControlHandle {
 
     /// Set timeout duration of each transaction between device.
     ///
-    /// NOTE: [`ControlHandle::read_mem`] and [`ControlHandle::write_mem`] may send multiple
+    /// NOTE: [`ControlHandle::read`] and [`ControlHandle::write`] may send multiple
     /// requests in a single call. In that case, Timeout is reflected to each request.
     ///
     /// In normal use case, no need to modify timeout duration.
@@ -275,6 +275,28 @@ macro_rules! unwrap_or_log {
     }};
 }
 
+impl cameleon_genapi::Device for ControlHandle {
+    type Error = ControlError;
+
+    fn read_mem(&mut self, address: i64, data: &mut [u8]) -> ControlResult<()> {
+        let address: u64 = address.try_into().map_err(|_| {
+            ControlError::InvalidData(
+                "invalid address: the given address has negative value".into(),
+            )
+        })?;
+        self.read(address, data)
+    }
+
+    fn write_mem(&mut self, address: i64, data: &[u8]) -> ControlResult<()> {
+        let address: u64 = address.try_into().map_err(|_| {
+            ControlError::InvalidData(
+                "invalid address: the given address has negative value".into(),
+            )
+        })?;
+        self.write(address, data)
+    }
+}
+
 impl DeviceControl for ControlHandle {
     type StrmParams = super::stream_handle::StreamParams;
 
@@ -304,7 +326,7 @@ impl DeviceControl for ControlHandle {
         }
     }
 
-    fn write_mem(&mut self, address: u64, data: &[u8]) -> ControlResult<()> {
+    fn write(&mut self, address: u64, data: &[u8]) -> ControlResult<()> {
         unwrap_or_log!(self.assert_open());
 
         let cmd = unwrap_or_log!(cmd::WriteMem::new(address, data));
@@ -324,7 +346,7 @@ impl DeviceControl for ControlHandle {
         Ok(())
     }
 
-    fn read_mem(&mut self, mut address: u64, buf: &mut [u8]) -> ControlResult<()> {
+    fn read(&mut self, mut address: u64, buf: &mut [u8]) -> ControlResult<()> {
         unwrap_or_log!(self.assert_open());
 
         // Chunks buffer if buffer length is larger than u16::MAX.
@@ -377,7 +399,7 @@ impl DeviceControl for ControlHandle {
         // Store current capacity so that we can set back it after XML retrieval because this needs exceptional large size of internal buffer.
         let current_capacity = self.buffer_capacity();
         let mut buf = vec![0; file_size];
-        unwrap_or_log!(self.read_mem(file_address, &mut buf));
+        unwrap_or_log!(self.read(file_address, &mut buf));
         self.resize_buffer(current_capacity);
 
         // Verify retrieved xml has correct hash.
@@ -537,7 +559,7 @@ macro_rules! impl_shared_control_handle {
             $vis:vis fn $method:ident(&mut $self:ident $(,$arg:ident: $arg_ty:ty)*) -> $ret_ty:ty),*) => {
         $(
             $(#[$meta])*
-            fn $method(&mut $self, $($arg: $arg_ty),*) -> $ret_ty {
+            $vis fn $method(&mut $self, $($arg: $arg_ty),*) -> $ret_ty {
                 $self.0.lock().unwrap().$method($($arg),*)
             }
         )*
@@ -571,6 +593,15 @@ impl SharedControlHandle {
     );
 }
 
+impl cameleon_genapi::Device for SharedControlHandle {
+    type Error = ControlError;
+
+    impl_shared_control_handle!(
+        fn read_mem(&mut self, address: i64, data: &mut [u8]) -> ControlResult<()>,
+        fn write_mem(&mut self, address: i64, data: &[u8]) -> ControlResult<()>
+    );
+}
+
 impl DeviceControl for SharedControlHandle {
     type StrmParams = super::StreamParams;
 
@@ -581,8 +612,8 @@ impl DeviceControl for SharedControlHandle {
     impl_shared_control_handle! {
         fn open(&mut self) -> ControlResult<()>,
         fn close(&mut self) -> ControlResult<()>,
-        fn read_mem(&mut self, address: u64, buf: &mut [u8]) -> ControlResult<()>,
-        fn write_mem(&mut self, address: u64, data: &[u8]) -> ControlResult<()>,
+        fn read(&mut self, address: u64, buf: &mut [u8]) -> ControlResult<()>,
+        fn write(&mut self, address: u64, data: &[u8]) -> ControlResult<()>,
         fn gen_api(&mut self) -> ControlResult<String>,
         fn enable_streaming(&mut self) -> ControlResult<Self::StrmParams>,
         fn disable_streaming(&mut self) -> ControlResult<()>

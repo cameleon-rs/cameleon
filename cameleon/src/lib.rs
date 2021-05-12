@@ -9,6 +9,8 @@ pub mod genapi;
 pub mod payload;
 pub mod u3v;
 
+pub use camera::{DeviceControl, PayloadStream};
+
 use std::{borrow::Cow, num::TryFromIntError};
 
 /// A specialized `Result` type.

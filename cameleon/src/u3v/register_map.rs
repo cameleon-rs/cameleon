@@ -431,7 +431,7 @@ impl Abrm {
         let (addr, len) = register;
         let mut buf = vec![0; len as usize];
         data.dump_bytes(&mut buf)?;
-        device.write_mem(addr, &buf)
+        device.write(addr, &buf)
     }
 }
 
@@ -877,7 +877,7 @@ impl Sirm {
         let addr = self.sirm_addr + offset;
         let mut buf = vec![0; len as usize];
         data.dump_bytes(&mut buf)?;
-        device.write_mem(addr, &buf)
+        device.write(addr, &buf)
     }
 }
 
@@ -1013,7 +1013,7 @@ impl ManifestEntry {
         // We don't use `self.read_register` here for perf.
         let mut sha1_hash: [u8; 20] = [0; 20];
         let addr = self.entry_addr + manifest_entry::SHA1_HASH.0;
-        device.read_mem(addr, &mut sha1_hash)?;
+        device.read(addr, &mut sha1_hash)?;
 
         // All bytes are 0 in case the hash is not available.
         if sha1_hash.iter().all(|byte| *byte == 0) {
@@ -1044,7 +1044,7 @@ where
 {
     let len = len as usize;
     let mut buf = vec![0; len];
-    device.read_mem(addr, &mut buf[..len])?;
+    device.read(addr, &mut buf[..len])?;
     T::parse_bytes(&buf[..len])
 }
 
