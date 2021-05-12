@@ -27,6 +27,9 @@ pub struct EnumerationNode(NodeId);
 /// A node that has `ICommand` interface.
 pub struct CommandNode(NodeId);
 
+/// A node that has `IBoolean` interface.
+pub struct BooleanNode(NodeId);
+
 macro_rules! delegate {
     (
         $expect_kind:ident,
@@ -233,6 +236,20 @@ impl CommandNode {
         /// Returns `true` if the previous command is executed on the device.
         pub fn is_done<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
         /// Returns `true` if the node is writable (executable).
+        pub fn is_writable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
+    }
+}
+
+impl BooleanNode {
+    delegate! {
+        expect_iboolean_kind,
+        /// Returns the value of the node.
+        pub fn value<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
+        /// Sets the value of the node.
+        pub fn set_value<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, value: bool) -> GenApiResult<()>,
+        /// Returns `true` if the node is readable.
+        pub fn is_readable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
+        /// Returns `true` if the node is writable.
         pub fn is_writable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
     }
 }
