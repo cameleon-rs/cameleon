@@ -118,7 +118,7 @@ pub trait IFloat {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64>;
 
-    fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>>;
+    fn inc_mode(&self, store: &impl NodeStore) -> Option<IncrementMode>;
 
     fn inc<T: ValueStore, U: CacheStore>(
         &self,
@@ -579,7 +579,7 @@ impl<'a> IFloat for IFloatKind<'a> {
         delegate_to_ifloat_variant!(self.max(device, store, cx))
     }
 
-    fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
+    fn inc_mode(&self, store: &impl NodeStore) -> Option<IncrementMode> {
         delegate_to_ifloat_variant!(self.inc_mode(store))
     }
 

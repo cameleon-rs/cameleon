@@ -133,8 +133,8 @@ impl IFloat for FloatNode {
         self.max.value(device, store, cx)
     }
 
-    fn inc_mode(&self, _store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
-        Ok(Some(IncrementMode::FixedIncrement))
+    fn inc_mode(&self, _store: &impl NodeStore) -> Option<IncrementMode> {
+        Some(IncrementMode::FixedIncrement)
     }
 
     #[tracing::instrument(skip(self, device, store, cx),
