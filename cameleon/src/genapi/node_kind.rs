@@ -300,3 +300,93 @@ impl PortNode {
         pub fn write<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, address: i64, data: &[u8]) -> GenApiResult<()>,
     }
 }
+
+impl Node {
+    /// Returns `None` if downcast is failed.
+    pub fn as_integer<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Option<IntegerNode>
+    where
+        Ctrl: Device,
+        Ctxt: GenApiCtxt,
+    {
+        ctxt.enter2(|_, ns, _| self.0.as_iinteger_kind(ns).map(|_| IntegerNode(self.0)))
+    }
+
+    /// Returns `None` if downcast is failed.
+    pub fn as_float<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Option<FloatNode>
+    where
+        Ctrl: Device,
+        Ctxt: GenApiCtxt,
+    {
+        ctxt.enter2(|_, ns, _| self.0.as_ifloat_kind(ns).map(|_| FloatNode(self.0)))
+    }
+
+    /// Returns `None` if downcast is failed.
+    pub fn as_string<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Option<StringNode>
+    where
+        Ctrl: Device,
+        Ctxt: GenApiCtxt,
+    {
+        ctxt.enter2(|_, ns, _| self.0.as_istring_kind(ns).map(|_| StringNode(self.0)))
+    }
+
+    /// Returns `None` if downcast is failed.
+    pub fn as_ienumeration<Ctrl, Ctxt>(
+        self,
+        ctxt: &mut ParamsCtxt<Ctrl, Ctxt>,
+    ) -> Option<EnumerationNode>
+    where
+        Ctrl: Device,
+        Ctxt: GenApiCtxt,
+    {
+        ctxt.enter2(|_, ns, _| {
+            self.0
+                .as_ienumeration_kind(ns)
+                .map(|_| EnumerationNode(self.0))
+        })
+    }
+
+    /// Returns `None` if downcast is failed.
+    pub fn as_command<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Option<CommandNode>
+    where
+        Ctrl: Device,
+        Ctxt: GenApiCtxt,
+    {
+        ctxt.enter2(|_, ns, _| self.0.as_icommand_kind(ns).map(|_| CommandNode(self.0)))
+    }
+
+    /// Returns `None` if downcast is failed.
+    pub fn as_boolean<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Option<BooleanNode>
+    where
+        Ctrl: Device,
+        Ctxt: GenApiCtxt,
+    {
+        ctxt.enter2(|_, ns, _| self.0.as_iboolean_kind(ns).map(|_| BooleanNode(self.0)))
+    }
+
+    /// Returns `None` if downcast is failed.
+    pub fn as_register<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Option<RegisterNode>
+    where
+        Ctrl: Device,
+        Ctxt: GenApiCtxt,
+    {
+        ctxt.enter2(|_, ns, _| self.0.as_iregister_kind(ns).map(|_| RegisterNode(self.0)))
+    }
+
+    /// Returns `None` if downcast is failed.
+    pub fn as_category<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Option<CategoryNode>
+    where
+        Ctrl: Device,
+        Ctxt: GenApiCtxt,
+    {
+        ctxt.enter2(|_, ns, _| self.0.as_icategory_kind(ns).map(|_| CategoryNode(self.0)))
+    }
+
+    /// Returns `None` if downcast is failed.
+    pub fn as_port<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Option<PortNode>
+    where
+        Ctrl: Device,
+        Ctxt: GenApiCtxt,
+    {
+        ctxt.enter2(|_, ns, _| self.0.as_iport_kind(ns).map(|_| PortNode(self.0)))
+    }
+}
