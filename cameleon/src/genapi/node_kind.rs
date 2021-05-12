@@ -5,7 +5,7 @@ use cameleon_genapi::{
     elem_type::{DisplayNotation, FloatRepresentation, IntegerRepresentation},
     interface::IncrementMode,
     prelude::*,
-    Device, GenApiResult, NodeId, ValueCtxt,
+    Device, EnumEntryNode, GenApiResult, NodeId, ValueCtxt,
 };
 
 use super::{GenApiCtxt, ParamsCtxt};
@@ -20,6 +20,9 @@ pub struct FloatNode(NodeId);
 
 /// A node that has `IString` interface.
 pub struct StringNode(NodeId);
+
+/// A node that has `IEnumeration` interface.
+pub struct EnumerationNode(NodeId);
 
 macro_rules! delegate {
     (
@@ -71,7 +74,7 @@ where
 }
 
 impl IntegerNode {
-    delegate!(
+    delegate! {
         expect_iinteger_kind,
         /// Returns the value of the node.
         pub fn value<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<i64>,
@@ -95,19 +98,19 @@ impl IntegerNode {
         pub fn is_readable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
         /// Returns `true` if the node is writable.
         pub fn is_writable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
-    );
-    delegate!(
+    }
+    delegate! {
        no_vc,
        expect_iinteger_kind,
        /// Returns [`IncrementMode`] of the node.
        pub fn inc_mode<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Option<IncrementMode>,
        /// Returns [`IntegerRepresentation`] of the node. This feature is mainly for GUI.
        pub fn representation<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> IntegerRepresentation,
-    );
+    }
 }
 
 impl FloatNode {
-    delegate!(
+    delegate! {
         expect_ifloat_kind,
         /// Returns the value of the node.
         pub fn value<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<f64>,
@@ -127,9 +130,9 @@ impl FloatNode {
         pub fn is_readable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
         /// Returns `true` if the node is writable.
         pub fn is_writable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
-    );
+    }
 
-    delegate!(
+    delegate! {
        no_vc,
        expect_ifloat_kind,
        /// Returns [`IncrementMode`] of the node.
@@ -138,7 +141,7 @@ impl FloatNode {
        pub fn representation<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) ->FloatRepresentation,
        /// Returns [`DisplayNotation`]. This featres is mainly for GUI.
        pub fn display_notation<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> DisplayNotation,
-    );
+    }
 
     /// Returns unit that describes phisical meaning of the value. e.g. "Hz" or "ms". This
     /// feature is mainly for GUI.
@@ -158,7 +161,7 @@ impl FloatNode {
 }
 
 impl StringNode {
-    delegate!(
+    delegate! {
         expect_istring_kind,
         /// Returns the value of the node.
         pub fn value<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<String>,
@@ -170,5 +173,51 @@ impl StringNode {
         pub fn is_readable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
         /// Returns `true` if the node is writable.
         pub fn is_writable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
-    );
+    }
+}
+
+impl EnumerationNode {
+    delegate! {
+    expect_ienumeration_kind,
+        /// Sets entry to the enumeration node by the entry name.
+        pub fn set_entry_by_name<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, name: &str) -> GenApiResult<()>,
+        /// Sets entry to the enumeration node by the entry value.
+        pub fn set_entry_by_value<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, value: i64) -> GenApiResult<()>,
+        /// Returns `true` if the node is readable.
+        pub fn is_readable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
+        /// Returns `true` if the node is writable.
+        pub fn is_writable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
+    }
+
+    /// Allows the access to entries of the node.
+    pub fn with_entries<Ctrl, Ctxt, F, R>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, mut f: F) -> R
+    where
+        Ctrl: Device,
+        Ctxt: GenApiCtxt,
+        F: FnMut(&[EnumEntryNode]) -> R,
+    {
+        with_ctxt(ctxt, |_, ns, _| {
+            f(self.0.expect_ienumeration_kind(ns).unwrap().entries(ns))
+        })
+    }
+
+    /// Returns entries of the node.
+    ///
+    /// This method isn't cheap, consider using [`Self::with_entries`] instead of calling this
+    /// method.
+    pub fn entries<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Vec<EnumEntryNode>
+    where
+        Ctrl: Device,
+        Ctxt: GenApiCtxt,
+    {
+        with_ctxt(ctxt, |_, ns, _| {
+            self.0
+                .expect_ienumeration_kind(ns)
+                .unwrap()
+                .entries(ns)
+                .iter()
+                .map(|entry| entry.clone())
+                .collect()
+        })
+    }
 }
