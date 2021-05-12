@@ -24,6 +24,9 @@ pub struct StringNode(NodeId);
 /// A node that has `IEnumeration` interface.
 pub struct EnumerationNode(NodeId);
 
+/// A node that has `ICommand` interface.
+pub struct CommandNode(NodeId);
+
 macro_rules! delegate {
     (
         $expect_kind:ident,
@@ -219,5 +222,17 @@ impl EnumerationNode {
                 .map(|entry| entry.clone())
                 .collect()
         })
+    }
+}
+
+impl CommandNode {
+    delegate! {
+        expect_icommand_kind,
+        /// Execute the command.
+        pub fn execute<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<()>,
+        /// Returns `true` if the previous command is executed on the device.
+        pub fn is_done<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
+        /// Returns `true` if the node is writable (executable).
+        pub fn is_writable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
     }
 }
