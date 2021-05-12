@@ -5,7 +5,7 @@ use cameleon_genapi::{
     elem_type::{DisplayNotation, FloatRepresentation, IntegerRepresentation},
     interface::IncrementMode,
     prelude::*,
-    Device, EnumEntryNode, GenApiResult, NodeId, ValueCtxt,
+    Device, EnumEntryNode, GenApiResult, NodeId,
 };
 
 use super::{GenApiCtxt, ParamsCtxt};
@@ -35,6 +35,9 @@ pub struct RegisterNode(NodeId);
 
 /// A node that has `Category` interface.
 pub struct CategoryNode(NodeId);
+
+/// A node that has `IPort` interface.
+pub struct PortNode(NodeId);
 
 /// An uninterpreted node.
 pub struct Node(NodeId);
@@ -255,7 +258,7 @@ impl BooleanNode {
 impl RegisterNode {
     delegate! {
         expect_iregister_kind,
-        /// Reads bytes from the register memory.
+        /// Reads bytes from the register.
         /// `buf.len()` must be same as the register length returned from [`Self::length`].
         pub fn read<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, buf: &mut [u8]) -> GenApiResult<()>,
         /// Writes bytes to the register.
@@ -285,5 +288,15 @@ impl CategoryNode {
                 .map(|nid| Node(*nid))
                 .collect()
         })
+    }
+}
+
+impl PortNode {
+    delegate! {
+        expect_iport_kind,
+        /// Reads bytes.
+        pub fn read<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, address: i64, buf: &mut [u8]) -> GenApiResult<()>,
+        /// Writes bytes.
+        pub fn write<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, address: i64, data: &[u8]) -> GenApiResult<()>,
     }
 }
