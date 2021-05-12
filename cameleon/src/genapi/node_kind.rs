@@ -18,6 +18,9 @@ pub struct IntegerNode(NodeId);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FloatNode(NodeId);
 
+/// A node that has `IString` interface.
+pub struct StringNode(NodeId);
+
 macro_rules! delegate {
     (
         $expect_kind:ident,
@@ -70,15 +73,15 @@ where
 impl IntegerNode {
     delegate!(
         expect_iinteger_kind,
-        /// Returns value of the node.
+        /// Returns the value of the node.
         pub fn value<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<i64>,
-        /// Sets value of the node.
+        /// Sets the value of the node.
         pub fn set_value<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, value: i64) -> GenApiResult<()>,
-        /// Returns minimum value which the node can take.
+        /// Returns the minimum value which the node can take.
         pub fn min<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<i64>,
         /// Restricts minimum value of the node.
         pub fn set_min<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, value: i64) -> GenApiResult<()>,
-        /// Returns maximum value which the node can take.
+        /// Returns the maximum value which the node can take.
         pub fn max<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<i64>,
         /// Restricts maximum value of the node.
         pub fn set_max<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, value: i64) -> GenApiResult<()>,
@@ -106,9 +109,9 @@ impl IntegerNode {
 impl FloatNode {
     delegate!(
         expect_ifloat_kind,
-        /// Returns value of the node.
+        /// Returns the value of the node.
         pub fn value<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<f64>,
-        /// Sets value of the node.
+        /// Sets the value of the node.
         pub fn set_value<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, value: f64) -> GenApiResult<()>,
         /// Returns minimum value which the node can take.
         pub fn min<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<f64>,
@@ -152,4 +155,20 @@ impl FloatNode {
                 .map(String::from)
         })
     }
+}
+
+impl StringNode {
+    delegate!(
+        expect_istring_kind,
+        /// Returns the value of the node.
+        pub fn value<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<String>,
+        /// Sets the value of the node.
+        pub fn set_value<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, value: &str) -> GenApiResult<()>,
+        /// Retruns the maximum length of the string.
+        pub fn max_length<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<i64>,
+        /// Returns `true` if the node is readable.
+        pub fn is_readable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
+        /// Returns `true` if the node is writable.
+        pub fn is_writable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
+    );
 }
