@@ -30,6 +30,9 @@ pub struct CommandNode(NodeId);
 /// A node that has `IBoolean` interface.
 pub struct BooleanNode(NodeId);
 
+/// A node that has `IRegister` interface.
+pub struct RegisterNode(NodeId);
+
 macro_rules! delegate {
     (
         $expect_kind:ident,
@@ -251,5 +254,22 @@ impl BooleanNode {
         pub fn is_readable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
         /// Returns `true` if the node is writable.
         pub fn is_writable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
+    }
+}
+
+impl RegisterNode {
+    delegate! {
+        expect_iregister_kind,
+        /// Reads bytes from the register memory.
+        /// `buf.len()` must be same as the register length returned from [`Self::length`].
+        pub fn read<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, buf: &mut [u8]) -> GenApiResult<()>,
+        /// Writes bytes to the register.
+        ///
+        /// `data.len()` must be same as the register length returned from [`IRegister::length`].
+        pub fn write<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, data: &[u8]) -> GenApiResult<()>,
+        /// Returns the address of the register that the node pointing to.
+        pub fn address<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<i64>,
+        /// Return the length of the register that the node pointing to.
+        pub fn length<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<i64>,
     }
 }
