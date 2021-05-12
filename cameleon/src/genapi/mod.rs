@@ -1,8 +1,35 @@
 //! This module provides access to `GenApi` features of `GenICam` a compatible camera.
+pub mod node_kind;
+
+mod device_control;
+
 use std::sync::{Arc, Mutex};
 
 use auto_impl::auto_impl;
 use cameleon_genapi::{store, CacheStore, NodeStore, ValueCtxt, ValueStore};
+
+/// Manages context of parameters of the device.
+#[derive(Debug, Clone)]
+pub struct ParamsCtxt<Ctrl, Ctxt> {
+    /// Control handle of the device.
+    pub ctrl: Ctrl,
+    /// `GenApi` context of the device.
+    pub ctxt: Ctxt,
+}
+
+impl<Ctrl, Ctxt> ParamsCtxt<Ctrl, Ctxt>
+where
+    Ctrl: cameleon_genapi::Device,
+    Ctxt: GenApiCtxt,
+{
+    /// Enter context.
+    pub fn enter<F, R>(&mut self, mut f: F) -> R
+    where
+        F: FnMut(&mut Ctrl, &mut Ctxt) -> R,
+    {
+        f(&mut self.ctrl, &mut self.ctxt)
+    }
+}
 
 /// The trait that provides accesss to `GenApi` context.
 #[auto_impl(&mut, Box)]
@@ -15,9 +42,9 @@ pub trait GenApiCtxt {
     type CS: CacheStore;
 
     /// Provide access to the context.
-    fn with_ctxt<F, R>(&mut self, f: F) -> R
+    fn enter<F, R>(&mut self, f: F) -> R
     where
-        F: Fn(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R;
+        F: FnMut(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R;
 }
 
 /// Default `GenApi` context.  
@@ -35,15 +62,15 @@ impl GenApiCtxt for DefaultGenApiCtxt {
     type VS = store::DefaultValueStore;
     type CS = store::DefaultCacheStore;
 
-    fn with_ctxt<F, R>(&mut self, f: F) -> R
+    fn enter<F, R>(&mut self, mut f: F) -> R
     where
-        F: Fn(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R,
+        F: FnMut(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R,
     {
         f(&self.node_store, &mut self.value_ctxt)
     }
 }
 
-/// Sharable version of [`DefaultGenApiCtxt`].
+/// A sharable version of [`DefaultGenApiCtxt`].
 #[derive(Clone, Debug)]
 pub struct SharedDefaultGenApiCtxt {
     node_store: Arc<store::DefaultNodeStore>,
@@ -55,9 +82,9 @@ impl GenApiCtxt for SharedDefaultGenApiCtxt {
     type VS = store::DefaultValueStore;
     type CS = store::DefaultCacheStore;
 
-    fn with_ctxt<F, R>(&mut self, f: F) -> R
+    fn enter<F, R>(&mut self, mut f: F) -> R
     where
-        F: Fn(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R,
+        F: FnMut(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R,
     {
         f(&self.node_store, &mut self.value_ctxt.lock().unwrap())
     }
@@ -85,9 +112,9 @@ impl GenApiCtxt for NoCacheGenApiCtxt {
     type VS = store::DefaultValueStore;
     type CS = store::CacheSink;
 
-    fn with_ctxt<F, R>(&mut self, f: F) -> R
+    fn enter<F, R>(&mut self, mut f: F) -> R
     where
-        F: Fn(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R,
+        F: FnMut(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R,
     {
         f(&self.node_store, &mut self.value_ctxt)
     }
@@ -102,7 +129,7 @@ impl From<DefaultGenApiCtxt> for NoCacheGenApiCtxt {
     }
 }
 
-/// Sharable version of [`NoCacheGenApiCtxt`].
+/// A sharable version of [`NoCacheGenApiCtxt`].
 #[derive(Clone, Debug)]
 pub struct SharedNoCacheGenApiCtxt {
     node_store: Arc<store::DefaultNodeStore>,
@@ -114,9 +141,9 @@ impl GenApiCtxt for SharedNoCacheGenApiCtxt {
     type VS = store::DefaultValueStore;
     type CS = store::CacheSink;
 
-    fn with_ctxt<F, R>(&mut self, f: F) -> R
+    fn enter<F, R>(&mut self, mut f: F) -> R
     where
-        F: Fn(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R,
+        F: FnMut(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R,
     {
         f(&self.node_store, &mut self.value_ctxt.lock().unwrap())
     }
@@ -135,20 +162,5 @@ impl From<DefaultGenApiCtxt> for SharedNoCacheGenApiCtxt {
     fn from(from: DefaultGenApiCtxt) -> Self {
         let ctxt: NoCacheGenApiCtxt = from.into();
         ctxt.into()
-    }
-}
-
-/// Provides easy-to-use access to `GenApi` features which are defined in `GenICam Standard Features Naming
-/// Convention (SFNC)`.
-#[derive(Clone, Debug)]
-pub struct CameraParams<Ctrl, Ctxt> {
-    ctrl: Ctrl,
-    ctxt: Ctxt,
-}
-
-impl<Ctrl, Ctxt> CameraParams<Ctrl, Ctxt> {
-    /// Constructs `CameraParams`.
-    pub fn new(ctrl: Ctrl, ctxt: Ctxt) -> Self {
-        Self { ctrl, ctxt }
     }
 }
