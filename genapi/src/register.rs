@@ -36,8 +36,17 @@ impl IRegister for RegisterNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.register_base()
-            .read_then_cache_with_buf(self.node_base().id(), buf, device, store, cx)
+        let address = self.address(device, store, cx)?;
+        let length = self.length(device, store, cx)?;
+        self.register_base().read_and_cache(
+            self.node_base().id(),
+            address,
+            length,
+            buf,
+            device,
+            store,
+            cx,
+        )
     }
 
     #[tracing::instrument(skip(self, device, store, cx),
@@ -51,7 +60,7 @@ impl IRegister for RegisterNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         self.register_base()
-            .write_then_cache(self.node_base().id(), buf, device, store, cx)
+            .write_and_cache(self.node_base().id(), buf, device, store, cx)
     }
 
     #[tracing::instrument(skip(self, device, store, cx),

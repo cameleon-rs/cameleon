@@ -77,18 +77,9 @@ impl IInteger for MaskedIntRegNode {
         let reg = self.register_base();
 
         // Get register value.
-        let reg_value = if let Some(cache) = cx.get_cache(nid) {
-            let res = utils::int_from_slice(cache, self.endianness, self.sign)?;
-            // Avoid a lifetime problem.
-            reg.elem_base.verify_is_readable(device, store, cx)?;
-            res
-        } else {
-            utils::int_from_slice(
-                &reg.read_then_cache(nid, device, store, cx)?,
-                self.endianness,
-                self.sign,
-            )?
-        };
+        let reg_value = reg.with_cache_or_read(nid, device, store, cx, |data| {
+            utils::int_from_slice(data, self.endianness, self.sign)
+        })?;
 
         // Apply mask.
         let len = reg.length(device, store, cx)? as usize;
@@ -117,26 +108,17 @@ impl IInteger for MaskedIntRegNode {
         utils::verify_value_in_range(&value, &min, &max)?;
 
         let reg = self.register_base();
-        let old_reg_value = if let Some(cache) = cx.get_cache(nid) {
-            let res = utils::int_from_slice(cache, self.endianness, self.sign)?;
-            // Avoid a lifetime problem.
-            reg.elem_base.verify_is_readable(device, store, cx)?;
-            res
-        } else {
-            utils::int_from_slice(
-                &reg.read_then_cache(nid, device, store, cx)?,
-                self.endianness,
-                self.sign,
-            )?
-        };
+        let old_reg_value = reg.with_cache_or_read(nid, device, store, cx, |data| {
+            utils::int_from_slice(data, self.endianness, self.sign)
+        })?;
 
-        let len = reg.length(device, store, cx)? as usize;
-        let new_reg_value = self
-            .bit_mask
-            .masked_value(old_reg_value, value, len, self.endianness);
-        let mut buf = vec![0; len as usize];
+        let length = reg.length(device, store, cx)? as usize;
+        let new_reg_value =
+            self.bit_mask
+                .masked_value(old_reg_value, value, length, self.endianness);
+        let mut buf = vec![0; length as usize];
         utils::bytes_from_int(new_reg_value, &mut buf, self.endianness, self.sign)?;
-        reg.write_then_cache(nid, &buf, device, store, cx)?;
+        reg.write_and_cache(nid, &buf, device, store, cx)?;
 
         Ok(())
     }
@@ -256,8 +238,17 @@ impl IRegister for MaskedIntRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.register_base()
-            .read_then_cache_with_buf(self.node_base().id(), buf, device, store, cx)
+        let address = self.address(device, store, cx)?;
+        let length = self.length(device, store, cx)?;
+        self.register_base().read_and_cache(
+            self.node_base().id(),
+            address,
+            length,
+            buf,
+            device,
+            store,
+            cx,
+        )
     }
 
     #[tracing::instrument(skip(self, device, store, cx),
@@ -271,7 +262,7 @@ impl IRegister for MaskedIntRegNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         self.register_base()
-            .write_then_cache(self.node_base().id(), buf, device, store, cx)
+            .write_and_cache(self.node_base().id(), buf, device, store, cx)
     }
 
     #[tracing::instrument(skip(self, device, store, cx),
