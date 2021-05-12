@@ -1,8 +1,6 @@
 //! This module provides access to `GenApi` features of `GenICam` a compatible camera.
 pub mod node_kind;
 
-mod device_control;
-
 use std::sync::{Arc, Mutex};
 
 use auto_impl::auto_impl;
