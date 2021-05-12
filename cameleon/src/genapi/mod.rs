@@ -20,12 +20,22 @@ where
     Ctrl: cameleon_genapi::Device,
     Ctxt: GenApiCtxt,
 {
-    /// Enter context.
+    /// Enters the context.
     pub fn enter<F, R>(&mut self, mut f: F) -> R
     where
         F: FnMut(&mut Ctrl, &mut Ctxt) -> R,
     {
         f(&mut self.ctrl, &mut self.ctxt)
+    }
+
+    /// Enters the context and then enters `GenApiCtxt`.
+    pub fn enter2<F, R>(&mut self, mut f: F) -> R
+    where
+        F: FnMut(&mut Ctrl, &Ctxt::NS, &mut ValueCtxt<Ctxt::VS, Ctxt::CS>) -> R,
+    {
+        self.enter(|ctrl, ctxt| {
+            ctxt.enter(|node_store, value_ctxt| f(ctrl, node_store, value_ctxt))
+        })
     }
 }
 

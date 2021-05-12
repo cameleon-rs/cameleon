@@ -33,6 +33,12 @@ pub struct BooleanNode(NodeId);
 /// A node that has `IRegister` interface.
 pub struct RegisterNode(NodeId);
 
+/// A node that has `Category` interface.
+pub struct CategoryNode(NodeId);
+
+/// An uninterpreted node.
+pub struct Node(NodeId);
+
 macro_rules! delegate {
     (
         $expect_kind:ident,
@@ -45,7 +51,7 @@ macro_rules! delegate {
             where $Ctrl: Device,
                   $Ctxt: GenApiCtxt
             {
-                with_ctxt(ctxt, |ctrl, ns, vc| {
+                ctxt.enter2(|ctrl, ns, vc| {
                     $self.0
                         .$expect_kind(ns)
                         .unwrap()
@@ -67,19 +73,10 @@ macro_rules! delegate {
             where $Ctrl: Device,
                   $Ctxt: GenApiCtxt
             {
-                with_ctxt(ctxt, |_, ns, _| $self.0.$expect_kind(ns).unwrap().$method($($arg,)* ns))
+                ctxt.enter2(|_, ns, _| $self.0.$expect_kind(ns).unwrap().$method($($arg,)* ns))
             }
         )*
     };
-}
-
-fn with_ctxt<Ctrl, Ctxt, F, R>(ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, mut f: F) -> R
-where
-    Ctrl: Device,
-    Ctxt: GenApiCtxt,
-    F: FnMut(&mut Ctrl, &Ctxt::NS, &mut ValueCtxt<Ctxt::VS, Ctxt::CS>) -> R,
-{
-    ctxt.enter(|ctrl, ctxt| ctxt.enter(|node_store, value_ctxt| f(ctrl, node_store, value_ctxt)))
 }
 
 impl IntegerNode {
@@ -159,7 +156,7 @@ impl FloatNode {
         Ctrl: Device,
         Ctxt: GenApiCtxt,
     {
-        with_ctxt(ctxt, |_, ns, _| {
+        ctxt.enter2(|_, ns, _| {
             self.0
                 .expect_ifloat_kind(ns)
                 .unwrap()
@@ -205,9 +202,7 @@ impl EnumerationNode {
         Ctxt: GenApiCtxt,
         F: FnMut(&[EnumEntryNode]) -> R,
     {
-        with_ctxt(ctxt, |_, ns, _| {
-            f(self.0.expect_ienumeration_kind(ns).unwrap().entries(ns))
-        })
+        ctxt.enter2(|_, ns, _| f(self.0.expect_ienumeration_kind(ns).unwrap().entries(ns)))
     }
 
     /// Returns entries of the node.
@@ -219,7 +214,7 @@ impl EnumerationNode {
         Ctrl: Device,
         Ctxt: GenApiCtxt,
     {
-        with_ctxt(ctxt, |_, ns, _| {
+        ctxt.enter2(|_, ns, _| {
             self.0
                 .expect_ienumeration_kind(ns)
                 .unwrap()
@@ -271,5 +266,24 @@ impl RegisterNode {
         pub fn address<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<i64>,
         /// Return the length of the register that the node pointing to.
         pub fn length<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<i64>,
+    }
+}
+
+impl CategoryNode {
+    /// Returns nodes in the category.
+    pub fn nodes<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Vec<Node>
+    where
+        Ctrl: Device,
+        Ctxt: GenApiCtxt,
+    {
+        ctxt.enter2(|_, ns, _| {
+            self.0
+                .expect_icategory_kind(ns)
+                .unwrap()
+                .nodes(ns)
+                .iter()
+                .map(|nid| Node(*nid))
+                .collect()
+        })
     }
 }

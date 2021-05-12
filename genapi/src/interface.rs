@@ -345,7 +345,7 @@ pub trait IRegister {
 
 pub trait ICategory {
     /// Return nodes in the category.
-    fn nodes(&self, store: &impl NodeStore) -> GenApiResult<&[NodeId]>;
+    fn nodes(&self, store: &impl NodeStore) -> &[NodeId];
 }
 
 pub trait IPort {
@@ -993,7 +993,7 @@ macro_rules! delegate_to_icategory_variant {
 }
 
 impl<'a> ICategory for ICategoryKind<'a> {
-    fn nodes(&self, store: &impl NodeStore) -> GenApiResult<&[NodeId]> {
+    fn nodes(&self, store: &impl NodeStore) -> &[NodeId] {
         delegate_to_icategory_variant!(self.nodes(store))
     }
 }
