@@ -41,7 +41,7 @@ pub trait IInteger {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64>;
 
-    fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>>;
+    fn inc_mode(&self, store: &impl NodeStore) -> Option<IncrementMode>;
 
     fn inc<T: ValueStore, U: CacheStore>(
         &self,
@@ -448,7 +448,7 @@ impl<'a> IInteger for IIntegerKind<'a> {
         delegate_to_iinteger_variant!(self.max(device, store, cx))
     }
 
-    fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
+    fn inc_mode(&self, store: &impl NodeStore) -> Option<IncrementMode> {
         delegate_to_iinteger_variant!(self.inc_mode(store))
     }
 

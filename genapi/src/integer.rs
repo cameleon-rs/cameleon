@@ -127,8 +127,8 @@ impl IInteger for IntegerNode {
         self.max.value(device, store, cx)
     }
 
-    fn inc_mode(&self, _: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
-        Ok(Some(IncrementMode::FixedIncrement))
+    fn inc_mode(&self, _: &impl NodeStore) -> Option<IncrementMode> {
+        Some(IncrementMode::FixedIncrement)
     }
 
     #[tracing::instrument(skip(self, device, store, cx),
