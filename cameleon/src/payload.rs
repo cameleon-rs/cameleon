@@ -117,8 +117,8 @@ impl PayloadReceiver {
     /// method.
     ///
     /// Return `StreamError` if the channel is full.
-    pub fn send_back(&self, payload: Payload) -> StreamResult<()> {
-        Ok(self.tx.try_send(payload)?)
+    pub fn send_back(&self, payload: Payload) {
+        self.tx.try_send(payload).ok();
     }
 }
 

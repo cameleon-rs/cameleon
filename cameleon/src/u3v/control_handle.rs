@@ -427,7 +427,6 @@ impl DeviceControl for ControlHandle {
 
     fn enable_streaming(&mut self) -> ControlResult<Self::StrmParams> {
         let sirm = unwrap_or_log!(self.sirm());
-        unwrap_or_log!(sirm.enable_stream(self));
 
         let payload_alignment = unwrap_or_log!(sirm.payload_size_alignment(self));
         macro_rules! align {

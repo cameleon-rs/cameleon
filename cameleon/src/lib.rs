@@ -95,20 +95,12 @@ pub enum StreamError {
     SendError(Cow<'static, str>),
 
     /// Payload leader is invalid.
-    #[error("invalid leader: {0}")]
-    InvalidLeader(Box<dyn std::error::Error>),
-
-    /// Payload data is invalid.
-    #[error("invalid leader: {0}")]
-    InvalidPayloadData(Box<dyn std::error::Error>),
-
-    /// Payload trailer is invalid.
-    #[error("invalid trailer: {0}")]
-    InvalidTrailer(Box<dyn std::error::Error>),
+    #[error("invalid payload has been sent: {0}")]
+    InvalidPayload(Cow<'static, str>),
 
     /// Can't communicate with device.
     #[error("can't communicate the device: {0}")]
-    Device(Box<dyn std::error::Error>),
+    Device(Cow<'static, str>),
 
     /// Buffer is too small to receive data.
     #[error("buffer is too small to recieve data")]

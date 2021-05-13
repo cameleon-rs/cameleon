@@ -147,9 +147,11 @@ impl PayloadStream for StreamHandle {
             completion_tx,
             cancellation_rx,
         };
-        strm_loop.run();
+        std::thread::spawn(|| {
+            strm_loop.run();
+        });
 
-        info!("start streaming loop");
+        info!("start streaming loop successfully");
         Ok(())
     }
 
@@ -163,7 +165,7 @@ impl PayloadStream for StreamHandle {
             unwrap_or_poisoned!(task::block_on(completion_rx))?;
         }
 
-        info!("stop streaming loop");
+        info!("stop streaming loop successfully");
         Ok(())
     }
 
@@ -212,7 +214,10 @@ impl StreamingLoop {
                 };
             }
 
-            if self.cancellation_rx.try_recv().is_ok() {
+            // Stop the loop when
+            // 1. `cancellation_tx` sends signal.
+            // 2. `cancellation_tx` is dropped.
+            if self.cancellation_rx.try_recv().transpose().is_some() {
                 break;
             }
 
@@ -232,10 +237,14 @@ impl StreamingLoop {
                 },
             };
 
-            let leader = unwrap_or_continue!(
-                read_leader(&mut inner, &self.params, &mut trailer_buf),
-                Some(payload_buf)
-            );
+            // We don't use `unwrap_or_continue` here not to emit so much logs.
+            let leader = match read_leader(&mut inner, &self.params, &mut trailer_buf) {
+                Ok(leader) => leader,
+                Err(_) => {
+                    payload_buf_opt = Some(payload_buf);
+                    continue;
+                }
+            };
             unwrap_or_continue!(
                 read_payload(&mut inner, &self.params, &mut payload_buf),
                 Some(payload_buf)
@@ -275,7 +284,7 @@ impl<'a> PayloadBuilder<'a> {
     fn build(self) -> StreamResult<Payload> {
         let payload_status = self.trailer.payload_status();
         if payload_status != u3v_stream::PayloadStatus::Success {
-            return Err(StreamError::InvalidPayloadData(
+            return Err(StreamError::InvalidPayload(
                 format!("trailer status indicates error: {:?}", payload_status).into(),
             ));
         }
@@ -328,9 +337,7 @@ impl<'a> PayloadBuilder<'a> {
         let mut current_offset = valid_payload_size;
         let image_size = loop {
             current_offset = current_offset.checked_sub(CHUNK_SIZE_LEN).ok_or_else(|| {
-                StreamError::InvalidPayloadData(
-                    "failed to parse chunk data: size field missing".into(),
-                )
+                StreamError::InvalidPayload("failed to parse chunk data: size field missing".into())
             })?;
             let data_size = u32::from_be_bytes(
                 self.payload_buf[current_offset..current_offset + CHUNK_SIZE_LEN]
@@ -338,7 +345,7 @@ impl<'a> PayloadBuilder<'a> {
                     .unwrap(),
             ) as usize;
             current_offset = current_offset.checked_sub(data_size + CHUNK_ID_LEN).ok_or_else(|| {
-                StreamError::InvalidPayloadData(
+                StreamError::InvalidPayload(
                     "failed to parse chunk data: chunk data size is smaller than specified size".into()
                 )
             })?;
@@ -387,13 +394,13 @@ impl<'a> PayloadBuilder<'a> {
     fn specific_leader_as<T: u3v_stream::SpecificLeader>(&self) -> StreamResult<T> {
         self.leader
             .specific_leader_as()
-            .map_err(|e| StreamError::InvalidLeader(e.into()))
+            .map_err(|e| StreamError::InvalidPayload(format!("{}", e).into()))
     }
 
     fn specific_trailer_as<T: u3v_stream::SpecificTrailer>(&self) -> StreamResult<T> {
         self.trailer
             .specific_trailer_as()
-            .map_err(|e| StreamError::InvalidTrailer(e.into()))
+            .map_err(|e| StreamError::InvalidPayload(format!("{}", e).into()))
     }
 }
 
@@ -488,7 +495,7 @@ fn read_leader<'a>(
     let leader_size = params.leader_size;
     recv(inner, params, buf, leader_size)?;
 
-    u3v_stream::Leader::parse(buf).map_err(|e| StreamError::InvalidLeader(e.into()))
+    u3v_stream::Leader::parse(buf).map_err(|e| StreamError::InvalidPayload(format!("{}", e).into()))
 }
 
 fn read_payload(
@@ -535,7 +542,8 @@ fn read_trailer<'a>(
     let trailer_size = params.trailer_size as usize;
     recv(inner, params, buf, trailer_size)?;
 
-    u3v_stream::Trailer::parse(buf).map_err(|e| StreamError::InvalidTrailer(e.into()))
+    u3v_stream::Trailer::parse(buf)
+        .map_err(|e| StreamError::InvalidPayload(format!("invalid trailer: {}", e).into()))
 }
 
 fn recv(
@@ -554,5 +562,5 @@ fn recv(
 
     inner
         .recv(&mut buf[..len], params.timeout)
-        .map_err(|e| StreamError::Device(e.into()))
+        .map_err(|e| StreamError::Device(format!("{}", e).into()))
 }
