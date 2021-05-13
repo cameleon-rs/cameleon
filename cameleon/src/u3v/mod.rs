@@ -42,16 +42,49 @@
 pub mod register_map;
 
 pub mod control_handle;
-pub mod device;
 pub mod stream_handle;
 
-pub use control_handle::ControlHandle;
-pub use device::{enumerate_devices, Device, DeviceInfo};
+pub use control_handle::{ControlHandle, SharedControlHandle};
 pub use stream_handle::{StreamHandle, StreamParams};
 
 use cameleon_device::u3v;
 
-use super::ControlError;
+use super::{genapi::DefaultGenApiCtxt, CameleonResult, Camera, CameraInfo, ControlError};
+
+/// Enumerate all U3V compatible cameras connected to the host.
+pub fn enumerate_cameras<Ctrl, Strm, Ctxt>() -> CameleonResult<Vec<Camera<Ctrl, Strm, Ctxt>>>
+where
+    Ctrl: From<ControlHandle>,
+    Strm: From<StreamHandle>,
+    Ctxt: From<DefaultGenApiCtxt>,
+{
+    let devices = u3v::enumerate_devices().map_err(|e| ControlError::from(e))?;
+
+    let mut cameras: Vec<Camera<Ctrl, Strm, Ctxt>> = Vec::with_capacity(devices.len());
+
+    for dev in devices {
+        let ctrl = ControlHandle::new(&dev)?;
+        let strm = if let Some(strm) = StreamHandle::new(&dev)? {
+            strm
+        } else {
+            continue;
+        };
+        let ctxt = None;
+
+        let dev_info = dev.device_info;
+        let camera_info = CameraInfo {
+            vendor_name: dev_info.vendor_name,
+            model_name: dev_info.model_name,
+            serial_number: dev_info.serial_number,
+        };
+
+        let camera: Camera<ControlHandle, StreamHandle, DefaultGenApiCtxt> =
+            Camera::new(ctrl, strm, ctxt, camera_info);
+        cameras.push(camera.convert_into())
+    }
+
+    Ok(cameras)
+}
 
 impl From<u3v::Error> for ControlError {
     fn from(err: u3v::Error) -> ControlError {

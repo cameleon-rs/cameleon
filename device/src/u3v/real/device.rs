@@ -17,7 +17,7 @@ pub struct Device {
     event_iface_info: Option<ReceiveIfaceInfo>,
     stream_iface_info: Option<ReceiveIfaceInfo>,
 
-    device_info: DeviceInfo,
+    pub device_info: DeviceInfo,
 }
 
 impl Device {

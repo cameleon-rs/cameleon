@@ -18,6 +18,6 @@ fn main() {
     }
 
     for device in devices {
-        println! {"{}", device.device_info()};
+        println! {"{}", device.device_info};
     }
 }

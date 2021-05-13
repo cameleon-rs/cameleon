@@ -9,7 +9,7 @@ pub mod genapi;
 pub mod payload;
 pub mod u3v;
 
-pub use camera::{DeviceControl, PayloadStream};
+pub use camera::{Camera, CameraInfo, DeviceControl, PayloadStream};
 
 use std::{borrow::Cow, num::TryFromIntError};
 
