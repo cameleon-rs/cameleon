@@ -81,14 +81,14 @@ pub struct ControlHandle {
     /// Buffer for serializing/deserializing a packet.
     buffer: Vec<u8>,
 
-    /// Cache for `Sbrm` address.
-    sbrm_addr: Option<u64>,
-
-    /// Cache for `Sirm` address.
-    sirm_addr: Option<u64>,
-
-    /// Cache for `ManifestTable` address.
-    manifest_addr: Option<u64>,
+    /// Cache for `Abrm`.
+    abrm: Option<Abrm>,
+    /// Cache for `Sbrm`.
+    sbrm: Option<Sbrm>,
+    /// Cache for `Sirm`.
+    sirm: Option<Sirm>,
+    /// Cache for `ManifestTable`.
+    manifest_table: Option<ManifestTable>,
 }
 
 impl ControlHandle {
@@ -147,9 +147,10 @@ impl ControlHandle {
             config: ConnectionConfig::default(),
             next_req_id: 0,
             buffer: Vec::new(),
-            sbrm_addr: None,
-            sirm_addr: None,
-            manifest_addr: None,
+            abrm: None,
+            sbrm: None,
+            sirm: None,
+            manifest_table: None,
         })
     }
 
@@ -338,7 +339,6 @@ impl DeviceControl for ControlHandle {
 
             if ack.length as usize != chunk_data_len {
                 let err_msg = "write mem failed: written length mismatch";
-                error!(err_msg);
                 return Err(ControlError::Io(err_msg.into()));
             }
         }
@@ -488,45 +488,48 @@ impl DeviceControl for ControlHandle {
 
 impl U3VDeviceControl for ControlHandle {
     fn abrm(&mut self) -> ControlResult<Abrm> {
-        Abrm::new(self)
+        if let Some(abrm) = self.abrm {
+            return Ok(abrm);
+        }
+        let abrm = Abrm::new(self)?;
+        self.abrm = Some(abrm);
+
+        Ok(abrm)
     }
 
     fn sbrm(&mut self) -> ControlResult<Sbrm> {
-        let addr = if let Some(addr) = self.sbrm_addr {
-            addr
-        } else {
-            let addr = self.abrm()?.sbrm_address(self)?;
-            self.sbrm_addr = Some(addr);
-            addr
-        };
-
-        Sbrm::new(self, addr)
+        if let Some(sbrm) = self.sbrm {
+            return Ok(sbrm);
+        }
+        let addr = self.abrm()?.sbrm_address(self)?;
+        let sbrm = Sbrm::new(self, addr)?;
+        self.sbrm = Some(sbrm);
+        Ok(sbrm)
     }
 
     fn sirm(&mut self) -> ControlResult<Sirm> {
-        let addr = if let Some(addr) = self.sirm_addr {
-            addr
-        } else {
-            let addr = self.sbrm()?.sirm_address(self)?.ok_or_else(|| {
-                ControlError::InternalError("the u3v device doesn't have `SIRM ADDRESS`".into())
-            })?;
-            self.sirm_addr = Some(addr);
-            addr
-        };
+        if let Some(sirm) = self.sirm {
+            return Ok(sirm);
+        }
 
-        Ok(Sirm::new(addr))
+        let addr = self.sbrm()?.sirm_address(self)?.ok_or_else(|| {
+            ControlError::InternalError("the u3v device doesn't have `SIRM ADDRESS`".into())
+        })?;
+        let sirm = Sirm::new(addr);
+        self.sirm = Some(sirm);
+
+        Ok(sirm)
     }
 
     fn manifest_table(&mut self) -> ControlResult<ManifestTable> {
-        let addr = if let Some(addr) = self.manifest_addr {
-            addr
-        } else {
-            let addr = self.abrm()?.manifest_table_address(self)?;
-            self.manifest_addr = Some(addr);
-            addr
-        };
+        if let Some(manifest_table) = self.manifest_table {
+            return Ok(manifest_table);
+        }
 
-        Ok(ManifestTable::new(addr))
+        let addr = self.abrm()?.manifest_table_address(self)?;
+        let manifest_table = ManifestTable::new(addr);
+        self.manifest_table = Some(manifest_table);
+        Ok(manifest_table)
     }
 }
 
