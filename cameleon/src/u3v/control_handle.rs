@@ -416,7 +416,7 @@ impl DeviceControl for ControlHandle {
                 }
                 let mut file = unwrap_or_log!(zip.by_index(0).map_err(zip_err));
                 let file_size: usize = unwrap_or_log!(file.size().try_into());
-                let mut xml = vec![0; file_size];
+                let mut xml = Vec::with_capacity(file_size);
                 unwrap_or_log!(file.read_to_end(&mut xml).map_err(zip_err));
                 Ok(String::from_utf8_lossy(&xml).into())
             }
