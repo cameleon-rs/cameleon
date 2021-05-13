@@ -49,6 +49,32 @@ where
         self.ctxt
             .with_store(|ns| ns.id_by_name(name).map(|nid| Node(nid)))
     }
+
+    /// Converts internal types. This method work same as `std::convert::From`, just hack to avoid
+    /// `E0119`.
+    pub fn convert_from<Ctrl2, Ctxt2>(from: ParamsCtxt<Ctrl2, Ctxt2>) -> Self
+    where
+        Ctrl: From<Ctrl2>,
+        Ctxt: From<Ctxt2>,
+    {
+        ParamsCtxt {
+            ctrl: from.ctrl.into(),
+            ctxt: from.ctxt.into(),
+        }
+    }
+
+    /// Converts internal types. This method work same as `std::convert::Into`, just hack to avoid
+    /// `E0119`.
+    pub fn convert_into<Ctrl2, Ctxt2>(self) -> ParamsCtxt<Ctrl2, Ctxt2>
+    where
+        Ctrl: Into<Ctrl2>,
+        Ctxt: Into<Ctxt2>,
+    {
+        ParamsCtxt {
+            ctrl: self.ctrl.into(),
+            ctxt: self.ctxt.into(),
+        }
+    }
 }
 
 /// A trait that provides accesss to `GenApi` context.
@@ -70,6 +96,9 @@ pub trait GenApiCtxt {
     fn with_store<F, R>(&self, f: F) -> R
     where
         F: FnOnce(&Self::NS) -> R;
+
+    /// Returns description of the `GenApi` xml.
+    fn description(&self) -> &RegisterDescription;
 }
 
 /// A trait that provides directly conversion from `GenApi` string to a `GenApi` context.
@@ -108,6 +137,10 @@ impl GenApiCtxt for DefaultGenApiCtxt {
         F: FnOnce(&Self::NS) -> R,
     {
         f(&self.node_store)
+    }
+
+    fn description(&self) -> &RegisterDescription {
+        &self.reg_desc
     }
 }
 
@@ -153,6 +186,10 @@ impl GenApiCtxt for SharedDefaultGenApiCtxt {
         F: FnOnce(&Self::NS) -> R,
     {
         f(&self.node_store)
+    }
+
+    fn description(&self) -> &RegisterDescription {
+        &self.reg_desc
     }
 }
 
@@ -202,6 +239,10 @@ impl GenApiCtxt for NoCacheGenApiCtxt {
         F: FnOnce(&Self::NS) -> R,
     {
         f(&self.node_store)
+    }
+
+    fn description(&self) -> &RegisterDescription {
+        &self.reg_desc
     }
 }
 
@@ -258,6 +299,9 @@ impl GenApiCtxt for SharedNoCacheGenApiCtxt {
         F: FnOnce(&Self::NS) -> R,
     {
         f(&self.node_store)
+    }
+    fn description(&self) -> &RegisterDescription {
+        &self.reg_desc
     }
 }
 
