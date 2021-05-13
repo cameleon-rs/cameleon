@@ -267,9 +267,9 @@ macro_rules! unwrap_or_log {
     ($expr:expr) => {{
         match $expr {
             Ok(v) => v,
-            Err(e) => {
-                error!(?e);
-                return Err(e.into());
+            Err(error) => {
+                error!(?error);
+                return Err(error.into());
             }
         }
     }};

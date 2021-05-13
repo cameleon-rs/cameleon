@@ -29,9 +29,11 @@ pub struct StreamHandle {
 
 macro_rules! unwrap_or_poisoned {
     ($res:expr) => {{
-        let msg = "panics has occurred in running loop";
-        error!(msg);
-        $res.map_err(|_| StreamError::Device(msg.into()))
+        let error = "panics has occurred in running loop";
+        $res.map_err(|cause| {
+            error!(error, ?cause);
+            StreamError::Device(error.into())
+        })
     }};
 }
 

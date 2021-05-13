@@ -96,6 +96,9 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
     ///
     /// # Panics
     /// If `cap` is zero, this method will panic.
+    #[tracing::instrument(skip(self),
+                          level = "info",
+                          fields(camera = ?self.info()))]
     pub fn start_streaming(&mut self, cap: usize) -> CameleonResult<PayloadReceiver>
     where
         Ctrl: DeviceControl<StrmParams = Strm::StrmParams>,
@@ -103,6 +106,7 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
         Ctxt: GenApiCtxt,
     {
         const DEFAULT_BUFFER_CAP: usize = 5;
+        info!("try starting streaming");
 
         if self.strm.is_loop_running() {
             return Err(StreamError::InStreaming.into());
@@ -117,17 +121,22 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
         let (sender, receiver) = channel(cap, DEFAULT_BUFFER_CAP);
         self.strm.run_streaming_loop(sender, strm_params)?;
 
+        info!("start streaming successfully");
         Ok(receiver)
     }
 
     /// Stops the streaming. The receiver returned from the previous [`Self::start_streaming`]
     /// call will be invalidated.
+    #[tracing::instrument(skip(self),
+                          level = "info",
+                          fields(camera = ?self.info()))]
     pub fn stop_streaming(&mut self) -> CameleonResult<()>
     where
         Ctrl: DeviceControl<StrmParams = Strm::StrmParams>,
         Strm: PayloadStream,
         Ctxt: GenApiCtxt,
     {
+        info!("try stopping streaming");
         if !self.strm.is_loop_running() {
             return Ok(());
         }
@@ -135,6 +144,7 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
         expect_node!(ctxt, "AcquisitionStop", as_command).execute(&mut ctxt)?;
         expect_node!(ctxt, "TLParamsLocked", as_integer).set_value(&mut ctxt, 0)?;
         self.ctrl.disable_streaming()?;
+        info!("stop streaming successfully");
         Ok(())
     }
 
