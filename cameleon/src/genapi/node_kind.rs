@@ -40,7 +40,7 @@ pub struct CategoryNode(NodeId);
 pub struct PortNode(NodeId);
 
 /// An uninterpreted node.
-pub struct Node(NodeId);
+pub struct Node(pub(super) NodeId);
 
 macro_rules! delegate {
     (

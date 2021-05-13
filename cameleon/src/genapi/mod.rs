@@ -3,12 +3,14 @@ pub mod node_kind;
 
 use std::sync::{Arc, Mutex};
 
+use auto_impl::auto_impl;
 use cameleon_genapi::{
     builder::GenApiBuilder, store, CacheStore, NodeStore, RegisterDescription, ValueCtxt,
     ValueStore,
 };
 
 use super::{ControlError, ControlResult};
+use node_kind::Node;
 
 /// Manages context of parameters of the device.
 #[derive(Debug, Clone)]
@@ -41,9 +43,16 @@ where
             ctxt.enter(|node_store, value_ctxt| f(ctrl, node_store, value_ctxt))
         })
     }
+
+    /// Returns Some(...) if there is a node with the given name in the context.
+    pub fn node(&self, name: &str) -> Option<Node> {
+        self.ctxt
+            .with_store(|ns| ns.id_by_name(name).map(|nid| Node(nid)))
+    }
 }
 
-/// The trait that provides accesss to `GenApi` context.
+/// A trait that provides accesss to `GenApi` context.
+#[auto_impl(&mut, Box)]
 pub trait GenApiCtxt {
     /// A type that implements [`NodeStore`]
     type NS: NodeStore;
@@ -57,10 +66,17 @@ pub trait GenApiCtxt {
     where
         F: FnMut(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R;
 
-    /// Parses `GenApi` xml and builds the context.
-    fn build(xml: &impl AsRef<str>) -> ControlResult<Self>
+    fn with_store<F, R>(&self, f: F) -> R
     where
-        Self: Sized;
+        F: FnOnce(&Self::NS) -> R;
+}
+
+/// A trait that provides directly conversion from `GenApi` string to a `GenApi` context.
+pub trait FromXml {
+    /// Parse `GenApi` context and build `
+    fn from_xml(xml: &impl AsRef<str>) -> ControlResult<Self>
+    where
+        Self: Sized + GenApiCtxt;
 }
 
 /// Default `GenApi` context.  
@@ -86,7 +102,20 @@ impl GenApiCtxt for DefaultGenApiCtxt {
         f(&self.node_store, &mut self.value_ctxt)
     }
 
-    fn build(xml: &impl AsRef<str>) -> ControlResult<Self> {
+    fn with_store<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&Self::NS) -> R,
+    {
+        f(&self.node_store)
+    }
+}
+
+impl FromXml for DefaultGenApiCtxt {
+    /// Parse `GenApi` context and build `
+    fn from_xml(xml: &impl AsRef<str>) -> ControlResult<Self>
+    where
+        Self: Sized + GenApiCtxt,
+    {
         let (reg_desc, node_store, value_ctxt) = GenApiBuilder::default()
             .build(xml)
             .map_err(|e| ControlError::InvalidData(e.into()))?;
@@ -118,8 +147,21 @@ impl GenApiCtxt for SharedDefaultGenApiCtxt {
         f(&self.node_store, &mut self.value_ctxt.lock().unwrap())
     }
 
-    fn build(xml: &impl AsRef<str>) -> ControlResult<Self> {
-        Ok(DefaultGenApiCtxt::build(xml)?.into())
+    fn with_store<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&Self::NS) -> R,
+    {
+        f(&self.node_store)
+    }
+}
+
+impl FromXml for SharedDefaultGenApiCtxt {
+    /// Parse `GenApi` context and build `
+    fn from_xml(xml: &impl AsRef<str>) -> ControlResult<Self>
+    where
+        Self: Sized + GenApiCtxt,
+    {
+        Ok(DefaultGenApiCtxt::from_xml(xml)?.into())
     }
 }
 
@@ -154,7 +196,20 @@ impl GenApiCtxt for NoCacheGenApiCtxt {
         f(&self.node_store, &mut self.value_ctxt)
     }
 
-    fn build(xml: &impl AsRef<str>) -> ControlResult<Self> {
+    fn with_store<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&Self::NS) -> R,
+    {
+        f(&self.node_store)
+    }
+}
+
+impl FromXml for NoCacheGenApiCtxt {
+    /// Parse `GenApi` context and build `
+    fn from_xml(xml: &impl AsRef<str>) -> ControlResult<Self>
+    where
+        Self: Sized + GenApiCtxt,
+    {
         let (reg_desc, node_store, value_ctxt) = GenApiBuilder::default()
             .no_cache()
             .build(xml)
@@ -197,8 +252,20 @@ impl GenApiCtxt for SharedNoCacheGenApiCtxt {
         f(&self.node_store, &mut self.value_ctxt.lock().unwrap())
     }
 
-    fn build(xml: &impl AsRef<str>) -> ControlResult<Self> {
-        Ok(NoCacheGenApiCtxt::build(xml)?.into())
+    fn with_store<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&Self::NS) -> R,
+    {
+        f(&self.node_store)
+    }
+}
+
+impl FromXml for SharedNoCacheGenApiCtxt {
+    fn from_xml(xml: &impl AsRef<str>) -> ControlResult<Self>
+    where
+        Self: Sized + GenApiCtxt,
+    {
+        Ok(NoCacheGenApiCtxt::from_xml(xml)?.into())
     }
 }
 
