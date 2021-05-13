@@ -22,6 +22,7 @@ pub enum PayloadType {
 }
 
 /// Image meta information.
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ImageInfo {
     /// Width of the image.
     pub width: usize,
@@ -40,6 +41,7 @@ pub struct ImageInfo {
 }
 
 /// Payload sent from the device.
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Payload {
     pub(crate) id: u64,
     pub(crate) payload_type: PayloadType,
