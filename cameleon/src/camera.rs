@@ -3,9 +3,9 @@ use auto_impl::auto_impl;
 use tracing::info;
 
 use super::{
-    genapi::{DefaultGenApiCtxt, GenApiCtxt},
-    payload::PayloadSender,
-    CameleonResult, ControlResult, StreamResult,
+    genapi::{DefaultGenApiCtxt, FromXml, GenApiCtxt, ParamsCtxt},
+    payload::{channel, PayloadReceiver, PayloadSender},
+    CameleonError, CameleonResult, ControlResult, StreamError, StreamResult,
 };
 
 /// Provides easy-to-use access to a `GenICam` compatible camera.
@@ -21,24 +21,28 @@ pub struct Camera<Ctrl, Strm, Ctxt = DefaultGenApiCtxt> {
     info: CameraInfo,
 }
 
-impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt>
-where
-    Ctrl: DeviceControl,
-    Strm: PayloadStream,
-    Ctxt: GenApiCtxt,
-{
+macro_rules! expect_node {
+    ($ctxt:expr, $name:literal, $as_type:ident) => {{
+        let err_msg = std::concat!("missing ", $name);
+        let err_msg2 = std::concat!($name, " has invalid interface");
+        $ctxt
+            .node($name)
+            .ok_or_else(|| CameleonError::InvalidGenApiXml(err_msg.into()))?
+            .$as_type(&mut $ctxt)
+            .ok_or_else(|| CameleonError::InvalidGenApiXml(err_msg2.into()))?
+    }};
 }
 
-impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt>
-where
-    Ctrl: DeviceControl,
-    Strm: PayloadStream,
-{
+impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
     /// Opens the camera. Ensure calling this method before start using the camera.
     #[tracing::instrument(skip(self),
                           level = "info",
                           fields(camera = ?self.info()))]
-    pub fn open(&mut self) -> CameleonResult<()> {
+    pub fn open(&mut self) -> CameleonResult<()>
+    where
+        Ctrl: DeviceControl,
+        Strm: PayloadStream,
+    {
         info!("try opening the device");
         self.ctrl.open()?;
         self.strm.open()?;
@@ -50,16 +54,108 @@ where
     #[tracing::instrument(skip(self),
                           level = "info",
                           fields(camera = ?self.info()))]
-    pub fn close(&mut self) -> CameleonResult<()> {
+    pub fn close(&mut self) -> CameleonResult<()>
+    where
+        Ctrl: DeviceControl,
+        Strm: PayloadStream,
+    {
         info!("try closing the device");
         self.ctrl.close()?;
         self.strm.close()?;
         info!("closed the device successfully");
         Ok(())
     }
-}
 
-impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
+    /// Loads `GenApi` xml from the device and builds the context, then returns the `GenApi` xml
+    /// string.  
+    /// Once the context has been built, the string itself is no longer needed. Therefore, you can
+    /// drop the returned string at any time.
+    pub fn load_context(&mut self) -> CameleonResult<String>
+    where
+        Ctrl: DeviceControl,
+        Strm: PayloadStream,
+        Ctxt: GenApiCtxt + FromXml,
+    {
+        let xml = self.ctrl.gen_api()?;
+        self.ctxt = Some(Ctxt::from_xml(&xml)?);
+        Ok(xml)
+    }
+
+    /// Starts streaming and returns the receiver for the `Payload`.
+    /// Make sure to load `GenApi` context before calling this method.
+    /// See [`Self::load_context`] and [`Self::set_context`] how to configure `GenApi` context.
+    ///
+    /// NOTE: This method doesn't change `AcquisitionMode` which defined in `GenICam SFNC`.  
+    /// We recommend you to set the node to `Continuous` if you don't know which mode is the best.
+    /// See the `GenICam SFNC` specification for more details.
+    ///
+    /// # Arguments
+    ///
+    /// * `cap` - A capacity of the paylaod receiver, the sender will stop to send a payload when it
+    /// gets full.
+    ///
+    /// # Panics
+    /// If `cap` is zero, this method will panic.
+    pub fn start_streaming(&mut self, cap: usize) -> CameleonResult<PayloadReceiver>
+    where
+        Ctrl: DeviceControl<StrmParams = Strm::StrmParams>,
+        Strm: PayloadStream,
+        Ctxt: GenApiCtxt,
+    {
+        const DEFAULT_BUFFER_CAP: usize = 5;
+
+        if self.strm.is_loop_running() {
+            return Err(StreamError::InStreaming.into());
+        }
+        self.ctrl.enable_streaming()?;
+
+        let mut ctxt = self.params_ctxt()?;
+        expect_node!(ctxt, "TLParamsLocked", as_integer).set_value(&mut ctxt, 1)?;
+        expect_node!(ctxt, "AcquisitionStart", as_command).execute(&mut ctxt)?;
+
+        let strm_params = self.ctrl.enable_streaming()?;
+        let (sender, receiver) = channel(cap, DEFAULT_BUFFER_CAP);
+        self.strm.run_streaming_loop(sender, strm_params)?;
+
+        Ok(receiver)
+    }
+
+    /// Stops the streaming. The receiver returned from the previous [`Self::start_streaming`]
+    /// call will be invalidated.
+    pub fn stop_streaming(&mut self) -> CameleonResult<()>
+    where
+        Ctrl: DeviceControl<StrmParams = Strm::StrmParams>,
+        Strm: PayloadStream,
+        Ctxt: GenApiCtxt,
+    {
+        if !self.strm.is_loop_running() {
+            return Ok(());
+        }
+        let mut ctxt = self.params_ctxt()?;
+        expect_node!(ctxt, "AcquisitionStop", as_command).execute(&mut ctxt)?;
+        expect_node!(ctxt, "TLParamsLocked", as_integer).set_value(&mut ctxt, 0)?;
+        self.ctrl.disable_streaming()?;
+        Ok(())
+    }
+
+    /// Returns the context of the camera params.
+    /// Make sure to load `GenApi` context before calling this method.
+    pub fn params_ctxt(&mut self) -> CameleonResult<ParamsCtxt<&mut Ctrl, &mut Ctxt>>
+    where
+        Ctrl: DeviceControl,
+        Strm: PayloadStream,
+        Ctxt: GenApiCtxt,
+    {
+        if let Some(ctxt) = self.ctxt.as_mut() {
+            Ok(ParamsCtxt {
+                ctrl: &mut self.ctrl,
+                ctxt,
+            })
+        } else {
+            Err(CameleonError::GenApiContextMissing)
+        }
+    }
+
     /// Returns the information of the camera.
     /// This information can be use before calling [`Self::open`].
     pub fn info(&self) -> &CameraInfo {
@@ -106,6 +202,17 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
             self.ctxt.map(|ctxt| ctxt.into()),
             self.info,
         )
+    }
+
+    /// Set a context to the camera. It's recommended to use [`Self::load_context`] instead if `Self::Ctxt`
+    /// implements [`FromXml`] trait.
+    pub fn set_context<Ctxt2>(self, ctxt: Ctxt2) -> Camera<Ctrl, Strm, Ctxt2> {
+        Camera {
+            ctrl: self.ctrl,
+            strm: self.strm,
+            ctxt: Some(ctxt),
+            info: self.info,
+        }
     }
 }
 

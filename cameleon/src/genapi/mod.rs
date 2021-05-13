@@ -66,6 +66,7 @@ pub trait GenApiCtxt {
     where
         F: FnMut(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R;
 
+    /// Provides access to the [`NodeStore`] in the context.
     fn with_store<F, R>(&self, f: F) -> R
     where
         F: FnOnce(&Self::NS) -> R;

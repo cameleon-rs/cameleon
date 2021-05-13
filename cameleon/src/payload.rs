@@ -150,9 +150,9 @@ impl PayloadSender {
 }
 
 /// Create [`PayloadReceiver`] and [`PayloadSender`].
-pub fn channel(from_device_cap: usize, to_device_cap: usize) -> (PayloadSender, PayloadReceiver) {
-    let (device_tx, host_rx) = async_std::channel::bounded(from_device_cap);
-    let (host_tx, device_rx) = async_std::channel::bounded(to_device_cap);
+pub fn channel(payload_cap: usize, buffer_cap: usize) -> (PayloadSender, PayloadReceiver) {
+    let (device_tx, host_rx) = async_std::channel::bounded(payload_cap);
+    let (host_tx, device_rx) = async_std::channel::bounded(buffer_cap);
     (
         PayloadSender {
             tx: device_tx,

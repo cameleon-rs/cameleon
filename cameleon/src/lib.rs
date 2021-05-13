@@ -19,25 +19,25 @@ pub type CameleonResult<T> = std::result::Result<T, CameleonError>;
 /// An error type returned from the `camera::Camera`.
 #[derive(Debug, thiserror::Error)]
 pub enum CameleonError {
-    /// Error from device control.
+    /// An error from device control.
     #[error("control error: {0}")]
-    ControlError(ControlError),
+    ControlError(#[from] ControlError),
 
-    /// Error from payload stream.
+    /// An rrror from payload stream.
     #[error("stream error: {0}")]
-    StreamError(StreamError),
-}
+    StreamError(#[from] StreamError),
 
-impl From<ControlError> for CameleonError {
-    fn from(err: ControlError) -> Self {
-        Self::ControlError(err)
-    }
-}
+    /// `GenApi` context is not laoded yet.
+    #[error("`GenApi` context is missing")]
+    GenApiContextMissing,
 
-impl From<StreamError> for CameleonError {
-    fn from(err: StreamError) -> Self {
-        Self::StreamError(err)
-    }
+    /// `GenApi` xml doesn't meet `GenApi SFNC` specification.
+    #[error("invalid `GenApi` xml: {0}")]
+    InvalidGenApiXml(Cow<'static, str>),
+
+    /// An error when `GenApi` node operation failed.
+    #[error("`GenApi` error: {0}")]
+    GenApiError(#[from] cameleon_genapi::GenApiError),
 }
 
 /// A specialized `Result` type for device control.

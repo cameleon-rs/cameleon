@@ -50,7 +50,7 @@ macro_rules! delegate {
             $vis:vis fn $method:ident<$Ctrl:ident, $Ctxt:ident>($self:ident, ctxt: &mut ParamsCtxt<Ctrl, Ctxt> $(,$arg:ident: $arg_ty:ty)*) -> $ret_ty:ty,)*) => {
         $(
             $(#[$meta])*
-            $vis fn $method<$Ctrl, $Ctxt>($self $(,$arg: $arg_ty)*, ctxt: &mut ParamsCtxt<$Ctrl, $Ctxt>) -> $ret_ty
+            $vis fn $method<$Ctrl, $Ctxt>($self, ctxt: &mut ParamsCtxt<$Ctrl, $Ctxt> $(,$arg: $arg_ty)*) -> $ret_ty
             where $Ctrl: Device,
                   $Ctxt: GenApiCtxt
             {
@@ -72,7 +72,7 @@ macro_rules! delegate {
             $vis:vis fn $method:ident<$Ctrl:ident, $Ctxt:ident>($self:ident, ctxt: &mut ParamsCtxt<Ctrl, Ctxt> $(,$arg:ident: $arg_ty:ty)*) -> $ret_ty:ty,)*) => {
         $(
             $(#[$meta])*
-            $vis fn $method<$Ctrl, $Ctxt>($self $(,$arg: $arg_ty)*, ctxt: &mut ParamsCtxt<$Ctrl, $Ctxt>) -> $ret_ty
+            $vis fn $method<$Ctrl, $Ctxt>($self, ctxt: &mut ParamsCtxt<$Ctrl, $Ctxt> $(,$arg: $arg_ty)*) -> $ret_ty
             where $Ctrl: Device,
                   $Ctxt: GenApiCtxt
             {
