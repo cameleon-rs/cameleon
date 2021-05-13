@@ -1,5 +1,6 @@
 use super::elem_type::StandardNameSpace;
 
+#[derive(Clone, Debug)]
 pub struct RegisterDescription {
     pub(crate) model_name: String,
     pub(crate) vendor_name: String,

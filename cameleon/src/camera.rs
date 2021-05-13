@@ -3,7 +3,9 @@ use auto_impl::auto_impl;
 use tracing::info;
 
 use super::{
-    genapi::DefaultGenApiCtxt, payload::PayloadSender, CameleonResult, ControlResult, StreamResult,
+    genapi::{DefaultGenApiCtxt, GenApiCtxt},
+    payload::PayloadSender,
+    CameleonResult, ControlResult, StreamResult,
 };
 
 /// Provides easy-to-use access to a `GenICam` compatible camera.
@@ -19,16 +21,24 @@ pub struct Camera<Ctrl, Strm, Ctxt = DefaultGenApiCtxt> {
     info: CameraInfo,
 }
 
-impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
+impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt>
+where
+    Ctrl: DeviceControl,
+    Strm: PayloadStream,
+    Ctxt: GenApiCtxt,
+{
+}
+
+impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt>
+where
+    Ctrl: DeviceControl,
+    Strm: PayloadStream,
+{
     /// Opens the camera. Ensure calling this method before start using the camera.
     #[tracing::instrument(skip(self),
                           level = "info",
                           fields(camera = ?self.info()))]
-    pub fn open(&mut self) -> CameleonResult<()>
-    where
-        Ctrl: DeviceControl,
-        Strm: PayloadStream,
-    {
+    pub fn open(&mut self) -> CameleonResult<()> {
         info!("try opening the device");
         self.ctrl.open()?;
         self.strm.open()?;
@@ -40,18 +50,16 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
     #[tracing::instrument(skip(self),
                           level = "info",
                           fields(camera = ?self.info()))]
-    pub fn close(&mut self) -> CameleonResult<()>
-    where
-        Ctrl: DeviceControl,
-        Strm: PayloadStream,
-    {
+    pub fn close(&mut self) -> CameleonResult<()> {
         info!("try closing the device");
         self.ctrl.close()?;
         self.strm.close()?;
         info!("closed the device successfully");
         Ok(())
     }
+}
 
+impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
     /// Returns the information of the camera.
     /// This information can be use before calling [`Self::open`].
     pub fn info(&self) -> &CameraInfo {
@@ -114,7 +122,7 @@ pub struct CameraInfo {
 
 /// This trait provides operations on the device's memory.
 #[auto_impl(&mut, Box)]
-pub trait DeviceControl {
+pub trait DeviceControl: cameleon_genapi::Device {
     /// A parameter type used for streaming.
     type StrmParams;
 

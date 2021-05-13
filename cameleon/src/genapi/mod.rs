@@ -3,8 +3,12 @@ pub mod node_kind;
 
 use std::sync::{Arc, Mutex};
 
-use auto_impl::auto_impl;
-use cameleon_genapi::{store, CacheStore, NodeStore, ValueCtxt, ValueStore};
+use cameleon_genapi::{
+    builder::GenApiBuilder, store, CacheStore, NodeStore, RegisterDescription, ValueCtxt,
+    ValueStore,
+};
+
+use super::{ControlError, ControlResult};
 
 /// Manages context of parameters of the device.
 #[derive(Debug, Clone)]
@@ -40,7 +44,6 @@ where
 }
 
 /// The trait that provides accesss to `GenApi` context.
-#[auto_impl(&mut, Box)]
 pub trait GenApiCtxt {
     /// A type that implements [`NodeStore`]
     type NS: NodeStore;
@@ -53,6 +56,11 @@ pub trait GenApiCtxt {
     fn enter<F, R>(&mut self, f: F) -> R
     where
         F: FnMut(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R;
+
+    /// Parses `GenApi` xml and builds the context.
+    fn build(xml: &impl AsRef<str>) -> ControlResult<Self>
+    where
+        Self: Sized;
 }
 
 /// Default `GenApi` context.  
@@ -63,6 +71,7 @@ pub trait GenApiCtxt {
 pub struct DefaultGenApiCtxt {
     node_store: store::DefaultNodeStore,
     value_ctxt: ValueCtxt<store::DefaultValueStore, store::DefaultCacheStore>,
+    reg_desc: RegisterDescription,
 }
 
 impl GenApiCtxt for DefaultGenApiCtxt {
@@ -76,6 +85,17 @@ impl GenApiCtxt for DefaultGenApiCtxt {
     {
         f(&self.node_store, &mut self.value_ctxt)
     }
+
+    fn build(xml: &impl AsRef<str>) -> ControlResult<Self> {
+        let (reg_desc, node_store, value_ctxt) = GenApiBuilder::default()
+            .build(xml)
+            .map_err(|e| ControlError::InvalidData(e.into()))?;
+        Ok(Self {
+            node_store,
+            value_ctxt,
+            reg_desc,
+        })
+    }
 }
 
 /// A sharable version of [`DefaultGenApiCtxt`].
@@ -83,6 +103,7 @@ impl GenApiCtxt for DefaultGenApiCtxt {
 pub struct SharedDefaultGenApiCtxt {
     node_store: Arc<store::DefaultNodeStore>,
     value_ctxt: Arc<Mutex<ValueCtxt<store::DefaultValueStore, store::DefaultCacheStore>>>,
+    reg_desc: Arc<RegisterDescription>,
 }
 
 impl GenApiCtxt for SharedDefaultGenApiCtxt {
@@ -96,6 +117,10 @@ impl GenApiCtxt for SharedDefaultGenApiCtxt {
     {
         f(&self.node_store, &mut self.value_ctxt.lock().unwrap())
     }
+
+    fn build(xml: &impl AsRef<str>) -> ControlResult<Self> {
+        Ok(DefaultGenApiCtxt::build(xml)?.into())
+    }
 }
 
 impl From<DefaultGenApiCtxt> for SharedDefaultGenApiCtxt {
@@ -103,6 +128,7 @@ impl From<DefaultGenApiCtxt> for SharedDefaultGenApiCtxt {
         Self {
             node_store: Arc::new(ctxt.node_store),
             value_ctxt: Arc::new(Mutex::new(ctxt.value_ctxt)),
+            reg_desc: Arc::new(ctxt.reg_desc),
         }
     }
 }
@@ -113,6 +139,7 @@ impl From<DefaultGenApiCtxt> for SharedDefaultGenApiCtxt {
 pub struct NoCacheGenApiCtxt {
     node_store: store::DefaultNodeStore,
     value_ctxt: ValueCtxt<store::DefaultValueStore, store::CacheSink>,
+    reg_desc: RegisterDescription,
 }
 
 impl GenApiCtxt for NoCacheGenApiCtxt {
@@ -126,6 +153,18 @@ impl GenApiCtxt for NoCacheGenApiCtxt {
     {
         f(&self.node_store, &mut self.value_ctxt)
     }
+
+    fn build(xml: &impl AsRef<str>) -> ControlResult<Self> {
+        let (reg_desc, node_store, value_ctxt) = GenApiBuilder::default()
+            .no_cache()
+            .build(xml)
+            .map_err(|e| ControlError::InvalidData(e.into()))?;
+        Ok(Self {
+            node_store,
+            value_ctxt,
+            reg_desc,
+        })
+    }
 }
 
 impl From<DefaultGenApiCtxt> for NoCacheGenApiCtxt {
@@ -133,6 +172,7 @@ impl From<DefaultGenApiCtxt> for NoCacheGenApiCtxt {
         Self {
             node_store: from.node_store,
             value_ctxt: ValueCtxt::new(from.value_ctxt.value_store, store::CacheSink::default()),
+            reg_desc: from.reg_desc,
         }
     }
 }
@@ -142,6 +182,7 @@ impl From<DefaultGenApiCtxt> for NoCacheGenApiCtxt {
 pub struct SharedNoCacheGenApiCtxt {
     node_store: Arc<store::DefaultNodeStore>,
     value_ctxt: Arc<Mutex<ValueCtxt<store::DefaultValueStore, store::CacheSink>>>,
+    reg_desc: Arc<RegisterDescription>,
 }
 
 impl GenApiCtxt for SharedNoCacheGenApiCtxt {
@@ -155,6 +196,10 @@ impl GenApiCtxt for SharedNoCacheGenApiCtxt {
     {
         f(&self.node_store, &mut self.value_ctxt.lock().unwrap())
     }
+
+    fn build(xml: &impl AsRef<str>) -> ControlResult<Self> {
+        Ok(NoCacheGenApiCtxt::build(xml)?.into())
+    }
 }
 
 impl From<NoCacheGenApiCtxt> for SharedNoCacheGenApiCtxt {
@@ -162,6 +207,7 @@ impl From<NoCacheGenApiCtxt> for SharedNoCacheGenApiCtxt {
         Self {
             node_store: Arc::new(from.node_store),
             value_ctxt: Arc::new(Mutex::new(from.value_ctxt)),
+            reg_desc: Arc::new(from.reg_desc),
         }
     }
 }
