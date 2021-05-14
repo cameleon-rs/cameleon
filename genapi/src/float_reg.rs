@@ -113,8 +113,8 @@ impl IFloat for FloatRegNode {
         Ok(f64::MAX)
     }
 
-    fn inc_mode(&self, _: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
-        Ok(None)
+    fn inc_mode(&self, _: &impl NodeStore) -> Option<IncrementMode> {
+        None
     }
 
     fn inc<T: ValueStore, U: CacheStore>(

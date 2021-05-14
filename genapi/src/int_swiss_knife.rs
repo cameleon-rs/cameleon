@@ -121,8 +121,8 @@ impl IInteger for IntSwissKnifeNode {
         self.value(device, store, cx)
     }
 
-    fn inc_mode(&self, _: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
-        Ok(None)
+    fn inc_mode(&self, _: &impl NodeStore) -> Option<IncrementMode> {
+        None
     }
 
     fn inc<T: ValueStore, U: CacheStore>(

@@ -65,6 +65,7 @@ impl Drop for ControlChannel {
     }
 }
 
+#[derive(Debug)]
 pub struct ReceiveChannel {
     device_handle: DeviceHandle,
     is_opened: bool,

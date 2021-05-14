@@ -3,14 +3,22 @@ name = "cameleon"
 version = "0.1.0"
 authors = ["Cameleon Project Developers"]
 edition = "2018"
+license = "MPL-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 thiserror = "1.0.24"
 semver = "0.11.0"
+zip = "0.5.12"
+sha-1 = "0.9.5"
+async-std = { version = "1.9.0", features = ["unstable"] }
+futures = "0.3.14"
+tracing = "0.1.26"
+auto_impl = "0.4.1"
 
 cameleon-device = { path = "../device" }
+cameleon-genapi = { path = "../genapi" }
 
 [dev-dependencies]
 trybuild = "1.0.42"
@@ -19,5 +27,9 @@ trybuild = "1.0.42"
 libusb = ["cameleon-device/libusb"]
 
 [[example]]
-name = "u3v_device_register_map"
-path = "examples/device/u3v/register_map.rs"
+name = "u3v_register_map"
+path = "examples/u3v/register_map.rs"
+
+[[example]]
+name = "stream"
+path = "examples/stream.rs"

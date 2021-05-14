@@ -132,8 +132,6 @@ impl EvaluationResult {
 }
 
 impl Expr {
-    #[must_use]
-    #[tracing::instrument(level = "trace")]
     pub fn eval<K, V>(&self, var_env: &HashMap<K, V>) -> GenApiResult<EvaluationResult>
     where
         K: Borrow<str> + Eq + Hash + fmt::Debug,
@@ -636,6 +634,7 @@ struct Lexer<'a> {
 
 impl<'a> Lexer<'a> {
     fn new(src: &'a str) -> Self {
+        tracing::trace!(src);
         Self {
             src: src.as_bytes(),
             peek: None,
@@ -719,7 +718,7 @@ impl<'a> Lexer<'a> {
 
             c if c.is_alphabetic() => {
                 let start_pos = self.cur - 1;
-                while self.eat_char(|c| c.is_alphanumeric() || c == '.') {}
+                while self.eat_char(|c| c.is_alphanumeric() || c == '.' || c == '_') {}
                 let end_pos = self.cur;
                 Token::Ident(self.sub_string(start_pos, end_pos).into())
             }

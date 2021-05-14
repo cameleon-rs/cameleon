@@ -149,8 +149,8 @@ impl IInteger for MaskedIntRegNode {
         Ok(self.bit_mask.max(len, self.endianness, self.sign))
     }
 
-    fn inc_mode(&self, _: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
-        Ok(None)
+    fn inc_mode(&self, _: &impl NodeStore) -> Option<IncrementMode> {
+        None
     }
 
     fn inc<T: ValueStore, U: CacheStore>(

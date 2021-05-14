@@ -9,6 +9,7 @@ pub(super) type RusbDevice = rusb::Device<rusb::GlobalContext>;
 /// This device itself doesn't communicate with the connected device but provide basic device
 /// information and channels to communicate with the connected device. So it's valid to use
 /// provided channels even after dropping this instance.
+#[derive(Debug)]
 pub struct Device {
     device: RusbDevice,
 
@@ -16,7 +17,7 @@ pub struct Device {
     event_iface_info: Option<ReceiveIfaceInfo>,
     stream_iface_info: Option<ReceiveIfaceInfo>,
 
-    device_info: DeviceInfo,
+    pub device_info: DeviceInfo,
 }
 
 impl Device {

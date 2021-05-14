@@ -45,6 +45,7 @@ use super::util::ReadBytes;
 ///     }
 /// }
 /// ```
+#[derive(Debug, Clone)]
 pub struct Leader<'a> {
     leader_size: u16,
     block_id: u64,
@@ -373,6 +374,7 @@ impl SpecificLeader for ChunkLeader {
 
 /// Trailer part of stream containing auxiliary information of payload data, which is sent after
 /// the payload data.
+#[derive(Debug, Clone)]
 pub struct Trailer<'a> {
     trailer_size: u16,
     block_id: u64,

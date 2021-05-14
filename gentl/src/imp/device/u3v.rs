@@ -1,7 +1,9 @@
 use std::{convert::TryFrom, sync::Mutex};
 
-use cameleon::device::u3v;
-use cameleon::device::CompressionType;
+use cameleon::{
+    genapi::{CompressionType, SharedDefaultGenApiCtxt},
+    u3v::{self, control_handle::U3VDeviceControl, SharedControlHandle, StreamHandle},
+};
 use cameleon_impl::memory::prelude::*;
 
 use crate::{
@@ -15,12 +17,10 @@ use crate::{
 use super::{u3v_genapi as genapi, Device, DeviceAccessStatus};
 use genapi::GenApiReg;
 
+type Camera = cameleon::Camera<SharedControlHandle, StreamHandle, SharedDefaultGenApiCtxt>;
+
 pub(crate) fn enumerate_u3v_device() -> GenTlResult<Vec<U3VDeviceModule>> {
-    Ok(u3v::enumerate_devices()?
-        .into_iter()
-        .map(U3VDeviceModule::new)
-        .filter_map(std::result::Result::ok)
-        .collect())
+    todo!()
 }
 
 pub(crate) struct U3VDeviceModule {
@@ -28,7 +28,7 @@ pub(crate) struct U3VDeviceModule {
     port_info: PortInfo,
     xml_infos: Vec<XmlInfo>,
 
-    device: u3v::Device,
+    camera: Camera,
     remote_device: Option<Box<Mutex<U3VRemoteDevice>>>,
 
     /// Current status of the device.  
@@ -39,11 +39,11 @@ pub(crate) struct U3VDeviceModule {
 
 // TODO: Implement methods for stream and event channel.
 impl U3VDeviceModule {
-    pub(crate) fn new(device: u3v::Device) -> GenTlResult<Self> {
-        let device_info = device.device_info();
+    pub(crate) fn new(camera: Camera) -> GenTlResult<Self> {
+        let device_info = camera.ctrl.device_info();
 
         let port_info = PortInfo {
-            id: device_info.guid.clone(),
+            id: device_info.guid,
             vendor: genapi::VENDOR_NAME.into(),
             model: genapi::MODEL_NAME.into(),
             tl_type: genapi::DEVICE_TYPE,
@@ -82,7 +82,7 @@ impl U3VDeviceModule {
             port_info,
             xml_infos: vec![xml_info],
 
-            device,
+            camera,
             remote_device: None,
 
             current_status: super::DeviceAccessStatus::Unknown,
@@ -93,7 +93,7 @@ impl U3VDeviceModule {
     }
 
     pub(crate) fn device_info(&self) -> &u3v::DeviceInfo {
-        self.device.device_info()
+        todo!()
     }
 
     /// Reflect current_status to `DeviceAccessStatusReg` in VM.
@@ -143,19 +143,7 @@ impl U3VDeviceModule {
     }
 
     fn initialize_vm(&mut self) -> GenTlResult<()> {
-        self.vm
-            .write::<GenApiReg::DeviceID>(self.device_id().into())?;
-
-        let info = self.device.device_info();
-        self.vm
-            .write::<GenApiReg::DeviceVendorName>(info.vendor_name.clone())?;
-        self.vm
-            .write::<GenApiReg::DeviceModelName>(info.model_name.clone())?;
-        self.reflect_status();
-
-        // TODO: Initialize registeres related to stream.
-
-        Ok(())
+        todo!()
     }
 }
 
@@ -202,38 +190,11 @@ impl Port for U3VDeviceModule {
 
 impl Device for U3VDeviceModule {
     fn open(&mut self, access_flag: super::DeviceAccessFlag) -> GenTlResult<()> {
-        if access_flag != super::DeviceAccessFlag::Exclusive {
-            return Err(GenTlError::AccessDenied);
-        }
-
-        if self.is_opened() {
-            return Err(GenTlError::ResourceInUse);
-        }
-
-        let ctrl_handle = self.device.control_handle().clone();
-        let res: GenTlResult<()> = ctrl_handle.open().map_err(Into::into);
-        self.remote_device = Some(Mutex::new(U3VRemoteDevice::new(ctrl_handle)?).into());
-
-        self.current_status = match &res {
-            Ok(()) => super::DeviceAccessStatus::OpenReadWrite,
-            Err(GenTlError::AccessDenied) => super::DeviceAccessStatus::Busy,
-            Err(GenTlError::Io(..)) => super::DeviceAccessStatus::NoAccess,
-            _ => super::DeviceAccessStatus::Unknown,
-        };
-
-        res
+        todo!()
     }
 
     fn close(&mut self) -> GenTlResult<()> {
-        let res: GenTlResult<()> = self.device.control_handle().close().map_err(Into::into);
-        self.current_status = match res {
-            Ok(()) => super::DeviceAccessStatus::ReadWrite,
-            Err(GenTlError::Io(..)) => super::DeviceAccessStatus::NoAccess,
-            _ => super::DeviceAccessStatus::Unknown,
-        };
-
-        self.remote_device = None;
-        Ok(())
+        todo!()
     }
 
     fn device_id(&self) -> &str {
@@ -247,11 +208,11 @@ impl Device for U3VDeviceModule {
     }
 
     fn vendor_name(&self) -> GenTlResult<String> {
-        Ok(self.device.device_info().vendor_name.clone())
+        todo!()
     }
 
     fn model_name(&self) -> GenTlResult<String> {
-        Ok(self.device.device_info().model_name.clone())
+        todo!()
     }
 
     fn display_name(&self) -> GenTlResult<String> {
@@ -266,125 +227,56 @@ impl Device for U3VDeviceModule {
     }
 
     fn device_access_status(&self) -> DeviceAccessStatus {
-        self.access_status()
+        todo!()
     }
 
     fn user_defined_name(&self) -> GenTlResult<String> {
-        let abrm = self.device.control_handle().abrm()?;
-        let user_defined_name = abrm.user_defined_name()?;
-        user_defined_name.ok_or(GenTlError::NotAvailable)
+        todo!()
     }
 
     fn serial_number(&self) -> GenTlResult<String> {
-        Ok(self.device.device_info().serial_number.clone())
+        Ok(self.device_info().serial_number.clone())
     }
 
     fn device_version(&self) -> GenTlResult<String> {
-        let abrm = self.device.control_handle().abrm()?;
-        Ok(abrm.device_version()?)
+        todo!()
     }
 
     fn timespamp_frequency(&self) -> GenTlResult<u64> {
-        let abrm = self.device.control_handle().abrm()?;
-
-        //  U3V's Timestamp increment represents ns / tick.
-        let timestamp_increment = abrm.timestamp_increment()?;
-        Ok((1_000_000_000) / timestamp_increment)
+        todo!()
     }
 }
 
-pub(crate) struct U3VRemoteDevice {
-    handle: u3v::ControlHandle,
-    port_info: PortInfo,
-    xml_infos: Vec<XmlInfo>,
-}
+pub(crate) struct U3VRemoteDevice {}
 
 impl U3VRemoteDevice {
     fn new(handle: u3v::ControlHandle) -> GenTlResult<Self> {
-        let port_info = Self::port_info(&handle)?;
-        let xml_infos = Self::xml_infos(&handle)?;
-        Ok(Self {
-            handle,
-            port_info,
-            xml_infos,
-        })
+        todo!()
     }
 
     fn port_info(handle: &u3v::ControlHandle) -> GenTlResult<PortInfo> {
-        let abrm = handle.abrm()?;
-
-        let id = abrm.serial_number()?;
-        let vendor = abrm.manufacturer_name()?;
-        let model = abrm.model_name()?;
-        let tl_type = TlType::USB3Vision;
-        let module_type = ModuleType::RemoteDevice;
-        let endianness = Endianness::LE;
-        let access = PortAccess::RW;
-        let version = abrm.gencp_version()?;
-        let port_name = "Device".into();
-
-        Ok(PortInfo {
-            id,
-            vendor,
-            model,
-            tl_type,
-            module_type,
-            endianness,
-            access,
-            version,
-            port_name,
-        })
+        todo!()
     }
 
     fn xml_infos(handle: &u3v::ControlHandle) -> GenTlResult<Vec<XmlInfo>> {
-        let abrm = handle.abrm()?;
-        let manifest_table = abrm.manifest_table()?;
-
-        let mut xml_infos = vec![];
-        for ent in manifest_table.entries()? {
-            let file_address = ent.file_address()?;
-            let file_size = ent.file_size()?;
-            let file_info = ent.file_info()?;
-
-            let schema_version = file_info.schema_version();
-            let compressed = file_info.compression_type()?;
-
-            let sha1_hash = ent.sha1_hash()?;
-            let file_version = ent.genicam_file_version()?;
-
-            let info = XmlInfo {
-                location: XmlLocation::RegisterMap {
-                    address: file_address,
-                    size: file_size as usize,
-                },
-                schema_version,
-                file_version,
-                sha1_hash,
-                compressed,
-            };
-            xml_infos.push(info);
-        }
-
-        Ok(xml_infos)
+        todo!()
     }
 }
 
 impl Port for U3VRemoteDevice {
     fn read(&self, address: u64, buf: &mut [u8]) -> GenTlResult<usize> {
-        self.handle.read_mem(address, buf)?;
-        Ok(buf.len())
+        todo!()
     }
 
     fn write(&mut self, address: u64, data: &[u8]) -> GenTlResult<usize> {
-        self.handle.write_mem(address, data)?;
-        Ok(data.len())
+        todo!()
     }
 
     fn port_info(&self) -> GenTlResult<&PortInfo> {
-        Ok(&self.port_info)
+        todo!()
     }
 
     fn xml_infos(&self) -> GenTlResult<&[XmlInfo]> {
-        Ok(&self.xml_infos)
+        todo!()
     }
 }

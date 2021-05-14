@@ -270,7 +270,7 @@ impl<'a> VariableKind<'a> {
             }
             Self::Enum(name) => {
                 if let Some(node) = nid.as_ienumeration_kind(store) {
-                    node.entry_by_name(name, store)?
+                    node.entry_by_name(name, store)
                         .ok_or_else(|| error(nid, store))?
                         .value()
                         .into()

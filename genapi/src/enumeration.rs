@@ -64,7 +64,7 @@ impl IEnumeration for EnumerationNode {
         self.elem_base.verify_is_readable(device, store, cx)?;
 
         let value = self.value.value(device, store, cx)?;
-        self.entries(store)?
+        self.entries(store)
             .iter()
             .find(|ent| ent.value() == value)
             .ok_or_else(|| {
@@ -78,8 +78,8 @@ impl IEnumeration for EnumerationNode {
             })
     }
 
-    fn entries(&self, _: &impl NodeStore) -> GenApiResult<&[EnumEntryNode]> {
-        Ok(&self.entries)
+    fn entries(&self, _: &impl NodeStore) -> &[EnumEntryNode] {
+        &self.entries
     }
 
     #[tracing::instrument(skip(self, device, store, cx),
@@ -97,7 +97,7 @@ impl IEnumeration for EnumerationNode {
         })?;
 
         let value = self
-            .entries(store)?
+            .entries(store)
             .iter()
             .find(|ent| ent.node_base().id() == ent_id)
             .ok_or_else(|| {
@@ -121,7 +121,7 @@ impl IEnumeration for EnumerationNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         self.elem_base.verify_is_writable(device, store, cx)?;
-        if !self.entries(store)?.iter().any(|ent| ent.value() == value) {
+        if !self.entries(store).iter().any(|ent| ent.value() == value) {
             return Err(GenApiError::invalid_data(
                 format!("not found entry with the value {}", value).into(),
             ));

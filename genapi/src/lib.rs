@@ -57,6 +57,7 @@ pub use port::PortNode;
 pub use register::RegisterNode;
 pub use register_base::RegisterBase;
 pub use register_description::RegisterDescription;
+pub use store::{CacheStore, NodeId, NodeStore, ValueStore};
 pub use string::StringNode;
 pub use string_reg::StringRegNode;
 pub use swiss_knife::SwissKnifeNode;
@@ -152,8 +153,8 @@ pub type GenApiResult<T> = std::result::Result<T, GenApiError>;
 
 #[derive(Clone, Debug)]
 pub struct ValueCtxt<T, U> {
-    value_store: T,
-    cache_store: U,
+    pub value_store: T,
+    pub cache_store: U,
 }
 
 impl<T, U> ValueCtxt<T, U> {

@@ -5,7 +5,7 @@ pub(super) mod system;
 
 mod genapi_common;
 
-use cameleon::device::DeviceError;
+use cameleon::ControlError;
 use cameleon_impl::memory::MemoryError;
 
 use super::GenTlError;
@@ -20,21 +20,21 @@ impl From<MemoryError> for GenTlError {
     }
 }
 
-impl From<DeviceError> for GenTlError {
-    fn from(err: DeviceError) -> Self {
+impl From<ControlError> for GenTlError {
+    fn from(err: ControlError) -> Self {
         use GenTlError::{
             BufferTooSmall, InvalidValue, Io, NotInitialized, ResourceInUse, Timeout,
         };
 
         match err {
-            DeviceError::Busy => ResourceInUse,
-            DeviceError::Disconnected | DeviceError::Io(..) | DeviceError::InternalError(..) => {
+            ControlError::Busy => ResourceInUse,
+            ControlError::Disconnected | ControlError::Io(..) | ControlError::InternalError(..) => {
                 Io(err.into())
             }
-            DeviceError::NotOpened => NotInitialized,
-            DeviceError::InvalidData(..) => InvalidValue(format!("{}", err).into()),
-            DeviceError::Timeout => Timeout,
-            DeviceError::BufferTooSmall => BufferTooSmall,
+            ControlError::NotOpened => NotInitialized,
+            ControlError::InvalidData(..) => InvalidValue(format!("{}", err).into()),
+            ControlError::Timeout => Timeout,
+            ControlError::BufferTooSmall => BufferTooSmall,
         }
     }
 }

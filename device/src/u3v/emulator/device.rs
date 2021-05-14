@@ -7,7 +7,7 @@ use super::{
 
 pub struct Device {
     device_id: u32,
-    device_info: DeviceInfo,
+    pub device_info: DeviceInfo,
 }
 
 impl Device {
@@ -24,11 +24,6 @@ impl Device {
     pub fn stream_channel(&self) -> Result<Option<ReceiveChannel>> {
         let handle = DeviceHandle::new(self.device_id, IfaceKind::Stream);
         Ok(Some(ReceiveChannel::new(handle)))
-    }
-
-    #[must_use]
-    pub fn device_info(&self) -> &DeviceInfo {
-        &self.device_info
     }
 
     pub(super) fn new(device_id: u32, device_info: DeviceInfo) -> Self {

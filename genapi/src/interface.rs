@@ -41,7 +41,7 @@ pub trait IInteger {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64>;
 
-    fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>>;
+    fn inc_mode(&self, store: &impl NodeStore) -> Option<IncrementMode>;
 
     fn inc<T: ValueStore, U: CacheStore>(
         &self,
@@ -118,7 +118,7 @@ pub trait IFloat {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64>;
 
-    fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>>;
+    fn inc_mode(&self, store: &impl NodeStore) -> Option<IncrementMode>;
 
     fn inc<T: ValueStore, U: CacheStore>(
         &self,
@@ -212,17 +212,12 @@ pub trait IEnumeration {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<&EnumEntryNode>;
 
-    fn entries(&self, store: &impl NodeStore) -> GenApiResult<&[EnumEntryNode]>;
+    fn entries(&self, store: &impl NodeStore) -> &[EnumEntryNode];
 
-    fn entry_by_name(
-        &self,
-        name: &str,
-        store: &impl NodeStore,
-    ) -> GenApiResult<Option<&EnumEntryNode>> {
-        Ok(self
-            .entries(store)?
+    fn entry_by_name(&self, name: &str, store: &impl NodeStore) -> Option<&EnumEntryNode> {
+        self.entries(store)
             .iter()
-            .find(|ent| ent.node_base().id().name(store) == name))
+            .find(|ent| ent.node_base().id().name(store) == name)
     }
 
     fn set_entry_by_name<T: ValueStore, U: CacheStore>(
@@ -350,7 +345,7 @@ pub trait IRegister {
 
 pub trait ICategory {
     /// Return nodes in the category.
-    fn nodes(&self, store: &impl NodeStore) -> GenApiResult<&[NodeId]>;
+    fn nodes(&self, store: &impl NodeStore) -> &[NodeId];
 }
 
 pub trait IPort {
@@ -448,7 +443,7 @@ impl<'a> IInteger for IIntegerKind<'a> {
         delegate_to_iinteger_variant!(self.max(device, store, cx))
     }
 
-    fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
+    fn inc_mode(&self, store: &impl NodeStore) -> Option<IncrementMode> {
         delegate_to_iinteger_variant!(self.inc_mode(store))
     }
 
@@ -579,7 +574,7 @@ impl<'a> IFloat for IFloatKind<'a> {
         delegate_to_ifloat_variant!(self.max(device, store, cx))
     }
 
-    fn inc_mode(&self, store: &impl NodeStore) -> GenApiResult<Option<IncrementMode>> {
+    fn inc_mode(&self, store: &impl NodeStore) -> Option<IncrementMode> {
         delegate_to_ifloat_variant!(self.inc_mode(store))
     }
 
@@ -800,7 +795,7 @@ impl<'a> IEnumeration for IEnumerationKind<'a> {
         delegate_to_ienumeration_variant!(self.current_entry(device, store, cx))
     }
 
-    fn entries(&self, store: &impl NodeStore) -> GenApiResult<&[EnumEntryNode]> {
+    fn entries(&self, store: &impl NodeStore) -> &[EnumEntryNode] {
         delegate_to_ienumeration_variant!(self.entries(store))
     }
 
@@ -998,7 +993,7 @@ macro_rules! delegate_to_icategory_variant {
 }
 
 impl<'a> ICategory for ICategoryKind<'a> {
-    fn nodes(&self, store: &impl NodeStore) -> GenApiResult<&[NodeId]> {
+    fn nodes(&self, store: &impl NodeStore) -> &[NodeId] {
         delegate_to_icategory_variant!(self.nodes(store))
     }
 }
