@@ -12,6 +12,7 @@ pub(super) trait IValue<T> {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<U, S>,
     ) -> GenApiResult<T>;
+
     fn set_value<U: ValueStore, S: CacheStore>(
         &self,
         value: T,

@@ -177,9 +177,7 @@ impl IInteger for IntRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.register_base()
-            .elem_base
-            .is_readable(device, store, cx)
+        self.register_base().is_readable(device, store, cx)
     }
 
     fn is_writable<T: ValueStore, U: CacheStore>(
@@ -188,9 +186,7 @@ impl IInteger for IntRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.register_base()
-            .elem_base
-            .is_writable(device, store, cx)
+        self.register_base().is_writable(device, store, cx)
     }
 }
 
