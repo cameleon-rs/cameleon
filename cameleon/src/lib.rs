@@ -2,7 +2,11 @@
 //! TODO: TBW
 
 #![warn(missing_docs)]
-#![allow(clippy::similar_names, clippy::missing_errors_doc)]
+#![allow(
+    clippy::similar_names,
+    clippy::missing_errors_doc,
+    clippy::clippy::module_name_repetitions
+)]
 
 pub mod camera;
 pub mod genapi;

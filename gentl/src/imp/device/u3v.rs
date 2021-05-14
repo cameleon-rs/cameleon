@@ -43,7 +43,7 @@ impl U3VDeviceModule {
         let device_info = camera.ctrl.device_info();
 
         let port_info = PortInfo {
-            id: device_info.guid.clone(),
+            id: device_info.guid,
             vendor: genapi::VENDOR_NAME.into(),
             model: genapi::MODEL_NAME.into(),
             tl_type: genapi::DEVICE_TYPE,

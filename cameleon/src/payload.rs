@@ -99,19 +99,19 @@ pub struct PayloadReceiver {
 }
 
 impl PayloadReceiver {
-    /// Receive [`payload::Payload`] sent from the device.
+    /// Receive [`Payload`] sent from the device.
     pub async fn recv(&self) -> StreamResult<Payload> {
         self.rx.recv().await?
     }
 
-    /// Try to receive [`payload::Payload`].
+    /// Try to receive [`Payload`].
     /// This method doesn't wait arrival of `payload` and immediately returns `StreamError` if
     /// the channel is empty.
     pub fn try_recv(&self) -> StreamResult<Payload> {
         self.rx.try_recv()?
     }
 
-    /// Send back [`payload::Payload`] to the device to reuse already allocated `payload`.
+    /// Send back [`Payload`] to the device to reuse already allocated `payload`.
     ///
     /// Sending back `payload` may improve performance of streaming, but not required to call this
     /// method.
@@ -132,18 +132,18 @@ pub struct PayloadSender {
 }
 
 impl PayloadSender {
-    /// Send [`payload::Payload`] to the host.
+    /// Send [`Payload`] to the host.
     pub async fn send(&self, payload: StreamResult<Payload>) -> StreamResult<()> {
         Ok(self.tx.send(payload).await?)
     }
 
-    /// Try to send [`payload::Payload`] to the host.
+    /// Try to send [`Payload`] to the host.
     /// Returns `StreamError` if the channel is full or empty.
     pub fn try_send(&self, payload: StreamResult<Payload>) -> StreamResult<()> {
         Ok(self.tx.try_send(payload)?)
     }
 
-    /// Try to receive [`payload::Payload`].
+    /// Try to receive [`Payload`].
     /// This method doesn't wait arrival of `payload` and immediately returns `StreamError` if
     /// the channel is empty.
     pub fn try_recv(&self) -> StreamResult<Payload> {

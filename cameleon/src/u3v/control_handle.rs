@@ -46,32 +46,32 @@ pub trait U3VDeviceControl: DeviceControl {
 
 /// This handle provides low level API to read and write data from the device.  
 /// See [`ControlHandle::abrm`] and [`register_map`](super::register_map) which provide more
-/// convenient API to communicate with the device.
-///
+/// convenient way to communicate with `u3v` specific registers.
 ///
 /// # Examples
 ///
 /// ```no_run
-/// use cameleon::u3v::enumerate_devices;
+/// use cameleon::{Camera, DeviceControl};
+/// use cameleon::u3v;
+/// use cameleon::genapi;
 ///
-/// // Enumerate devices connected to the host.
-/// let mut devices = enumerate_devices().unwrap();
+/// // Enumerates cameras connected to the host.
+/// let mut cameras: Vec<Camera<u3v::ControlHandle, u3v::StreamHandle, genapi::DefaultGenApiCtxt>> =
+///     u3v::enumerate_cameras().unwrap();
 ///
-/// // If no device is found, return.
-/// if devices.is_empty() {
+/// // If no camera is found, return.
+/// if cameras.is_empty() {
 ///     return;
 /// }
+/// let mut camera = cameras.pop().unwrap();
 ///
-/// let mut device = devices.pop().unwrap();
-///
-/// // Obtain and open control handle.
-/// let handle = device.control_handle();
-/// handle.open().unwrap();
+/// // Opens the camera.
+/// camera.open().unwrap();
 ///
 /// // Read 64bytes from address 0x0184.
 /// let address = 0x0184;
 /// let mut buffer = vec![0; 64];
-/// handle.read(address, &mut buffer).unwrap();
+/// camera.ctrl.read(address, &mut buffer).unwrap();
 /// ```
 pub struct ControlHandle {
     inner: u3v::ControlChannel,
@@ -95,14 +95,14 @@ pub struct ControlHandle {
 }
 
 impl ControlHandle {
-    /// Capacity of the buffer inside [`ControlHandleImpl`], the buffer is used for
+    /// Capacity of the buffer inside [`ControlHandle`], the buffer is used for
     /// serializing/deserializing packet. This buffer automatically extend according to packet
     /// length.
     pub fn buffer_capacity(&self) -> usize {
         self.buffer.capacity()
     }
 
-    /// Resize the capacity of the buffer inside [`ControlHandleImpl`], the buffer is used for
+    /// Resize the capacity of the buffer inside [`ControlHandle`], the buffer is used for
     /// serializing/deserializing packet. This buffer automatically extend according to packet
     /// length.
     pub fn resize_buffer(&mut self, size: usize) {
@@ -260,12 +260,12 @@ impl ControlHandle {
 
         if let Some(hash) = ent.sha1_hash(self)? {
             let xml_hash = sha1::Sha1::digest(xml);
-            if xml_hash.as_slice() != hash {
+            if xml_hash.as_slice() == hash {
+                Ok(())
+            } else {
                 Err(ControlError::InternalError(
                     "sha1 of retrieved xml file isn't same as entry's hash".into(),
                 ))
-            } else {
-                Ok(())
             }
         } else {
             Ok(())
@@ -330,10 +330,9 @@ impl DeviceControl for ControlHandle {
 
     fn close(&mut self) -> ControlResult<()> {
         if self.is_opened() {
-            Ok(unwrap_or_log!(self.inner.close()))
-        } else {
-            Ok(())
+            unwrap_or_log!(self.inner.close());
         }
+        Ok(())
     }
 
     fn write(&mut self, address: u64, data: &[u8]) -> ControlResult<()> {
@@ -381,6 +380,10 @@ impl DeviceControl for ControlHandle {
     }
 
     fn gen_api(&mut self) -> ControlResult<String> {
+        fn zip_err(err: impl std::fmt::Debug) -> ControlError {
+            ControlError::InternalError(format!("zipped xml file is broken: {:?}", err).into())
+        }
+
         let table = unwrap_or_log!(self.manifest_table());
         // Use newest version if there are more than one entries.
         let mut newest_ent = None;
@@ -414,9 +417,6 @@ impl DeviceControl for ControlHandle {
         // Verify retrieved xml has correct hash.
         unwrap_or_log!(self.verify_xml(&buf, ent));
 
-        fn zip_err(err: impl std::fmt::Debug) -> ControlError {
-            ControlError::InternalError(format!("zipped xml file is broken: {:?}", err).into())
-        }
         match comp_type {
             CompressionType::Zip => {
                 let mut zip = zip::ZipArchive::new(std::io::Cursor::new(buf)).unwrap();
@@ -454,15 +454,15 @@ impl DeviceControl for ControlHandle {
             align!(required_payload_size % payload_transfer_size as u64, u64) as u32;
         let payload_final_transfer2_size = 0;
 
-        let maximum_leader_size = if required_leader_size != 0 {
+        let maximum_leader_size = if required_leader_size == 0 {
+            payload_transfer_size
+        } else {
             required_leader_size
-        } else {
-            payload_transfer_size
         };
-        let maximum_trailer_size = if required_trailer_size != 0 {
-            required_trailer_size
-        } else {
+        let maximum_trailer_size = if required_trailer_size == 0 {
             payload_transfer_size
+        } else {
+            required_trailer_size
         };
         let timeout =
             unwrap_or_log!(unwrap_or_log!(self.abrm()).maximum_device_response_time(self));
@@ -549,7 +549,7 @@ impl Drop for ControlHandle {
     }
 }
 
-/// Thread safe version of [`ContolHandle`].
+/// Thread safe version of [`ControlHandle`].
 #[derive(Clone)]
 pub struct SharedControlHandle(Arc<Mutex<ControlHandle>>);
 
@@ -585,21 +585,21 @@ impl From<ControlHandle> for SharedControlHandle {
 
 impl SharedControlHandle {
     impl_shared_control_handle!(
-        /// Thread safe version of [`ContolHandle::buffer_capacity`].
+        /// Thread safe version of [`ControlHandle::buffer_capacity`].
         #[must_use]
         pub fn buffer_capacity(&self) -> usize,
-        /// Thread safe version of [`ContolHandle::resize_buffer`].
+        /// Thread safe version of [`ControlHandle::resize_buffer`].
         pub fn resize_buffer(&self, size: usize) -> (),
         #[must_use]
-        /// Thread safe version of [`ContolHandle::timeout_duration`].
+        /// Thread safe version of [`ControlHandle::timeout_duration`].
         #[must_use]
         pub fn timeout_duration(&self) -> Duration,
-        /// Thread safe version of [`ContolHandle::set_timeout_duration`].
+        /// Thread safe version of [`ControlHandle::set_timeout_duration`].
         pub fn set_timeout_duration(&self, duration: Duration) -> (),
-        /// Thread safe version of [`ContolHandle::retry_count`].
+        /// Thread safe version of [`ControlHandle::retry_count`].
         #[must_use]
         pub fn retry_count(&self) -> u16,
-        /// Thread safe version of [`ContolHandle::set_retry_count`].
+        /// Thread safe version of [`ControlHandle::set_retry_count`].
         pub fn set_retry_count(&self, count: u16) -> ()
     );
 

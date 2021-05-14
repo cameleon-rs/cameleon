@@ -323,6 +323,9 @@ impl<'a> PayloadBuilder<'a> {
     }
 
     fn build_image_extended_payload(self) -> StreamResult<Payload> {
+        const CHUNK_ID_LEN: usize = 4;
+        const CHUNK_SIZE_LEN: usize = 4;
+
         let leader: u3v_stream::ImageExtendedChunkLeader = self.specific_leader_as()?;
         let trailer: u3v_stream::ImageExtendedChunkTrailer = self.specific_trailer_as()?;
 
@@ -332,8 +335,6 @@ impl<'a> PayloadBuilder<'a> {
         // Extract image size from the first chunk of the paload data.
         // Chunk data is designed to be decoded from the last byte to the first byte.
         // Use chunk parser of `cameleon_genapi` once it gets implemented.
-        const CHUNK_ID_LEN: usize = 4;
-        const CHUNK_SIZE_LEN: usize = 4;
         let mut current_offset = valid_payload_size;
         let image_size = loop {
             current_offset = current_offset.checked_sub(CHUNK_SIZE_LEN).ok_or_else(|| {

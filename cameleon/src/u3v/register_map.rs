@@ -6,25 +6,29 @@
 //! # Examples
 //!
 //! ```no_run
-//! use cameleon::u3v;
-//! // Enumerate devices connected to the host.
-//! let mut devices = u3v::enumerate_devices().unwrap();
+//! use cameleon::Camera;
+//! use cameleon::u3v::{self, U3VDeviceControl};
+//! use cameleon::genapi;
 //!
-//! // If no device is connected, return.
-//! if devices.is_empty() {
+//! // Enumerates cameras connected to the host.
+//! let mut cameras: Vec<Camera<u3v::ControlHandle, u3v::StreamHandle, genapi::DefaultGenApiCtxt>> =
+//!     u3v::enumerate_cameras().unwrap();
+//!
+//! // If no camera is found, return.
+//! if cameras.is_empty() {
 //!     return;
 //! }
 //!
-//! let device = devices.pop().unwrap();
-//! // Get and open handle.
-//! let handle = device.control_handle();
-//! handle.open().unwrap();
+//! let mut camera = cameras.pop().unwrap();
+//! // Opens the camera.
+//! camera.open();
 //!
+//! let ctrl = &mut camera.ctrl;
 //! // Get Abrm.
-//! let abrm = handle.abrm().unwrap();
+//! let abrm = ctrl.abrm().unwrap();
 //!
 //! // Read serial number from ABRM.
-//! let serial_number = abrm.serial_number().unwrap();
+//! let serial_number = abrm.serial_number(ctrl).unwrap();
 //! println!("{}", serial_number);
 //!
 //! // Check user defined name feature is supported.
@@ -32,11 +36,11 @@
 //! let device_capability = abrm.device_capability().unwrap();
 //! if device_capability.is_user_defined_name_supported() {
 //!     // Read from user defined name register.
-//!     let user_defined_name = abrm.user_defined_name().unwrap().unwrap();
+//!     let user_defined_name = abrm.user_defined_name(ctrl).unwrap().unwrap();
 //!     println!("{}", user_defined_name);
 //!
 //!     // Write new name to the register.
-//!     abrm.set_user_defined_name("cameleon").unwrap();
+//!     abrm.set_user_defined_name(ctrl, "cameleon").unwrap();
 //! }
 //! ```
 use std::{convert::TryInto, time::Duration};
@@ -60,25 +64,29 @@ use super::control_handle::U3VDeviceControl;
 /// # Examples
 ///
 /// ```no_run
-/// use cameleon::u3v;
-/// // Enumerate devices connected to the host.
-/// let mut devices = u3v::enumerate_devices().unwrap();
+/// use cameleon::Camera;
+/// use cameleon::u3v::{self, U3VDeviceControl};
+/// use cameleon::genapi;
 ///
-/// // If no device is connected, return.
-/// if devices.is_empty() {
+/// // Enumerates cameras connected to the host.
+/// let mut cameras: Vec<Camera<u3v::ControlHandle, u3v::StreamHandle, genapi::DefaultGenApiCtxt>> =
+///     u3v::enumerate_cameras().unwrap();
+///
+/// // If no camera is found, return.
+/// if cameras.is_empty() {
 ///     return;
 /// }
 ///
-/// let device = devices.pop().unwrap();
-/// // Get and open handle.
-/// let handle = device.control_handle();
-/// handle.open().unwrap();
+/// let mut camera = cameras.pop().unwrap();
+/// // Opens the camera.
+/// camera.open();
 ///
+/// let ctrl = &mut camera.ctrl;
 /// // Get Abrm.
-/// let abrm = handle.abrm().unwrap();
+/// let abrm = ctrl.abrm().unwrap();
 ///
 /// // Read serial number from ABRM.
-/// let serial_number = abrm.serial_number().unwrap();
+/// let serial_number = abrm.serial_number(ctrl).unwrap();
 /// println!("{}", serial_number);
 ///
 /// // Check user defined name feature is supported.
@@ -86,13 +94,12 @@ use super::control_handle::U3VDeviceControl;
 /// let device_capability = abrm.device_capability().unwrap();
 /// if device_capability.is_user_defined_name_supported() {
 ///     // Read from user defined name register.
-///     let user_defined_name = abrm.user_defined_name().unwrap().unwrap();
+///     let user_defined_name = abrm.user_defined_name(ctrl).unwrap().unwrap();
 ///     println!("{}", user_defined_name);
 ///
 ///     // Write new name to the register.
-///     abrm.set_user_defined_name("cameleon").unwrap();
+///     abrm.set_user_defined_name(ctrl, "cameleon").unwrap();
 /// }
-///
 /// ```
 #[derive(Clone, Copy, Debug)]
 pub struct Abrm {
@@ -100,24 +107,7 @@ pub struct Abrm {
 }
 
 impl Abrm {
-    /// Construct new `Abrm`.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # use cameleon::u3v;
-    /// # let mut devices = u3v::enumerate_devices().unwrap();
-    /// # let device = devices.pop().unwrap();
-    /// use cameleon::u3v::register_map::Abrm;
-    ///
-    /// // Construct `Abrm` from control handle of the device directly.
-    /// let control_handle = device.control_handle();
-    /// control_handle.open().unwrap();
-    /// let abrm = Abrm::new(&control_handle).unwrap();
-    ///
-    /// // Or `Device::abrm` can be used to construct it.
-    /// let abrm = control_handle.abrm().unwrap();
-    /// ```
+    /// Constructs new `Abrm`, consider using [`super::U3VDeviceControl::abrm`] instead.
     pub fn new(device: &mut impl U3VDeviceControl) -> ControlResult<Self> {
         let (capability_addr, capability_len) = abrm::DEVICE_CAPABILITY;
         let device_capability = read_register(device, capability_addr, capability_len)?;
@@ -125,13 +115,13 @@ impl Abrm {
         Ok(Self { device_capability })
     }
 
-    /// Return [`Sbrm`].
+    /// Returns [`Sbrm`], consider using [`super::U3VDeviceControl::sbrm`] instead.
     pub fn sbrm(&self, device: &mut impl U3VDeviceControl) -> ControlResult<Sbrm> {
         let sbrm_address = self.sbrm_address(device)?;
         Sbrm::new(device, sbrm_address)
     }
 
-    /// Return [`ManifestTable`].
+    /// Returns [`ManifestTable`], consider using [`super::U3VDeviceControl::manifest_table`] instead.
     pub fn manifest_table(
         &self,
         device: &mut impl U3VDeviceControl,
@@ -196,28 +186,6 @@ impl Abrm {
     ///
     /// NOTE: Some device doesn't support this feature.
     /// Please refer to [`DeviceCapability`] to see whether the feature is available on the device.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # use cameleon::u3v;
-    /// # let mut devices = u3v::enumerate_devices().unwrap();
-    /// # let device = devices.pop().unwrap();
-    /// # let handle = device.control_handle();
-    /// # handle.open().unwrap();
-    /// let abrm = handle.abrm().unwrap();
-    ///
-    /// // Check user defined name is supported.
-    /// let device_capability = abrm.device_capability().unwrap();
-    /// if !device_capability.is_user_defined_name_supported() {
-    ///     return;
-    /// }
-    ///
-    /// // Read user defined name.
-    /// let user_defined_name = abrm.user_defined_name().unwrap();
-    ///
-    /// println!("{:?}", user_defined_name);
-    /// ```
     pub fn user_defined_name(
         &self,
         device: &mut impl U3VDeviceControl,
@@ -238,26 +206,6 @@ impl Abrm {
     ///
     /// NOTE: Some device doesn't support this feature.
     /// Please refer to [`DeviceCapability`] to see whether the feature is available on the device.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # use cameleon::u3v;
-    /// # let mut devices = u3v::enumerate_devices().unwrap();
-    /// # let device = devices.pop().unwrap();
-    /// # let handle = device.control_handle();
-    /// # handle.open().unwrap();
-    /// let abrm = handle.abrm().unwrap();
-    ///
-    /// // Check user defined name is supported.
-    /// let device_capability = abrm.device_capability().unwrap();
-    /// if !device_capability.is_user_defined_name_supported() {
-    ///     return;
-    /// }
-    ///
-    /// // Write new name to the register.
-    /// abrm.set_user_defined_name("cameleon").unwrap();
-    /// ```
     pub fn set_user_defined_name(
         &self,
         device: &mut impl U3VDeviceControl,
@@ -288,24 +236,6 @@ impl Abrm {
     ///
     /// Before calling this method, please make sure to call [`Self::set_timestamp_latch_bit`] that
     /// updates timestamp register.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # use cameleon::u3v;
-    /// # let mut devices = u3v::enumerate_devices().unwrap();
-    /// # let device = devices.pop().unwrap();
-    /// # let handle = device.control_handle();
-    /// # handle.open().unwrap();
-    /// let abrm = handle.abrm().unwrap();
-    ///
-    /// // In order to obtain current device internal clock,
-    /// // make sure to call `set_timestamp_latch_bit` to
-    /// // update timestamp register with current device internal clock.
-    /// abrm.set_timestamp_latch_bit().unwrap();
-    ///
-    /// let timestamp = abrm.timestamp();
-    /// ```
     pub fn timestamp(&self, device: &mut impl U3VDeviceControl) -> ControlResult<u64> {
         self.read_register(device, abrm::TIMESTAMP)
     }
@@ -355,24 +285,6 @@ impl Abrm {
     }
 
     /// Current configuration of the device.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # use cameleon::u3v;
-    /// # let mut devices = u3v::enumerate_devices().unwrap();
-    /// # let device = devices.pop().unwrap();
-    /// # let handle = device.control_handle();
-    /// # handle.open().unwrap();
-    /// let abrm = handle.abrm().unwrap();
-    ///
-    /// let configuration = abrm.device_configuration().unwrap();
-    /// if configuration.is_multi_event_enabled() {
-    ///     println!("Multi event is enabled")
-    /// } else {
-    ///     println!("Multi event is disabled")
-    /// }
-    /// ```
     pub fn device_configuration(
         &self,
         device: &mut impl U3VDeviceControl,
@@ -381,28 +293,6 @@ impl Abrm {
     }
 
     /// Write configuration to the device.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # use cameleon::u3v;
-    /// # let mut devices = u3v::enumerate_devices().unwrap();
-    /// # let device = devices.pop().unwrap();
-    /// # let handle = device.control_handle();
-    /// # handle.open().unwrap();
-    /// let abrm = handle.abrm().unwrap();
-    ///
-    /// // Check multi event feature is supported.
-    /// let capability = abrm.device_capability().unwrap();
-    /// if !capability.is_multi_event_supported() {
-    ///     return;
-    /// }
-    ///
-    /// // Enable multi event.
-    /// let mut configuration = abrm.device_configuration().unwrap();
-    /// configuration.set_multi_event_enable_bit();
-    /// abrm.write_device_configuration(configuration).unwrap();
-    /// ```
     pub fn write_device_configuration(
         &self,
         device: &mut impl U3VDeviceControl,
@@ -440,34 +330,6 @@ impl Abrm {
 /// To maintain consistency with the device data, `Sbrm` doesn't cache any data. It means
 /// that all methods of this struct cause communication with the device every time, thus the device
 /// is expected to be opened when methods are called.
-///
-/// # Examples
-///
-/// ```no_run
-/// use cameleon::u3v;
-/// // Enumerate devices connected to the host.
-/// let mut devices = u3v::enumerate_devices().unwrap();
-///
-/// // If no device is connected, return.
-/// if devices.is_empty() {
-///     return;
-/// }
-///
-/// let device = devices.pop().unwrap();
-/// // Get and open the handle.
-/// let handle = device.control_handle();
-/// handle.open().unwrap();
-///
-/// // Get Abrm.
-/// let abrm = handle.abrm().unwrap();
-///
-/// // Get Sbrm from Abrm.
-/// let sbrm = abrm.sbrm().unwrap();
-///
-/// // Get U3V version of the device.
-/// let u3v_version = sbrm.u3v_version().unwrap();
-/// println!("{}", u3v_version);
-/// ```
 #[derive(Clone, Copy, Debug)]
 pub struct Sbrm {
     sbrm_addr: u64,
@@ -475,9 +337,7 @@ pub struct Sbrm {
 }
 
 impl Sbrm {
-    /// Construct new `Sbrm`.
-    ///
-    /// To construct `Sbrm`,  [`Abrm::sbrm`] also can be used.
+    /// Constructs new `Sbrm`, consider using [`super::U3VDeviceControl::sbrm`] isntead.
     pub fn new(device: &mut impl U3VDeviceControl, sbrm_addr: u64) -> ControlResult<Self> {
         let (capability_offset, capability_len) = sbrm::U3VCP_CAPABILITY_REGISTER;
         let capability_addr = capability_offset + sbrm_addr;
@@ -537,7 +397,7 @@ impl Sbrm {
 
     /// Return [`Sirm`] if it's available.
     pub fn sirm(&self, device: &mut impl U3VDeviceControl) -> ControlResult<Option<Sirm>> {
-        Ok(self.sirm_address(device)?.map(|addr| Sirm::new(addr)))
+        Ok(self.sirm_address(device)?.map(Sirm::new))
     }
 
     /// The initial address of `Sirm`.
@@ -633,42 +493,13 @@ impl Sbrm {
 /// To maintain consistency with the device data, `Sirm` doesn't cache any data. It means
 /// that all methods of this struct cause communication with the device every time, thus the device
 /// is expected to be opened when methods are called.
-///
-/// # Examples
-///
-/// ```no_run
-/// use cameleon::u3v;
-/// // Enumerate devices connected to the host.
-/// let mut devices = u3v::enumerate_devices().unwrap();
-///
-/// // If no device is connected, return.
-/// if devices.is_empty() {
-///     return;
-/// }
-///
-/// let device = devices.pop().unwrap();
-/// // Obtain and open the handle.
-/// let handle = device.control_handle();
-/// handle.open().unwrap();
-///
-/// // Get Sirm.
-/// let abrm = handle.abrm().unwrap();
-/// let sbrm = abrm.sbrm().unwrap();
-/// if !sbrm.u3v_capability().unwrap().is_sirm_available() {
-///    return;
-/// }
-/// let sirm = sbrm.sirm().unwrap().unwrap();
-///
-/// // Enable streaming to make the device start to transmit image.
-/// sirm.enable_stream().unwrap();
-/// ```
 #[derive(Clone, Copy, Debug)]
 pub struct Sirm {
     sirm_addr: u64,
 }
 
 impl Sirm {
-    /// Construct new `Sirm`.
+    /// Constructs new `Sirm`, consider using [`super::U3VDeviceControl::sirm`] instead.
     ///
     /// To construct `Sirm`, Use [`Sbrm::sirm`] also can be used.
     #[must_use]
@@ -676,7 +507,7 @@ impl Sirm {
         Self { sirm_addr }
     }
 
-    /// Return required alignment size of payload.
+    /// Returns required alignment size of payload.
     ///
     /// A host must use this value as a minimum alignment size when modifying SIRM registers
     /// related to payload size.
@@ -689,7 +520,7 @@ impl Sirm {
         Ok(1 << (si_info >> 24))
     }
 
-    /// Enable stream.
+    /// Enables stream.
     ///
     /// It's forbidden to write to SIRM registers while stream is enabled.
     pub fn enable_stream(&self, device: &mut impl U3VDeviceControl) -> ControlResult<()> {
@@ -697,7 +528,7 @@ impl Sirm {
         self.write_register(device, sirm::SI_CONTROL, value)
     }
 
-    /// Disable stream.
+    /// Disables stream.
     ///
     /// It's forbidden to write to SIRM registers while stream is enabled.
     pub fn disable_stream(&self, device: &mut impl U3VDeviceControl) -> ControlResult<()> {
@@ -705,7 +536,7 @@ impl Sirm {
         self.write_register(device, sirm::SI_CONTROL, value)
     }
 
-    /// Return `true` if stream is enabled.
+    /// Returns `true` if stream is enabled.
     pub fn is_stream_enable(&self, device: &mut impl U3VDeviceControl) -> ControlResult<bool> {
         let si_ctrl: u32 = self.read_register(device, sirm::SI_CONTROL)?;
         Ok((si_ctrl & 1) == 1)
@@ -743,7 +574,7 @@ impl Sirm {
         self.read_register(device, sirm::MAXIMUM_LEADER_SIZE)
     }
 
-    /// Set maximum leader size in any device configuration.
+    /// Sets maximum leader size in any device configuration.
     ///
     /// A leader must be fit within one bulk transfer, so `maximum_leader_size` is restricted by the
     /// maximum size that one bulk transfer can contain.
@@ -762,7 +593,7 @@ impl Sirm {
         self.read_register(device, sirm::MAXIMUM_TRAILER_SIZE)
     }
 
-    /// Set maximum trailer size in any device configuration.
+    /// Sets maximum trailer size in any device configuration.
     ///
     /// A trailer must be fit within one bulk transfer, so `maximum_trailer_size` is restricted by the
     /// maximum size that one bulk transfer can contain.
@@ -777,15 +608,11 @@ impl Sirm {
     }
 
     /// Payload transfer size.
-    ///
-    /// Total Payload size = [`payload_transfer_size`](Self::payload_transfer_size) * [`payload_transfer_count`](Self::payload_transfer_count) + [`payload_final_transfer1_size`](Self::payload_final_transfer1_size) + [`payload_final_transfer2_size`](Self::payload_final_transfer2_size).
     pub fn payload_transfer_size(&self, device: &mut impl U3VDeviceControl) -> ControlResult<u32> {
         self.read_register(device, sirm::PAYLOAD_TRANSFER_SIZE)
     }
 
     /// Set payload transfer size.
-    ///
-    /// Total Payload size = [`payload_transfer_size`](Self::payload_transfer_size) * [`payload_transfer_count`](Self::payload_transfer_count) + [`payload_final_transfer1_size`](Self::payload_final_transfer1_size) + [`payload_final_transfer2_size`](Self::payload_final_transfer2_size).
     pub fn set_payload_transfer_size(
         &self,
         device: &mut impl U3VDeviceControl,
@@ -795,15 +622,11 @@ impl Sirm {
     }
 
     /// Payload transfer count.
-    ///
-    /// Total Payload size = [`payload_transfer_size`](Self::payload_transfer_size) * [`payload_transfer_count`](Self::payload_transfer_count) + [`payload_final_transfer1_size`](Self::payload_final_transfer1_size) + [`payload_final_transfer2_size`](Self::payload_final_transfer2_size).
     pub fn payload_transfer_count(&self, device: &mut impl U3VDeviceControl) -> ControlResult<u32> {
         self.read_register(device, sirm::PAYLOAD_TRANSFER_COUNT)
     }
 
-    /// Set payload transfer count.
-    ///
-    /// Total Payload size = [`payload_transfer_size`](Self::payload_transfer_size) * [`payload_transfer_count`](Self::payload_transfer_count) + [`payload_final_transfer1_size`](Self::payload_final_transfer1_size) + [`payload_final_transfer2_size`](Self::payload_final_transfer2_size).
+    /// Sets payload transfer count.
     pub fn set_payload_transfer_count(
         &self,
         device: &mut impl U3VDeviceControl,
@@ -813,8 +636,6 @@ impl Sirm {
     }
 
     /// Payload final transfer1 size.
-    ///
-    /// Total Payload size = [`payload_transfer_size`](Self::payload_transfer_size) * [`payload_transfer_count`](Self::payload_transfer_count) + [`payload_final_transfer1_size`](Self::payload_final_transfer1_size) + [`payload_final_transfer2_size`](Self::payload_final_transfer2_size).
     pub fn payload_final_transfer1_size(
         &self,
         device: &mut impl U3VDeviceControl,
@@ -822,9 +643,7 @@ impl Sirm {
         self.read_register(device, sirm::PAYLOAD_FINAL_TRANSFER1_SIZE)
     }
 
-    /// Set payload final transfer1 size.
-    ///
-    /// Total Payload size = [`payload_transfer_size`](Self::payload_transfer_size) * [`payload_transfer_count`](Self::payload_transfer_count) + [`payload_final_transfer1_size`](Self::payload_final_transfer1_size) + [`payload_final_transfer2_size`](Self::payload_final_transfer2_size).
+    /// Sets payload final transfer1 size.
     pub fn set_payload_final_transfer1_size(
         &self,
         device: &mut impl U3VDeviceControl,
@@ -834,8 +653,6 @@ impl Sirm {
     }
 
     /// Payload final transfer1 size.
-    ///
-    /// Total Payload size = [`payload_transfer_size`](Self::payload_transfer_size) * [`payload_transfer_count`](Self::payload_transfer_count) + [`payload_final_transfer1_size`](Self::payload_final_transfer1_size) + [`payload_final_transfer2_size`](Self::payload_final_transfer2_size).
     pub fn payload_final_transfer2_size(
         &self,
         device: &mut impl U3VDeviceControl,
@@ -844,8 +661,6 @@ impl Sirm {
     }
 
     /// Set payload final transfer1 size.
-    ///
-    /// Total Payload size = [`payload_transfer_size`](Self::payload_transfer_size) * [`payload_transfer_count`](Self::payload_transfer_count) + [`payload_final_transfer1_size`](Self::payload_final_transfer1_size) + [`payload_final_transfer2_size`](Self::payload_final_transfer2_size).
     pub fn set_payload_final_transfer2_size(
         &self,
         device: &mut impl U3VDeviceControl,
@@ -882,40 +697,20 @@ impl Sirm {
 }
 
 /// `ManifestTable` provides iterator of [`ManifestEntry`].
-///
-/// # Examples
-/// ```no_run
-/// # use cameleon::u3v;
-/// # let mut devices = u3v::enumerate_devices().unwrap();
-/// # let device = devices.pop().unwrap();
-/// # let handle = device.control_handle();
-/// # handle.open().unwrap();
-/// // Get Abrm.
-/// let abrm = handle.abrm().unwrap();
-///
-/// // Get manifest table.
-/// let manifest_table = abrm.manifest_table().unwrap();
-///
-/// // Iterate over entry.
-/// for entry in manifest_table.entries().unwrap() {
-///     // ...
-/// }
-/// ```
 #[derive(Clone, Copy, Debug)]
 pub struct ManifestTable {
     manifest_address: u64,
 }
 
 impl ManifestTable {
-    /// Construct new `ManifestEntry`.
-    ///
-    /// To construct `Sbrm`,  [`Abrm::sbrm`] also can be used.
+    /// Constructs new `ManifestEntry`, consider using [`super::U3VDeviceControl::manifest_table`]
+    /// instead.
     #[must_use]
     pub fn new(manifest_address: u64) -> Self {
         Self { manifest_address }
     }
 
-    /// Return iterator of [`ManifestEntry`].
+    /// Returns iterator of [`ManifestEntry`].
     pub fn entries(
         &self,
         device: &mut impl U3VDeviceControl,
@@ -942,27 +737,6 @@ impl ManifestTable {
 }
 
 /// Manifest entry describes `GenApi` XML properties.
-/// # Examples
-///
-/// ```no_run
-/// # use cameleon::u3v;
-/// # let mut devices = u3v::enumerate_devices().unwrap();
-/// # let device = devices.pop().unwrap();
-/// # let handle = device.control_handle();
-/// # handle.open().unwrap();
-/// // Get Abrm.
-/// let abrm = handle.abrm().unwrap();
-///
-/// // Get first manifest entry.
-/// let manifest_table = abrm.manifest_table().unwrap();
-/// let entry = manifest_table.entries().unwrap().next().unwrap();
-///
-/// // Get XML file address and length.
-/// let (address, len) = (entry.file_address().unwrap(), entry.file_size().unwrap());
-///
-/// // Get GenICam file version.
-/// let file_version = entry.genicam_file_version().unwrap();
-/// ```
 #[derive(Clone, Copy, Debug)]
 pub struct ManifestEntry {
     entry_addr: u64,
@@ -1037,7 +811,7 @@ impl ManifestEntry {
     }
 }
 
-/// Read and parse register value.
+/// Reads and parses register value.
 fn read_register<T>(device: &mut impl U3VDeviceControl, addr: u64, len: u16) -> ControlResult<T>
 where
     T: ParseBytes,
@@ -1067,29 +841,6 @@ macro_rules! unset_bit {
 }
 
 /// Configuration of the device.
-///
-/// # Examples
-///
-/// ```no_run
-/// # use cameleon::u3v;
-/// # let mut devices = u3v::enumerate_devices().unwrap();
-/// # let device = devices.pop().unwrap();
-/// # let handle = device.control_handle();
-/// # handle.open().unwrap();
-/// // Get Abrm.
-/// let abrm = handle.abrm().unwrap();
-///
-/// // Check multi event feature is supported.
-/// let capability = abrm.device_capability().unwrap();
-/// if !capability.is_multi_event_supported() {
-///     return;
-/// }
-///
-/// // Enable multi event by setting configuration.
-/// let mut configuration = abrm.device_configuration().unwrap();
-/// configuration.set_multi_event_enable_bit();
-/// abrm.write_device_configuration(configuration).unwrap();
-/// ```
 #[derive(Clone, Copy, Debug)]
 pub struct DeviceConfiguration(u64);
 impl DeviceConfiguration {
@@ -1099,13 +850,13 @@ impl DeviceConfiguration {
         is_bit_set!(self.0, 1)
     }
 
-    /// Set multi event enable bit.
+    /// Sets multi event enable bit.
     /// To reflect the configuration change, call [`Abrm::write_device_configuration`].
     pub fn set_multi_event_enable_bit(&mut self) {
         set_bit!(self.0, 1)
     }
 
-    /// Unset bit multi event of the device.
+    /// Unsets bit multi event of the device.
     /// To reflect the configuration change, call [`Abrm::write_device_configuration`].
     pub fn disable_multi_event(&mut self) {
         unset_bit!(self.0, 1)
@@ -1113,33 +864,6 @@ impl DeviceConfiguration {
 }
 
 /// Indicate some optional features are supported or not.
-///
-/// # Examples
-///
-/// ```no_run
-/// # use cameleon::u3v;
-/// # let mut devices = u3v::enumerate_devices().unwrap();
-/// # let device = devices.pop().unwrap();
-/// # let handle = device.control_handle();
-/// # handle.open().unwrap();
-/// // Get Abrm.
-/// let abrm = handle.abrm().unwrap();
-///
-/// // Get Device Capability of the device.
-/// let device_capability = abrm.device_capability().unwrap();
-///
-/// println!("Is user defined name supported: {}",
-///     device_capability.is_user_defined_name_supported());
-///
-/// println!("Is family name supported: {}",
-///     device_capability.is_family_name_supported());
-///
-/// println!("Is multi event supported: {}",
-///     device_capability.is_multi_event_supported());
-///
-/// println!("Is device software interface version suported: {}",
-///     device_capability.is_device_software_interface_version_supported());
-/// ```
 #[derive(Clone, Copy, Debug)]
 pub struct DeviceCapability(u64);
 
@@ -1176,31 +900,6 @@ impl DeviceCapability {
 }
 
 /// Indicate some optional U3V specific features are supported or not.
-///
-/// # Examples
-///
-/// ```no_run
-/// # use cameleon::u3v;
-/// # let mut devices = u3v::enumerate_devices().unwrap();
-/// # let device = devices.pop().unwrap();
-/// # let handle = device.control_handle();
-/// # handle.open().unwrap();
-/// // Get Sbrm.
-/// let sbrm = handle.abrm().unwrap().sbrm().unwrap();
-///
-/// // Get U3V Capability of the device.
-/// let device_capability = sbrm.u3v_capability().unwrap();
-///
-/// println!("Is SIRM available: {}",
-///     device_capability.is_sirm_available());
-///
-/// println!("Is EIRM available: {}",
-///     device_capability.is_eirm_available());
-///
-/// println!("Is iidc2 available: {}",
-///     device_capability.is_iidc2_available());
-///
-/// ```
 #[derive(Clone, Copy, Debug)]
 pub struct U3VCapablitiy(u64);
 
@@ -1225,29 +924,6 @@ impl U3VCapablitiy {
 }
 
 /// XML file information.
-///
-/// # Examples
-///
-/// ```no_run
-/// # use cameleon::u3v;
-/// # let mut devices = u3v::enumerate_devices().unwrap();
-/// # let device = devices.pop().unwrap();
-/// # let handle = device.control_handle();
-/// # handle.open().unwrap();
-/// // Get Abrm.
-/// let abrm = handle.abrm().unwrap();
-///
-/// // Get first manifest entry.
-/// let manifest_table = abrm.manifest_table().unwrap();
-/// let entry = manifest_table.entries().unwrap().next().unwrap();
-///
-/// // Get file info.
-/// let info = entry.file_info().unwrap();
-///
-/// let file_type = info.file_type();
-/// let compression_type = info.compression_type();
-/// let schema_version = info.schema_version();
-/// ```
 pub struct GenICamFileInfo(u32);
 
 impl GenICamFileInfo {

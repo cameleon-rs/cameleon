@@ -132,7 +132,6 @@ impl EvaluationResult {
 }
 
 impl Expr {
-    #[must_use]
     pub fn eval<K, V>(&self, var_env: &HashMap<K, V>) -> GenApiResult<EvaluationResult>
     where
         K: Borrow<str> + Eq + Hash + fmt::Debug,

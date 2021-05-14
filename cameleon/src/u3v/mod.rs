@@ -3,26 +3,29 @@
 //! # Examples
 //!
 //! ```no_run
-//! use cameleon::u3v;
-//! // Enumerate devices connected to the host.
-//! let mut devices = u3v::enumerate_devices().unwrap();
+//! use cameleon::Camera;
+//! use cameleon::u3v::{self, U3VDeviceControl};
+//! use cameleon::genapi;
 //!
-//! // If no device is connected, return.
-//! if devices.is_empty() {
+//! // Enumerates cameras connected to the host.
+//! let mut cameras: Vec<Camera<u3v::ControlHandle, u3v::StreamHandle, genapi::DefaultGenApiCtxt>> =
+//!     u3v::enumerate_cameras().unwrap();
+//!
+//! // If no camera is found, return.
+//! if cameras.is_empty() {
 //!     return;
 //! }
 //!
-//! let device = devices.pop().unwrap();
+//! let mut camera = cameras.pop().unwrap();
+//! // Opens the camera.
+//! camera.open();
 //!
-//! // Obtain and open the handle.
-//! let handle = device.control_handle();
-//! handle.open().unwrap();
-//!
+//! let ctrl = &mut camera.ctrl;
 //! // Get Abrm.
-//! let abrm = handle.abrm().unwrap();
+//! let abrm = ctrl.abrm().unwrap();
 //!
 //! // Read serial number from ABRM.
-//! let serial_number = abrm.serial_number().unwrap();
+//! let serial_number = abrm.serial_number(ctrl).unwrap();
 //! println!("{}", serial_number);
 //!
 //! // Check user defined name feature is supported.
@@ -30,11 +33,11 @@
 //! let device_capability = abrm.device_capability().unwrap();
 //! if device_capability.is_user_defined_name_supported() {
 //!     // Read from user defined name register.
-//!     let user_defined_name = abrm.user_defined_name().unwrap().unwrap();
+//!     let user_defined_name = abrm.user_defined_name(ctrl).unwrap().unwrap();
 //!     println!("{}", user_defined_name);
 //!
 //!     // Write new name to the register.
-//!     abrm.set_user_defined_name("cameleon").unwrap();
+//!     abrm.set_user_defined_name(ctrl, "cameleon").unwrap();
 //! }
 //! ```
 #![allow(clippy::missing_panics_doc)]
@@ -44,21 +47,39 @@ pub mod register_map;
 pub mod control_handle;
 pub mod stream_handle;
 
-pub use control_handle::{ControlHandle, SharedControlHandle};
+pub use control_handle::{ControlHandle, SharedControlHandle, U3VDeviceControl};
 pub use stream_handle::{StreamHandle, StreamParams};
+
+pub use cameleon_device::u3v::DeviceInfo;
 
 use cameleon_device::u3v;
 
 use super::{genapi::DefaultGenApiCtxt, CameleonResult, Camera, CameraInfo, ControlError};
 
 /// Enumerate all U3V compatible cameras connected to the host.
+///
+/// # Examples
+///
+/// ```no_run
+/// use cameleon::Camera;
+/// use cameleon::u3v;
+/// use cameleon::genapi;
+///
+/// // Enumerate cameras connected to the host.
+/// let mut cameras: Vec<Camera<u3v::ControlHandle, u3v::StreamHandle, genapi::DefaultGenApiCtxt>> =
+///     u3v::enumerate_cameras().unwrap();
+
+/// // Use `SharedControlHandle` and `DefaultGenApiCtxt` if you need to share the control handle and `GenApi` context across threads.
+/// let mut cameras: Vec<Camera<u3v::SharedControlHandle, u3v::StreamHandle, genapi::SharedDefaultGenApiCtxt>> =
+///     u3v::enumerate_cameras().unwrap();
+/// ```
 pub fn enumerate_cameras<Ctrl, Strm, Ctxt>() -> CameleonResult<Vec<Camera<Ctrl, Strm, Ctxt>>>
 where
     Ctrl: From<ControlHandle>,
     Strm: From<StreamHandle>,
     Ctxt: From<DefaultGenApiCtxt>,
 {
-    let devices = u3v::enumerate_devices().map_err(|e| ControlError::from(e))?;
+    let devices = u3v::enumerate_devices().map_err(ControlError::from)?;
 
     let mut cameras: Vec<Camera<Ctrl, Strm, Ctxt>> = Vec::with_capacity(devices.len());
 

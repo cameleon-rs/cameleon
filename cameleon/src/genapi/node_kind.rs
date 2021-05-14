@@ -19,27 +19,35 @@ pub struct IntegerNode(NodeId);
 pub struct FloatNode(NodeId);
 
 /// A node that has `IString` interface.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct StringNode(NodeId);
 
 /// A node that has `IEnumeration` interface.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct EnumerationNode(NodeId);
 
 /// A node that has `ICommand` interface.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CommandNode(NodeId);
 
 /// A node that has `IBoolean` interface.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct BooleanNode(NodeId);
 
 /// A node that has `IRegister` interface.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RegisterNode(NodeId);
 
 /// A node that has `Category` interface.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CategoryNode(NodeId);
 
 /// A node that has `IPort` interface.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PortNode(NodeId);
 
 /// An uninterpreted node.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Node(pub(super) NodeId);
 
 macro_rules! delegate {
@@ -222,9 +230,7 @@ impl EnumerationNode {
                 .expect_ienumeration_kind(ns)
                 .unwrap()
                 .entries(ns)
-                .iter()
-                .map(|entry| entry.clone())
-                .collect()
+                .to_vec()
         })
     }
 }

@@ -46,8 +46,7 @@ where
 
     /// Returns Some(...) if there is a node with the given name in the context.
     pub fn node(&self, name: &str) -> Option<Node> {
-        self.ctxt
-            .with_store(|ns| ns.id_by_name(name).map(|nid| Node(nid)))
+        self.ctxt.with_store(|ns| ns.id_by_name(name).map(Node))
     }
 
     /// Converts internal types. This method work same as `std::convert::From`, just hack to avoid
