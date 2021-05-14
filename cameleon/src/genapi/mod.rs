@@ -330,3 +330,12 @@ impl From<DefaultGenApiCtxt> for SharedNoCacheGenApiCtxt {
         ctxt.into()
     }
 }
+
+/// Represents `CompressionType` of `GenICam` XML file on the device's memory.
+#[derive(Debug, Clone, Copy)]
+pub enum CompressionType {
+    /// Uncompressed `GenICam` XML file.
+    Uncompressed,
+    /// ZIP containing a single `GenICam` XML file.
+    Zip,
+}

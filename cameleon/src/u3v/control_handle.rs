@@ -15,7 +15,7 @@ use tracing::error;
 
 use super::register_map::{self, Abrm, ManifestTable, Sbrm, Sirm};
 
-use crate::{camera::DeviceControl, ControlError, ControlResult};
+use crate::{camera::DeviceControl, genapi::CompressionType, ControlError, ControlResult};
 
 /// Initial timeout duration for transaction between device and host.
 /// This value is temporarily used until the device's bootstrap register value is read.
@@ -418,7 +418,7 @@ impl DeviceControl for ControlHandle {
             ControlError::InternalError(format!("zipped xml file is broken: {:?}", err).into())
         }
         match comp_type {
-            register_map::CompressionType::Zip => {
+            CompressionType::Zip => {
                 let mut zip = zip::ZipArchive::new(std::io::Cursor::new(buf)).unwrap();
                 if zip.len() != 1 {
                     return Err(zip_err("more than one files in zipped GenApi XML"));
@@ -430,7 +430,7 @@ impl DeviceControl for ControlHandle {
                 Ok(String::from_utf8_lossy(&xml).into())
             }
 
-            register_map::CompressionType::Uncompressed => Ok(String::from_utf8_lossy(&buf).into()),
+            CompressionType::Uncompressed => Ok(String::from_utf8_lossy(&buf).into()),
         }
     }
 

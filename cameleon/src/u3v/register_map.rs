@@ -46,7 +46,7 @@ use cameleon_device::u3v::{
     register_map::{abrm, manifest_entry, sbrm, sirm},
 };
 
-use crate::{ControlError, ControlResult};
+use crate::{genapi::CompressionType, ControlError, ControlResult};
 
 use super::control_handle::U3VDeviceControl;
 
@@ -1291,15 +1291,6 @@ pub enum GenICamFileType {
     DeviceXml,
     /// This is optional XML-file that contains only the chunkdata related nodes.
     BufferXml,
-}
-
-/// Represent `CompressionType` of `GenICam` XML file on the device's memory.
-#[derive(Debug, Clone, Copy)]
-pub enum CompressionType {
-    /// Uncompressed `GenICam` XML file.
-    Uncompressed,
-    /// ZIP containing a single `GenICam` XML file.
-    Zip,
 }
 
 trait ParseBytes: Sized {
