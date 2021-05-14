@@ -81,6 +81,9 @@ pub struct ControlHandle {
     /// Buffer for serializing/deserializing a packet.
     buffer: Vec<u8>,
 
+    /// Device information.
+    info: u3v::DeviceInfo,
+
     /// Cache for `Abrm`.
     abrm: Option<Abrm>,
     /// Cache for `Sbrm`.
@@ -139,6 +142,11 @@ impl ControlHandle {
         self.config.retry_count = count;
     }
 
+    /// Returns the device info of the handle.
+    pub fn device_info(&self) -> &u3v::DeviceInfo {
+        &self.info
+    }
+
     pub(super) fn new(device: &u3v::Device) -> ControlResult<Self> {
         let inner = device.control_channel()?;
 
@@ -147,6 +155,7 @@ impl ControlHandle {
             config: ConnectionConfig::default(),
             next_req_id: 0,
             buffer: Vec::new(),
+            info: device.device_info.clone(),
             abrm: None,
             sbrm: None,
             sirm: None,
@@ -593,6 +602,11 @@ impl SharedControlHandle {
         /// Thread safe version of [`ContolHandle::set_retry_count`].
         pub fn set_retry_count(&self, count: u16) -> ()
     );
+
+    /// Returns the device info of the handle.
+    pub fn device_info(&self) -> u3v::DeviceInfo {
+        self.0.lock().unwrap().device_info().clone()
+    }
 }
 
 impl cameleon_genapi::Device for SharedControlHandle {
