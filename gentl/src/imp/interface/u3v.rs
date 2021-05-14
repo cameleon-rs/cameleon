@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use cameleon::CompressionType;
+use cameleon::genapi::CompressionType;
 use cameleon_impl::memory::{prelude::*, MemoryObserver};
 
 use crate::{

@@ -103,8 +103,8 @@ fn file_location_to_url(xml_info: &imp::port::XmlInfo, port_info: &imp::port::Po
             // length: Byte length  of the xml, must be expressed in hexademical
             // without prefix.
             let extension = match xml_info.compressed {
-                cameleon::CompressionType::Uncompressed => "xml",
-                cameleon::CompressionType::Zip => "zip",
+                cameleon::genapi::CompressionType::Uncompressed => "xml",
+                cameleon::genapi::CompressionType::Zip => "zip",
             };
             let schema_version = &xml_info.schema_version;
 
