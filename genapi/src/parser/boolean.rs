@@ -77,7 +77,7 @@ mod tests {
     fn test_boolean_node_with_imm() {
         let xml1 = r#"
             <Boolean Name="TestNode">
-                <Value>true</Value>
+                <Value>t<!--Hi Are you surprised?-->rue</Value>
             </Boolean>
             "#;
 

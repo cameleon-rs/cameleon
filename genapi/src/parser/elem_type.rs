@@ -20,6 +20,21 @@ use super::{
     xml, Parse,
 };
 
+macro_rules! match_text_view{
+    ($text:expr,
+        $s1:expr => $var1:expr,
+        $($s:expr => $var:expr,)*
+    ) => {
+        if $text == $s1 {
+            $var1
+        } $(else if $text == $s {
+            $var
+        })* else {
+            unreachable!()
+        }
+    }
+}
+
 impl Default for NameSpace {
     fn default() -> Self {
         Self::Custom
@@ -43,25 +58,17 @@ impl Parse for NameSpace {
         _: &mut impl ValueStoreBuilder,
         _: &mut impl CacheStoreBuilder,
     ) -> Self {
-        node.next_text().unwrap().into()
+        let text = node.next_text().unwrap();
+        match_text_view!(text,
+            "Standard" => Self::Standard,
+            "Custom" => Self::Custom,
+        )
     }
 }
 
 impl Default for Visibility {
     fn default() -> Self {
         Self::Beginner
-    }
-}
-
-impl From<&str> for Visibility {
-    fn from(value: &str) -> Self {
-        match value {
-            "Beginner" => Self::Beginner,
-            "Expert" => Self::Expert,
-            "Guru" => Self::Guru,
-            "Invisible" => Self::Invisible,
-            _ => unreachable!(),
-        }
     }
 }
 
@@ -72,7 +79,13 @@ impl Parse for Visibility {
         _: &mut impl ValueStoreBuilder,
         _: &mut impl CacheStoreBuilder,
     ) -> Self {
-        node.next_text().unwrap().into()
+        let text = node.next_text().unwrap();
+        match_text_view!(text,
+            "Beginner" => Self::Beginner,
+            "Expert" => Self::Expert,
+            "Guru" => Self::Guru,
+            "Invisible" => Self::Invisible,
+        )
     }
 }
 
@@ -100,18 +113,12 @@ impl Parse for MergePriority {
         _: &mut impl ValueStoreBuilder,
         _: &mut impl CacheStoreBuilder,
     ) -> Self {
-        node.next_text().unwrap().into()
-    }
-}
-
-impl From<&str> for AccessMode {
-    fn from(value: &str) -> Self {
-        match value {
-            "RO" => Self::RO,
-            "WO" => Self::WO,
-            "RW" => Self::RW,
-            _ => unreachable!(),
-        }
+        let text = node.next_text().unwrap();
+        match_text_view!(text,
+            "1" => Self::High,
+            "0" => Self::Mid,
+            "-1" => Self::Low,
+        )
     }
 }
 
@@ -122,7 +129,12 @@ impl Parse for AccessMode {
         _: &mut impl ValueStoreBuilder,
         _: &mut impl CacheStoreBuilder,
     ) -> Self {
-        node.next_text().unwrap().into()
+        let text = node.next_text().unwrap();
+        match_text_view!(text,
+            "RO" => Self::RO,
+            "WO" => Self::WO,
+            "RW" => Self::RW,
+        )
     }
 }
 
@@ -134,7 +146,7 @@ impl Parse for ImmOrPNode<i64> {
         cache_builder: &mut impl CacheStoreBuilder,
     ) -> Self {
         let peeked_text = node.peek().unwrap().text();
-        if peeked_text.chars().next().unwrap().is_alphabetic() {
+        if peeked_text.view().chars().next().unwrap().is_alphabetic() {
             Self::PNode(node.parse(node_builder, value_builder, cache_builder))
         } else {
             Self::Imm(node.parse(node_builder, value_builder, cache_builder))
@@ -154,7 +166,7 @@ impl Parse for ImmOrPNode<f64> {
         if peeked_text == "INF"
             || peeked_text == "-INF"
             || peeked_text == "NaN"
-            || !peeked_text.chars().next().unwrap().is_alphabetic()
+            || !peeked_text.view().chars().next().unwrap().is_alphabetic()
         {
             Self::Imm(node.parse(node_builder, value_builder, cache_builder))
         } else {
@@ -228,7 +240,7 @@ impl Parse for IntegerRepresentation {
         };
 
         let value = node.next_text().unwrap();
-        match value {
+        match_text_view!(value,
             "Linear" => Linear,
             "Logarithmic" => Logarithmic,
             "Boolean" => Boolean,
@@ -236,8 +248,7 @@ impl Parse for IntegerRepresentation {
             "HexNumber" => HexNumber,
             "IPV4Address" => IpV4Address,
             "MACAddress" => MacAddress,
-            _ => unreachable!(),
-        }
+        )
     }
 }
 
@@ -248,12 +259,11 @@ impl Parse for FloatRepresentation {
         _: &mut impl ValueStoreBuilder,
         _: &mut impl CacheStoreBuilder,
     ) -> Self {
-        let value = node.next_text().unwrap();
-        match value {
+        let text = node.next_text().unwrap();
+        match_text_view! {text,
             "Linear" => Self::Linear,
             "Logarithmic" => Self::Logarithmic,
             "PureNumber" => Self::PureNumber,
-            _ => unreachable!(),
         }
     }
 }
@@ -271,13 +281,12 @@ impl Parse for Slope {
         _: &mut impl ValueStoreBuilder,
         _: &mut impl CacheStoreBuilder,
     ) -> Self {
-        let value = node.next_text().unwrap();
-        match value {
+        let text = node.next_text().unwrap();
+        match_text_view! {text,
             "Increasing" => Self::Increasing,
             "Decreasing" => Self::Decreasing,
             "Varying" => Self::Varying,
             "Automatic" => Self::Automatic,
-            _ => unreachable!(),
         }
     }
 }
@@ -301,12 +310,11 @@ impl Parse for DisplayNotation {
         _: &mut impl ValueStoreBuilder,
         _: &mut impl CacheStoreBuilder,
     ) -> Self {
-        let value = node.next_text().unwrap();
-        match value {
+        let text = node.next_text().unwrap();
+        match_text_view! {text,
             "Automatic" => Self::Automatic,
             "Fixed" => Self::Fixed,
             "Scientific" => Self::Scientific,
-            _ => unreachable!(),
         }
     }
 }
@@ -330,17 +338,6 @@ impl Default for CachingMode {
     }
 }
 
-impl From<&str> for CachingMode {
-    fn from(value: &str) -> Self {
-        match value {
-            "WriteThrough" => Self::WriteThrough,
-            "WriteAround" => Self::WriteAround,
-            "NoCache" => Self::NoCache,
-            _ => unreachable!(),
-        }
-    }
-}
-
 impl Parse for CachingMode {
     fn parse(
         node: &mut xml::Node,
@@ -349,7 +346,11 @@ impl Parse for CachingMode {
         _: &mut impl CacheStoreBuilder,
     ) -> Self {
         let text = node.next_text().unwrap();
-        text.into()
+        match_text_view! {text,
+            "WriteThrough" => Self::WriteThrough,
+            "WriteAround" => Self::WriteAround,
+            "NoCache" => Self::NoCache,
+        }
     }
 }
 
@@ -385,7 +386,7 @@ impl Parse for bool {
         _: &mut impl CacheStoreBuilder,
     ) -> Self {
         let text = node.next_text().unwrap();
-        convert_to_bool(text)
+        convert_to_bool(&text.view())
     }
 }
 
@@ -413,7 +414,7 @@ impl Parse for i64 {
         _: &mut impl CacheStoreBuilder,
     ) -> Self {
         let value = node.next_text().unwrap();
-        convert_to_int(value)
+        convert_to_int(&value.view())
     }
 }
 
@@ -425,7 +426,7 @@ impl Parse for u64 {
         _: &mut impl CacheStoreBuilder,
     ) -> Self {
         let value = node.next_text().unwrap();
-        convert_to_uint(value)
+        convert_to_uint(&value.view())
     }
 }
 
@@ -436,7 +437,7 @@ impl Parse for f64 {
         _: &mut impl ValueStoreBuilder,
         _: &mut impl CacheStoreBuilder,
     ) -> Self {
-        let value = node.next_text().unwrap();
+        let value = node.next_text().unwrap().view();
         if value == "INF" {
             f64::INFINITY
         } else if value == "-INF" {
@@ -454,8 +455,7 @@ impl Parse for String {
         _: &mut impl ValueStoreBuilder,
         _: &mut impl CacheStoreBuilder,
     ) -> Self {
-        let text = node.next_text().unwrap();
-        text.into()
+        node.next_text().unwrap().view().into()
     }
 }
 
@@ -467,7 +467,7 @@ impl Parse for NodeId {
         _: &mut impl CacheStoreBuilder,
     ) -> Self {
         let text = node.next_text().unwrap();
-        node_builder.get_or_intern(text)
+        node_builder.get_or_intern(&text.view())
     }
 }
 
@@ -655,10 +655,10 @@ impl Parse for Endianness {
         _: &mut impl ValueStoreBuilder,
         _: &mut impl CacheStoreBuilder,
     ) -> Self {
-        match node.next_text().unwrap() {
+        let text = node.next_text().unwrap();
+        match_text_view! {text,
             "LittleEndian" => Self::LE,
             "BigEndian" => Self::BE,
-            _ => unreachable!(),
         }
     }
 }
@@ -676,10 +676,10 @@ impl Parse for Sign {
         _: &mut impl ValueStoreBuilder,
         _: &mut impl CacheStoreBuilder,
     ) -> Self {
-        match node.next_text().unwrap() {
+        let text = node.next_text().unwrap();
+        match_text_view! {text,
             "Signed" => Self::Signed,
             "Unsigned" => Self::Unsigned,
-            _ => unreachable!(),
         }
     }
 }

@@ -85,7 +85,7 @@ impl<'a, 'input> Node<'a, 'input> {
         }
     }
 
-    pub(super) fn next_text(&mut self) -> Option<&'a str> {
+    pub(super) fn next_text(&mut self) -> Option<TextView<'a, 'input>> {
         Some(self.next()?.text())
     }
 
@@ -111,8 +111,8 @@ impl<'a, 'input> Node<'a, 'input> {
         self.attributes.attribute_of(name)
     }
 
-    pub(super) fn text(&self) -> &'a str {
-        self.inner.text().unwrap()
+    pub(super) fn text(&self) -> TextView<'a, 'input> {
+        TextView { inner: self.inner }
     }
 
     fn from_xmltree_node(node: roxmltree::Node<'a, 'input>, src: &'input str) -> Self {
@@ -154,5 +154,35 @@ impl<'a, 'input> Attributes<'a, 'input> {
                 None
             }
         })
+    }
+}
+
+pub(super) struct TextView<'a, 'input> {
+    inner: roxmltree::Node<'a, 'input>,
+}
+
+impl<'a, 'input> TextView<'a, 'input> {
+    pub(super) fn view(&self) -> std::borrow::Cow<'a, str> {
+        let first_child = self.inner.first_child().unwrap();
+        if first_child.has_siblings() {
+            let mut s = String::new();
+            for child in self.inner.children() {
+                let child = if child.is_text() {
+                    child.text().unwrap()
+                } else {
+                    continue;
+                };
+                s.push_str(child);
+            }
+            s.into()
+        } else {
+            first_child.text().unwrap().into()
+        }
+    }
+}
+
+impl<'a, 'input> PartialEq<&str> for TextView<'a, 'input> {
+    fn eq(&self, rhs: &&str) -> bool {
+        &self.view() == rhs
     }
 }

@@ -29,9 +29,9 @@ impl Parse for StringNode {
             .parse_if(STREAMABLE, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
         let value = node.next_if(VALUE).map_or_else(
-            || ImmOrPNode::PNode(node_builder.get_or_intern(node.next_text().unwrap())),
+            || ImmOrPNode::PNode(node_builder.get_or_intern(&node.next_text().unwrap().view())),
             |next_node| {
-                let id = value_builder.store(String::from(next_node.text()));
+                let id = value_builder.store(next_node.text().view().into_owned());
                 ImmOrPNode::Imm(id)
             },
         );
