@@ -3,9 +3,9 @@ set -e
 
 cargo fmt --all -- --check
 
-cargo clippy --all-targets -- -D clippy::all -D clippy::pedantic
+cargo clippy --all-targets -- -D clippy::all
 cd device
-cargo clippy --all-targets --features libusb -- -D clippy::all -D clippy::pedantic
+cargo clippy --all-targets --features libusb -- -D clippy::all
 cd ..
 
 cargo doc --no-deps

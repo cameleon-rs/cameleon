@@ -35,10 +35,10 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Clippy with default features
-        run: cargo clippy --all-targets -- -D clippy::all -D clippy::pedantic
+        run: cargo clippy --all-targets -- -D clippy::all
 
       - name: Clippy for cameleon-device with libusb
-        run:  cargo clippy --all-targets --features libusb -- -D clippy::all -D clippy::pedantic # Check with libusb feature.
+        run:  cargo clippy --all-targets --features libusb -- -D clippy::all # Check with libusb feature.
         working-directory: device
 
   test-default-feature:
