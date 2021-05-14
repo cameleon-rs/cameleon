@@ -50,7 +50,9 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
         Ok(())
     }
 
-    /// Closes the camera.
+    /// Closes the camera.  
+    /// Make sure to call this method before the camera is dropped.
+    /// This method is NOT automatically called in `Drop` for flexibility.
     #[tracing::instrument(skip(self),
                           level = "info",
                           fields(camera = ?self.info()))]
@@ -58,8 +60,10 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
     where
         Ctrl: DeviceControl,
         Strm: PayloadStream,
+        Ctxt: GenApiCtxt,
     {
         info!("try closing the device");
+        self.stop_streaming()?;
         self.ctrl.close()?;
         self.strm.close()?;
         info!("closed the device successfully");
@@ -132,7 +136,7 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
                           fields(camera = ?self.info()))]
     pub fn stop_streaming(&mut self) -> CameleonResult<()>
     where
-        Ctrl: DeviceControl<StrmParams = Strm::StrmParams>,
+        Ctrl: DeviceControl,
         Strm: PayloadStream,
         Ctxt: GenApiCtxt,
     {
