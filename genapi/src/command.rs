@@ -48,7 +48,6 @@ impl ICommand for CommandNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.elem_base.verify_is_writable(device, store, cx)?;
         cx.invalidate_cache_by(self.node_base().id());
 
         let value = self.command_value.value(device, store, cx)?;

@@ -73,8 +73,6 @@ impl IInteger for IntSwissKnifeNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
-        self.elem_base.verify_is_readable(device, store, cx)?;
-
         let var_env =
             utils::FormulaEnvCollector::new(&self.p_variables, &self.constants, &self.expressions)
                 .collect(device, store, cx)?;

@@ -42,7 +42,6 @@ impl IString for StringNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<String> {
-        self.elem_base.verify_is_readable(device, store, cx)?;
         match self.value {
             ImmOrPNode::Imm(vid) => Ok(cx.value_store().str_value(vid).unwrap().clone()),
             ImmOrPNode::PNode(nid) => nid.expect_istring_kind(store)?.value(device, store, cx),
@@ -59,7 +58,6 @@ impl IString for StringNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.elem_base.verify_is_writable(device, store, cx)?;
         if !value.is_ascii() {
             return Err(GenApiError::invalid_data(
                 "the data to write must be an ascii string".into(),

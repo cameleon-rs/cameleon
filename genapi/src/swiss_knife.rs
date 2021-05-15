@@ -85,8 +85,6 @@ impl IFloat for SwissKnifeNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
-        self.elem_base.verify_is_readable(device, store, cx)?;
-
         let var_env =
             utils::FormulaEnvCollector::new(&self.p_variables, &self.constants, &self.expressions)
                 .collect(device, store, cx)?;

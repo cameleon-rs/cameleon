@@ -109,8 +109,6 @@ impl IFloat for ConverterNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
-        self.elem_base.verify_is_readable(device, store, cx)?;
-
         let mut collector =
             utils::FormulaEnvCollector::new(&self.p_variables, &self.constants, &self.expressions);
         collector.insert("TO", self.p_value(), device, store, cx)?;
@@ -130,7 +128,6 @@ impl IFloat for ConverterNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.elem_base.verify_is_writable(device, store, cx)?;
         cx.invalidate_cache_by(self.node_base().id());
 
         let mut collector =

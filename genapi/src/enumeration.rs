@@ -61,8 +61,6 @@ impl IEnumeration for EnumerationNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<&EnumEntryNode> {
-        self.elem_base.verify_is_readable(device, store, cx)?;
-
         let value = self.value.value(device, store, cx)?;
         self.entries(store)
             .iter()
@@ -120,7 +118,6 @@ impl IEnumeration for EnumerationNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.elem_base.verify_is_writable(device, store, cx)?;
         if !self.entries(store).iter().any(|ent| ent.value() == value) {
             return Err(GenApiError::invalid_data(
                 format!("not found entry with the value `{}`", value).into(),

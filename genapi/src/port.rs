@@ -39,7 +39,7 @@ impl PortNode {
 }
 
 impl IPort for PortNode {
-    #[tracing::instrument(skip(self, device, store, cx),
+    #[tracing::instrument(skip(self, device, store),
                           level = "trace",
                           fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn read<T: ValueStore, U: CacheStore>(
@@ -48,10 +48,8 @@ impl IPort for PortNode {
         buf: &mut [u8],
         device: &mut impl Device,
         store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
+        _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.elem_base.verify_is_readable(device, store, cx)?;
-
         if self.chunk_id.is_some() {
             Err(GenApiError::chunk_data_missing())
         } else {
@@ -72,7 +70,6 @@ impl IPort for PortNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.elem_base.verify_is_writable(device, store, cx)?;
         cx.invalidate_cache_by(self.node_base().id());
 
         if self.chunk_id.is_some() {

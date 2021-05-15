@@ -4,7 +4,7 @@ use super::{
     ivalue::IValue,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, FloatId, NodeStore, ValueStore},
-    utils, Device, GenApiResult, ValueCtxt,
+    Device, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -85,7 +85,6 @@ impl IFloat for FloatNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
-        self.elem_base.verify_is_readable(device, store, cx)?;
         self.value_kind().value(device, store, cx)
     }
 
@@ -99,13 +98,7 @@ impl IFloat for FloatNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.elem_base.verify_is_writable(device, store, cx)?;
         cx.invalidate_cache_by(self.node_base().id());
-
-        let min = self.min(device, store, cx)?;
-        let max = self.max(device, store, cx)?;
-        utils::verify_value_in_range(&value, &min, &max)?;
-
         self.value_kind().set_value(value, device, store, cx)
     }
 

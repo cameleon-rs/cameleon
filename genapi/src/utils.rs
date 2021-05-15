@@ -102,23 +102,6 @@ pub(super) fn bytes_from_float(
     }
 }
 
-pub(super) fn verify_value_in_range<T>(value: &T, min: &T, max: &T) -> GenApiResult<()>
-where
-    T: PartialOrd,
-{
-    if value < min {
-        Err(GenApiError::invalid_data(
-            "given data is smaller than min value of the node".into(),
-        ))
-    } else if value > max {
-        Err(GenApiError::invalid_data(
-            "given data is larger than max value of the node".into(),
-        ))
-    } else {
-        Ok(())
-    }
-}
-
 pub(super) struct FormulaEnvCollector<'a, T> {
     p_variables: &'a [NamedValue<NodeId>],
     constants: &'a [NamedValue<T>],

@@ -88,10 +88,6 @@ pub enum GenApiError {
     #[error("device I/O error: {0}")]
     Device(Box<dyn std::error::Error>),
 
-    /// The node is not readable.
-    #[error("attempt to read a value from non readable node")]
-    NotReadable,
-
     /// The node is not writable.
     #[error("attempt to write a value to non writable node")]
     NotWritable,
@@ -118,12 +114,6 @@ pub enum GenApiError {
 impl GenApiError {
     fn device(inner: Box<dyn std::error::Error>) -> Self {
         let err = GenApiError::Device(inner);
-        error!("{}", err);
-        err
-    }
-
-    fn not_readable() -> Self {
-        let err = GenApiError::NotReadable;
         error!("{}", err);
         err
     }

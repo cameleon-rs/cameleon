@@ -61,7 +61,6 @@ impl IBoolean for BooleanNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.elem_base.verify_is_readable(device, store, cx)?;
         let value = self.value.value(device, store, cx)?;
         if value == self.on_value {
             Ok(true)
@@ -84,7 +83,6 @@ impl IBoolean for BooleanNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.elem_base.verify_is_writable(device, store, cx)?;
         cx.invalidate_cache_by(self.node_base().id());
         let value = if value { self.on_value } else { self.off_value };
         self.value.set_value(value, device, store, cx)
