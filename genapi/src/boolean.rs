@@ -94,7 +94,8 @@ impl IBoolean for BooleanNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.elem_base.is_readable(device, store, cx)
+        Ok(self.elem_base.is_readable(device, store, cx)?
+            && self.value.is_readable(device, store, cx)?)
     }
 
     fn is_writable<T: ValueStore, U: CacheStore>(
@@ -103,7 +104,8 @@ impl IBoolean for BooleanNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.elem_base.is_writable(device, store, cx)
+        Ok(self.elem_base.is_writable(device, store, cx)?
+            && self.value.is_writable(device, store, cx)?)
     }
 }
 

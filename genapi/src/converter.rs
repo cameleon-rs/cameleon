@@ -1,7 +1,7 @@
 use super::{
     elem_type::{DisplayNotation, FloatRepresentation, NamedValue, Slope},
     formula::{Expr, Formula},
-    interface::{IBoolean, IFloat, IInteger, IncrementMode},
+    interface::{IFloat, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, NodeId, NodeStore, ValueStore},
     utils, Device, GenApiError, GenApiResult, ValueCtxt,
@@ -136,20 +136,7 @@ impl IFloat for ConverterNode {
         let var_env = collector.collect(device, store, cx)?;
 
         let eval_result = self.formula_to.eval(&var_env)?;
-        let nid = self.p_value();
-        if let Some(node) = nid.as_iinteger_kind(store) {
-            node.set_value(eval_result.as_integer(), device, store, cx)?;
-        } else if let Some(node) = nid.as_ifloat_kind(store) {
-            node.set_value(eval_result.as_float(), device, store, cx)?;
-        } else if let Some(node) = nid.as_iboolean_kind(store) {
-            node.set_value(eval_result.as_bool(), device, store, cx)?;
-        } else {
-            return Err(GenApiError::invalid_node(
-                "`pValue` elem of `ConverterNode` doesn't implement `IInteger`/`IFloat`/`IBoolean`"
-                    .into(),
-            ));
-        }
-
+        utils::set_eval_result(self.p_value, eval_result, device, store, cx)?;
         Ok(())
     }
 
@@ -232,7 +219,11 @@ impl IFloat for ConverterNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.elem_base.is_readable(device, store, cx)
+        let collector =
+            utils::FormulaEnvCollector::new(&self.p_variables, &self.constants, &self.expressions);
+        Ok(self.elem_base.is_readable(device, store, cx)?
+            && utils::is_nid_readable(self.p_value, device, store, cx)?
+            && collector.is_readable(device, store, cx)?)
     }
 
     fn is_writable<T: ValueStore, U: CacheStore>(
@@ -241,6 +232,10 @@ impl IFloat for ConverterNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.elem_base.is_writable(device, store, cx)
+        let collector =
+            utils::FormulaEnvCollector::new(&self.p_variables, &self.constants, &self.expressions);
+        Ok(self.elem_base.is_writable(device, store, cx)?
+            && utils::is_nid_writable(self.p_value, device, store, cx)?
+            && collector.is_readable(device, store, cx)?) // Collector is needed to be readable to write a value.
     }
 }

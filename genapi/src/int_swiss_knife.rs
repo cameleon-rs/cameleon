@@ -174,7 +174,10 @@ impl IInteger for IntSwissKnifeNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.elem_base.is_readable(device, store, cx)
+        let collector =
+            utils::FormulaEnvCollector::new(&self.p_variables, &self.constants, &self.expressions);
+        Ok(self.elem_base.is_readable(device, store, cx)?
+            && collector.is_readable(device, store, cx)?)
     }
 
     fn is_writable<T: ValueStore, U: CacheStore>(

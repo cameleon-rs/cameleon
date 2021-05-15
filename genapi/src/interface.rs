@@ -220,7 +220,7 @@ pub trait IString {
 
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
-        value: &str,
+        value: String,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,

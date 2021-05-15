@@ -85,7 +85,7 @@ impl IFloat for FloatNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
-        self.value_kind().value(device, store, cx)
+        self.value_kind.value(device, store, cx)
     }
 
     #[tracing::instrument(skip(self, device, store, cx),
@@ -99,7 +99,7 @@ impl IFloat for FloatNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         cx.invalidate_cache_by(self.node_base().id());
-        self.value_kind().set_value(value, device, store, cx)
+        self.value_kind.set_value(value, device, store, cx)
     }
 
     #[tracing::instrument(skip(self, device, store, cx),
@@ -190,7 +190,8 @@ impl IFloat for FloatNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.elem_base.is_readable(device, store, cx)
+        Ok(self.elem_base.is_readable(device, store, cx)?
+            && self.value_kind.is_readable(device, store, cx)?)
     }
 
     fn is_writable<T: ValueStore, U: CacheStore>(
@@ -199,6 +200,7 @@ impl IFloat for FloatNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.elem_base.is_writable(device, store, cx)
+        Ok(self.elem_base.is_writable(device, store, cx)?
+            && self.value_kind.is_writable(device, store, cx)?)
     }
 }

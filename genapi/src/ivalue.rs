@@ -2,8 +2,8 @@ use ambassador::delegatable_trait;
 
 use super::{
     elem_type::{ImmOrPNode, PIndex, PValue, ValueKind},
-    interface::{IFloat, IInteger},
-    store::{CacheStore, FloatId, IntegerId, NodeId, NodeStore, ValueStore},
+    interface::{IFloat, IInteger, IString},
+    store::{CacheStore, FloatId, IntegerId, NodeId, NodeStore, StringId, ValueStore},
     Device, GenApiError, GenApiResult, ValueCtxt,
 };
 
@@ -93,7 +93,7 @@ macro_rules! impl_ivalue_for_vid {
                 _: &impl NodeStore,
                 cx: &mut ValueCtxt<U, S>,
             ) -> GenApiResult<$ty> {
-                Ok(cx.value_store.$f(*self).unwrap())
+                Ok(cx.value_store.$f(*self).unwrap().into())
             }
 
             fn set_value<U: ValueStore, S: CacheStore>(
@@ -129,6 +129,7 @@ macro_rules! impl_ivalue_for_vid {
 }
 impl_ivalue_for_vid!(i64, IntegerId, integer_value);
 impl_ivalue_for_vid!(f64, FloatId, float_value);
+impl_ivalue_for_vid!(String, StringId, str_value);
 
 macro_rules! impl_ivalue_for_node_id {
     ($ty:ty, $expect_kind:ident) => {
@@ -175,6 +176,7 @@ macro_rules! impl_ivalue_for_node_id {
 }
 impl_ivalue_for_node_id!(f64, expect_ifloat_kind);
 impl_ivalue_for_node_id!(i64, expect_iinteger_kind);
+impl_ivalue_for_node_id!(String, expect_istring_kind);
 
 impl<T, Ty> IValue<T> for ImmOrPNode<Ty>
 where
@@ -213,7 +215,7 @@ where
         cx: &mut ValueCtxt<U, S>,
     ) -> GenApiResult<bool> {
         match self {
-            ImmOrPNode::Imm(_) => Ok(true),
+            ImmOrPNode::Imm(i) => i.is_readable(device, store, cx),
             ImmOrPNode::PNode(nid) => nid.is_readable(device, store, cx),
         }
     }
@@ -225,7 +227,7 @@ where
         cx: &mut ValueCtxt<U, S>,
     ) -> GenApiResult<bool> {
         match self {
-            ImmOrPNode::Imm(_) => Ok(true),
+            ImmOrPNode::Imm(i) => i.is_writable(device, store, cx),
             ImmOrPNode::PNode(nid) => nid.is_writable(device, store, cx),
         }
     }
