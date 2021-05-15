@@ -105,14 +105,6 @@ pub trait ValueStore {
             None
         }
     }
-
-    fn boolean_value(&self, id: BooleanId) -> Option<bool> {
-        if let ValueData::Boolean(b) = self.value_opt(id)? {
-            Some(*b)
-        } else {
-            None
-        }
-    }
 }
 
 #[auto_impl(&mut, Box)]
@@ -375,11 +367,9 @@ macro_rules! declare_value_id {
         }
     };
 }
-
 declare_value_id!(IntegerId);
 declare_value_id!(FloatId);
 declare_value_id!(StringId);
-declare_value_id!(BooleanId);
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ValueData {
@@ -398,7 +388,6 @@ macro_rules! impl_value_data_conversion {
         }
     };
 }
-
 impl_value_data_conversion!(i64, Self::Integer);
 impl_value_data_conversion!(f64, Self::Float);
 impl_value_data_conversion!(String, Self::Str);

@@ -8,7 +8,7 @@ use crate::{
         NamedValue, PIndex, PValue, RegPIndex, Sign, Slope, StandardNameSpace, ValueIndexed,
         ValueKind, Visibility,
     },
-    store::{BooleanId, FloatId, IntegerId, NodeData, NodeId},
+    store::{FloatId, IntegerId, NodeData, NodeId},
     IntSwissKnifeNode,
 };
 
@@ -182,12 +182,7 @@ impl Parse for ImmOrPNode<bool> {
         value_builder: &mut impl ValueStoreBuilder,
         cache_builder: &mut impl CacheStoreBuilder,
     ) -> Self {
-        let peeked_text = node.peek().unwrap().text();
-        if peeked_text == "Yes"
-            || peeked_text == "No"
-            || peeked_text == "true"
-            || peeked_text == "false"
-        {
+        if convert_to_bool_opt(&node.peek().unwrap().text().view()).is_some() {
             Self::Imm(node.parse(node_builder, value_builder, cache_builder))
         } else {
             Self::PNode(node.parse(node_builder, value_builder, cache_builder))
@@ -207,8 +202,8 @@ macro_rules! impl_parse_for_imm_or_pnode_id {
                 let node: ImmOrPNode<$value_ty> =
                     node.parse(node_builder, value_builder, cache_builder);
                 match node {
-                    ImmOrPNode::Imm(b) => {
-                        let id = value_builder.store(b);
+                    ImmOrPNode::Imm(i) => {
+                        let id = value_builder.store(i);
                         ImmOrPNode::Imm(id)
                     }
                     ImmOrPNode::PNode(id) => ImmOrPNode::PNode(id),
@@ -220,7 +215,6 @@ macro_rules! impl_parse_for_imm_or_pnode_id {
 
 impl_parse_for_imm_or_pnode_id!(IntegerId, i64);
 impl_parse_for_imm_or_pnode_id!(FloatId, f64);
-impl_parse_for_imm_or_pnode_id!(BooleanId, bool);
 
 impl Default for IntegerRepresentation {
     fn default() -> Self {
@@ -371,10 +365,17 @@ where
 }
 
 pub(super) fn convert_to_bool(value: &str) -> bool {
-    match value {
-        "Yes" | "true" => true,
-        "No" | "false" => false,
+    match convert_to_bool_opt(value) {
+        Some(b) => b,
         _ => unreachable!(),
+    }
+}
+
+pub(super) fn convert_to_bool_opt(value: &str) -> Option<bool> {
+    match value {
+        "Yes" | "true" => Some(true),
+        "No" | "false" => Some(false),
+        _ => None,
     }
 }
 
@@ -490,7 +491,6 @@ macro_rules! impl_parse_for_value_id {
 
 impl_parse_for_value_id!(IntegerId, i64);
 impl_parse_for_value_id!(FloatId, f64);
-impl_parse_for_value_id!(BooleanId, bool);
 
 impl<T> Parse for ValueKind<T>
 where
