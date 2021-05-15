@@ -111,7 +111,7 @@ impl IInteger for MaskedIntRegNode {
         let length = reg.length(device, store, cx)? as usize;
         let new_reg_value =
             self.bit_mask
-                .masked_value(old_reg_value, value, length, self.endianness);
+                .masked_value(old_reg_value, value, length, self.endianness, self.sign)?;
         let mut buf = vec![0; length as usize];
         utils::bytes_from_int(new_reg_value, &mut buf, self.endianness, self.sign)?;
         reg.write_and_cache(nid, &buf, device, store, cx)?;
@@ -314,10 +314,19 @@ impl BitMask {
         value: i64,
         reg_byte_len: usize,
         endianness: Endianness,
-    ) -> i64 {
+        sign: Sign,
+    ) -> GenApiResult<i64> {
+        if value > self.max(reg_byte_len, endianness, sign)
+            || value < self.min(reg_byte_len, endianness, sign)
+        {
+            return Err(GenApiError::invalid_data(
+                "given value doesn't fit into the bit range".into(),
+            ));
+        }
+
         let mask = self.mask(reg_byte_len, endianness);
         let lsb = self.lsb(reg_byte_len, endianness);
-        (old_reg_value & !mask) | ((value << lsb) & mask)
+        Ok((old_reg_value & !mask) | ((value << lsb) & mask))
     }
 
     fn lsb(self, reg_byte_len: usize, endianness: Endianness) -> usize {
@@ -399,7 +408,6 @@ impl BitMask {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::shadow_unrelated)]
     use super::*;
 
     #[test]
@@ -414,7 +422,9 @@ mod tests {
         assert_eq!(mask.max(reg_len, endianness, sign), 1);
         let value = mask.apply_mask(reg_value, reg_len, endianness, sign);
         assert_eq!(value, 1);
-        let new_value = mask.masked_value(reg_value, 0, reg_len, endianness);
+        let new_value = mask
+            .masked_value(reg_value, 0, reg_len, endianness, sign)
+            .unwrap();
         assert_eq!(new_value, 0b1100_0011);
 
         let sign = Sign::Signed;
@@ -422,7 +432,9 @@ mod tests {
         assert_eq!(mask.max(reg_len, endianness, sign), 0);
         let value = mask.apply_mask(reg_value, reg_len, endianness, sign);
         assert_eq!(value, -1);
-        let new_value = mask.masked_value(reg_value, 0, reg_len, endianness);
+        let new_value = mask
+            .masked_value(reg_value, 0, reg_len, endianness, sign)
+            .unwrap();
         assert_eq!(new_value, 0b1100_0011);
     }
 
@@ -438,7 +450,9 @@ mod tests {
         assert_eq!(mask.max(reg_len, endianness, sign), 15);
         let value = mask.apply_mask(reg_value, reg_len, endianness, sign);
         assert_eq!(value, 0b0101);
-        let new_value = mask.masked_value(reg_value, 0b0110, reg_len, endianness);
+        let new_value = mask
+            .masked_value(reg_value, 0b0110, reg_len, endianness, sign)
+            .unwrap();
         assert_eq!(new_value, 0b1100_1101);
 
         let sign = Sign::Signed;
@@ -446,7 +460,9 @@ mod tests {
         assert_eq!(mask.min(reg_len, endianness, sign), -8);
         assert_eq!(mask.max(reg_len, endianness, sign), 7);
         assert_eq!(value, 5);
-        let new_value = mask.masked_value(reg_value, -1, reg_len, endianness);
+        let new_value = mask
+            .masked_value(reg_value, -1, reg_len, endianness, sign)
+            .unwrap();
         assert_eq!(new_value, 0b1101_1111);
     }
 
@@ -460,14 +476,21 @@ mod tests {
         let sign = Sign::Unsigned;
         let value = mask.apply_mask(reg_value, reg_len, endianness, sign);
         assert_eq!(value, 0b0101);
-        let new_value = mask.masked_value(reg_value, 0b0110, reg_len, endianness);
+        let new_value = mask
+            .masked_value(reg_value, 0b0110, reg_len, endianness, sign)
+            .unwrap();
         assert_eq!(new_value, 0b1100_1101);
 
         let sign = Sign::Signed;
         let value = mask.apply_mask(reg_value, reg_len, endianness, sign);
         assert_eq!(value, 5);
-        let new_value = mask.masked_value(reg_value, -1, reg_len, endianness);
+        let new_value = mask
+            .masked_value(reg_value, -1, reg_len, endianness, sign)
+            .unwrap();
         assert_eq!(new_value, 0b1101_1111);
+
+        let new_value = mask.masked_value(reg_value, 256, reg_len, endianness, sign);
+        assert!(new_value.is_err());
     }
 
     #[test]
@@ -482,7 +505,9 @@ mod tests {
         assert_eq!(mask.max(reg_len, endianness, sign), std::i64::MAX);
         let value = mask.apply_mask(reg_value, reg_len, endianness, sign);
         assert_eq!(value, i64::MAX);
-        let new_value = mask.masked_value(reg_value, 0, reg_len, endianness);
+        let new_value = mask
+            .masked_value(reg_value, 0, reg_len, endianness, sign)
+            .unwrap();
         assert_eq!(new_value, 0);
 
         let sign = Sign::Signed;
@@ -490,7 +515,9 @@ mod tests {
         assert_eq!(mask.max(reg_len, endianness, sign), std::i64::MAX);
         let value = mask.apply_mask(reg_value, reg_len, endianness, sign);
         assert_eq!(value, std::i64::MAX);
-        let new_value = mask.masked_value(reg_value, std::i64::MIN, reg_len, endianness);
+        let new_value = mask
+            .masked_value(reg_value, std::i64::MIN, reg_len, endianness, sign)
+            .unwrap();
         assert_eq!(new_value, std::i64::MIN);
     }
 }
