@@ -34,7 +34,7 @@ impl Parse for NodeAttributeBase {
             .unwrap_or_default();
         let expose_static = node
             .attribute_of(EXPOSE_STATIC)
-            .map(|text| convert_to_bool(&text));
+            .map(|text| convert_to_bool(text));
 
         Self {
             id,
@@ -68,7 +68,7 @@ impl Parse for NodeElementBase {
             .unwrap_or_default();
         let event_id = node
             .next_if(EVENT_ID)
-            .map(|n| u64::from_str_radix(n.text(), 16).unwrap());
+            .map(|n| u64::from_str_radix(&n.text().view(), 16).unwrap());
         let p_is_implemented =
             node.parse_if(P_IS_IMPLEMENTED, node_builder, value_builder, cache_builder);
         let p_is_available =

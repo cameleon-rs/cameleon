@@ -25,6 +25,6 @@ impl Parse for Expr {
         _: &mut impl CacheStoreBuilder,
     ) -> Self {
         let text = node.next_text().unwrap();
-        parse(text)
+        parse(&text.view())
     }
 }
