@@ -188,9 +188,7 @@ impl IInteger for IntConverterNode {
         store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::access_denied(
-            "can't set value to min elem of `IntConverterNode`".into(),
-        ))
+        Err(GenApiError::not_writable())
     }
 
     #[tracing::instrument(skip(self, store),
@@ -203,9 +201,7 @@ impl IInteger for IntConverterNode {
         store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::access_denied(
-            "can't set value to max elem of `IntConverterNode`".into(),
-        ))
+        Err(GenApiError::not_writable())
     }
 
     fn is_readable<T: ValueStore, U: CacheStore>(

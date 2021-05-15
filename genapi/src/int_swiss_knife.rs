@@ -92,9 +92,7 @@ impl IInteger for IntSwissKnifeNode {
         store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::access_denied(
-            "write to `IntSwissKnifeNode` is forbidden".into(),
-        ))
+        Err(GenApiError::not_writable())
     }
 
     #[tracing::instrument(skip(self, device, store, cx),
@@ -156,9 +154,7 @@ impl IInteger for IntSwissKnifeNode {
         store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::access_denied(
-            "write to `IntSwissKnifeNode` is forbidden".into(),
-        ))
+        Err(GenApiError::not_writable())
     }
 
     #[tracing::instrument(skip(self, store),
@@ -171,9 +167,7 @@ impl IInteger for IntSwissKnifeNode {
         store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::access_denied(
-            "write to `IntSwissKnifeNode` is forbidden".into(),
-        ))
+        Err(GenApiError::not_writable())
     }
 
     fn is_readable<T: ValueStore, U: CacheStore>(

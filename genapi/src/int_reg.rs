@@ -151,9 +151,7 @@ impl IInteger for IntRegNode {
         store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::access_denied(
-            "can't set value to register's min elem".into(),
-        ))
+        Err(GenApiError::not_writable())
     }
 
     #[tracing::instrument(skip(self, store),
@@ -166,9 +164,7 @@ impl IInteger for IntRegNode {
         store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::access_denied(
-            "can't set value to register's max elem".into(),
-        ))
+        Err(GenApiError::not_writable())
     }
 
     fn is_readable<T: ValueStore, U: CacheStore>(

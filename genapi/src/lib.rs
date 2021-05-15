@@ -88,9 +88,13 @@ pub enum GenApiError {
     #[error("device I/O error: {0}")]
     Device(Box<dyn std::error::Error>),
 
-    /// Read/Write access to the `GenApi` node is denied.
-    #[error("access is denied: {0}")]
-    AccessDenied(Cow<'static, str>),
+    /// The node is not readable.
+    #[error("attempt to read a value from non readable node")]
+    NotReadable,
+
+    /// The node is not writable.
+    #[error("attempt to write a value to non writable node")]
+    NotWritable,
 
     /// Invalid node.
     #[error("invalid node: {0}")]
@@ -118,8 +122,14 @@ impl GenApiError {
         err
     }
 
-    fn access_denied(inner: Cow<'static, str>) -> Self {
-        let err = GenApiError::AccessDenied(inner);
+    fn not_readable() -> Self {
+        let err = GenApiError::NotReadable;
+        error!("{}", err);
+        err
+    }
+
+    fn not_writable() -> Self {
+        let err = GenApiError::NotWritable;
         error!("{}", err);
         err
     }

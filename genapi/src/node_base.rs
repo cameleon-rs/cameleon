@@ -160,9 +160,7 @@ impl NodeElementBase {
         if self.is_readable(device, store, cx)? {
             Ok(())
         } else {
-            Err(GenApiError::access_denied(
-                "the node is not readable".into(),
-            ))
+            Err(GenApiError::not_readable())
         }
     }
 
@@ -175,9 +173,7 @@ impl NodeElementBase {
         if self.is_writable(device, store, cx)? {
             Ok(())
         } else {
-            Err(GenApiError::access_denied(
-                "the node is not writable".into(),
-            ))
+            Err(GenApiError::not_writable())
         }
     }
 

@@ -58,9 +58,7 @@ macro_rules! impl_ivalue_for_imm {
                 _: &impl NodeStore,
                 _: &mut ValueCtxt<U, S>,
             ) -> GenApiResult<()> {
-                Err(GenApiError::access_denied(
-                    "cannot rewrite the constant".into(),
-                ))
+                Err(GenApiError::not_writable())
             }
 
             fn is_readable<U: ValueStore, S: CacheStore>(
