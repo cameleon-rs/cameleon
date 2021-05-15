@@ -39,6 +39,145 @@ pub(super) trait IValue<T> {
     ) -> GenApiResult<bool>;
 }
 
+macro_rules! impl_ivalue_for_imm {
+    ($ty:ty) => {
+        impl IValue<$ty> for $ty {
+            fn value<U: ValueStore, S: CacheStore>(
+                &self,
+                _: &mut impl Device,
+                _: &impl NodeStore,
+                _: &mut ValueCtxt<U, S>,
+            ) -> GenApiResult<$ty> {
+                Ok(*self)
+            }
+
+            fn set_value<U, S>(
+                &self,
+                _: $ty,
+                _: &mut impl Device,
+                _: &impl NodeStore,
+                _: &mut ValueCtxt<U, S>,
+            ) -> GenApiResult<()> {
+                Err(GenApiError::access_denied(
+                    "cannot rewrite the constant".into(),
+                ))
+            }
+
+            fn is_readable<U: ValueStore, S: CacheStore>(
+                &self,
+                _: &mut impl Device,
+                _: &impl NodeStore,
+                _: &mut ValueCtxt<U, S>,
+            ) -> GenApiResult<bool> {
+                Ok(true)
+            }
+
+            fn is_writable<U: ValueStore, S: CacheStore>(
+                &self,
+                _: &mut impl Device,
+                _: &impl NodeStore,
+                _: &mut ValueCtxt<U, S>,
+            ) -> GenApiResult<bool> {
+                Ok(false)
+            }
+        }
+    };
+}
+impl_ivalue_for_imm!(i64);
+impl_ivalue_for_imm!(f64);
+
+macro_rules! impl_ivalue_for_vid {
+    ($ty:ty, $vid:ty, $f:ident) => {
+        impl IValue<$ty> for $vid {
+            fn value<U: ValueStore, S: CacheStore>(
+                &self,
+                _: &mut impl Device,
+                _: &impl NodeStore,
+                cx: &mut ValueCtxt<U, S>,
+            ) -> GenApiResult<$ty> {
+                Ok(cx.value_store.$f(*self).unwrap())
+            }
+
+            fn set_value<U: ValueStore, S: CacheStore>(
+                &self,
+                value: $ty,
+                _: &mut impl Device,
+                _: &impl NodeStore,
+                cx: &mut ValueCtxt<U, S>,
+            ) -> GenApiResult<()> {
+                cx.value_store_mut().update(*self, value);
+                Ok(())
+            }
+
+            fn is_readable<U: ValueStore, S: CacheStore>(
+                &self,
+                _: &mut impl Device,
+                _: &impl NodeStore,
+                _: &mut ValueCtxt<U, S>,
+            ) -> GenApiResult<bool> {
+                Ok(true)
+            }
+
+            fn is_writable<U: ValueStore, S: CacheStore>(
+                &self,
+                _: &mut impl Device,
+                _: &impl NodeStore,
+                _: &mut ValueCtxt<U, S>,
+            ) -> GenApiResult<bool> {
+                Ok(true)
+            }
+        }
+    };
+}
+impl_ivalue_for_vid!(i64, IntegerId, integer_value);
+impl_ivalue_for_vid!(f64, FloatId, float_value);
+
+macro_rules! impl_ivalue_for_node_id {
+    ($ty:ty, $expect_kind:ident) => {
+        impl IValue<$ty> for NodeId {
+            fn value<U: ValueStore, S: CacheStore>(
+                &self,
+                device: &mut impl Device,
+                store: &impl NodeStore,
+                cx: &mut ValueCtxt<U, S>,
+            ) -> GenApiResult<$ty> {
+                self.$expect_kind(store)?.value(device, store, cx)
+            }
+
+            fn set_value<U: ValueStore, S: CacheStore>(
+                &self,
+                value: $ty,
+                device: &mut impl Device,
+                store: &impl NodeStore,
+                cx: &mut ValueCtxt<U, S>,
+            ) -> GenApiResult<()> {
+                self.$expect_kind(store)?
+                    .set_value(value, device, store, cx)
+            }
+
+            fn is_readable<U: ValueStore, S: CacheStore>(
+                &self,
+                device: &mut impl Device,
+                store: &impl NodeStore,
+                cx: &mut ValueCtxt<U, S>,
+            ) -> GenApiResult<bool> {
+                self.$expect_kind(store)?.is_readable(device, store, cx)
+            }
+
+            fn is_writable<U: ValueStore, S: CacheStore>(
+                &self,
+                device: &mut impl Device,
+                store: &impl NodeStore,
+                cx: &mut ValueCtxt<U, S>,
+            ) -> GenApiResult<bool> {
+                self.$expect_kind(store)?.is_writable(device, store, cx)
+            }
+        }
+    };
+}
+impl_ivalue_for_node_id!(f64, expect_ifloat_kind);
+impl_ivalue_for_node_id!(i64, expect_iinteger_kind);
+
 impl<T, Ty> IValue<T> for ImmOrPNode<Ty>
 where
     Ty: IValue<T>,
@@ -91,252 +230,6 @@ where
             ImmOrPNode::Imm(_) => Ok(true),
             ImmOrPNode::PNode(nid) => nid.is_writable(device, store, cx),
         }
-    }
-}
-
-impl IValue<i64> for IntegerId {
-    fn value<U: ValueStore, S: CacheStore>(
-        &self,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        cx: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<i64> {
-        Ok(cx.value_store.integer_value(*self).unwrap())
-    }
-
-    fn set_value<U: ValueStore, S: CacheStore>(
-        &self,
-        value: i64,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        cx: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<()> {
-        cx.value_store_mut().update(*self, value);
-        Ok(())
-    }
-
-    fn is_readable<U: ValueStore, S: CacheStore>(
-        &self,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        _: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<bool> {
-        Ok(true)
-    }
-
-    fn is_writable<U: ValueStore, S: CacheStore>(
-        &self,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        _: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<bool> {
-        Ok(true)
-    }
-}
-
-impl IValue<i64> for i64 {
-    fn value<U: ValueStore, S: CacheStore>(
-        &self,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        _: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<i64> {
-        Ok(*self)
-    }
-
-    fn set_value<U, S>(
-        &self,
-        _: i64,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        _: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<()> {
-        Err(GenApiError::access_denied(
-            "cannot rewrite the constant".into(),
-        ))
-    }
-
-    fn is_readable<U: ValueStore, S: CacheStore>(
-        &self,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        _: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<bool> {
-        Ok(true)
-    }
-
-    fn is_writable<U: ValueStore, S: CacheStore>(
-        &self,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        _: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<bool> {
-        Ok(false)
-    }
-}
-
-impl IValue<i64> for NodeId {
-    fn value<U: ValueStore, S: CacheStore>(
-        &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<i64> {
-        self.expect_iinteger_kind(store)?.value(device, store, cx)
-    }
-
-    fn set_value<U: ValueStore, S: CacheStore>(
-        &self,
-        value: i64,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<()> {
-        self.expect_iinteger_kind(store)?
-            .set_value(value, device, store, cx)
-    }
-
-    fn is_readable<U: ValueStore, S: CacheStore>(
-        &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<bool> {
-        self.expect_iinteger_kind(store)?
-            .is_readable(device, store, cx)
-    }
-
-    fn is_writable<U: ValueStore, S: CacheStore>(
-        &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<bool> {
-        self.expect_iinteger_kind(store)?
-            .is_writable(device, store, cx)
-    }
-}
-
-impl IValue<f64> for FloatId {
-    fn value<U: ValueStore, S: CacheStore>(
-        &self,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        cx: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<f64> {
-        Ok(cx.value_store().float_value(*self).unwrap())
-    }
-
-    fn set_value<U: ValueStore, S: CacheStore>(
-        &self,
-        value: f64,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        cx: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<()> {
-        cx.value_store_mut().update(*self, value);
-        Ok(())
-    }
-
-    fn is_readable<U: ValueStore, S: CacheStore>(
-        &self,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        _: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<bool> {
-        Ok(true)
-    }
-
-    fn is_writable<U: ValueStore, S: CacheStore>(
-        &self,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        _: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<bool> {
-        Ok(true)
-    }
-}
-
-impl IValue<f64> for f64 {
-    fn value<U: ValueStore, S: CacheStore>(
-        &self,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        _: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<f64> {
-        Ok(*self)
-    }
-
-    fn set_value<U: ValueStore, S: CacheStore>(
-        &self,
-        _: f64,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        _: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<()> {
-        Err(GenApiError::access_denied(
-            "cannot rewrite the constant".into(),
-        ))
-    }
-
-    fn is_readable<U: ValueStore, S: CacheStore>(
-        &self,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        _: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<bool> {
-        Ok(true)
-    }
-
-    fn is_writable<U: ValueStore, S: CacheStore>(
-        &self,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        _: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<bool> {
-        Ok(false)
-    }
-}
-
-impl IValue<f64> for NodeId {
-    fn value<U: ValueStore, S: CacheStore>(
-        &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<f64> {
-        self.expect_ifloat_kind(store)?.value(device, store, cx)
-    }
-
-    fn set_value<U: ValueStore, S: CacheStore>(
-        &self,
-        value: f64,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<()> {
-        self.expect_ifloat_kind(store)?
-            .set_value(value, device, store, cx)
-    }
-
-    fn is_readable<U: ValueStore, S: CacheStore>(
-        &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<bool> {
-        self.expect_ifloat_kind(store)?
-            .is_readable(device, store, cx)
-    }
-
-    fn is_writable<U: ValueStore, S: CacheStore>(
-        &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<U, S>,
-    ) -> GenApiResult<bool> {
-        self.expect_ifloat_kind(store)?
-            .is_writable(device, store, cx)
     }
 }
 
