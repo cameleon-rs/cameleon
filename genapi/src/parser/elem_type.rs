@@ -8,6 +8,7 @@ use crate::{
         NamedValue, PIndex, PValue, RegPIndex, Sign, Slope, StandardNameSpace, ValueIndexed,
         ValueKind, Visibility,
     },
+    interface::INode,
     store::{FloatId, IntegerId, NodeData, NodeId},
     IntSwissKnifeNode,
 };

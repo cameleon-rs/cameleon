@@ -1,6 +1,6 @@
 use super::{
     elem_type::{Endianness, IntegerRepresentation, Sign},
-    interface::{IInteger, IRegister, ISelector, IncrementMode},
+    interface::{IInteger, INode, IRegister, ISelector, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase},
     register_base::RegisterBase,
     store::{CacheStore, NodeId, NodeStore, ValueStore},
@@ -20,12 +20,6 @@ pub struct IntRegNode {
 }
 
 impl IntRegNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase {
-        let elem_base = &self.register_base.elem_base;
-        NodeBase::new(&self.attr_base, elem_base)
-    }
-
     #[must_use]
     pub fn register_base(&self) -> &RegisterBase {
         &self.register_base
@@ -54,6 +48,17 @@ impl IntRegNode {
     #[must_use]
     pub fn p_selected(&self) -> &[NodeId] {
         &self.p_selected
+    }
+}
+
+impl INode for IntRegNode {
+    fn node_base(&self) -> NodeBase {
+        let elem_base = &self.register_base.elem_base;
+        NodeBase::new(&self.attr_base, elem_base)
+    }
+
+    fn streamable(&self) -> bool {
+        self.register_base().streamable()
     }
 }
 

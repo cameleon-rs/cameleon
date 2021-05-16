@@ -7,7 +7,7 @@ use super::{
     builder,
     interface::{
         IBooleanKind, ICategoryKind, ICommandKind, IEnumerationKind, IFloatKind, IIntegerKind,
-        IPortKind, IRegisterKind, ISelectorKind, IStringKind,
+        INode, INodeKind, IPortKind, IRegisterKind, ISelectorKind, IStringKind,
     },
     node_base::NodeBase,
     BooleanNode, CategoryNode, CommandNode, ConverterNode, EnumerationNode, FloatNode,
@@ -136,6 +136,16 @@ impl Symbol for NodeId {
 impl NodeId {
     pub fn name(self, store: &impl NodeStore) -> &str {
         store.name_by_id(self).unwrap()
+    }
+
+    pub fn as_inode_kind(self, store: &impl NodeStore) -> Option<INodeKind> {
+        INodeKind::maybe_from(self, store)
+    }
+
+    pub fn expect_inode_kind(self, store: &impl NodeStore) -> GenApiResult<INodeKind> {
+        self.as_inode_kind(store).ok_or_else(|| {
+            GenApiError::invalid_node("the node doesn't implement `IInteger`".into())
+        })
     }
 
     pub fn as_iinteger_kind(self, store: &impl NodeStore) -> Option<IIntegerKind> {

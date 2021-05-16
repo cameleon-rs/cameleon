@@ -69,8 +69,8 @@ use tracing::error;
 
 pub mod prelude {
     pub use super::interface::{
-        IBoolean, ICategory, ICommand, IEnumeration, IFloat, IInteger, IPort, IRegister, ISelector,
-        IString,
+        IBoolean, ICategory, ICommand, IEnumeration, IFloat, IInteger, INode, IPort, IRegister,
+        ISelector, IString,
     };
 }
 

@@ -223,6 +223,8 @@ impl Parse for StructEntryNode {
 
 #[cfg(test)]
 mod tests {
+    use crate::interface::INode;
+
     use super::{super::utils::tests::parse_default, *};
 
     #[test]

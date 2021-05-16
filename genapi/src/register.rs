@@ -1,5 +1,5 @@
 use super::{
-    interface::IRegister,
+    interface::{INode, IRegister},
     node_base::{NodeAttributeBase, NodeBase},
     register_base::RegisterBase,
     store::{CacheStore, NodeStore, ValueStore},
@@ -14,14 +14,19 @@ pub struct RegisterNode {
 
 impl RegisterNode {
     #[must_use]
-    pub fn node_base(&self) -> NodeBase {
+    pub fn register_base(&self) -> &RegisterBase {
+        &self.register_base
+    }
+}
+
+impl INode for RegisterNode {
+    fn node_base(&self) -> NodeBase {
         let elem_base = &self.register_base.elem_base;
         NodeBase::new(&self.attr_base, elem_base)
     }
 
-    #[must_use]
-    pub fn register_base(&self) -> &RegisterBase {
-        &self.register_base
+    fn streamable(&self) -> bool {
+        self.register_base().streamable()
     }
 }
 

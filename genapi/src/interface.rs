@@ -1,9 +1,8 @@
 use ambassador::{delegatable_trait, Delegate};
 
 use super::{
-    elem_type::{
-        DisplayNotation, FloatRepresentation, IntegerRepresentation, NameSpace, Visibility,
-    },
+    elem_type::{DisplayNotation, FloatRepresentation, IntegerRepresentation},
+    node_base::NodeBase,
     store::{CacheStore, NodeData, NodeId, NodeStore, ValueStore},
     EnumEntryNode, {Device, GenApiResult, ValueCtxt},
 };
@@ -17,39 +16,12 @@ pub enum IncrementMode {
 
 #[delegatable_trait]
 pub trait INode {
-    fn name(&self, store: &impl NodeStore) -> &str;
-    fn name_space(&self, store: &impl NodeStore) -> NameSpace;
+    fn name<'s>(&self, store: &'s impl NodeStore) -> &'s str {
+        store.name_by_id(self.node_base().id()).unwrap()
+    }
 
-    fn tool_tip(&self, store: &impl NodeStore) -> Option<&str>;
-    fn description(&self, store: &impl NodeStore) -> Option<&str>;
-    fn display_name(&self, store: &impl NodeStore) -> &str;
-    fn visibility(&self) -> Visibility;
-    fn event_id(&self) -> Option<u64>;
-
-    fn is_deprecated<T: ValueStore, U: CacheStore>(
-        &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> bool;
-    fn is_available<T: ValueStore, U: CacheStore>(
-        &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> bool;
-    fn is_locked<T: ValueStore, U: CacheStore>(
-        &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> bool;
-    fn is_implemented<T: ValueStore, U: CacheStore>(
-        &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> bool;
+    fn node_base(&self) -> NodeBase;
+    fn streamable(&self) -> bool;
 }
 
 #[delegatable_trait]
@@ -424,6 +396,8 @@ pub trait ISelector {
     fn selecting_nodes(&self, store: &impl NodeStore) -> GenApiResult<&[NodeId]>;
 }
 
+#[derive(Delegate)]
+#[delegate(INode)]
 pub enum INodeKind<'a> {
     Integer(&'a super::IntegerNode),
     IntReg(&'a super::IntRegNode),
@@ -434,11 +408,41 @@ pub enum INodeKind<'a> {
     FloatReg(&'a super::FloatRegNode),
     Converter(&'a super::ConverterNode),
     SwissKnife(&'a super::SwissKnifeNode),
+    String(&'a super::StringNode),
+    StringReg(&'a super::StringRegNode),
     Boolean(&'a super::BooleanNode),
+    Command(&'a super::CommandNode),
     Register(&'a super::RegisterNode),
     Category(&'a super::CategoryNode),
     Port(&'a super::PortNode),
     Enumeration(&'a super::EnumerationNode),
+    Node(&'a super::Node),
+}
+
+impl<'a> INodeKind<'a> {
+    pub(super) fn maybe_from(id: NodeId, store: &'a impl NodeStore) -> Option<Self> {
+        match store.node_opt(id)? {
+            NodeData::Integer(n) => Some(Self::Integer(n)),
+            NodeData::IntReg(n) => Some(Self::IntReg(n)),
+            NodeData::MaskedIntReg(n) => Some(Self::MaskedIntReg(n)),
+            NodeData::IntConverter(n) => Some(Self::IntConverter(n)),
+            NodeData::IntSwissKnife(n) => Some(Self::IntSwissKnife(n)),
+            NodeData::Float(n) => Some(Self::Float(n)),
+            NodeData::FloatReg(n) => Some(Self::FloatReg(n)),
+            NodeData::Converter(n) => Some(Self::Converter(n)),
+            NodeData::SwissKnife(n) => Some(Self::SwissKnife(n)),
+            NodeData::String(n) => Some(Self::String(n)),
+            NodeData::StringReg(n) => Some(Self::StringReg(n)),
+            NodeData::Boolean(n) => Some(Self::Boolean(n)),
+            NodeData::Command(n) => Some(Self::Command(n)),
+            NodeData::Register(n) => Some(Self::Register(n)),
+            NodeData::Category(n) => Some(Self::Category(n)),
+            NodeData::Port(n) => Some(Self::Port(n)),
+            NodeData::Enumeration(n) => Some(Self::Enumeration(n)),
+            NodeData::Node(n) => Some(Self::Node(n)),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Delegate)]

@@ -1,7 +1,7 @@
 use super::{
     elem_type::{IntegerRepresentation, NamedValue},
     formula::{Expr, Formula},
-    interface::{IInteger, IncrementMode},
+    interface::{IInteger, INode, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, NodeId, NodeStore, ValueStore},
     utils, Device, GenApiError, GenApiResult, ValueCtxt,
@@ -22,16 +22,6 @@ pub struct IntSwissKnifeNode {
 }
 
 impl IntSwissKnifeNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn streamable(&self) -> bool {
-        self.streamable
-    }
-
     #[must_use]
     pub fn p_variables(&self) -> &[NamedValue<NodeId>] {
         &self.p_variables
@@ -60,6 +50,16 @@ impl IntSwissKnifeNode {
     #[must_use]
     pub fn representation_elem(&self) -> IntegerRepresentation {
         self.representation
+    }
+}
+
+impl INode for IntSwissKnifeNode {
+    fn node_base(&self) -> NodeBase {
+        NodeBase::new(&self.attr_base, &self.elem_base)
+    }
+
+    fn streamable(&self) -> bool {
+        self.streamable
     }
 }
 

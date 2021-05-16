@@ -1,6 +1,6 @@
 use super::{
     elem_type::ImmOrPNode,
-    interface::{IEnumeration, ISelector},
+    interface::{IEnumeration, INode, ISelector},
     ivalue::IValue,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, IntegerId, NodeId, NodeStore, ValueStore},
@@ -21,16 +21,6 @@ pub struct EnumerationNode {
 
 impl EnumerationNode {
     #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn streamable(&self) -> bool {
-        self.streamable
-    }
-
-    #[must_use]
     pub fn entries_elem(&self) -> &[EnumEntryNode] {
         &self.entries
     }
@@ -48,6 +38,16 @@ impl EnumerationNode {
     #[must_use]
     pub fn polling_time(&self) -> Option<u64> {
         self.polling_time
+    }
+}
+
+impl INode for EnumerationNode {
+    fn node_base(&self) -> NodeBase {
+        NodeBase::new(&self.attr_base, &self.elem_base)
+    }
+
+    fn streamable(&self) -> bool {
+        self.streamable
     }
 }
 
@@ -127,6 +127,9 @@ impl IEnumeration for EnumerationNode {
         self.value.set_value(value, device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_readable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -137,6 +140,9 @@ impl IEnumeration for EnumerationNode {
             && self.value.is_readable(device, store, cx)?)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_writable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -145,6 +151,12 @@ impl IEnumeration for EnumerationNode {
     ) -> GenApiResult<bool> {
         Ok(self.elem_base.is_writable(device, store, cx)?
             && self.value.is_writable(device, store, cx)?)
+    }
+}
+
+impl ISelector for EnumerationNode {
+    fn selecting_nodes(&self, _: &impl NodeStore) -> GenApiResult<&[NodeId]> {
+        Ok(self.p_selected())
     }
 }
 
@@ -188,11 +200,5 @@ impl EnumEntryNode {
     #[must_use]
     pub fn is_self_clearing(&self) -> bool {
         self.is_self_clearing
-    }
-}
-
-impl ISelector for EnumerationNode {
-    fn selecting_nodes(&self, _: &impl NodeStore) -> GenApiResult<&[NodeId]> {
-        Ok(self.p_selected())
     }
 }

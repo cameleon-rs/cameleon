@@ -1,6 +1,6 @@
 use super::{
     elem_type::ImmOrPNode,
-    interface::IPort,
+    interface::{INode, IPort},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, NodeStore, ValueStore},
     Device, GenApiError, GenApiResult, ValueCtxt,
@@ -18,11 +18,6 @@ pub struct PortNode {
 
 impl PortNode {
     #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
     pub fn chunk_id(&self) -> Option<&ImmOrPNode<u64>> {
         self.chunk_id.as_ref()
     }
@@ -35,6 +30,16 @@ impl PortNode {
     #[must_use]
     pub fn cache_chunk_data(&self) -> bool {
         self.cache_chunk_data
+    }
+}
+
+impl INode for PortNode {
+    fn node_base(&self) -> NodeBase {
+        NodeBase::new(&self.attr_base, &self.elem_base)
+    }
+
+    fn streamable(&self) -> bool {
+        false
     }
 }
 

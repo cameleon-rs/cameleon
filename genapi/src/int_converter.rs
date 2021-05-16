@@ -1,7 +1,7 @@
 use super::{
     elem_type::{IntegerRepresentation, NamedValue, Slope},
     formula::{Expr, Formula},
-    interface::{IInteger, IncrementMode},
+    interface::{IInteger, INode, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, NodeId, NodeStore, ValueStore},
     utils, Device, GenApiError, GenApiResult, ValueCtxt,
@@ -25,16 +25,6 @@ pub struct IntConverterNode {
 }
 
 impl IntConverterNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn streamable(&self) -> bool {
-        self.streamable
-    }
-
     #[must_use]
     pub fn p_variables(&self) -> &[NamedValue<NodeId>] {
         &self.p_variables
@@ -78,6 +68,16 @@ impl IntConverterNode {
     #[must_use]
     pub fn slope(&self) -> Slope {
         self.slope
+    }
+}
+
+impl INode for IntConverterNode {
+    fn node_base(&self) -> NodeBase {
+        NodeBase::new(&self.attr_base, &self.elem_base)
+    }
+
+    fn streamable(&self) -> bool {
+        self.streamable
     }
 }
 
@@ -191,6 +191,9 @@ impl IInteger for IntConverterNode {
         Err(GenApiError::not_writable())
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_readable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -204,6 +207,9 @@ impl IInteger for IntConverterNode {
             && collector.is_readable(device, store, cx)?)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_writable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,

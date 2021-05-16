@@ -1,6 +1,6 @@
 use super::{
     elem_type::ImmOrPNode,
-    interface::IString,
+    interface::{INode, IString},
     ivalue::IValue,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, NodeStore, StringId, ValueStore},
@@ -18,11 +18,6 @@ pub struct StringNode {
 
 impl StringNode {
     #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
     pub fn streamable(&self) -> bool {
         self.streamable
     }
@@ -30,6 +25,16 @@ impl StringNode {
     #[must_use]
     pub fn value_elem(&self) -> ImmOrPNode<StringId> {
         self.value
+    }
+}
+
+impl INode for StringNode {
+    fn node_base(&self) -> NodeBase {
+        NodeBase::new(&self.attr_base, &self.elem_base)
+    }
+
+    fn streamable(&self) -> bool {
+        self.streamable
     }
 }
 
@@ -77,6 +82,9 @@ impl IString for StringNode {
         }
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_readable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -87,6 +95,9 @@ impl IString for StringNode {
             && self.value.is_readable(device, store, cx)?)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_writable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,

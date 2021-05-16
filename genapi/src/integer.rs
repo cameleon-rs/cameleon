@@ -1,6 +1,6 @@
 use super::{
     elem_type::{ImmOrPNode, IntegerRepresentation, ValueKind},
-    interface::{IInteger, ISelector, IncrementMode},
+    interface::{IInteger, INode, ISelector, IncrementMode},
     ivalue::IValue,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, IntegerId, NodeId, NodeStore, ValueStore},
@@ -23,16 +23,6 @@ pub struct IntegerNode {
 }
 
 impl IntegerNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn streamable(&self) -> bool {
-        self.streamable
-    }
-
     #[must_use]
     pub fn value_kind(&self) -> &ValueKind<IntegerId> {
         &self.value_kind
@@ -66,6 +56,16 @@ impl IntegerNode {
     #[must_use]
     pub fn p_selected(&self) -> &[NodeId] {
         &self.p_selected
+    }
+}
+
+impl INode for IntegerNode {
+    fn node_base(&self) -> NodeBase {
+        NodeBase::new(&self.attr_base, &self.elem_base)
+    }
+
+    fn streamable(&self) -> bool {
+        self.streamable
     }
 }
 
@@ -174,6 +174,9 @@ impl IInteger for IntegerNode {
         self.max.set_value(value, device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_readable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -184,6 +187,9 @@ impl IInteger for IntegerNode {
             && self.value_kind.is_readable(device, store, cx)?)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_writable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,

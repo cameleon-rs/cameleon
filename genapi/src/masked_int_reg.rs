@@ -1,6 +1,6 @@
 use super::{
     elem_type::{BitMask, Endianness, IntegerRepresentation, Sign},
-    interface::{IInteger, IRegister, ISelector, IncrementMode},
+    interface::{IInteger, INode, IRegister, ISelector, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase},
     register_base::RegisterBase,
     store::{CacheStore, NodeId, NodeStore, ValueStore},
@@ -21,12 +21,6 @@ pub struct MaskedIntRegNode {
 }
 
 impl MaskedIntRegNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase {
-        let elem_base = &self.register_base.elem_base;
-        NodeBase::new(&self.attr_base, elem_base)
-    }
-
     #[must_use]
     pub fn register_base(&self) -> &RegisterBase {
         &self.register_base
@@ -60,6 +54,17 @@ impl MaskedIntRegNode {
     #[must_use]
     pub fn p_selected(&self) -> &[NodeId] {
         &self.p_selected
+    }
+}
+
+impl INode for MaskedIntRegNode {
+    fn node_base(&self) -> NodeBase {
+        let elem_base = &self.register_base.elem_base;
+        NodeBase::new(&self.attr_base, elem_base)
+    }
+
+    fn streamable(&self) -> bool {
+        self.register_base().streamable()
     }
 }
 
@@ -196,6 +201,9 @@ impl IInteger for MaskedIntRegNode {
         Err(GenApiError::not_writable())
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_readable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -205,6 +213,9 @@ impl IInteger for MaskedIntRegNode {
         self.register_base().is_readable(device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_writable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,

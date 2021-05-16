@@ -1,6 +1,6 @@
 use super::{
     elem_type::ImmOrPNode,
-    interface::{ICommand, IInteger},
+    interface::{ICommand, IInteger, INode},
     ivalue::IValue,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, IntegerId, NodeStore, ValueStore},
@@ -19,11 +19,6 @@ pub struct CommandNode {
 
 impl CommandNode {
     #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
     pub fn value_elem(&self) -> ImmOrPNode<IntegerId> {
         self.value
     }
@@ -36,6 +31,16 @@ impl CommandNode {
     #[must_use]
     pub fn polling_time(&self) -> Option<u64> {
         self.polling_time
+    }
+}
+
+impl INode for CommandNode {
+    fn node_base(&self) -> NodeBase {
+        NodeBase::new(&self.attr_base, &self.elem_base)
+    }
+
+    fn streamable(&self) -> bool {
+        false
     }
 }
 
@@ -78,6 +83,9 @@ impl ICommand for CommandNode {
         }
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_writable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,

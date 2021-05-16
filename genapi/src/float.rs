@@ -1,6 +1,6 @@
 use super::{
     elem_type::{DisplayNotation, FloatRepresentation, ImmOrPNode, ValueKind},
-    interface::{IFloat, IncrementMode},
+    interface::{IFloat, INode, IncrementMode},
     ivalue::IValue,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, FloatId, NodeStore, ValueStore},
@@ -24,16 +24,6 @@ pub struct FloatNode {
 }
 
 impl FloatNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn streamable(&self) -> bool {
-        self.streamable
-    }
-
     #[must_use]
     pub fn value_kind(&self) -> &ValueKind<FloatId> {
         &self.value_kind
@@ -72,6 +62,16 @@ impl FloatNode {
     #[must_use]
     pub fn display_precision_elem(&self) -> i64 {
         self.display_precision
+    }
+}
+
+impl INode for FloatNode {
+    fn node_base(&self) -> NodeBase {
+        NodeBase::new(&self.attr_base, &self.elem_base)
+    }
+
+    fn streamable(&self) -> bool {
+        self.streamable
     }
 }
 
@@ -184,6 +184,9 @@ impl IFloat for FloatNode {
         self.max.set_value(value, device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_readable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -194,6 +197,9 @@ impl IFloat for FloatNode {
             && self.value_kind.is_readable(device, store, cx)?)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_writable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
