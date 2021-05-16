@@ -98,6 +98,11 @@ pub trait GenApiCtxt {
 
     /// Returns description of the `GenApi` xml.
     fn description(&self) -> &RegisterDescription;
+
+    /// Clear all cache of the context.
+    fn clear_cache(&mut self) {
+        self.enter(|_, value_ctxt| value_ctxt.clear_cache())
+    }
 }
 
 /// A trait that provides directly conversion from `GenApi` string to a `GenApi` context.

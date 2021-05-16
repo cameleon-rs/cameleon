@@ -66,6 +66,9 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
         self.stop_streaming()?;
         self.ctrl.close()?;
         self.strm.close()?;
+        if let Some(ctxt) = &mut self.ctxt {
+            ctxt.clear_cache()
+        }
         info!("closed the device successfully");
         Ok(())
     }

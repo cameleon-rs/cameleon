@@ -116,6 +116,8 @@ pub trait CacheStore {
     fn invalidate_by(&mut self, nid: NodeId);
 
     fn invalidate_of(&mut self, nid: NodeId);
+
+    fn clear(&mut self);
 }
 
 impl Symbol for NodeId {
@@ -514,6 +516,10 @@ impl CacheStore for DefaultCacheStore {
             *cache = HashMap::new();
         }
     }
+
+    fn clear(&mut self) {
+        self.store.clear()
+    }
 }
 
 #[derive(Default, Copy, Clone, Debug)]
@@ -549,4 +555,6 @@ impl CacheStore for CacheSink {
     fn invalidate_by(&mut self, _: NodeId) {}
 
     fn invalidate_of(&mut self, _: NodeId) {}
+
+    fn clear(&mut self) {}
 }
