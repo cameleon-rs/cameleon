@@ -379,7 +379,7 @@ impl DeviceControl for ControlHandle {
         Ok(())
     }
 
-    fn gen_api(&mut self) -> ControlResult<String> {
+    fn genapi(&mut self) -> ControlResult<String> {
         fn zip_err(err: impl std::fmt::Debug) -> ControlError {
             ControlError::InternalError(format!("zipped xml file is broken: {:?}", err).into())
         }
@@ -630,7 +630,7 @@ impl DeviceControl for SharedControlHandle {
         fn close(&mut self) -> ControlResult<()>,
         fn read(&mut self, address: u64, buf: &mut [u8]) -> ControlResult<()>,
         fn write(&mut self, address: u64, data: &[u8]) -> ControlResult<()>,
-        fn gen_api(&mut self) -> ControlResult<String>,
+        fn genapi(&mut self) -> ControlResult<String>,
         fn enable_streaming(&mut self) -> ControlResult<Self::StrmParams>,
         fn disable_streaming(&mut self) -> ControlResult<()>
     }

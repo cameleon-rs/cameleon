@@ -80,7 +80,7 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
         Strm: PayloadStream,
         Ctxt: GenApiCtxt + FromXml,
     {
-        let xml = self.ctrl.gen_api()?;
+        let xml = self.ctrl.genapi()?;
         self.ctxt = Some(Ctxt::from_xml(&xml)?);
         Ok(xml)
     }
@@ -265,7 +265,7 @@ pub trait DeviceControl: cameleon_genapi::Device {
     fn write(&mut self, address: u64, data: &[u8]) -> ControlResult<()>;
 
     /// Returns `GenICam` xml string.
-    fn gen_api(&mut self) -> ControlResult<String>;
+    fn genapi(&mut self) -> ControlResult<String>;
 
     /// Enables streaming.
     fn enable_streaming(&mut self) -> ControlResult<Self::StrmParams>;
