@@ -4,13 +4,19 @@ pub mod node_kind;
 use std::sync::{Arc, Mutex};
 
 use auto_impl::auto_impl;
-use cameleon_genapi::{
-    builder::GenApiBuilder, store, CacheStore, NodeStore, RegisterDescription, ValueCtxt,
-    ValueStore,
-};
+use cameleon_genapi::{builder::GenApiBuilder, store};
 
 use super::{ControlError, ControlResult};
 use node_kind::Node;
+
+pub use cameleon_genapi::{
+    elem_type::{AccessMode, NameSpace, Visibility},
+    store::{
+        CacheSink, CacheStore, DefaultCacheStore, DefaultNodeStore, DefaultValueStore, NodeId,
+        NodeStore, ValueStore,
+    },
+    RegisterDescription, ValueCtxt,
+};
 
 /// Manages context of parameters of the device.
 #[derive(Debug, Clone)]
