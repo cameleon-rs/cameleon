@@ -128,7 +128,7 @@ impl PayloadStream for StreamHandle {
     fn start_streaming_loop(
         &mut self,
         sender: PayloadSender,
-        ctrl: &mut impl DeviceControl,
+        ctrl: &mut dyn DeviceControl,
     ) -> StreamResult<()> {
         self.params = StreamParams::from_control(ctrl).map_err(|e| {
             StreamError::Device(format!("failed to setup streaming parameters: {}", e).into())
@@ -468,7 +468,7 @@ impl StreamParams {
     }
 
     /// Build `StreamParams` from [`DeviceControl`].
-    pub fn from_control(ctrl: &mut impl DeviceControl) -> ControlResult<Self> {
+    pub fn from_control<Ctrl: DeviceControl + ?Sized>(ctrl: &mut Ctrl) -> ControlResult<Self> {
         let abrm = Abrm::new(ctrl)?;
         let sirm = abrm.sbrm(ctrl)?.sirm(ctrl)?.ok_or_else(|| {
             let msg = "the U3V device doesn't have `SIRM`";

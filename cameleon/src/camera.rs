@@ -294,7 +294,7 @@ pub trait PayloadStream {
     fn start_streaming_loop(
         &mut self,
         sender: PayloadSender,
-        ctrl: &mut impl DeviceControl,
+        ctrl: &mut dyn DeviceControl,
     ) -> StreamResult<()>;
 
     /// Stops streaming.
