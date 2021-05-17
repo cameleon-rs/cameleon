@@ -212,4 +212,11 @@ impl<T, U> ValueCtxt<T, U> {
     {
         self.cache_store.invalidate_of(nid)
     }
+
+    pub fn clear_cache(&mut self)
+    where
+        U: store::CacheStore,
+    {
+        self.cache_store.clear()
+    }
 }
