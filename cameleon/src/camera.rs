@@ -28,7 +28,7 @@ macro_rules! expect_node {
         $ctxt
             .node($name)
             .ok_or_else(|| CameleonError::InvalidGenApiXml(err_msg.into()))?
-            .$as_type(&mut $ctxt)
+            .$as_type(&$ctxt)
             .ok_or_else(|| CameleonError::InvalidGenApiXml(err_msg2.into()))?
     }};
 }

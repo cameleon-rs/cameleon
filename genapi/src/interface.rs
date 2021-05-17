@@ -396,7 +396,7 @@ pub trait ISelector {
     fn selecting_nodes(&self, store: &impl NodeStore) -> GenApiResult<&[NodeId]>;
 }
 
-#[derive(Delegate)]
+#[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(INode)]
 pub enum INodeKind<'a> {
     Integer(&'a super::IntegerNode),
@@ -443,9 +443,33 @@ impl<'a> INodeKind<'a> {
             _ => None,
         }
     }
+
+    /// Returns [`NodeBase`] with more precise lifetime.
+    pub fn node_base_precise(self) -> NodeBase<'a> {
+        match self {
+            Self::Integer(n) => n.node_base(),
+            Self::IntReg(n) => n.node_base(),
+            Self::MaskedIntReg(n) => n.node_base(),
+            Self::IntConverter(n) => n.node_base(),
+            Self::IntSwissKnife(n) => n.node_base(),
+            Self::Float(n) => n.node_base(),
+            Self::FloatReg(n) => n.node_base(),
+            Self::Converter(n) => n.node_base(),
+            Self::SwissKnife(n) => n.node_base(),
+            Self::String(n) => n.node_base(),
+            Self::StringReg(n) => n.node_base(),
+            Self::Boolean(n) => n.node_base(),
+            Self::Command(n) => n.node_base(),
+            Self::Register(n) => n.node_base(),
+            Self::Category(n) => n.node_base(),
+            Self::Port(n) => n.node_base(),
+            Self::Enumeration(n) => n.node_base(),
+            Self::Node(n) => n.node_base(),
+        }
+    }
 }
 
-#[derive(Delegate)]
+#[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(IInteger)]
 pub enum IIntegerKind<'a> {
     Integer(&'a super::IntegerNode),
@@ -468,7 +492,7 @@ impl<'a> IIntegerKind<'a> {
     }
 }
 
-#[derive(Delegate)]
+#[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(IFloat)]
 pub enum IFloatKind<'a> {
     Float(&'a super::FloatNode),
@@ -489,7 +513,7 @@ impl<'a> IFloatKind<'a> {
     }
 }
 
-#[derive(Delegate)]
+#[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(IString)]
 pub enum IStringKind<'a> {
     String(&'a super::StringNode),
@@ -506,7 +530,7 @@ impl<'a> IStringKind<'a> {
     }
 }
 
-#[derive(Delegate)]
+#[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(ICommand)]
 pub enum ICommandKind<'a> {
     Command(&'a super::CommandNode),
@@ -521,7 +545,7 @@ impl<'a> ICommandKind<'a> {
     }
 }
 
-#[derive(Delegate)]
+#[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(IEnumeration)]
 pub enum IEnumerationKind<'a> {
     Enumeration(&'a super::EnumerationNode),
@@ -536,7 +560,7 @@ impl<'a> IEnumerationKind<'a> {
     }
 }
 
-#[derive(Delegate)]
+#[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(IBoolean)]
 pub enum IBooleanKind<'a> {
     Boolean(&'a super::BooleanNode),
@@ -551,7 +575,7 @@ impl<'a> IBooleanKind<'a> {
     }
 }
 
-#[derive(Delegate)]
+#[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(IRegister)]
 pub enum IRegisterKind<'a> {
     Register(&'a super::RegisterNode),
@@ -574,7 +598,7 @@ impl<'a> IRegisterKind<'a> {
     }
 }
 
-#[derive(Delegate)]
+#[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(ICategory)]
 pub enum ICategoryKind<'a> {
     Category(&'a super::CategoryNode),
@@ -589,7 +613,7 @@ impl<'a> ICategoryKind<'a> {
     }
 }
 
-#[derive(Delegate)]
+#[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(IPort)]
 pub enum IPortKind<'a> {
     Port(&'a super::PortNode),
@@ -604,7 +628,7 @@ impl<'a> IPortKind<'a> {
     }
 }
 
-#[derive(Delegate)]
+#[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(ISelector)]
 pub enum ISelectorKind<'a> {
     Integer(&'a super::IntegerNode),

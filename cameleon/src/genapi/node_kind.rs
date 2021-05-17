@@ -50,6 +50,12 @@ pub struct PortNode(NodeId);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Node(pub(super) NodeId);
 
+impl From<NodeId> for Node {
+    fn from(nid: NodeId) -> Self {
+        Node(nid)
+    }
+}
+
 macro_rules! delegate {
     (
         $expect_kind:ident,
@@ -77,14 +83,15 @@ macro_rules! delegate {
         $expect_kind:ident,
         $(
             $(#[$meta:meta])*
-            $vis:vis fn $method:ident<$Ctrl:ident, $Ctxt:ident>($self:ident, ctxt: &mut ParamsCtxt<Ctrl, Ctxt> $(,$arg:ident: $arg_ty:ty)*) -> $ret_ty:ty,)*) => {
+            $vis:vis fn $method:ident<$Ctrl:ident, $Ctxt:ident>($self:ident, ctxt: &ParamsCtxt<Ctrl, Ctxt> $(,$arg:ident: $arg_ty:ty)*) -> $ret_ty:ty,)*) => {
         $(
             $(#[$meta])*
-            $vis fn $method<$Ctrl, $Ctxt>($self, ctxt: &mut ParamsCtxt<$Ctrl, $Ctxt> $(,$arg: $arg_ty)*) -> $ret_ty
-            where $Ctrl: Device,
+            $vis fn $method<$Ctrl, $Ctxt>($self, ctxt: &ParamsCtxt<$Ctrl, $Ctxt> $(,$arg: $arg_ty)*) -> $ret_ty
+            where
                   $Ctxt: GenApiCtxt
             {
-                ctxt.enter2(|_, ns, _| $self.0.$expect_kind(ns).unwrap().$method($($arg,)* ns))
+                let ns = ctxt.node_store();
+                $self.0.$expect_kind(ns).unwrap().$method($($arg,)* ns)
             }
         )*
     };
@@ -120,9 +127,27 @@ impl IntegerNode {
        no_vc,
        expect_iinteger_kind,
        /// Returns [`IncrementMode`] of the node.
-       pub fn inc_mode<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Option<IncrementMode>,
+       pub fn inc_mode<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> Option<IncrementMode>,
        /// Returns [`IntegerRepresentation`] of the node. This feature is mainly for GUI.
-       pub fn representation<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> IntegerRepresentation,
+       pub fn representation<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> IntegerRepresentation,
+    }
+
+    /// Returns unit that describes phisical meaning of the value. e.g. "Hz" or "ms".
+    pub fn unit<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> Option<String>
+    where
+        Ctxt: GenApiCtxt,
+    {
+        let ns = ctxt.node_store();
+        self.0
+            .expect_iinteger_kind(ns)
+            .unwrap()
+            .unit(ns)
+            .map(String::from)
+    }
+
+    /// Upcast to [`Node`].
+    pub fn as_node(self) -> Node {
+        Node(self.0)
     }
 }
 
@@ -153,27 +178,29 @@ impl FloatNode {
        no_vc,
        expect_ifloat_kind,
        /// Returns [`IncrementMode`] of the node.
-       pub fn inc_mode<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Option<IncrementMode>,
+       pub fn inc_mode<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> Option<IncrementMode>,
        /// Returns [`FloatRepresentation`] of the node. This feature is mainly for GUI.
-       pub fn representation<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) ->FloatRepresentation,
+       pub fn representation<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) ->FloatRepresentation,
        /// Returns [`DisplayNotation`]. This featres is mainly for GUI.
-       pub fn display_notation<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> DisplayNotation,
+       pub fn display_notation<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> DisplayNotation,
     }
 
-    /// Returns unit that describes phisical meaning of the value. e.g. "Hz" or "ms". This
-    /// feature is mainly for GUI.
-    pub fn unit<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Option<String>
+    /// Returns unit that describes phisical meaning of the value. e.g. "Hz" or "ms".
+    pub fn unit<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> Option<String>
     where
-        Ctrl: Device,
         Ctxt: GenApiCtxt,
     {
-        ctxt.enter2(|_, ns, _| {
-            self.0
-                .expect_ifloat_kind(ns)
-                .unwrap()
-                .unit(ns)
-                .map(String::from)
-        })
+        let ns = ctxt.node_store();
+        self.0
+            .expect_ifloat_kind(ns)
+            .unwrap()
+            .unit(ns)
+            .map(String::from)
+    }
+
+    /// Upcast to [`Node`].
+    pub fn as_node(self) -> Node {
+        Node(self.0)
     }
 }
 
@@ -184,12 +211,17 @@ impl StringNode {
         pub fn value<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<String>,
         /// Sets the value of the node.
         pub fn set_value<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, value: String) -> GenApiResult<()>,
-        /// Retruns the maximum length of the string.
+        /// Returns the maximum length of the string.
         pub fn max_length<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<i64>,
         /// Returns `true` if the node is readable.
         pub fn is_readable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
         /// Returns `true` if the node is writable.
         pub fn is_writable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
+    }
+
+    /// Upcast to [`Node`].
+    pub fn as_node(self) -> Node {
+        Node(self.0)
     }
 }
 
@@ -207,31 +239,36 @@ impl EnumerationNode {
     }
 
     /// Allows the access to entries of the node.
-    pub fn with_entries<Ctrl, Ctxt, F, R>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, f: F) -> R
+    pub fn with_entries<Ctrl, Ctxt, F, R>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>, f: F) -> R
     where
         Ctrl: Device,
         Ctxt: GenApiCtxt,
         F: FnOnce(&[EnumEntryNode]) -> R,
     {
-        ctxt.enter2(|_, ns, _| f(self.0.expect_ienumeration_kind(ns).unwrap().entries(ns)))
+        let ns = ctxt.node_store();
+        f(self.0.expect_ienumeration_kind(ns).unwrap().entries(ns))
     }
 
     /// Returns entries of the node.
     ///
     /// This method isn't cheap, consider using [`Self::with_entries`] instead of calling this
     /// method.
-    pub fn entries<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Vec<EnumEntryNode>
+    pub fn entries<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> Vec<EnumEntryNode>
     where
         Ctrl: Device,
         Ctxt: GenApiCtxt,
     {
-        ctxt.enter2(|_, ns, _| {
-            self.0
-                .expect_ienumeration_kind(ns)
-                .unwrap()
-                .entries(ns)
-                .to_vec()
-        })
+        let ns = ctxt.node_store();
+        self.0
+            .expect_ienumeration_kind(ns)
+            .unwrap()
+            .entries(ns)
+            .to_vec()
+    }
+
+    /// Upcast to [`Node`].
+    pub fn as_node(self) -> Node {
+        Node(self.0)
     }
 }
 
@@ -244,6 +281,11 @@ impl CommandNode {
         pub fn is_done<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
         /// Returns `true` if the node is writable (executable).
         pub fn is_writable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
+    }
+
+    /// Upcast to [`Node`].
+    pub fn as_node(self) -> Node {
+        Node(self.0)
     }
 }
 
@@ -259,6 +301,11 @@ impl BooleanNode {
         /// Returns `true` if the node is writable.
         pub fn is_writable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
     }
+
+    /// Upcast to [`Node`].
+    pub fn as_node(self) -> Node {
+        Node(self.0)
+    }
 }
 
 impl RegisterNode {
@@ -273,8 +320,13 @@ impl RegisterNode {
         pub fn write<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, data: &[u8]) -> GenApiResult<()>,
         /// Returns the address of the register that the node pointing to.
         pub fn address<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<i64>,
-        /// Return the length of the register that the node pointing to.
+        /// Returns the length of the register that the node pointing to.
         pub fn length<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<i64>,
+    }
+
+    /// Upcast to [`Node`].
+    pub fn as_node(self) -> Node {
+        Node(self.0)
     }
 }
 
@@ -295,6 +347,11 @@ impl CategoryNode {
                 .collect()
         })
     }
+
+    /// Upcast to [`Node`].
+    pub fn as_node(self) -> Node {
+        Node(self.0)
+    }
 }
 
 impl PortNode {
@@ -305,94 +362,110 @@ impl PortNode {
         /// Writes bytes.
         pub fn write<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, address: i64, data: &[u8]) -> GenApiResult<()>,
     }
+
+    /// Upcast to [`Node`].
+    pub fn as_node(self) -> Node {
+        Node(self.0)
+    }
+}
+
+macro_rules! downcast {
+    ($(
+       $(#[$meta:meta])*
+       ($method:ident, $expect_kind:ident, $ty:ident),
+     )*
+    ) => {
+        $(
+            $(#[$meta])*
+            pub fn $method<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> Option<$ty>
+            where
+                Ctxt: GenApiCtxt,
+            {
+                let ns = ctxt.node_store();
+                self.0.$expect_kind(ns).map(|_| $ty(self.0))
+        })*
+    };
+}
+
+macro_rules! delegate_node_base {
+    (
+        $(
+            $(#[$meta:meta])*
+            $vis:vis fn $method:ident<$Ctrl:ident, $Ctxt:ident>($self:ident, ctxt: &ParamsCtxt<Ctrl, Ctxt> $(,$arg:ident: $arg_ty:ty)*) -> $ret_ty:ty,)*) => {
+        $(
+            $(#[$meta])*
+            $vis fn $method<$Ctrl, $Ctxt>($self, ctxt: &ParamsCtxt<$Ctrl, $Ctxt> $(,$arg: $arg_ty)*) -> $ret_ty
+            where
+                  $Ctxt: GenApiCtxt
+            {
+                let ns = ctxt.node_store();
+                let node_base = $self.0.as_inode_kind(ns).unwrap().node_base_precise();
+                node_base.$method($($arg,)*).into()
+            }
+        )*
+    };
 }
 
 impl Node {
-    /// Returns `None` if downcast is failed.
-    pub fn as_integer<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Option<IntegerNode>
-    where
-        Ctrl: Device,
-        Ctxt: GenApiCtxt,
-    {
-        ctxt.enter2(|_, ns, _| self.0.as_iinteger_kind(ns).map(|_| IntegerNode(self.0)))
+    downcast! {
+        /// Try downcasting to [`IntegerNode`]. Returns `None` if downcast failed.
+        (as_integer, as_iinteger_kind, IntegerNode),
+        /// Try downcasting to [`FloatNode`]. Returns `None` if downcast failed.
+        (as_float, as_ifloat_kind, FloatNode),
+        /// Try downcasting to [`StringNode`]. Returns `None` if downcast failed.
+        (as_string ,as_istring_kind, StringNode),
+        /// Try downcasting to [`EnumerationNode`]. Returns `None` if downcast failed.
+        (as_enumeration ,as_ienumeration_kind, EnumerationNode),
+        /// Try downcasting to [`CommandNode`]. Returns `None` if downcast failed.
+        (as_command, as_icommand_kind, CommandNode),
+        /// Try downcasting to [`BooleanNode`]. Returns `None` if downcast failed.
+        (as_boolean, as_iboolean_kind, BooleanNode),
+        /// Try downcasting to [`RegisterNode`]. Returns `None` if downcast failed.
+        (as_register, as_iregister_kind, RegisterNode),
+        /// Try downcasting to [`CategoryNode`]. Returns `None` if downcast failed.
+        (as_category, as_icategory_kind, CategoryNode),
+        /// Try downcasting to [`PortNode`]. Returns `None` if downcast failed.
+        (as_port, as_iport_kind, PortNode),
     }
 
-    /// Returns `None` if downcast is failed.
-    pub fn as_float<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Option<FloatNode>
+    /// Returns name of the node.
+    pub fn name<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> &str
     where
-        Ctrl: Device,
         Ctxt: GenApiCtxt,
     {
-        ctxt.enter2(|_, ns, _| self.0.as_ifloat_kind(ns).map(|_| FloatNode(self.0)))
+        let ns = ctxt.node_store();
+        self.0.as_inode_kind(ns).unwrap().name(ns)
     }
 
-    /// Returns `None` if downcast is failed.
-    pub fn as_string<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Option<StringNode>
+    /// Returns display name of the node. This method is mainly for GUI.
+    pub fn display_name<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> &str
     where
-        Ctrl: Device,
         Ctxt: GenApiCtxt,
     {
-        ctxt.enter2(|_, ns, _| self.0.as_istring_kind(ns).map(|_| StringNode(self.0)))
+        let ns = ctxt.node_store();
+        let node_base = self.0.as_inode_kind(ns).unwrap().node_base_precise();
+
+        if let Some(desc) = node_base.display_name() {
+            desc
+        } else {
+            self.name(ctxt)
+        }
     }
 
-    /// Returns `None` if downcast is failed.
-    pub fn as_ienumeration<Ctrl, Ctxt>(
-        self,
-        ctxt: &mut ParamsCtxt<Ctrl, Ctxt>,
-    ) -> Option<EnumerationNode>
-    where
-        Ctrl: Device,
-        Ctxt: GenApiCtxt,
-    {
-        ctxt.enter2(|_, ns, _| {
-            self.0
-                .as_ienumeration_kind(ns)
-                .map(|_| EnumerationNode(self.0))
-        })
-    }
-
-    /// Returns `None` if downcast is failed.
-    pub fn as_command<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Option<CommandNode>
-    where
-        Ctrl: Device,
-        Ctxt: GenApiCtxt,
-    {
-        ctxt.enter2(|_, ns, _| self.0.as_icommand_kind(ns).map(|_| CommandNode(self.0)))
-    }
-
-    /// Returns `None` if downcast is failed.
-    pub fn as_boolean<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Option<BooleanNode>
-    where
-        Ctrl: Device,
-        Ctxt: GenApiCtxt,
-    {
-        ctxt.enter2(|_, ns, _| self.0.as_iboolean_kind(ns).map(|_| BooleanNode(self.0)))
-    }
-
-    /// Returns `None` if downcast is failed.
-    pub fn as_register<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Option<RegisterNode>
-    where
-        Ctrl: Device,
-        Ctxt: GenApiCtxt,
-    {
-        ctxt.enter2(|_, ns, _| self.0.as_iregister_kind(ns).map(|_| RegisterNode(self.0)))
-    }
-
-    /// Returns `None` if downcast is failed.
-    pub fn as_category<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Option<CategoryNode>
-    where
-        Ctrl: Device,
-        Ctxt: GenApiCtxt,
-    {
-        ctxt.enter2(|_, ns, _| self.0.as_icategory_kind(ns).map(|_| CategoryNode(self.0)))
-    }
-
-    /// Returns `None` if downcast is failed.
-    pub fn as_port<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Option<PortNode>
-    where
-        Ctrl: Device,
-        Ctxt: GenApiCtxt,
-    {
-        ctxt.enter2(|_, ns, _| self.0.as_iport_kind(ns).map(|_| PortNode(self.0)))
+    delegate_node_base! {
+        /// Returns name space of the node.
+        pub fn name_space<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> super::NameSpace,
+        /// Returns description of the node if exists. This method is mainly for GUI.
+        pub fn description<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> Option<&str>,
+        /// Returns expose static of the node if exists. This method is mainly for GUI.
+        pub fn expose_static<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> Option<bool>,
+        /// Returns visibility of the node. This method is mainly for GUI.
+        pub fn visibility<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> super::Visibility,
+        /// Returns `true` if the node is marked as deprecated.
+        pub fn is_deprecated<Ctlr, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> bool,
+        /// Returns event id of the node if exists.
+        pub fn event_id<Ctlr, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> Option<u64>,
+        /// Returns tooltip of the node. This method is mainly for GUI.
+        pub fn tooltip<Ctlr, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> Option<&str>,
     }
 }

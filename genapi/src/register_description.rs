@@ -4,7 +4,7 @@ use super::elem_type::StandardNameSpace;
 pub struct RegisterDescription {
     pub(crate) model_name: String,
     pub(crate) vendor_name: String,
-    pub(crate) tool_tip: Option<String>,
+    pub(crate) tooltip: Option<String>,
     pub(crate) standard_name_space: StandardNameSpace,
     pub(crate) schema_major_version: u64,
     pub(crate) schema_minor_version: u64,
@@ -28,8 +28,8 @@ impl RegisterDescription {
     }
 
     #[must_use]
-    pub fn tool_tip(&self) -> Option<&str> {
-        self.tool_tip.as_deref()
+    pub fn tooltip(&self) -> Option<&str> {
+        self.tooltip.as_deref()
     }
 
     #[must_use]

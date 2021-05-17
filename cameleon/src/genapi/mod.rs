@@ -4,13 +4,19 @@ pub mod node_kind;
 use std::sync::{Arc, Mutex};
 
 use auto_impl::auto_impl;
-use cameleon_genapi::{
-    builder::GenApiBuilder, store, CacheStore, NodeStore, RegisterDescription, ValueCtxt,
-    ValueStore,
-};
+use cameleon_genapi::{builder::GenApiBuilder, store};
 
 use super::{ControlError, ControlResult};
 use node_kind::Node;
+
+pub use cameleon_genapi::{
+    elem_type::{AccessMode, NameSpace, Visibility},
+    store::{
+        CacheSink, CacheStore, DefaultCacheStore, DefaultNodeStore, DefaultValueStore, NodeId,
+        NodeStore, ValueStore,
+    },
+    RegisterDescription, ValueCtxt,
+};
 
 /// Manages context of parameters of the device.
 #[derive(Debug, Clone)]
@@ -43,12 +49,25 @@ where
             ctxt.enter(|node_store, value_ctxt| f(ctrl, node_store, value_ctxt))
         })
     }
+}
+
+impl<Ctrl, Ctxt> ParamsCtxt<Ctrl, Ctxt>
+where
+    Ctxt: GenApiCtxt,
+{
+    /// Returns [`NodeStore`] in the context.
+    pub fn node_store(&self) -> &Ctxt::NS {
+        self.ctxt.node_store()
+    }
 
     /// Returns Some(...) if there is a node with the given name in the context.
     pub fn node(&self, name: &str) -> Option<Node> {
-        self.ctxt.with_store(|ns| ns.id_by_name(name).map(Node))
+        let ns = self.ctxt.node_store();
+        ns.id_by_name(name).map(Node)
     }
+}
 
+impl<Ctrl, Ctxt> ParamsCtxt<Ctrl, Ctxt> {
     /// Converts internal types. This method work same as `std::convert::From`, just hack to avoid
     /// `E0119`.
     pub fn convert_from<Ctrl2, Ctxt2>(from: ParamsCtxt<Ctrl2, Ctxt2>) -> Self
@@ -91,10 +110,8 @@ pub trait GenApiCtxt {
     where
         F: FnOnce(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R;
 
-    /// Provides access to the [`NodeStore`] in the context.
-    fn with_store<F, R>(&self, f: F) -> R
-    where
-        F: FnOnce(&Self::NS) -> R;
+    /// Returns [`NodeStore`] in the context.
+    fn node_store(&self) -> &Self::NS;
 
     /// Returns description of the `GenApi` xml.
     fn description(&self) -> &RegisterDescription;
@@ -136,11 +153,8 @@ impl GenApiCtxt for DefaultGenApiCtxt {
         f(&self.node_store, &mut self.value_ctxt)
     }
 
-    fn with_store<F, R>(&self, f: F) -> R
-    where
-        F: FnOnce(&Self::NS) -> R,
-    {
-        f(&self.node_store)
+    fn node_store(&self) -> &Self::NS {
+        &self.node_store
     }
 
     fn description(&self) -> &RegisterDescription {
@@ -185,11 +199,8 @@ impl GenApiCtxt for SharedDefaultGenApiCtxt {
         f(&self.node_store, &mut self.value_ctxt.lock().unwrap())
     }
 
-    fn with_store<F, R>(&self, f: F) -> R
-    where
-        F: FnOnce(&Self::NS) -> R,
-    {
-        f(&self.node_store)
+    fn node_store(&self) -> &Self::NS {
+        &self.node_store
     }
 
     fn description(&self) -> &RegisterDescription {
@@ -238,11 +249,8 @@ impl GenApiCtxt for NoCacheGenApiCtxt {
         f(&self.node_store, &mut self.value_ctxt)
     }
 
-    fn with_store<F, R>(&self, f: F) -> R
-    where
-        F: FnOnce(&Self::NS) -> R,
-    {
-        f(&self.node_store)
+    fn node_store(&self) -> &Self::NS {
+        &self.node_store
     }
 
     fn description(&self) -> &RegisterDescription {
@@ -298,12 +306,10 @@ impl GenApiCtxt for SharedNoCacheGenApiCtxt {
         f(&self.node_store, &mut self.value_ctxt.lock().unwrap())
     }
 
-    fn with_store<F, R>(&self, f: F) -> R
-    where
-        F: FnOnce(&Self::NS) -> R,
-    {
-        f(&self.node_store)
+    fn node_store(&self) -> &Self::NS {
+        &self.node_store
     }
+
     fn description(&self) -> &RegisterDescription {
         &self.reg_desc
     }

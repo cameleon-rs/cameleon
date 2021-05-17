@@ -148,7 +148,7 @@ impl StructEntryNode {
 
 impl NodeElementBase {
     fn merge(&mut self, rhs: Self) {
-        merge_impl!(self, rhs, tool_tip);
+        merge_impl!(self, rhs, tooltip);
         merge_impl!(self, rhs, description);
         merge_impl!(self, rhs, display_name);
         merge_impl!(self, rhs, visibility, default);
@@ -277,7 +277,7 @@ mod tests {
             AccessMode::RO
         );
         assert_eq!(
-            masked_int_reg0.node_base().tool_tip().unwrap(),
+            masked_int_reg0.node_base().tooltip().unwrap(),
             "StructEntry0 ToolTip"
         );
         assert_eq!(
@@ -295,7 +295,7 @@ mod tests {
             AccessMode::RW
         );
         assert_eq!(
-            masked_int_reg1.node_base().tool_tip().unwrap(),
+            masked_int_reg1.node_base().tooltip().unwrap(),
             "Struct Reg ToolTip"
         );
         assert_eq!(
