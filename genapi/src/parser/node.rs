@@ -68,7 +68,7 @@ mod tests {
         assert_eq!(node_base.merge_priority(), MergePriority::High);
         assert_eq!(node_base.expose_static().unwrap(), false);
 
-        assert_eq!(node_base.tool_tip().unwrap(), "tooltip");
+        assert_eq!(node_base.tooltip().unwrap(), "tooltip");
         assert_eq!(node_base.description().unwrap(), "the description");
         assert_eq!(node_base.display_name(), Some("display name"));
         assert_eq!(node_base.visibility(), Visibility::Guru);
@@ -125,7 +125,7 @@ mod tests {
         assert_eq!(node_base.merge_priority(), MergePriority::Mid);
         assert!(node_base.expose_static().is_none());
 
-        assert!(node_base.tool_tip().is_none());
+        assert!(node_base.tooltip().is_none());
         assert_eq!(node_base.display_name(), None);
         assert_eq!(node_base.visibility(), Visibility::Beginner);
         assert!(node_base.docu_url().is_none());

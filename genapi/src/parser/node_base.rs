@@ -56,7 +56,7 @@ impl Parse for NodeElementBase {
         let _extension: Option<String> =
             node.parse_if(EXTENSION, node_builder, value_builder, cache_builder);
 
-        let tool_tip = node.parse_if(TOOL_TIP, node_builder, value_builder, cache_builder);
+        let tooltip = node.parse_if(TOOL_TIP, node_builder, value_builder, cache_builder);
         let description = node.parse_if(DESCRIPTION, node_builder, value_builder, cache_builder);
         let display_name = node.parse_if(DISPLAY_NAME, node_builder, value_builder, cache_builder);
         let visibility = node
@@ -89,7 +89,7 @@ impl Parse for NodeElementBase {
         let p_cast_alias = node.parse_if(P_CAST_ALIAS, node_builder, value_builder, cache_builder);
 
         Self {
-            tool_tip,
+            tooltip,
             description,
             display_name,
             visibility,

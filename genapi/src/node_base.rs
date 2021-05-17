@@ -60,7 +60,7 @@ impl<'a> NodeBase<'a> {
     }
 
     #[must_use]
-    pub fn display_name(&self) -> Option<&str> {
+    pub fn display_name(&self) -> Option<&'a str> {
         self.elem.display_name.as_deref()
     }
 
@@ -90,7 +90,7 @@ impl<'a> NodeBase<'a> {
     }
 
     optional_string_elem_getter! {description}
-    optional_string_elem_getter! {tool_tip}
+    optional_string_elem_getter! {tooltip}
     optional_string_elem_getter! {docu_url}
     optional_node_id_elem_getter! {p_is_implemented}
     optional_node_id_elem_getter! {p_is_available}
@@ -110,7 +110,7 @@ pub(crate) struct NodeAttributeBase {
 
 #[derive(Debug, Clone)]
 pub(crate) struct NodeElementBase {
-    pub(crate) tool_tip: Option<String>,
+    pub(crate) tooltip: Option<String>,
     pub(crate) description: Option<String>,
     pub(crate) display_name: Option<String>,
     pub(crate) visibility: Visibility,

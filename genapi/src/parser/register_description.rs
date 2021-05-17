@@ -28,7 +28,7 @@ impl Parse for RegisterDescription {
 
         let model_name = node.attribute_of(MODEL_NAME).unwrap().into();
         let vendor_name = node.attribute_of(VENDOR_NAME).unwrap().into();
-        let tool_tip = node.attribute_of(TOOL_TIP).map(Into::into);
+        let tooltip = node.attribute_of(TOOL_TIP).map(Into::into);
         let standard_name_space = node.attribute_of(STANDARD_NAME_SPCACE).unwrap().into();
         let schema_major_version =
             convert_to_uint(&node.attribute_of(SCHEMA_MAJOR_VERSION).unwrap());
@@ -45,7 +45,7 @@ impl Parse for RegisterDescription {
         Self {
             model_name,
             vendor_name,
-            tool_tip,
+            tooltip,
             standard_name_space,
             schema_major_version,
             schema_minor_version,
