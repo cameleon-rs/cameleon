@@ -43,7 +43,12 @@ where
             ctxt.enter(|node_store, value_ctxt| f(ctrl, node_store, value_ctxt))
         })
     }
+}
 
+impl<Ctrl, Ctxt> ParamsCtxt<Ctrl, Ctxt>
+where
+    Ctxt: GenApiCtxt,
+{
     /// Returns [`NodeStore`] in the context.
     pub fn node_store(&self) -> &Ctxt::NS {
         self.ctxt.node_store()
@@ -54,7 +59,9 @@ where
         let ns = self.ctxt.node_store();
         ns.id_by_name(name).map(Node)
     }
+}
 
+impl<Ctrl, Ctxt> ParamsCtxt<Ctrl, Ctxt> {
     /// Converts internal types. This method work same as `std::convert::From`, just hack to avoid
     /// `E0119`.
     pub fn convert_from<Ctrl2, Ctxt2>(from: ParamsCtxt<Ctrl2, Ctxt2>) -> Self
