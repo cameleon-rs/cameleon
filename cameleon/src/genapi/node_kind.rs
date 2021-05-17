@@ -80,11 +80,12 @@ macro_rules! delegate {
             $vis:vis fn $method:ident<$Ctrl:ident, $Ctxt:ident>($self:ident, ctxt: &mut ParamsCtxt<Ctrl, Ctxt> $(,$arg:ident: $arg_ty:ty)*) -> $ret_ty:ty,)*) => {
         $(
             $(#[$meta])*
-            $vis fn $method<$Ctrl, $Ctxt>($self, ctxt: &mut ParamsCtxt<$Ctrl, $Ctxt> $(,$arg: $arg_ty)*) -> $ret_ty
+            $vis fn $method<$Ctrl, $Ctxt>($self, ctxt: &ParamsCtxt<$Ctrl, $Ctxt> $(,$arg: $arg_ty)*) -> $ret_ty
             where $Ctrl: Device,
                   $Ctxt: GenApiCtxt
             {
-                ctxt.enter2(|_, ns, _| $self.0.$expect_kind(ns).unwrap().$method($($arg,)* ns))
+                let ns = ctxt.node_store();
+                $self.0.$expect_kind(ns).unwrap().$method($($arg,)* ns)
             }
         )*
     };
