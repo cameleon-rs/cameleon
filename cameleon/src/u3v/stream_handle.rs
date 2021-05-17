@@ -186,6 +186,12 @@ impl Drop for StreamHandle {
     }
 }
 
+impl From<StreamHandle> for Box<dyn PayloadStream> {
+    fn from(strm: StreamHandle) -> Self {
+        Box::new(strm)
+    }
+}
+
 struct StreamingLoop {
     inner: Arc<Mutex<u3v::ReceiveChannel>>,
     params: StreamParams,

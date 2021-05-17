@@ -638,12 +638,12 @@ impl Default for ConnectionConfig {
 
 impl From<SharedControlHandle> for Box<dyn DeviceControl> {
     fn from(ctrl: SharedControlHandle) -> Self {
-        ctrl.into()
+        Box::new(ctrl)
     }
 }
 
 impl From<ControlHandle> for Box<dyn DeviceControl> {
     fn from(ctrl: ControlHandle) -> Self {
-        ctrl.into()
+        Box::new(ctrl)
     }
 }
