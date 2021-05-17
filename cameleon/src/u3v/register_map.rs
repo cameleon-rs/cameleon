@@ -7,7 +7,7 @@
 //!
 //! ```no_run
 //! use cameleon::Camera;
-//! use cameleon::u3v::{self, U3VDeviceControl};
+//! use cameleon::u3v;
 //! use cameleon::genapi;
 //!
 //! // Enumerates cameras connected to the host.
@@ -49,9 +49,7 @@ use cameleon_device::u3v::{
     register_map::{abrm, manifest_entry, sbrm, sirm},
 };
 
-use crate::{genapi::CompressionType, ControlError, ControlResult};
-
-use super::control_handle::U3VDeviceControl;
+use crate::{genapi::CompressionType, ControlError, ControlResult, DeviceControl};
 
 /// Represent Technology Agnostic Boot Register Map (`ABRM`), refer to `GenCP` specification for more
 /// information about `ABRM`.
@@ -64,7 +62,7 @@ use super::control_handle::U3VDeviceControl;
 ///
 /// ```no_run
 /// use cameleon::Camera;
-/// use cameleon::u3v::{self, U3VDeviceControl};
+/// use cameleon::u3v;
 /// use cameleon::genapi;
 ///
 /// // Enumerates cameras connected to the host.
@@ -105,33 +103,27 @@ pub struct Abrm {
 }
 
 impl Abrm {
-    /// Constructs new `Abrm`, consider using [`super::U3VDeviceControl::abrm`] instead.
-    pub fn new(device: &mut impl U3VDeviceControl) -> ControlResult<Self> {
+    /// Constructs new `Abrm`, consider using [`super::ControlHandle::abrm`] instead.
+    pub fn new(device: &mut impl DeviceControl) -> ControlResult<Self> {
         let (capability_addr, capability_len) = abrm::DEVICE_CAPABILITY;
         let device_capability = read_register(device, capability_addr, capability_len)?;
 
         Ok(Self { device_capability })
     }
 
-    /// Returns [`Sbrm`], consider using [`super::U3VDeviceControl::sbrm`] instead.
-    pub fn sbrm(&self, device: &mut impl U3VDeviceControl) -> ControlResult<Sbrm> {
+    /// Returns [`Sbrm`], consider using [`super::ControlHandle::sbrm`] instead.
+    pub fn sbrm(&self, device: &mut impl DeviceControl) -> ControlResult<Sbrm> {
         let sbrm_address = self.sbrm_address(device)?;
         Sbrm::new(device, sbrm_address)
     }
 
-    /// Returns [`ManifestTable`], consider using [`super::U3VDeviceControl::manifest_table`] instead.
-    pub fn manifest_table(
-        &self,
-        device: &mut impl U3VDeviceControl,
-    ) -> ControlResult<ManifestTable> {
+    /// Returns [`ManifestTable`], consider using [`super::ControlHandle::manifest_table`] instead.
+    pub fn manifest_table(&self, device: &mut impl DeviceControl) -> ControlResult<ManifestTable> {
         Ok(ManifestTable::new(self.manifest_table_address(device)?))
     }
 
     /// `GenCP` version of the device.
-    pub fn gencp_version(
-        &self,
-        device: &mut impl U3VDeviceControl,
-    ) -> ControlResult<semver::Version> {
+    pub fn gencp_version(&self, device: &mut impl DeviceControl) -> ControlResult<semver::Version> {
         let gencp_version: u32 = self.read_register(device, abrm::GENCP_VERSION)?;
         let gencp_version_minor = gencp_version & 0xff;
         let gencp_version_major = (gencp_version >> 16) & 0xff;
@@ -143,12 +135,12 @@ impl Abrm {
     }
 
     /// Manufacture name of the device.
-    pub fn manufacturer_name(&self, device: &mut impl U3VDeviceControl) -> ControlResult<String> {
+    pub fn manufacturer_name(&self, device: &mut impl DeviceControl) -> ControlResult<String> {
         self.read_register(device, abrm::MANUFACTURER_NAME)
     }
 
     /// Model name of the device.
-    pub fn model_name(&self, device: &mut impl U3VDeviceControl) -> ControlResult<String> {
+    pub fn model_name(&self, device: &mut impl DeviceControl) -> ControlResult<String> {
         self.read_register(device, abrm::MODEL_NAME)
     }
 
@@ -156,7 +148,7 @@ impl Abrm {
     ///
     /// NOTE: Some device doesn't support this feature.
     /// Please refer to [`DeviceCapability`] to see whether the feature is available on the device.
-    pub fn family_name(&self, device: &mut impl U3VDeviceControl) -> ControlResult<Option<String>> {
+    pub fn family_name(&self, device: &mut impl DeviceControl) -> ControlResult<Option<String>> {
         if self.device_capability.is_family_name_supported() {
             self.read_register(device, abrm::FAMILY_NAME).map(Some)
         } else {
@@ -165,18 +157,18 @@ impl Abrm {
     }
 
     /// Device version, this information represents manufacturer specific information.
-    pub fn device_version(&self, device: &mut impl U3VDeviceControl) -> ControlResult<String> {
+    pub fn device_version(&self, device: &mut impl DeviceControl) -> ControlResult<String> {
         self.read_register(device, abrm::DEVICE_VERSION)
     }
 
     /// Manufacturer info of the device, this information represents manufacturer specific
     /// information.
-    pub fn manufacturer_info(&self, device: &mut impl U3VDeviceControl) -> ControlResult<String> {
+    pub fn manufacturer_info(&self, device: &mut impl DeviceControl) -> ControlResult<String> {
         self.read_register(device, abrm::MANUFACTURER_INFO)
     }
 
     /// Serial number of the device.
-    pub fn serial_number(&self, device: &mut impl U3VDeviceControl) -> ControlResult<String> {
+    pub fn serial_number(&self, device: &mut impl DeviceControl) -> ControlResult<String> {
         self.read_register(device, abrm::SERIAL_NUMBER)
     }
 
@@ -186,7 +178,7 @@ impl Abrm {
     /// Please refer to [`DeviceCapability`] to see whether the feature is available on the device.
     pub fn user_defined_name(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
     ) -> ControlResult<Option<String>> {
         if self.device_capability.is_user_defined_name_supported() {
             self.read_register(device, abrm::USER_DEFINED_NAME)
@@ -206,7 +198,7 @@ impl Abrm {
     /// Please refer to [`DeviceCapability`] to see whether the feature is available on the device.
     pub fn set_user_defined_name(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
         name: &str,
     ) -> ControlResult<()> {
         if !self.device_capability.is_user_defined_name_supported() {
@@ -219,14 +211,14 @@ impl Abrm {
     /// The initial address of manifest table.
     ///
     /// To obtain [`ManifestTable`], it is easier to use [`Self::manifest_table`].
-    pub fn manifest_table_address(&self, device: &mut impl U3VDeviceControl) -> ControlResult<u64> {
+    pub fn manifest_table_address(&self, device: &mut impl DeviceControl) -> ControlResult<u64> {
         self.read_register(device, abrm::MANIFEST_TABLE_ADDRESS)
     }
 
     /// The initial address of `Sbrm`.
     ///
     /// To obtain [`Sbrm`], it is easier to use [`Self::sbrm`].
-    pub fn sbrm_address(&self, device: &mut impl U3VDeviceControl) -> ControlResult<u64> {
+    pub fn sbrm_address(&self, device: &mut impl DeviceControl) -> ControlResult<u64> {
         self.read_register(device, abrm::SBRM_ADDRESS)
     }
 
@@ -234,19 +226,19 @@ impl Abrm {
     ///
     /// Before calling this method, please make sure to call [`Self::set_timestamp_latch_bit`] that
     /// updates timestamp register.
-    pub fn timestamp(&self, device: &mut impl U3VDeviceControl) -> ControlResult<u64> {
+    pub fn timestamp(&self, device: &mut impl DeviceControl) -> ControlResult<u64> {
         self.read_register(device, abrm::TIMESTAMP)
     }
 
     /// Update timestamp register by set 1 to `timestamp_latch`.
-    pub fn set_timestamp_latch_bit(&self, device: &mut impl U3VDeviceControl) -> ControlResult<()> {
+    pub fn set_timestamp_latch_bit(&self, device: &mut impl DeviceControl) -> ControlResult<()> {
         self.write_register(device, abrm::TIMESTAMP_LATCH, 1_u32)
     }
 
     /// Time stamp increment that indicates the ns/tick of the device internal clock.
     ///
     /// For example a value of 1000 indicates the device clock runs at 1MHz.
-    pub fn timestamp_increment(&self, device: &mut impl U3VDeviceControl) -> ControlResult<u64> {
+    pub fn timestamp_increment(&self, device: &mut impl DeviceControl) -> ControlResult<u64> {
         self.read_register(device, abrm::TIMESTAMP_INCREMENT)
     }
 
@@ -256,7 +248,7 @@ impl Abrm {
     /// Please refer to [`DeviceCapability`] to see whether the feature is available on the device.
     pub fn device_software_interface_version(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
     ) -> ControlResult<Option<String>> {
         if self
             .device_capability
@@ -272,7 +264,7 @@ impl Abrm {
     /// Maximum device response time.
     pub fn maximum_device_response_time(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
     ) -> ControlResult<Duration> {
         self.read_register(device, abrm::MAXIMUM_DEVICE_RESPONSE_TIME)
     }
@@ -285,7 +277,7 @@ impl Abrm {
     /// Current configuration of the device.
     pub fn device_configuration(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
     ) -> ControlResult<DeviceConfiguration> {
         self.read_register(device, abrm::DEVICE_CONFIGURATION)
     }
@@ -293,7 +285,7 @@ impl Abrm {
     /// Write configuration to the device.
     pub fn write_device_configuration(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
         config: DeviceConfiguration,
     ) -> ControlResult<()> {
         self.write_register(device, abrm::DEVICE_CONFIGURATION, config)
@@ -301,7 +293,7 @@ impl Abrm {
 
     fn read_register<T>(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
         register: (u64, u16),
     ) -> ControlResult<T>
     where
@@ -312,7 +304,7 @@ impl Abrm {
 
     fn write_register(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
         register: (u64, u16),
         data: impl DumpBytes,
     ) -> ControlResult<()> {
@@ -335,8 +327,8 @@ pub struct Sbrm {
 }
 
 impl Sbrm {
-    /// Constructs new `Sbrm`, consider using [`super::U3VDeviceControl::sbrm`] isntead.
-    pub fn new(device: &mut impl U3VDeviceControl, sbrm_addr: u64) -> ControlResult<Self> {
+    /// Constructs new `Sbrm`, consider using [`super::ControlHandle::sbrm`] isntead.
+    pub fn new(device: &mut impl DeviceControl, sbrm_addr: u64) -> ControlResult<Self> {
         let (capability_offset, capability_len) = sbrm::U3VCP_CAPABILITY_REGISTER;
         let capability_addr = capability_offset + sbrm_addr;
         let capability = read_register(device, capability_addr, capability_len)?;
@@ -348,10 +340,7 @@ impl Sbrm {
     }
 
     /// Version of U3V of the device.
-    pub fn u3v_version(
-        &self,
-        device: &mut impl U3VDeviceControl,
-    ) -> ControlResult<semver::Version> {
+    pub fn u3v_version(&self, device: &mut impl DeviceControl) -> ControlResult<semver::Version> {
         let u3v_version: u32 = self.read_register(device, sbrm::U3V_VERSION)?;
         let u3v_version_minor = u3v_version & 0xff;
         let u3v_version_major = (u3v_version >> 16) & 0xff;
@@ -369,7 +358,7 @@ impl Sbrm {
     /// the device at one time.
     pub fn maximum_command_transfer_length(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
     ) -> ControlResult<u32> {
         self.read_register(device, sbrm::MAXIMUM_COMMAND_TRANSFER_LENGTH)
     }
@@ -380,21 +369,18 @@ impl Sbrm {
     /// the host at one time.
     pub fn maximum_acknowledge_trasfer_length(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
     ) -> ControlResult<u32> {
         self.read_register(device, sbrm::MAXIMUM_ACKNOWLEDGE_TRANSFER_LENGTH)
     }
 
     /// The number of stream channels the device has.
-    pub fn number_of_stream_channel(
-        &self,
-        device: &mut impl U3VDeviceControl,
-    ) -> ControlResult<u32> {
+    pub fn number_of_stream_channel(&self, device: &mut impl DeviceControl) -> ControlResult<u32> {
         self.read_register(device, sbrm::NUMBER_OF_STREAM_CHANNELS)
     }
 
     /// Return [`Sirm`] if it's available.
-    pub fn sirm(&self, device: &mut impl U3VDeviceControl) -> ControlResult<Option<Sirm>> {
+    pub fn sirm(&self, device: &mut impl DeviceControl) -> ControlResult<Option<Sirm>> {
         Ok(self.sirm_address(device)?.map(Sirm::new))
     }
 
@@ -402,7 +388,7 @@ impl Sbrm {
     ///
     /// NOTE: Some device doesn't support this feature.
     /// Please refer to [`U3VCapablitiy`] to see whether the feature is available on the device.
-    pub fn sirm_address(&self, device: &mut impl U3VDeviceControl) -> ControlResult<Option<u64>> {
+    pub fn sirm_address(&self, device: &mut impl DeviceControl) -> ControlResult<Option<u64>> {
         if self.capability.is_sirm_available() {
             self.read_register(device, sbrm::SIRM_ADDRESS).map(Some)
         } else {
@@ -414,7 +400,7 @@ impl Sbrm {
     ///
     /// NOTE: Some device doesn't support this feature.
     /// Please refer to [`U3VCapablitiy`] to see whether the feature is available on the device.
-    pub fn sirm_length(&self, device: &mut impl U3VDeviceControl) -> ControlResult<Option<u32>> {
+    pub fn sirm_length(&self, device: &mut impl DeviceControl) -> ControlResult<Option<u32>> {
         if self.capability.is_sirm_available() {
             self.read_register(device, sbrm::SIRM_LENGTH).map(Some)
         } else {
@@ -427,7 +413,7 @@ impl Sbrm {
     ///
     /// NOTE: Some device doesn't support this feature.
     /// Please refer to [`U3VCapablitiy`] to see whether the feature is available on the device.
-    pub fn eirm_address(&self, device: &mut impl U3VDeviceControl) -> ControlResult<Option<u64>> {
+    pub fn eirm_address(&self, device: &mut impl DeviceControl) -> ControlResult<Option<u64>> {
         if self.capability.is_eirm_available() {
             self.read_register(device, sbrm::EIRM_ADDRESS).map(Some)
         } else {
@@ -439,7 +425,7 @@ impl Sbrm {
     ///
     /// NOTE: Some device doesn't support this feature.
     /// Please refer to [`U3VCapablitiy`] to see whether the feature is available on the device.
-    pub fn eirm_length(&self, device: &mut impl U3VDeviceControl) -> ControlResult<Option<u32>> {
+    pub fn eirm_length(&self, device: &mut impl DeviceControl) -> ControlResult<Option<u32>> {
         if self.capability.is_eirm_available() {
             self.read_register(device, sbrm::EIRM_LENGTH).map(Some)
         } else {
@@ -451,7 +437,7 @@ impl Sbrm {
     ///
     /// NOTE: Some device doesn't support this feature.
     /// Please refer to [`U3VCapablitiy`] to see whether the feature is available on the device.
-    pub fn iidc2_address(&self, device: &mut impl U3VDeviceControl) -> ControlResult<Option<u64>> {
+    pub fn iidc2_address(&self, device: &mut impl DeviceControl) -> ControlResult<Option<u64>> {
         if self.capability.is_iidc2_available() {
             self.read_register(device, sbrm::IIDC2_ADDRESS).map(Some)
         } else {
@@ -460,10 +446,7 @@ impl Sbrm {
     }
 
     /// Current bus speed used to communication.
-    pub fn current_speed(
-        &self,
-        device: &mut impl U3VDeviceControl,
-    ) -> ControlResult<u3v::BusSpeed> {
+    pub fn current_speed(&self, device: &mut impl DeviceControl) -> ControlResult<u3v::BusSpeed> {
         self.read_register(device, sbrm::CURRENT_SPEED)
     }
 
@@ -474,7 +457,7 @@ impl Sbrm {
 
     fn read_register<T>(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
         register: (u64, u16),
     ) -> ControlResult<T>
     where
@@ -497,7 +480,7 @@ pub struct Sirm {
 }
 
 impl Sirm {
-    /// Constructs new `Sirm`, consider using [`super::U3VDeviceControl::sirm`] instead.
+    /// Constructs new `Sirm`, consider using [`super::ControlHandle::sirm`] instead.
     ///
     /// To construct `Sirm`, Use [`Sbrm::sirm`] also can be used.
     #[must_use]
@@ -509,10 +492,7 @@ impl Sirm {
     ///
     /// A host must use this value as a minimum alignment size when modifying SIRM registers
     /// related to payload size.
-    pub fn payload_size_alignment(
-        &self,
-        device: &mut impl U3VDeviceControl,
-    ) -> ControlResult<usize> {
+    pub fn payload_size_alignment(&self, device: &mut impl DeviceControl) -> ControlResult<usize> {
         let si_info: u32 = self.read_register(device, sirm::SI_INFO)?;
         // Upper 8 bits specifies the exp of the alignment.
         Ok(1 << (si_info >> 24))
@@ -521,7 +501,7 @@ impl Sirm {
     /// Enables stream.
     ///
     /// It's forbidden to write to SIRM registers while stream is enabled.
-    pub fn enable_stream(&self, device: &mut impl U3VDeviceControl) -> ControlResult<()> {
+    pub fn enable_stream(&self, device: &mut impl DeviceControl) -> ControlResult<()> {
         let value = 1_u32;
         self.write_register(device, sirm::SI_CONTROL, value)
     }
@@ -529,13 +509,13 @@ impl Sirm {
     /// Disables stream.
     ///
     /// It's forbidden to write to SIRM registers while stream is enabled.
-    pub fn disable_stream(&self, device: &mut impl U3VDeviceControl) -> ControlResult<()> {
+    pub fn disable_stream(&self, device: &mut impl DeviceControl) -> ControlResult<()> {
         let value = 0_u32;
         self.write_register(device, sirm::SI_CONTROL, value)
     }
 
     /// Returns `true` if stream is enabled.
-    pub fn is_stream_enable(&self, device: &mut impl U3VDeviceControl) -> ControlResult<bool> {
+    pub fn is_stream_enable(&self, device: &mut impl DeviceControl) -> ControlResult<bool> {
         let si_ctrl: u32 = self.read_register(device, sirm::SI_CONTROL)?;
         Ok((si_ctrl & 1) == 1)
     }
@@ -545,7 +525,7 @@ impl Sirm {
     /// This value is never changed while stream is enabled.
     /// Once stream is disabled, the value may be changed, so The host must reload the value to
     /// update the buffer size required for payload data.
-    pub fn required_payload_size(&self, device: &mut impl U3VDeviceControl) -> ControlResult<u64> {
+    pub fn required_payload_size(&self, device: &mut impl DeviceControl) -> ControlResult<u64> {
         self.read_register(device, sirm::REQUIRED_PAYLOAD_SIZE)
     }
 
@@ -554,7 +534,7 @@ impl Sirm {
     /// This value is never changed while stream is enabled.
     /// Once stream is disabled, the value may be changed, so The host must reload the value to
     /// update the buffer size required for payload data.
-    pub fn required_leader_size(&self, device: &mut impl U3VDeviceControl) -> ControlResult<u32> {
+    pub fn required_leader_size(&self, device: &mut impl DeviceControl) -> ControlResult<u32> {
         self.read_register(device, sirm::REQUIRED_LEADER_SIZE)
     }
 
@@ -563,12 +543,12 @@ impl Sirm {
     /// This value is never changed while stream is enabled.
     /// Once stream is disabled, the value may be changed, so The host must reload the value to
     /// update the buffer size required for payload data.
-    pub fn required_trailer_size(&self, device: &mut impl U3VDeviceControl) -> ControlResult<u32> {
+    pub fn required_trailer_size(&self, device: &mut impl DeviceControl) -> ControlResult<u32> {
         self.read_register(device, sirm::REQUIRED_TRAILER_SIZE)
     }
 
     /// Maximum leader size in any device configuration.
-    pub fn maximum_leader_size(&self, device: &mut impl U3VDeviceControl) -> ControlResult<u32> {
+    pub fn maximum_leader_size(&self, device: &mut impl DeviceControl) -> ControlResult<u32> {
         self.read_register(device, sirm::MAXIMUM_LEADER_SIZE)
     }
 
@@ -580,14 +560,14 @@ impl Sirm {
     /// start streaming.
     pub fn set_maximum_leader_size(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
         size: u32,
     ) -> ControlResult<()> {
         self.write_register(device, sirm::MAXIMUM_LEADER_SIZE, size)
     }
 
     /// Maximum trailer size in any device configuration.
-    pub fn maximum_trailer_size(&self, device: &mut impl U3VDeviceControl) -> ControlResult<u32> {
+    pub fn maximum_trailer_size(&self, device: &mut impl DeviceControl) -> ControlResult<u32> {
         self.read_register(device, sirm::MAXIMUM_TRAILER_SIZE)
     }
 
@@ -599,35 +579,35 @@ impl Sirm {
     /// start streaming.
     pub fn set_maximum_trailer_size(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
         size: u32,
     ) -> ControlResult<()> {
         self.write_register(device, sirm::MAXIMUM_TRAILER_SIZE, size)
     }
 
     /// Payload transfer size.
-    pub fn payload_transfer_size(&self, device: &mut impl U3VDeviceControl) -> ControlResult<u32> {
+    pub fn payload_transfer_size(&self, device: &mut impl DeviceControl) -> ControlResult<u32> {
         self.read_register(device, sirm::PAYLOAD_TRANSFER_SIZE)
     }
 
     /// Set payload transfer size.
     pub fn set_payload_transfer_size(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
         size: u32,
     ) -> ControlResult<()> {
         self.write_register(device, sirm::PAYLOAD_TRANSFER_SIZE, size)
     }
 
     /// Payload transfer count.
-    pub fn payload_transfer_count(&self, device: &mut impl U3VDeviceControl) -> ControlResult<u32> {
+    pub fn payload_transfer_count(&self, device: &mut impl DeviceControl) -> ControlResult<u32> {
         self.read_register(device, sirm::PAYLOAD_TRANSFER_COUNT)
     }
 
     /// Sets payload transfer count.
     pub fn set_payload_transfer_count(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
         size: u32,
     ) -> ControlResult<()> {
         self.write_register(device, sirm::PAYLOAD_TRANSFER_COUNT, size)
@@ -636,7 +616,7 @@ impl Sirm {
     /// Payload final transfer1 size.
     pub fn payload_final_transfer1_size(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
     ) -> ControlResult<u32> {
         self.read_register(device, sirm::PAYLOAD_FINAL_TRANSFER1_SIZE)
     }
@@ -644,7 +624,7 @@ impl Sirm {
     /// Sets payload final transfer1 size.
     pub fn set_payload_final_transfer1_size(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
         size: u32,
     ) -> ControlResult<()> {
         self.write_register(device, sirm::PAYLOAD_FINAL_TRANSFER1_SIZE, size)
@@ -653,7 +633,7 @@ impl Sirm {
     /// Payload final transfer1 size.
     pub fn payload_final_transfer2_size(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
     ) -> ControlResult<u32> {
         self.read_register(device, sirm::PAYLOAD_FINAL_TRANSFER2_SIZE)
     }
@@ -661,7 +641,7 @@ impl Sirm {
     /// Set payload final transfer1 size.
     pub fn set_payload_final_transfer2_size(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
         size: u32,
     ) -> ControlResult<()> {
         self.write_register(device, sirm::PAYLOAD_FINAL_TRANSFER2_SIZE, size)
@@ -669,7 +649,7 @@ impl Sirm {
 
     fn read_register<T>(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
         register: (u64, u16),
     ) -> ControlResult<T>
     where
@@ -682,7 +662,7 @@ impl Sirm {
 
     fn write_register(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
         register: (u64, u16),
         data: impl DumpBytes,
     ) -> ControlResult<()> {
@@ -701,7 +681,7 @@ pub struct ManifestTable {
 }
 
 impl ManifestTable {
-    /// Constructs new `ManifestEntry`, consider using [`super::U3VDeviceControl::manifest_table`]
+    /// Constructs new `ManifestEntry`, consider using [`super::ControlHandle::manifest_table`]
     /// instead.
     #[must_use]
     pub fn new(manifest_address: u64) -> Self {
@@ -711,7 +691,7 @@ impl ManifestTable {
     /// Returns iterator of [`ManifestEntry`].
     pub fn entries(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
     ) -> ControlResult<impl Iterator<Item = ManifestEntry>> {
         let entry_num: u64 = self.read_register(device, (0, 8))?;
         let first_entry_addr = self.manifest_address + 8;
@@ -723,7 +703,7 @@ impl ManifestTable {
 
     fn read_register<T>(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
         register: (u64, u16),
     ) -> ControlResult<T>
     where
@@ -751,7 +731,7 @@ impl ManifestEntry {
     /// `GenICam` file version.
     pub fn genicam_file_version(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
     ) -> ControlResult<semver::Version> {
         let file_version: u32 = self.read_register(device, manifest_entry::GENICAM_FILE_VERSION)?;
         let subminor = file_version & 0xff;
@@ -766,22 +746,22 @@ impl ManifestEntry {
     }
 
     /// Register address where `GenApi` XML file is located.
-    pub fn file_address(&self, device: &mut impl U3VDeviceControl) -> ControlResult<u64> {
+    pub fn file_address(&self, device: &mut impl DeviceControl) -> ControlResult<u64> {
         self.read_register(device, manifest_entry::REGISTER_ADDRESS)
     }
 
     /// `GenApi` XML file size in bytes.
-    pub fn file_size(&self, device: &mut impl U3VDeviceControl) -> ControlResult<u64> {
+    pub fn file_size(&self, device: &mut impl DeviceControl) -> ControlResult<u64> {
         self.read_register(device, manifest_entry::FILE_SIZE)
     }
 
     /// `GenApi` XML file info.
-    pub fn file_info(&self, device: &mut impl U3VDeviceControl) -> ControlResult<GenICamFileInfo> {
+    pub fn file_info(&self, device: &mut impl DeviceControl) -> ControlResult<GenICamFileInfo> {
         self.read_register(device, manifest_entry::FILE_FORMAT_INFO)
     }
 
     /// SHA1 hash of the file. In case the hash is not available, return None.
-    pub fn sha1_hash(&self, device: &mut impl U3VDeviceControl) -> ControlResult<Option<[u8; 20]>> {
+    pub fn sha1_hash(&self, device: &mut impl DeviceControl) -> ControlResult<Option<[u8; 20]>> {
         // We don't use `self.read_register` here for perf.
         let mut sha1_hash: [u8; 20] = [0; 20];
         let addr = self.entry_addr + manifest_entry::SHA1_HASH.0;
@@ -797,7 +777,7 @@ impl ManifestEntry {
 
     fn read_register<T>(
         &self,
-        device: &mut impl U3VDeviceControl,
+        device: &mut impl DeviceControl,
         register: (u64, u16),
     ) -> ControlResult<T>
     where
@@ -810,7 +790,7 @@ impl ManifestEntry {
 }
 
 /// Reads and parses register value.
-fn read_register<T>(device: &mut impl U3VDeviceControl, addr: u64, len: u16) -> ControlResult<T>
+fn read_register<T>(device: &mut impl DeviceControl, addr: u64, len: u16) -> ControlResult<T>
 where
     T: ParseBytes,
 {

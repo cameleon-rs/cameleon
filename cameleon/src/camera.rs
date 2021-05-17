@@ -108,7 +108,7 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
                           fields(camera = ?self.info()))]
     pub fn start_streaming(&mut self, cap: usize) -> CameleonResult<PayloadReceiver>
     where
-        Ctrl: DeviceControl<StrmParams = Strm::StrmParams>,
+        Ctrl: DeviceControl,
         Strm: PayloadStream,
         Ctxt: GenApiCtxt,
     {
@@ -124,9 +124,9 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
         expect_node!(ctxt, "TLParamsLocked", as_integer).set_value(&mut ctxt, 1)?;
         expect_node!(ctxt, "AcquisitionStart", as_command).execute(&mut ctxt)?;
 
-        let strm_params = self.ctrl.enable_streaming()?;
+        self.ctrl.enable_streaming()?;
         let (sender, receiver) = channel(cap, DEFAULT_BUFFER_CAP);
-        self.strm.run_streaming_loop(sender, strm_params)?;
+        self.strm.run_streaming_loop(sender, &mut self.ctrl)?;
 
         info!("start streaming successfully");
         Ok(receiver)
@@ -247,9 +247,6 @@ pub struct CameraInfo {
 /// This trait provides operations on the device's memory.
 #[auto_impl(&mut, Box)]
 pub trait DeviceControl: cameleon_genapi::Device {
-    /// A parameter type used for streaming.
-    type StrmParams;
-
     /// Opens the handle.
     fn open(&mut self) -> ControlResult<()>;
 
@@ -271,7 +268,7 @@ pub trait DeviceControl: cameleon_genapi::Device {
     fn genapi(&mut self) -> ControlResult<String>;
 
     /// Enables streaming.
-    fn enable_streaming(&mut self) -> ControlResult<Self::StrmParams>;
+    fn enable_streaming(&mut self) -> ControlResult<()>;
 
     /// Disables streaming.
     fn disable_streaming(&mut self) -> ControlResult<()>;
@@ -280,9 +277,6 @@ pub trait DeviceControl: cameleon_genapi::Device {
 /// This trait provides streaming capability.
 #[auto_impl(&mut, Box)]
 pub trait PayloadStream {
-    /// A parameter type used for streaming.
-    type StrmParams;
-
     /// Opens the handle.
     fn open(&mut self) -> StreamResult<()>;
 
@@ -293,7 +287,7 @@ pub trait PayloadStream {
     fn run_streaming_loop(
         &mut self,
         sender: PayloadSender,
-        params: Self::StrmParams,
+        ctrl: &mut impl DeviceControl,
     ) -> StreamResult<()>;
 
     /// Stops streaming.

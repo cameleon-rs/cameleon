@@ -29,21 +29,6 @@ const INITIAL_MAXIMUM_CMD_LENGTH: u32 = 128;
 /// This value is temporarily used until the device's bootstrap register value is read.
 const INITIAL_MAXIMUM_ACK_LENGTH: u32 = 128;
 
-/// A trait represents the handle is for `U3V`.
-pub trait U3VDeviceControl: DeviceControl {
-    /// Return [`Abrm`].
-    fn abrm(&mut self) -> ControlResult<Abrm>;
-
-    /// Return [`Sbrm`].
-    fn sbrm(&mut self) -> ControlResult<Sbrm>;
-
-    /// Return [`Sirm`].
-    fn sirm(&mut self) -> ControlResult<Sirm>;
-
-    /// Return [`ManifestTable`].
-    fn manifest_table(&mut self) -> ControlResult<ManifestTable>;
-}
-
 /// This handle provides low level API to read and write data from the device.  
 /// See [`ControlHandle::abrm`] and [`register_map`](super::register_map) which provide more
 /// convenient way to communicate with `u3v` specific registers.
@@ -144,6 +129,55 @@ impl ControlHandle {
     /// Returns the device info of the handle.
     pub fn device_info(&self) -> &u3v::DeviceInfo {
         &self.info
+    }
+
+    /// Returns [`Abrm`].
+    pub fn abrm(&mut self) -> ControlResult<Abrm> {
+        if let Some(abrm) = self.abrm {
+            return Ok(abrm);
+        }
+        let abrm = Abrm::new(self)?;
+        self.abrm = Some(abrm);
+
+        Ok(abrm)
+    }
+
+    /// Returns [`Sbrm`].
+    pub fn sbrm(&mut self) -> ControlResult<Sbrm> {
+        if let Some(sbrm) = self.sbrm {
+            return Ok(sbrm);
+        }
+        let addr = self.abrm()?.sbrm_address(self)?;
+        let sbrm = Sbrm::new(self, addr)?;
+        self.sbrm = Some(sbrm);
+        Ok(sbrm)
+    }
+
+    /// Returns [`Sirm`].
+    pub fn sirm(&mut self) -> ControlResult<Sirm> {
+        if let Some(sirm) = self.sirm {
+            return Ok(sirm);
+        }
+
+        let addr = self.sbrm()?.sirm_address(self)?.ok_or_else(|| {
+            ControlError::InternalError("the u3v device doesn't have `SIRM ADDRESS`".into())
+        })?;
+        let sirm = Sirm::new(addr);
+        self.sirm = Some(sirm);
+
+        Ok(sirm)
+    }
+
+    /// Returns [`ManifestTable`].
+    pub fn manifest_table(&mut self) -> ControlResult<ManifestTable> {
+        if let Some(manifest_table) = self.manifest_table {
+            return Ok(manifest_table);
+        }
+
+        let addr = self.abrm()?.manifest_table_address(self)?;
+        let manifest_table = ManifestTable::new(addr);
+        self.manifest_table = Some(manifest_table);
+        Ok(manifest_table)
     }
 
     pub(super) fn new(device: &u3v::Device) -> ControlResult<Self> {
@@ -285,30 +319,34 @@ macro_rules! unwrap_or_log {
 }
 
 impl cameleon_genapi::Device for ControlHandle {
-    type Error = ControlError;
-
-    fn read_mem(&mut self, address: i64, data: &mut [u8]) -> ControlResult<()> {
+    fn read_mem(
+        &mut self,
+        address: i64,
+        data: &mut [u8],
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let address: u64 = address.try_into().map_err(|_| {
             ControlError::InvalidData(
                 "invalid address: the given address has negative value".into(),
             )
         })?;
-        self.read(address, data)
+        Ok(self.read(address, data)?)
     }
 
-    fn write_mem(&mut self, address: i64, data: &[u8]) -> ControlResult<()> {
+    fn write_mem(
+        &mut self,
+        address: i64,
+        data: &[u8],
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
         let address: u64 = address.try_into().map_err(|_| {
             ControlError::InvalidData(
                 "invalid address: the given address has negative value".into(),
             )
         })?;
-        self.write(address, data)
+        Ok(self.write(address, data)?)
     }
 }
 
 impl DeviceControl for ControlHandle {
-    type StrmParams = super::stream_handle::StreamParams;
-
     fn open(&mut self) -> ControlResult<()> {
         if self.is_opened() {
             return Ok(());
@@ -433,7 +471,7 @@ impl DeviceControl for ControlHandle {
         }
     }
 
-    fn enable_streaming(&mut self) -> ControlResult<Self::StrmParams> {
+    fn enable_streaming(&mut self) -> ControlResult<()> {
         let sirm = unwrap_or_log!(self.sirm());
 
         let payload_alignment = unwrap_or_log!(sirm.payload_size_alignment(self));
@@ -463,8 +501,6 @@ impl DeviceControl for ControlHandle {
         } else {
             required_trailer_size
         };
-        let timeout =
-            unwrap_or_log!(unwrap_or_log!(self.abrm()).maximum_device_response_time(self));
 
         unwrap_or_log!(sirm.set_payload_transfer_size(self, payload_transfer_size));
         unwrap_or_log!(sirm.set_payload_transfer_count(self, payload_transfer_count));
@@ -474,69 +510,12 @@ impl DeviceControl for ControlHandle {
         unwrap_or_log!(sirm.set_maximum_trailer_size(self, maximum_trailer_size));
         unwrap_or_log!(sirm.enable_stream(self));
 
-        let params = super::stream_handle::StreamParams {
-            leader_size: maximum_leader_size as usize,
-            trailer_size: maximum_trailer_size as usize,
-            payload_size: payload_transfer_size as usize,
-            payload_count: payload_transfer_count as usize,
-            payload_final1_size: payload_final_transfer1_size as usize,
-            payload_final2_size: payload_final_transfer2_size as usize,
-            timeout,
-        };
-
-        Ok(params)
+        Ok(())
     }
 
     fn disable_streaming(&mut self) -> ControlResult<()> {
         let sirm = unwrap_or_log!(self.sirm());
         sirm.disable_stream(self)
-    }
-}
-
-impl U3VDeviceControl for ControlHandle {
-    fn abrm(&mut self) -> ControlResult<Abrm> {
-        if let Some(abrm) = self.abrm {
-            return Ok(abrm);
-        }
-        let abrm = Abrm::new(self)?;
-        self.abrm = Some(abrm);
-
-        Ok(abrm)
-    }
-
-    fn sbrm(&mut self) -> ControlResult<Sbrm> {
-        if let Some(sbrm) = self.sbrm {
-            return Ok(sbrm);
-        }
-        let addr = self.abrm()?.sbrm_address(self)?;
-        let sbrm = Sbrm::new(self, addr)?;
-        self.sbrm = Some(sbrm);
-        Ok(sbrm)
-    }
-
-    fn sirm(&mut self) -> ControlResult<Sirm> {
-        if let Some(sirm) = self.sirm {
-            return Ok(sirm);
-        }
-
-        let addr = self.sbrm()?.sirm_address(self)?.ok_or_else(|| {
-            ControlError::InternalError("the u3v device doesn't have `SIRM ADDRESS`".into())
-        })?;
-        let sirm = Sirm::new(addr);
-        self.sirm = Some(sirm);
-
-        Ok(sirm)
-    }
-
-    fn manifest_table(&mut self) -> ControlResult<ManifestTable> {
-        if let Some(manifest_table) = self.manifest_table {
-            return Ok(manifest_table);
-        }
-
-        let addr = self.abrm()?.manifest_table_address(self)?;
-        let manifest_table = ManifestTable::new(addr);
-        self.manifest_table = Some(manifest_table);
-        Ok(manifest_table)
     }
 }
 
@@ -609,17 +588,13 @@ impl SharedControlHandle {
 }
 
 impl cameleon_genapi::Device for SharedControlHandle {
-    type Error = ControlError;
-
     impl_shared_control_handle!(
-        fn read_mem(&mut self, address: i64, data: &mut [u8]) -> ControlResult<()>,
-        fn write_mem(&mut self, address: i64, data: &[u8]) -> ControlResult<()>
+        fn read_mem(&mut self, address: i64, data: &mut [u8]) -> std::result::Result<(), Box<dyn std::error::Error>>,
+        fn write_mem(&mut self, address: i64, data: &[u8]) -> std::result::Result<(), Box<dyn std::error::Error>>
     );
 }
 
 impl DeviceControl for SharedControlHandle {
-    type StrmParams = super::StreamParams;
-
     impl_shared_control_handle! {
         fn is_opened(&self) -> bool
     }
@@ -630,17 +605,8 @@ impl DeviceControl for SharedControlHandle {
         fn read(&mut self, address: u64, buf: &mut [u8]) -> ControlResult<()>,
         fn write(&mut self, address: u64, data: &[u8]) -> ControlResult<()>,
         fn genapi(&mut self) -> ControlResult<String>,
-        fn enable_streaming(&mut self) -> ControlResult<Self::StrmParams>,
+        fn enable_streaming(&mut self) -> ControlResult<()>,
         fn disable_streaming(&mut self) -> ControlResult<()>
-    }
-}
-
-impl U3VDeviceControl for SharedControlHandle {
-    impl_shared_control_handle! {
-        fn abrm(&mut self) -> ControlResult<Abrm>,
-        fn sbrm(&mut self) -> ControlResult<Sbrm>,
-        fn sirm(&mut self) -> ControlResult<Sirm>,
-        fn manifest_table(&mut self) -> ControlResult<ManifestTable>
     }
 }
 
@@ -667,5 +633,17 @@ impl Default for ConnectionConfig {
             maximum_cmd_length: INITIAL_MAXIMUM_CMD_LENGTH,
             maximum_ack_length: INITIAL_MAXIMUM_ACK_LENGTH,
         }
+    }
+}
+
+impl From<SharedControlHandle> for Box<dyn DeviceControl> {
+    fn from(ctrl: SharedControlHandle) -> Self {
+        ctrl.into()
+    }
+}
+
+impl From<ControlHandle> for Box<dyn DeviceControl> {
+    fn from(ctrl: ControlHandle) -> Self {
+        ctrl.into()
     }
 }

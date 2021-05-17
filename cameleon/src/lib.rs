@@ -74,7 +74,7 @@ pub enum ControlError {
     #[error("buffer is too small to recieve data")]
     BufferTooSmall,
 
-    /// Try to write invalid data to the device, or data sent from the device is semantically invalid.
+    /// Try to write invalid data to the device, or received data from the device is semantically invalid.
     /// e.g. try to write too large data that will overrun register.
     #[error("try to write invalid data to the device: {0}")]
     InvalidData(Box<dyn std::error::Error>),

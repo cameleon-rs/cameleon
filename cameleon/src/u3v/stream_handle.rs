@@ -14,14 +14,16 @@ use tracing::{error, info, warn};
 use crate::{
     camera::PayloadStream,
     payload::{ImageInfo, Payload, PayloadSender, PayloadType},
-    ControlResult, StreamError, StreamResult,
+    ControlError, ControlResult, DeviceControl, StreamError, StreamResult,
 };
 
-use super::control_handle::U3VDeviceControl;
+use super::register_map::Abrm;
 
 /// This type is used to receive stream packets from the device.
 pub struct StreamHandle {
-    inner: Arc<Mutex<u3v::ReceiveChannel>>,
+    /// Inner channel to receive payload data.
+    pub inner: Arc<Mutex<u3v::ReceiveChannel>>,
+    /// Parameters for streaming.
     params: StreamParams,
     cancellation_tx: Option<oneshot::Sender<()>>,
     completion_rx: Option<oneshot::Receiver<()>>,
@@ -104,8 +106,6 @@ impl StreamHandle {
 }
 
 impl PayloadStream for StreamHandle {
-    type StrmParams = StreamParams;
-
     fn open(&mut self) -> StreamResult<()> {
         unwrap_or_poisoned!(self.inner.lock())?.open().map_err(|e| {
             error!(?e);
@@ -128,9 +128,12 @@ impl PayloadStream for StreamHandle {
     fn run_streaming_loop(
         &mut self,
         sender: PayloadSender,
-        params: Self::StrmParams,
+        ctrl: &mut impl DeviceControl,
     ) -> StreamResult<()> {
-        self.params = params;
+        self.params = StreamParams::from_control(ctrl).map_err(|e| {
+            StreamError::Device(format!("failed to setup streaming parameters: {}", e).into())
+        })?;
+
         if self.is_loop_running() {
             return Err(StreamError::InStreaming);
         }
@@ -464,17 +467,22 @@ impl StreamParams {
         }
     }
 
-    /// Build `StreamParams` from [`U3VDeviceControl`].
-    pub fn from_device(device: &mut impl U3VDeviceControl) -> ControlResult<Self> {
-        let sirm = device.sirm()?;
-        let leader_size = sirm.maximum_leader_size(device)? as usize;
-        let trailer_size = sirm.maximum_trailer_size(device)? as usize;
+    /// Build `StreamParams` from [`DeviceControl`].
+    pub fn from_control(ctrl: &mut impl DeviceControl) -> ControlResult<Self> {
+        let abrm = Abrm::new(ctrl)?;
+        let sirm = abrm.sbrm(ctrl)?.sirm(ctrl)?.ok_or_else(|| {
+            let msg = "the U3V device doesn't have `SIRM`";
+            error!(msg);
+            ControlError::InternalError(msg.into())
+        })?;
+        let leader_size = sirm.maximum_leader_size(ctrl)? as usize;
+        let trailer_size = sirm.maximum_trailer_size(ctrl)? as usize;
 
-        let payload_size = sirm.payload_transfer_size(device)? as usize;
-        let payload_count = sirm.payload_transfer_count(device)? as usize;
-        let payload_final1_size = sirm.payload_final_transfer1_size(device)? as usize;
-        let payload_final2_size = sirm.payload_final_transfer2_size(device)? as usize;
-        let timeout = device.abrm()?.maximum_device_response_time(device)?;
+        let payload_size = sirm.payload_transfer_size(ctrl)? as usize;
+        let payload_count = sirm.payload_transfer_count(ctrl)? as usize;
+        let payload_final1_size = sirm.payload_final_transfer1_size(ctrl)? as usize;
+        let payload_final2_size = sirm.payload_final_transfer2_size(ctrl)? as usize;
+        let timeout = abrm.maximum_device_response_time(ctrl)?;
 
         Ok(Self::new(
             leader_size,
