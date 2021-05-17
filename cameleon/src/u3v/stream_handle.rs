@@ -125,7 +125,7 @@ impl PayloadStream for StreamHandle {
             })
     }
 
-    fn run_streaming_loop(
+    fn start_streaming_loop(
         &mut self,
         sender: PayloadSender,
         ctrl: &mut impl DeviceControl,

@@ -4,7 +4,7 @@
 //!
 //! ```no_run
 //! use cameleon::Camera;
-//! use cameleon::u3v::{self, U3VDeviceControl};
+//! use cameleon::u3v;
 //! use cameleon::genapi;
 //!
 //! // Enumerates cameras connected to the host.

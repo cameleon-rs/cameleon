@@ -125,9 +125,9 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
         expect_node!(ctxt, "TLParamsLocked", as_integer).set_value(&mut ctxt, 1)?;
         expect_node!(ctxt, "AcquisitionStart", as_command).execute(&mut ctxt)?;
 
-        // Run streaming loop.
+        // Start streaming loop.
         let (sender, receiver) = channel(cap, DEFAULT_BUFFER_CAP);
-        self.strm.run_streaming_loop(sender, &mut self.ctrl)?;
+        self.strm.start_streaming_loop(sender, &mut self.ctrl)?;
 
         info!("start streaming successfully");
         Ok(receiver)
@@ -291,7 +291,7 @@ pub trait PayloadStream {
     fn close(&mut self) -> StreamResult<()>;
 
     /// Starts streaming.
-    fn run_streaming_loop(
+    fn start_streaming_loop(
         &mut self,
         sender: PayloadSender,
         ctrl: &mut impl DeviceControl,
