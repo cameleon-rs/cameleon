@@ -1,13 +1,8 @@
-use cameleon::{
-    genapi::DefaultGenApiCtxt,
-    u3v::{enumerate_cameras, ControlHandle, StreamHandle},
-    Camera,
-};
+use cameleon::u3v::enumerate_cameras;
 
 fn main() {
     // Enumerates cameras connected to the host.
-    let mut cameras: Vec<Camera<ControlHandle, StreamHandle, DefaultGenApiCtxt>> =
-        enumerate_cameras().unwrap();
+    let mut cameras = enumerate_cameras().unwrap();
 
     if cameras.is_empty() {
         println!("no camera found!");

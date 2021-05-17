@@ -8,8 +8,7 @@
 //! use cameleon::genapi;
 //!
 //! // Enumerates cameras connected to the host.
-//! let mut cameras: Vec<Camera<u3v::ControlHandle, u3v::StreamHandle, genapi::DefaultGenApiCtxt>> =
-//!     u3v::enumerate_cameras().unwrap();
+//! let mut cameras = u3v::enumerate_cameras().unwrap();
 //!
 //! // If no camera is found, return.
 //! if cameras.is_empty() {
@@ -66,22 +65,12 @@ use super::{genapi::DefaultGenApiCtxt, CameleonResult, Camera, CameraInfo, Contr
 /// use cameleon::genapi;
 ///
 /// // Enumerate cameras connected to the host.
-/// let mut cameras: Vec<Camera<u3v::ControlHandle, u3v::StreamHandle, genapi::DefaultGenApiCtxt>> =
-///     u3v::enumerate_cameras().unwrap();
-
-/// // Use `SharedControlHandle` and `DefaultGenApiCtxt` if you need to share the control handle and `GenApi` context across threads.
-/// let mut cameras: Vec<Camera<u3v::SharedControlHandle, u3v::StreamHandle, genapi::SharedDefaultGenApiCtxt>> =
-///     u3v::enumerate_cameras().unwrap();
+/// let mut cameras = u3v::enumerate_cameras().unwrap();
 /// ```
-pub fn enumerate_cameras<Ctrl, Strm, Ctxt>() -> CameleonResult<Vec<Camera<Ctrl, Strm, Ctxt>>>
-where
-    Ctrl: From<ControlHandle>,
-    Strm: From<StreamHandle>,
-    Ctxt: From<DefaultGenApiCtxt>,
-{
+pub fn enumerate_cameras() -> CameleonResult<Vec<Camera<ControlHandle, StreamHandle>>> {
     let devices = u3v::enumerate_devices().map_err(ControlError::from)?;
 
-    let mut cameras: Vec<Camera<Ctrl, Strm, Ctxt>> = Vec::with_capacity(devices.len());
+    let mut cameras: Vec<Camera<ControlHandle, StreamHandle>> = Vec::with_capacity(devices.len());
 
     for dev in devices {
         let ctrl = ControlHandle::new(&dev)?;
@@ -101,7 +90,7 @@ where
 
         let camera: Camera<ControlHandle, StreamHandle, DefaultGenApiCtxt> =
             Camera::new(ctrl, strm, ctxt, camera_info);
-        cameras.push(camera.convert_into())
+        cameras.push(camera)
     }
 
     Ok(cameras)

@@ -56,8 +56,7 @@ pub trait U3VDeviceControl: DeviceControl {
 /// use cameleon::genapi;
 ///
 /// // Enumerates cameras connected to the host.
-/// let mut cameras: Vec<Camera<u3v::ControlHandle, u3v::StreamHandle, genapi::DefaultGenApiCtxt>> =
-///     u3v::enumerate_cameras().unwrap();
+/// let mut cameras = u3v::enumerate_cameras().unwrap();
 ///
 /// // If no camera is found, return.
 /// if cameras.is_empty() {
