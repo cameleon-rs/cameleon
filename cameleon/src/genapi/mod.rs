@@ -113,9 +113,6 @@ pub trait GenApiCtxt {
     /// Returns [`NodeStore`] in the context.
     fn node_store(&self) -> &Self::NS;
 
-    /// Returns description of the `GenApi` xml.
-    fn description(&self) -> &RegisterDescription;
-
     /// Clear all cache of the context.
     fn clear_cache(&mut self) {
         self.enter(|_, value_ctxt| value_ctxt.clear_cache())
@@ -136,9 +133,12 @@ pub trait FromXml {
 /// If you need no cache context, use [`NoCacheGenApiCtxt`].
 #[derive(Debug)]
 pub struct DefaultGenApiCtxt {
-    node_store: store::DefaultNodeStore,
-    value_ctxt: ValueCtxt<store::DefaultValueStore, store::DefaultCacheStore>,
-    reg_desc: RegisterDescription,
+    /// Node store.
+    pub node_store: store::DefaultNodeStore,
+    /// Value context.
+    pub value_ctxt: ValueCtxt<store::DefaultValueStore, store::DefaultCacheStore>,
+    /// Register description.
+    pub reg_desc: RegisterDescription,
 }
 
 impl GenApiCtxt for DefaultGenApiCtxt {
@@ -155,10 +155,6 @@ impl GenApiCtxt for DefaultGenApiCtxt {
 
     fn node_store(&self) -> &Self::NS {
         &self.node_store
-    }
-
-    fn description(&self) -> &RegisterDescription {
-        &self.reg_desc
     }
 }
 
@@ -182,9 +178,12 @@ impl FromXml for DefaultGenApiCtxt {
 /// A sharable version of [`DefaultGenApiCtxt`].
 #[derive(Clone, Debug)]
 pub struct SharedDefaultGenApiCtxt {
-    node_store: Arc<store::DefaultNodeStore>,
-    value_ctxt: Arc<Mutex<ValueCtxt<store::DefaultValueStore, store::DefaultCacheStore>>>,
-    reg_desc: Arc<RegisterDescription>,
+    /// Node store.
+    pub node_store: Arc<store::DefaultNodeStore>,
+    /// Value context.
+    pub value_ctxt: Arc<Mutex<ValueCtxt<store::DefaultValueStore, store::DefaultCacheStore>>>,
+    /// Register description.
+    pub reg_desc: Arc<RegisterDescription>,
 }
 
 impl GenApiCtxt for SharedDefaultGenApiCtxt {
@@ -201,10 +200,6 @@ impl GenApiCtxt for SharedDefaultGenApiCtxt {
 
     fn node_store(&self) -> &Self::NS {
         &self.node_store
-    }
-
-    fn description(&self) -> &RegisterDescription {
-        &self.reg_desc
     }
 }
 
@@ -232,9 +227,12 @@ impl From<DefaultGenApiCtxt> for SharedDefaultGenApiCtxt {
 /// This context doesn't cache any value of `GenApi` nodes.
 #[derive(Debug)]
 pub struct NoCacheGenApiCtxt {
-    node_store: store::DefaultNodeStore,
-    value_ctxt: ValueCtxt<store::DefaultValueStore, store::CacheSink>,
-    reg_desc: RegisterDescription,
+    /// Node store.
+    pub node_store: store::DefaultNodeStore,
+    /// Value context.
+    pub value_ctxt: ValueCtxt<store::DefaultValueStore, store::CacheSink>,
+    /// Register description.
+    pub reg_desc: RegisterDescription,
 }
 
 impl GenApiCtxt for NoCacheGenApiCtxt {
@@ -251,10 +249,6 @@ impl GenApiCtxt for NoCacheGenApiCtxt {
 
     fn node_store(&self) -> &Self::NS {
         &self.node_store
-    }
-
-    fn description(&self) -> &RegisterDescription {
-        &self.reg_desc
     }
 }
 
@@ -289,9 +283,12 @@ impl From<DefaultGenApiCtxt> for NoCacheGenApiCtxt {
 /// A sharable version of [`NoCacheGenApiCtxt`].
 #[derive(Clone, Debug)]
 pub struct SharedNoCacheGenApiCtxt {
-    node_store: Arc<store::DefaultNodeStore>,
-    value_ctxt: Arc<Mutex<ValueCtxt<store::DefaultValueStore, store::CacheSink>>>,
-    reg_desc: Arc<RegisterDescription>,
+    /// Node store.
+    pub node_store: Arc<store::DefaultNodeStore>,
+    /// Value context.
+    pub value_ctxt: Arc<Mutex<ValueCtxt<store::DefaultValueStore, store::CacheSink>>>,
+    /// Register description.
+    pub reg_desc: Arc<RegisterDescription>,
 }
 
 impl GenApiCtxt for SharedNoCacheGenApiCtxt {
@@ -308,10 +305,6 @@ impl GenApiCtxt for SharedNoCacheGenApiCtxt {
 
     fn node_store(&self) -> &Self::NS {
         &self.node_store
-    }
-
-    fn description(&self) -> &RegisterDescription {
-        &self.reg_desc
     }
 }
 
