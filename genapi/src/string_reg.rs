@@ -1,7 +1,7 @@
 use crate::GenApiError;
 
 use super::{
-    interface::{IRegister, IString},
+    interface::{INode, IRegister, IString},
     node_base::{NodeAttributeBase, NodeBase},
     register_base::RegisterBase,
     store::{CacheStore, NodeStore, ValueStore},
@@ -16,14 +16,19 @@ pub struct StringRegNode {
 
 impl StringRegNode {
     #[must_use]
-    pub fn node_base(&self) -> NodeBase {
+    pub fn register_base(&self) -> &RegisterBase {
+        &self.register_base
+    }
+}
+
+impl INode for StringRegNode {
+    fn node_base(&self) -> NodeBase {
         let elem_base = &self.register_base.elem_base;
         NodeBase::new(&self.attr_base, elem_base)
     }
 
-    #[must_use]
-    pub fn register_base(&self) -> &RegisterBase {
-        &self.register_base
+    fn streamable(&self) -> bool {
+        self.register_base().streamable()
     }
 }
 
@@ -40,7 +45,11 @@ impl IString for StringRegNode {
         let nid = self.node_base().id();
         let reg = self.register_base();
         reg.with_cache_or_read(nid, device, store, cx, |data| {
-            Ok(String::from_utf8_lossy(data).to_string())
+            let str_end = data
+                .iter()
+                .position(|b| *b == 0)
+                .unwrap_or_else(|| data.len());
+            Ok(String::from_utf8_lossy(&data[..str_end]).to_string())
         })
     }
 
@@ -49,28 +58,30 @@ impl IString for StringRegNode {
                           fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn set_value<T: ValueStore, U: CacheStore>(
         &self,
-        value: &str,
+        value: String,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
+        let max_length = self.max_length(device, store, cx)? as usize;
         if !value.is_ascii() {
             return Err(GenApiError::invalid_data(
-                "the data to write must be an ascii string".into(),
+                "the data must be an ascii string".into(),
             ));
         }
-        if value.len() > self.max_length(device, store, cx)? as usize {
+        if value.len() > max_length {
             return Err(GenApiError::invalid_data(
-                "the data to write exceeds the maximum length allowed by the node.".into(),
+                "the data length exceeds the maximum length allowed by the node.".into(),
             ));
         }
+
         let nid = self.node_base().id();
         cx.invalidate_cache_by(nid);
+
         let reg = self.register_base();
-        let mut buf = vec![0_u8; self.length(device, store, cx)? as usize];
-        let bytes = value.as_bytes();
-        buf[0..bytes.len()].copy_from_slice(bytes);
-        reg.write_and_cache(nid, &buf, device, store, cx)
+        let mut bytes = value.into_bytes();
+        bytes.resize(max_length, 0);
+        reg.write_and_cache(nid, &bytes, device, store, cx)
     }
 
     #[tracing::instrument(skip(self, device, store, cx),
@@ -85,26 +96,28 @@ impl IString for StringRegNode {
         self.length(device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_readable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.register_base()
-            .elem_base
-            .is_readable(device, store, cx)
+        self.register_base().is_readable(device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_writable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.register_base()
-            .elem_base
-            .is_writable(device, store, cx)
+        self.register_base().is_writable(device, store, cx)
     }
 }
 

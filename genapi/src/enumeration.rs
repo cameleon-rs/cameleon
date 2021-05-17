@@ -1,6 +1,6 @@
 use super::{
     elem_type::ImmOrPNode,
-    interface::{IEnumeration, ISelector},
+    interface::{IEnumeration, INode, ISelector},
     ivalue::IValue,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, IntegerId, NodeId, NodeStore, ValueStore},
@@ -20,16 +20,6 @@ pub struct EnumerationNode {
 }
 
 impl EnumerationNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn streamable(&self) -> bool {
-        self.streamable
-    }
-
     #[must_use]
     pub fn entries_elem(&self) -> &[EnumEntryNode] {
         &self.entries
@@ -51,6 +41,16 @@ impl EnumerationNode {
     }
 }
 
+impl INode for EnumerationNode {
+    fn node_base(&self) -> NodeBase {
+        NodeBase::new(&self.attr_base, &self.elem_base)
+    }
+
+    fn streamable(&self) -> bool {
+        self.streamable
+    }
+}
+
 impl IEnumeration for EnumerationNode {
     #[tracing::instrument(skip(self, device, store, cx),
                           level = "trace",
@@ -61,8 +61,6 @@ impl IEnumeration for EnumerationNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<&EnumEntryNode> {
-        self.elem_base.verify_is_readable(device, store, cx)?;
-
         let value = self.value.value(device, store, cx)?;
         self.entries(store)
             .iter()
@@ -102,7 +100,7 @@ impl IEnumeration for EnumerationNode {
             .find(|ent| ent.node_base().id() == ent_id)
             .ok_or_else(|| {
                 GenApiError::invalid_data(
-                    format! {"no `EenumEntryNode`: {} not found in {}",
+                    format! {"no `EenumEntryNode`: `{}` not found in `{}`",
                     name,
                     store.name_by_id(self.node_base().id()).unwrap()}
                     .into(),
@@ -120,32 +118,45 @@ impl IEnumeration for EnumerationNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.elem_base.verify_is_writable(device, store, cx)?;
         if !self.entries(store).iter().any(|ent| ent.value() == value) {
             return Err(GenApiError::invalid_data(
-                format!("not found entry with the value {}", value).into(),
+                format!("not found entry with the value `{}`", value).into(),
             ));
         };
         cx.invalidate_cache_by(self.node_base().id());
         self.value.set_value(value, device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_readable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.elem_base.is_readable(device, store, cx)
+        Ok(self.elem_base.is_readable(device, store, cx)?
+            && self.value.is_readable(device, store, cx)?)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_writable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.elem_base.is_writable(device, store, cx)
+        Ok(self.elem_base.is_writable(device, store, cx)?
+            && self.value.is_writable(device, store, cx)?)
+    }
+}
+
+impl ISelector for EnumerationNode {
+    fn selecting_nodes(&self, _: &impl NodeStore) -> GenApiResult<&[NodeId]> {
+        Ok(self.p_selected())
     }
 }
 
@@ -189,11 +200,5 @@ impl EnumEntryNode {
     #[must_use]
     pub fn is_self_clearing(&self) -> bool {
         self.is_self_clearing
-    }
-}
-
-impl ISelector for EnumerationNode {
-    fn selecting_nodes(&self, _: &impl NodeStore) -> GenApiResult<&[NodeId]> {
-        Ok(self.p_selected())
     }
 }

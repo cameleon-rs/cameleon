@@ -69,8 +69,8 @@ use tracing::error;
 
 pub mod prelude {
     pub use super::interface::{
-        IBoolean, ICategory, ICommand, IEnumeration, IFloat, IInteger, IPort, IRegister, ISelector,
-        IString,
+        IBoolean, ICategory, ICommand, IEnumeration, IFloat, IInteger, INode, IPort, IRegister,
+        ISelector, IString,
     };
 }
 
@@ -88,9 +88,9 @@ pub enum GenApiError {
     #[error("device I/O error: {0}")]
     Device(Box<dyn std::error::Error>),
 
-    /// Read/Write access to the `GenApi` node is denied.
-    #[error("access is denied: {0}")]
-    AccessDenied(Cow<'static, str>),
+    /// The node is not writable.
+    #[error("attempt to write a value to non writable node")]
+    NotWritable,
 
     /// Invalid node.
     #[error("invalid node: {0}")]
@@ -118,8 +118,8 @@ impl GenApiError {
         err
     }
 
-    fn access_denied(inner: Cow<'static, str>) -> Self {
-        let err = GenApiError::AccessDenied(inner);
+    fn not_writable() -> Self {
+        let err = GenApiError::NotWritable;
         error!("{}", err);
         err
     }

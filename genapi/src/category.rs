@@ -1,5 +1,5 @@
 use super::{
-    interface::ICategory,
+    interface::{ICategory, INode},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{NodeId, NodeStore},
 };
@@ -14,13 +14,18 @@ pub struct CategoryNode {
 
 impl CategoryNode {
     #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
+    pub fn p_features(&self) -> &[NodeId] {
+        &self.p_features
+    }
+}
+
+impl INode for CategoryNode {
+    fn node_base(&self) -> NodeBase {
         NodeBase::new(&self.attr_base, &self.elem_base)
     }
 
-    #[must_use]
-    pub fn p_features(&self) -> &[NodeId] {
-        &self.p_features
+    fn streamable(&self) -> bool {
+        false
     }
 }
 

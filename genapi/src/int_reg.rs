@@ -1,6 +1,6 @@
 use super::{
     elem_type::{Endianness, IntegerRepresentation, Sign},
-    interface::{IInteger, IRegister, ISelector, IncrementMode},
+    interface::{IInteger, INode, IRegister, ISelector, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase},
     register_base::RegisterBase,
     store::{CacheStore, NodeId, NodeStore, ValueStore},
@@ -20,12 +20,6 @@ pub struct IntRegNode {
 }
 
 impl IntRegNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase {
-        let elem_base = &self.register_base.elem_base;
-        NodeBase::new(&self.attr_base, elem_base)
-    }
-
     #[must_use]
     pub fn register_base(&self) -> &RegisterBase {
         &self.register_base
@@ -54,6 +48,17 @@ impl IntRegNode {
     #[must_use]
     pub fn p_selected(&self) -> &[NodeId] {
         &self.p_selected
+    }
+}
+
+impl INode for IntRegNode {
+    fn node_base(&self) -> NodeBase {
+        let elem_base = &self.register_base.elem_base;
+        NodeBase::new(&self.attr_base, elem_base)
+    }
+
+    fn streamable(&self) -> bool {
+        self.register_base().streamable()
     }
 }
 
@@ -151,9 +156,7 @@ impl IInteger for IntRegNode {
         store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::access_denied(
-            "can't set value to register's min elem".into(),
-        ))
+        Err(GenApiError::not_writable())
     }
 
     #[tracing::instrument(skip(self, store),
@@ -166,9 +169,7 @@ impl IInteger for IntRegNode {
         store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::access_denied(
-            "can't set value to register's max elem".into(),
-        ))
+        Err(GenApiError::not_writable())
     }
 
     fn is_readable<T: ValueStore, U: CacheStore>(
@@ -177,9 +178,7 @@ impl IInteger for IntRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.register_base()
-            .elem_base
-            .is_readable(device, store, cx)
+        self.register_base().is_readable(device, store, cx)
     }
 
     fn is_writable<T: ValueStore, U: CacheStore>(
@@ -188,9 +187,7 @@ impl IInteger for IntRegNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.register_base()
-            .elem_base
-            .is_writable(device, store, cx)
+        self.register_base().is_writable(device, store, cx)
     }
 }
 

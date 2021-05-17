@@ -1,6 +1,6 @@
 use super::{
     elem_type::{DisplayNotation, Endianness, FloatRepresentation},
-    interface::{IFloat, IRegister, IncrementMode},
+    interface::{IFloat, INode, IRegister, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase},
     store::{CacheStore, NodeStore, ValueStore},
     utils, Device, GenApiError, GenApiResult, RegisterBase, ValueCtxt,
@@ -19,12 +19,6 @@ pub struct FloatRegNode {
 }
 
 impl FloatRegNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase {
-        let elem_base = &self.register_base.elem_base;
-        NodeBase::new(&self.attr_base, elem_base)
-    }
-
     #[must_use]
     pub fn register_base(&self) -> &RegisterBase {
         &self.register_base
@@ -53,6 +47,17 @@ impl FloatRegNode {
     #[must_use]
     pub fn display_precision_elem(&self) -> i64 {
         self.display_precision
+    }
+}
+
+impl INode for FloatRegNode {
+    fn node_base(&self) -> NodeBase {
+        let elem_base = &self.register_base.elem_base;
+        NodeBase::new(&self.attr_base, elem_base)
+    }
+
+    fn streamable(&self) -> bool {
+        self.register_base().streamable()
     }
 }
 
@@ -152,9 +157,7 @@ impl IFloat for FloatRegNode {
         store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::access_denied(
-            "can't set value to register's min elem".into(),
-        ))
+        Err(GenApiError::not_writable())
     }
 
     #[tracing::instrument(skip(self, store),
@@ -167,31 +170,31 @@ impl IFloat for FloatRegNode {
         store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::access_denied(
-            "can't set value to register's max elem".into(),
-        ))
+        Err(GenApiError::not_writable())
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_readable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.register_base()
-            .elem_base
-            .is_readable(device, store, cx)
+        self.register_base().is_readable(device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_writable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.register_base()
-            .elem_base
-            .is_writable(device, store, cx)
+        self.register_base().is_writable(device, store, cx)
     }
 }
 

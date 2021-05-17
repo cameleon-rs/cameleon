@@ -31,7 +31,10 @@ impl Parse for Node {
 
 #[cfg(test)]
 mod tests {
-    use crate::elem_type::{AccessMode, MergePriority, NameSpace, Visibility};
+    use crate::{
+        elem_type::{AccessMode, MergePriority, NameSpace, Visibility},
+        interface::INode,
+    };
 
     use super::{super::utils::tests::parse_default, *};
 

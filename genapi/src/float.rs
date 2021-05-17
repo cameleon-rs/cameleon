@@ -1,10 +1,10 @@
 use super::{
     elem_type::{DisplayNotation, FloatRepresentation, ImmOrPNode, ValueKind},
-    interface::{IFloat, IncrementMode},
+    interface::{IFloat, INode, IncrementMode},
     ivalue::IValue,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, FloatId, NodeStore, ValueStore},
-    utils, Device, GenApiResult, ValueCtxt,
+    Device, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -24,16 +24,6 @@ pub struct FloatNode {
 }
 
 impl FloatNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn streamable(&self) -> bool {
-        self.streamable
-    }
-
     #[must_use]
     pub fn value_kind(&self) -> &ValueKind<FloatId> {
         &self.value_kind
@@ -75,6 +65,16 @@ impl FloatNode {
     }
 }
 
+impl INode for FloatNode {
+    fn node_base(&self) -> NodeBase {
+        NodeBase::new(&self.attr_base, &self.elem_base)
+    }
+
+    fn streamable(&self) -> bool {
+        self.streamable
+    }
+}
+
 impl IFloat for FloatNode {
     #[tracing::instrument(skip(self, device, store, cx),
                           level = "trace",
@@ -85,8 +85,7 @@ impl IFloat for FloatNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
-        self.elem_base.verify_is_readable(device, store, cx)?;
-        self.value_kind().value(device, store, cx)
+        self.value_kind.value(device, store, cx)
     }
 
     #[tracing::instrument(skip(self, device, store, cx),
@@ -99,14 +98,8 @@ impl IFloat for FloatNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.elem_base.verify_is_writable(device, store, cx)?;
         cx.invalidate_cache_by(self.node_base().id());
-
-        let min = self.min(device, store, cx)?;
-        let max = self.max(device, store, cx)?;
-        utils::verify_value_in_range(&value, &min, &max)?;
-
-        self.value_kind().set_value(value, device, store, cx)
+        self.value_kind.set_value(value, device, store, cx)
     }
 
     #[tracing::instrument(skip(self, device, store, cx),
@@ -191,21 +184,29 @@ impl IFloat for FloatNode {
         self.max.set_value(value, device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_readable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.elem_base.is_readable(device, store, cx)
+        Ok(self.elem_base.is_readable(device, store, cx)?
+            && self.value_kind.is_readable(device, store, cx)?)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_writable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.elem_base.is_writable(device, store, cx)
+        Ok(self.elem_base.is_writable(device, store, cx)?
+            && self.value_kind.is_writable(device, store, cx)?)
     }
 }

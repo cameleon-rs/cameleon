@@ -92,7 +92,6 @@ impl RegisterBase {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        // TODO: Check access in fix for #51. memo: we need to check `AccessMode`.
         if buf.len() != length as usize {
             return Err(GenApiError::invalid_buffer(
                 "given buffer length doesn't same as the register length".into(),
@@ -116,7 +115,6 @@ impl RegisterBase {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        // TODO: Check access in fix for #51. memo: we need to check `AccessMode`.
         let length = self.length(device, store, cx)?;
 
         if buf.len() != length as usize {
@@ -156,5 +154,25 @@ impl RegisterBase {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
         self.length_elem().value(device, store, cx)
+    }
+
+    pub(super) fn is_readable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        Ok(self.elem_base.is_readable(device, store, cx)?
+            && !matches!(self.access_mode(), AccessMode::WO))
+    }
+
+    pub(super) fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        Ok(self.elem_base.is_writable(device, store, cx)?
+            && !matches!(self.access_mode(), AccessMode::RO))
     }
 }

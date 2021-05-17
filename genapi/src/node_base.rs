@@ -2,7 +2,7 @@ use super::{
     elem_type::{AccessMode, MergePriority, NameSpace, Visibility},
     store::{CacheStore, NodeId, NodeStore, ValueStore},
     utils::bool_from_id,
-    Device, GenApiError, GenApiResult, ValueCtxt,
+    Device, GenApiResult, ValueCtxt,
 };
 
 pub struct NodeBase<'a> {
@@ -149,36 +149,6 @@ impl NodeElementBase {
             && self.is_available(device, store, cx)?
             && !self.is_locked(device, store, cx)?
             && matches!(self.imposed_access_mode, AccessMode::WO | AccessMode::RW))
-    }
-
-    pub(super) fn verify_is_readable<T: ValueStore, U: CacheStore>(
-        &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<()> {
-        if self.is_readable(device, store, cx)? {
-            Ok(())
-        } else {
-            Err(GenApiError::access_denied(
-                "the node is not readable".into(),
-            ))
-        }
-    }
-
-    pub(super) fn verify_is_writable<T: ValueStore, U: CacheStore>(
-        &self,
-        device: &mut impl Device,
-        store: &impl NodeStore,
-        cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<()> {
-        if self.is_writable(device, store, cx)? {
-            Ok(())
-        } else {
-            Err(GenApiError::access_denied(
-                "the node is not writable".into(),
-            ))
-        }
     }
 
     fn is_locked<T: ValueStore, U: CacheStore>(

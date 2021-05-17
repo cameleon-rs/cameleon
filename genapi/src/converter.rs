@@ -1,7 +1,7 @@
 use super::{
     elem_type::{DisplayNotation, FloatRepresentation, NamedValue, Slope},
     formula::{Expr, Formula},
-    interface::{IBoolean, IFloat, IInteger, IncrementMode},
+    interface::{IFloat, INode, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, NodeId, NodeStore, ValueStore},
     utils, Device, GenApiError, GenApiResult, ValueCtxt,
@@ -28,16 +28,6 @@ pub struct ConverterNode {
 }
 
 impl ConverterNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn streamable(&self) -> bool {
-        self.streamable
-    }
-
     #[must_use]
     pub fn p_variables(&self) -> &[NamedValue<NodeId>] {
         &self.p_variables
@@ -99,6 +89,16 @@ impl ConverterNode {
     }
 }
 
+impl INode for ConverterNode {
+    fn node_base(&self) -> NodeBase {
+        NodeBase::new(&self.attr_base, &self.elem_base)
+    }
+
+    fn streamable(&self) -> bool {
+        self.streamable
+    }
+}
+
 impl IFloat for ConverterNode {
     #[tracing::instrument(skip(self, device, store, cx),
                           level = "trace",
@@ -109,8 +109,6 @@ impl IFloat for ConverterNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
-        self.elem_base.verify_is_readable(device, store, cx)?;
-
         let mut collector =
             utils::FormulaEnvCollector::new(&self.p_variables, &self.constants, &self.expressions);
         collector.insert("TO", self.p_value(), device, store, cx)?;
@@ -130,7 +128,6 @@ impl IFloat for ConverterNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.elem_base.verify_is_writable(device, store, cx)?;
         cx.invalidate_cache_by(self.node_base().id());
 
         let mut collector =
@@ -139,20 +136,7 @@ impl IFloat for ConverterNode {
         let var_env = collector.collect(device, store, cx)?;
 
         let eval_result = self.formula_to.eval(&var_env)?;
-        let nid = self.p_value();
-        if let Some(node) = nid.as_iinteger_kind(store) {
-            node.set_value(eval_result.as_integer(), device, store, cx)?;
-        } else if let Some(node) = nid.as_ifloat_kind(store) {
-            node.set_value(eval_result.as_float(), device, store, cx)?;
-        } else if let Some(node) = nid.as_iboolean_kind(store) {
-            node.set_value(eval_result.as_bool(), device, store, cx)?;
-        } else {
-            return Err(GenApiError::invalid_node(
-                "`pValue` elem of `ConverterNode` doesn't implement `IInteger`/`IFloat`/`IBoolean`"
-                    .into(),
-            ));
-        }
-
+        utils::set_eval_result(self.p_value, eval_result, device, store, cx)?;
         Ok(())
     }
 
@@ -213,9 +197,7 @@ impl IFloat for ConverterNode {
         store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::access_denied(
-            "can't set value to min elem of `ConverterNode`".into(),
-        ))
+        Err(GenApiError::not_writable())
     }
 
     #[tracing::instrument(skip(self, store),
@@ -228,26 +210,38 @@ impl IFloat for ConverterNode {
         store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::access_denied(
-            "can't set value to max elem of `ConverterNode`".into(),
-        ))
+        Err(GenApiError::not_writable())
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_readable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.elem_base.is_readable(device, store, cx)
+        let collector =
+            utils::FormulaEnvCollector::new(&self.p_variables, &self.constants, &self.expressions);
+        Ok(self.elem_base.is_readable(device, store, cx)?
+            && utils::is_nid_readable(self.p_value, device, store, cx)?
+            && collector.is_readable(device, store, cx)?)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_writable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.elem_base.is_writable(device, store, cx)
+        let collector =
+            utils::FormulaEnvCollector::new(&self.p_variables, &self.constants, &self.expressions);
+        Ok(self.elem_base.is_writable(device, store, cx)?
+            && utils::is_nid_writable(self.p_value, device, store, cx)?
+            && collector.is_readable(device, store, cx)?) // Collector is needed to be readable to write a value.
     }
 }

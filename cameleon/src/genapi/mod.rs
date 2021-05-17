@@ -27,17 +27,17 @@ where
     Ctxt: GenApiCtxt,
 {
     /// Enters the context.
-    pub fn enter<F, R>(&mut self, mut f: F) -> R
+    pub fn enter<F, R>(&mut self, f: F) -> R
     where
-        F: FnMut(&mut Ctrl, &mut Ctxt) -> R,
+        F: FnOnce(&mut Ctrl, &mut Ctxt) -> R,
     {
         f(&mut self.ctrl, &mut self.ctxt)
     }
 
     /// Enters the context and then enters `GenApiCtxt`.
-    pub fn enter2<F, R>(&mut self, mut f: F) -> R
+    pub fn enter2<F, R>(&mut self, f: F) -> R
     where
-        F: FnMut(&mut Ctrl, &Ctxt::NS, &mut ValueCtxt<Ctxt::VS, Ctxt::CS>) -> R,
+        F: FnOnce(&mut Ctrl, &Ctxt::NS, &mut ValueCtxt<Ctxt::VS, Ctxt::CS>) -> R,
     {
         self.enter(|ctrl, ctxt| {
             ctxt.enter(|node_store, value_ctxt| f(ctrl, node_store, value_ctxt))
@@ -89,7 +89,7 @@ pub trait GenApiCtxt {
     /// Provide access to the context.
     fn enter<F, R>(&mut self, f: F) -> R
     where
-        F: FnMut(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R;
+        F: FnOnce(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R;
 
     /// Provides access to the [`NodeStore`] in the context.
     fn with_store<F, R>(&self, f: F) -> R
@@ -124,9 +124,9 @@ impl GenApiCtxt for DefaultGenApiCtxt {
     type VS = store::DefaultValueStore;
     type CS = store::DefaultCacheStore;
 
-    fn enter<F, R>(&mut self, mut f: F) -> R
+    fn enter<F, R>(&mut self, f: F) -> R
     where
-        F: FnMut(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R,
+        F: FnOnce(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R,
     {
         f(&self.node_store, &mut self.value_ctxt)
     }
@@ -173,9 +173,9 @@ impl GenApiCtxt for SharedDefaultGenApiCtxt {
     type VS = store::DefaultValueStore;
     type CS = store::DefaultCacheStore;
 
-    fn enter<F, R>(&mut self, mut f: F) -> R
+    fn enter<F, R>(&mut self, f: F) -> R
     where
-        F: FnMut(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R,
+        F: FnOnce(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R,
     {
         f(&self.node_store, &mut self.value_ctxt.lock().unwrap())
     }
@@ -226,9 +226,9 @@ impl GenApiCtxt for NoCacheGenApiCtxt {
     type VS = store::DefaultValueStore;
     type CS = store::CacheSink;
 
-    fn enter<F, R>(&mut self, mut f: F) -> R
+    fn enter<F, R>(&mut self, f: F) -> R
     where
-        F: FnMut(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R,
+        F: FnOnce(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R,
     {
         f(&self.node_store, &mut self.value_ctxt)
     }
@@ -286,9 +286,9 @@ impl GenApiCtxt for SharedNoCacheGenApiCtxt {
     type VS = store::DefaultValueStore;
     type CS = store::CacheSink;
 
-    fn enter<F, R>(&mut self, mut f: F) -> R
+    fn enter<F, R>(&mut self, f: F) -> R
     where
-        F: FnMut(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R,
+        F: FnOnce(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R,
     {
         f(&self.node_store, &mut self.value_ctxt.lock().unwrap())
     }

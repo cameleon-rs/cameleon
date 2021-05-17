@@ -85,6 +85,7 @@ impl Parse for FloatNode {
 mod test {
     use crate::{
         elem_type::{DisplayNotation, FloatRepresentation, ValueKind},
+        interface::INode,
         store::ValueStore,
     };
 

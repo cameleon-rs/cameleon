@@ -1,7 +1,7 @@
 use super::{
     elem_type::{IntegerRepresentation, NamedValue},
     formula::{Expr, Formula},
-    interface::{IInteger, IncrementMode},
+    interface::{IInteger, INode, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, NodeId, NodeStore, ValueStore},
     utils, Device, GenApiError, GenApiResult, ValueCtxt,
@@ -22,16 +22,6 @@ pub struct IntSwissKnifeNode {
 }
 
 impl IntSwissKnifeNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn streamable(&self) -> bool {
-        self.streamable
-    }
-
     #[must_use]
     pub fn p_variables(&self) -> &[NamedValue<NodeId>] {
         &self.p_variables
@@ -63,6 +53,16 @@ impl IntSwissKnifeNode {
     }
 }
 
+impl INode for IntSwissKnifeNode {
+    fn node_base(&self) -> NodeBase {
+        NodeBase::new(&self.attr_base, &self.elem_base)
+    }
+
+    fn streamable(&self) -> bool {
+        self.streamable
+    }
+}
+
 impl IInteger for IntSwissKnifeNode {
     #[tracing::instrument(skip(self, device, store, cx),
                           level = "trace",
@@ -73,8 +73,6 @@ impl IInteger for IntSwissKnifeNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
-        self.elem_base.verify_is_readable(device, store, cx)?;
-
         let var_env =
             utils::FormulaEnvCollector::new(&self.p_variables, &self.constants, &self.expressions)
                 .collect(device, store, cx)?;
@@ -92,9 +90,7 @@ impl IInteger for IntSwissKnifeNode {
         store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::access_denied(
-            "write to `IntSwissKnifeNode` is forbidden".into(),
-        ))
+        Err(GenApiError::not_writable())
     }
 
     #[tracing::instrument(skip(self, device, store, cx),
@@ -156,9 +152,7 @@ impl IInteger for IntSwissKnifeNode {
         store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::access_denied(
-            "write to `IntSwissKnifeNode` is forbidden".into(),
-        ))
+        Err(GenApiError::not_writable())
     }
 
     #[tracing::instrument(skip(self, store),
@@ -171,9 +165,7 @@ impl IInteger for IntSwissKnifeNode {
         store: &impl NodeStore,
         _: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        Err(GenApiError::access_denied(
-            "write to `IntSwissKnifeNode` is forbidden".into(),
-        ))
+        Err(GenApiError::not_writable())
     }
 
     fn is_readable<T: ValueStore, U: CacheStore>(
@@ -182,7 +174,10 @@ impl IInteger for IntSwissKnifeNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.elem_base.is_readable(device, store, cx)
+        let collector =
+            utils::FormulaEnvCollector::new(&self.p_variables, &self.constants, &self.expressions);
+        Ok(self.elem_base.is_readable(device, store, cx)?
+            && collector.is_readable(device, store, cx)?)
     }
 
     fn is_writable<T: ValueStore, U: CacheStore>(

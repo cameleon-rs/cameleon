@@ -7,7 +7,7 @@ use super::{
     builder,
     interface::{
         IBooleanKind, ICategoryKind, ICommandKind, IEnumerationKind, IFloatKind, IIntegerKind,
-        IPortKind, IRegisterKind, ISelectorKind, IStringKind,
+        INode, INodeKind, IPortKind, IRegisterKind, ISelectorKind, IStringKind,
     },
     node_base::NodeBase,
     BooleanNode, CategoryNode, CommandNode, ConverterNode, EnumerationNode, FloatNode,
@@ -105,14 +105,6 @@ pub trait ValueStore {
             None
         }
     }
-
-    fn boolean_value(&self, id: BooleanId) -> Option<bool> {
-        if let ValueData::Boolean(b) = self.value_opt(id)? {
-            Some(*b)
-        } else {
-            None
-        }
-    }
 }
 
 #[auto_impl(&mut, Box)]
@@ -144,6 +136,16 @@ impl Symbol for NodeId {
 impl NodeId {
     pub fn name(self, store: &impl NodeStore) -> &str {
         store.name_by_id(self).unwrap()
+    }
+
+    pub fn as_inode_kind(self, store: &impl NodeStore) -> Option<INodeKind> {
+        INodeKind::maybe_from(self, store)
+    }
+
+    pub fn expect_inode_kind(self, store: &impl NodeStore) -> GenApiResult<INodeKind> {
+        self.as_inode_kind(store).ok_or_else(|| {
+            GenApiError::invalid_node("the node doesn't implement `IInteger`".into())
+        })
     }
 
     pub fn as_iinteger_kind(self, store: &impl NodeStore) -> Option<IIntegerKind> {
@@ -375,11 +377,9 @@ macro_rules! declare_value_id {
         }
     };
 }
-
 declare_value_id!(IntegerId);
 declare_value_id!(FloatId);
 declare_value_id!(StringId);
-declare_value_id!(BooleanId);
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ValueData {
@@ -398,7 +398,6 @@ macro_rules! impl_value_data_conversion {
         }
     };
 }
-
 impl_value_data_conversion!(i64, Self::Integer);
 impl_value_data_conversion!(f64, Self::Float);
 impl_value_data_conversion!(String, Self::Str);

@@ -1,6 +1,6 @@
 use super::{
     elem_type::ImmOrPNode,
-    interface::{ICommand, IInteger},
+    interface::{ICommand, IInteger, INode},
     ivalue::IValue,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, IntegerId, NodeStore, ValueStore},
@@ -19,11 +19,6 @@ pub struct CommandNode {
 
 impl CommandNode {
     #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
     pub fn value_elem(&self) -> ImmOrPNode<IntegerId> {
         self.value
     }
@@ -39,6 +34,16 @@ impl CommandNode {
     }
 }
 
+impl INode for CommandNode {
+    fn node_base(&self) -> NodeBase {
+        NodeBase::new(&self.attr_base, &self.elem_base)
+    }
+
+    fn streamable(&self) -> bool {
+        false
+    }
+}
+
 impl ICommand for CommandNode {
     #[tracing::instrument(skip(self, device, store, cx),
                           fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
@@ -48,7 +53,6 @@ impl ICommand for CommandNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.elem_base.verify_is_writable(device, store, cx)?;
         cx.invalidate_cache_by(self.node_base().id());
 
         let value = self.command_value.value(device, store, cx)?;
@@ -79,12 +83,17 @@ impl ICommand for CommandNode {
         }
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_writable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.elem_base.is_writable(device, store, cx)
+        Ok(self.elem_base.is_writable(device, store, cx)?
+            && self.command_value.is_writable(device, store, cx)?
+            && self.value.is_writable(device, store, cx)?)
     }
 }

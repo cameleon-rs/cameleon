@@ -2,6 +2,7 @@ use std::{borrow::Cow, collections::HashMap, convert::TryInto};
 
 use super::{
     elem_type::{Endianness, NamedValue, Sign},
+    formula::EvaluationResult,
     formula::Expr,
     interface::{IBoolean, IEnumeration, IFloat, IInteger},
     store::{CacheStore, NodeId, NodeStore, ValueStore},
@@ -102,23 +103,6 @@ pub(super) fn bytes_from_float(
     }
 }
 
-pub(super) fn verify_value_in_range<T>(value: &T, min: &T, max: &T) -> GenApiResult<()>
-where
-    T: PartialOrd,
-{
-    if value < min {
-        Err(GenApiError::invalid_data(
-            "given data is smaller than min value of the node".into(),
-        ))
-    } else if value > max {
-        Err(GenApiError::invalid_data(
-            "given data is larger than max value of the node".into(),
-        ))
-    } else {
-        Ok(())
-    }
-}
-
 pub(super) struct FormulaEnvCollector<'a, T> {
     p_variables: &'a [NamedValue<NodeId>],
     constants: &'a [NamedValue<T>],
@@ -173,13 +157,26 @@ impl<'a, T: Copy + Into<Expr>> FormulaEnvCollector<'a, T> {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<U, S>,
     ) -> GenApiResult<()> {
-        let expr = expr_from_node_id(nid, device, store, cx)?;
+        let expr = expr_from_nid(nid, device, store, cx)?;
         self.insert_imm(name, expr);
         Ok(())
     }
 
     pub(super) fn insert_imm(&mut self, name: &'a str, imm: impl Into<Expr>) {
         self.var_env.insert(name, Cow::Owned(imm.into()));
+    }
+
+    pub(super) fn is_readable<U: ValueStore, S: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<U, S>,
+    ) -> GenApiResult<bool> {
+        let mut res = true;
+        for variable in self.p_variables {
+            res &= is_nid_readable(variable.value(), device, store, cx)?;
+        }
+        Ok(res)
     }
 
     fn collect_variables<U: ValueStore, S: CacheStore>(
@@ -236,7 +233,7 @@ impl<'a> VariableKind<'a> {
         }
 
         let expr: Expr = match self {
-            Self::Value => expr_from_node_id(nid, device, store, cx)?,
+            Self::Value => expr_from_nid(nid, device, store, cx)?,
             Self::Min => {
                 if let Some(node) = nid.as_iinteger_kind(store) {
                     node.min(device, store, cx)?.into()
@@ -284,26 +281,90 @@ impl<'a> VariableKind<'a> {
     }
 }
 
-pub(super) fn expr_from_node_id<T: ValueStore, U: CacheStore>(
+pub(super) fn is_nid_readable<T: ValueStore, U: CacheStore>(
+    nid: NodeId,
+    device: &mut impl Device,
+    store: &impl NodeStore,
+    cx: &mut ValueCtxt<T, U>,
+) -> GenApiResult<bool> {
+    Ok(if let Some(node) = nid.as_iinteger_kind(store) {
+        node.is_readable(device, store, cx)?
+    } else if let Some(node) = nid.as_ifloat_kind(store) {
+        node.is_readable(device, store, cx)?
+    } else if let Some(node) = nid.as_iboolean_kind(store) {
+        node.is_readable(device, store, cx)?
+    } else if let Some(node) = nid.as_ienumeration_kind(store) {
+        node.is_readable(device, store, cx)?
+    } else {
+        return Err(GenApiError::invalid_node(
+            format!("{}`", nid.name(store)).into(),
+        ));
+    })
+}
+
+pub(super) fn is_nid_writable<T: ValueStore, U: CacheStore>(
+    nid: NodeId,
+    device: &mut impl Device,
+    store: &impl NodeStore,
+    cx: &mut ValueCtxt<T, U>,
+) -> GenApiResult<bool> {
+    Ok(if let Some(node) = nid.as_iinteger_kind(store) {
+        node.is_writable(device, store, cx)?
+    } else if let Some(node) = nid.as_ifloat_kind(store) {
+        node.is_writable(device, store, cx)?
+    } else if let Some(node) = nid.as_iboolean_kind(store) {
+        node.is_writable(device, store, cx)?
+    } else if let Some(node) = nid.as_ienumeration_kind(store) {
+        node.is_writable(device, store, cx)?
+    } else {
+        return Err(GenApiError::invalid_node(
+            format!("{}`", nid.name(store)).into(),
+        ));
+    })
+}
+
+pub(super) fn set_eval_result<T: ValueStore, U: CacheStore>(
+    nid: NodeId,
+    result: EvaluationResult,
+    device: &mut impl Device,
+    store: &impl NodeStore,
+    cx: &mut ValueCtxt<T, U>,
+) -> GenApiResult<()> {
+    if let Some(node) = nid.as_iinteger_kind(store) {
+        node.set_value(result.as_integer(), device, store, cx)?
+    } else if let Some(node) = nid.as_ifloat_kind(store) {
+        node.set_value(result.as_float(), device, store, cx)?
+    } else if let Some(node) = nid.as_iboolean_kind(store) {
+        node.set_value(result.as_bool(), device, store, cx)?
+    } else if let Some(node) = nid.as_ienumeration_kind(store) {
+        node.set_entry_by_value(result.as_integer(), device, store, cx)?
+    } else {
+        return Err(GenApiError::invalid_node(
+            format!("{}`", nid.name(store)).into(),
+        ));
+    }
+    Ok(())
+}
+
+fn expr_from_nid<T: ValueStore, U: CacheStore>(
     nid: NodeId,
     device: &mut impl Device,
     store: &impl NodeStore,
     cx: &mut ValueCtxt<T, U>,
 ) -> GenApiResult<Expr> {
-    if let Some(node) = nid.as_iinteger_kind(store) {
-        Ok(node.value(device, store, cx)?.into())
+    Ok(if let Some(node) = nid.as_iinteger_kind(store) {
+        node.value(device, store, cx)?.into()
     } else if let Some(node) = nid.as_ifloat_kind(store) {
-        Ok(node.value(device, store, cx)?.into())
+        node.value(device, store, cx)?.into()
     } else if let Some(node) = nid.as_iboolean_kind(store) {
-        Ok(node.value(device, store, cx)?.into())
+        node.value(device, store, cx)?.into()
     } else if let Some(node) = nid.as_ienumeration_kind(store) {
-        Ok(node
-            .current_entry(device, store, cx)?
+        node.current_entry(device, store, cx)?
             .numeric_value()
-            .into())
+            .into()
     } else {
-        Err(GenApiError::invalid_node(
-            format!("invalid `pVariable: {}`", nid.name(store)).into(),
-        ))
-    }
+        return Err(GenApiError::invalid_node(
+            format!("{}`", nid.name(store)).into(),
+        ));
+    })
 }

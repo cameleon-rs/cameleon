@@ -183,7 +183,7 @@ impl StringNode {
         /// Returns the value of the node.
         pub fn value<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<String>,
         /// Sets the value of the node.
-        pub fn set_value<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, value: &str) -> GenApiResult<()>,
+        pub fn set_value<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, value: String) -> GenApiResult<()>,
         /// Retruns the maximum length of the string.
         pub fn max_length<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<i64>,
         /// Returns `true` if the node is readable.
@@ -207,11 +207,11 @@ impl EnumerationNode {
     }
 
     /// Allows the access to entries of the node.
-    pub fn with_entries<Ctrl, Ctxt, F, R>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, mut f: F) -> R
+    pub fn with_entries<Ctrl, Ctxt, F, R>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, f: F) -> R
     where
         Ctrl: Device,
         Ctxt: GenApiCtxt,
-        F: FnMut(&[EnumEntryNode]) -> R,
+        F: FnOnce(&[EnumEntryNode]) -> R,
     {
         ctxt.enter2(|_, ns, _| f(self.0.expect_ienumeration_kind(ns).unwrap().entries(ns)))
     }

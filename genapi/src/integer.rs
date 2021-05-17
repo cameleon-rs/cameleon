@@ -1,10 +1,10 @@
 use super::{
     elem_type::{ImmOrPNode, IntegerRepresentation, ValueKind},
-    interface::{IInteger, ISelector, IncrementMode},
+    interface::{IInteger, INode, ISelector, IncrementMode},
     ivalue::IValue,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, IntegerId, NodeId, NodeStore, ValueStore},
-    utils, Device, GenApiResult, ValueCtxt,
+    Device, GenApiResult, ValueCtxt,
 };
 
 #[derive(Debug, Clone)]
@@ -23,16 +23,6 @@ pub struct IntegerNode {
 }
 
 impl IntegerNode {
-    #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn streamable(&self) -> bool {
-        self.streamable
-    }
-
     #[must_use]
     pub fn value_kind(&self) -> &ValueKind<IntegerId> {
         &self.value_kind
@@ -69,6 +59,16 @@ impl IntegerNode {
     }
 }
 
+impl INode for IntegerNode {
+    fn node_base(&self) -> NodeBase {
+        NodeBase::new(&self.attr_base, &self.elem_base)
+    }
+
+    fn streamable(&self) -> bool {
+        self.streamable
+    }
+}
+
 impl IInteger for IntegerNode {
     #[tracing::instrument(skip(self, device, store, cx),
                           level = "trace",
@@ -79,7 +79,6 @@ impl IInteger for IntegerNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
-        self.elem_base.verify_is_readable(device, store, cx)?;
         self.value_kind().value(device, store, cx)
     }
 
@@ -93,13 +92,7 @@ impl IInteger for IntegerNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.elem_base.verify_is_writable(device, store, cx)?;
         cx.invalidate_cache_by(self.node_base().id());
-
-        let min = self.min(device, store, cx)?;
-        let max = self.max(device, store, cx)?;
-        utils::verify_value_in_range(&value, &min, &max)?;
-
         self.value_kind().set_value(value, device, store, cx)
     }
 
@@ -181,22 +174,30 @@ impl IInteger for IntegerNode {
         self.max.set_value(value, device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_readable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.elem_base.is_readable(device, store, cx)
+        Ok(self.elem_base.is_readable(device, store, cx)?
+            && self.value_kind.is_readable(device, store, cx)?)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_writable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.elem_base.is_writable(device, store, cx)
+        Ok(self.elem_base.is_writable(device, store, cx)?
+            && self.value_kind.is_writable(device, store, cx)?)
     }
 }
 

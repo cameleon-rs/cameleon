@@ -2,6 +2,7 @@ use tracing::debug;
 
 use crate::{
     builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder},
+    elem_type::ImmOrPNode,
     BooleanNode,
 };
 
@@ -27,14 +28,23 @@ impl Parse for BooleanNode {
         let streamable = node
             .parse_if(STREAMABLE, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
-        let value = node.parse(node_builder, value_builder, cache_builder);
-        let on_value = node
+        let value: ImmOrPNode<bool> = node.parse(node_builder, value_builder, cache_builder);
+        let on_value: i64 = node
             .parse_if(ON_VALUE, node_builder, value_builder, cache_builder)
             .unwrap_or(1);
-        let off_value = node
+        let off_value: i64 = node
             .parse_if(OFF_VALUE, node_builder, value_builder, cache_builder)
             .unwrap_or(0);
         let p_selected = node.parse_while(P_SELECTED, node_builder, value_builder, cache_builder);
+
+        let value = match value {
+            ImmOrPNode::Imm(imm) => {
+                let i = if imm { on_value } else { off_value };
+                let id = value_builder.store(i);
+                ImmOrPNode::Imm(id)
+            }
+            ImmOrPNode::PNode(pnode) => ImmOrPNode::PNode(pnode),
+        };
 
         Self {
             attr_base,
@@ -58,8 +68,8 @@ mod tests {
     fn test_boolean_node_with_p_node() {
         let xml = r#"
             <Boolean Name="TestNode">
-                <pValue>Node</pValue>
-                <OnValue>1</OnValue>
+                <pValue>N<!--comment here-->ode</pValue>
+                <OnValue>10</OnValue>
                 <OffValue>0</OffValue>
             </Boolean>
             "#;
@@ -69,7 +79,7 @@ mod tests {
             node.value_elem(),
             ImmOrPNode::PNode(node_builder.get_or_intern("Node"))
         );
-        assert_eq!(node.on_value(), 1);
+        assert_eq!(node.on_value(), 10);
         assert_eq!(node.off_value(), 0);
     }
 
@@ -77,26 +87,30 @@ mod tests {
     fn test_boolean_node_with_imm() {
         let xml1 = r#"
             <Boolean Name="TestNode">
-                <Value>t<!--Hi Are you surprised?-->rue</Value>
+                <Value>true</Value>
+                <OnValue>10</OnValue>
+                <OffValue>0</OffValue>
             </Boolean>
             "#;
 
         let (node, _, value_builder, ..): (BooleanNode, _, _, _) = parse_default(xml1);
         let value1 = value_builder
-            .boolean_value(node.value_elem().imm().unwrap())
+            .integer_value(node.value_elem().imm().unwrap())
             .unwrap();
-        assert_eq!(value1, true);
+        assert_eq!(value1, node.on_value());
 
         let xml2 = r#"
             <Boolean Name="TestNode">
                 <Value>false</Value>
+                <OnValue>10</OnValue>
+                <OffValue>0</OffValue>
             </Boolean>
             "#;
 
         let (node, _, value_builder2, ..): (BooleanNode, _, _, _) = parse_default(xml2);
         let value2 = value_builder2
-            .boolean_value(node.value_elem().imm().unwrap())
+            .integer_value(node.value_elem().imm().unwrap())
             .unwrap();
-        assert_eq!(value2, false);
+        assert_eq!(value2, node.off_value());
     }
 }

@@ -76,7 +76,7 @@ impl Parse for IntegerNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::{elem_type::ValueKind, store::ValueStore};
+    use crate::{elem_type::ValueKind, interface::INode, store::ValueStore};
 
     use super::{super::utils::tests::parse_default, *};
 

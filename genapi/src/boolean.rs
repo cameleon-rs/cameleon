@@ -1,8 +1,9 @@
 use super::{
     elem_type::ImmOrPNode,
-    interface::{IBoolean, IInteger, ISelector},
+    interface::{IBoolean, INode, ISelector},
+    ivalue::IValue,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
-    store::{BooleanId, CacheStore, NodeId, NodeStore, ValueStore},
+    store::{CacheStore, IntegerId, NodeId, NodeStore, ValueStore},
     Device, GenApiError, GenApiResult, ValueCtxt,
 };
 
@@ -12,7 +13,7 @@ pub struct BooleanNode {
     pub(crate) elem_base: NodeElementBase,
 
     pub(crate) streamable: bool,
-    pub(crate) value: ImmOrPNode<BooleanId>,
+    pub(crate) value: ImmOrPNode<IntegerId>,
     pub(crate) on_value: i64,
     pub(crate) off_value: i64,
     pub(crate) p_selected: Vec<NodeId>,
@@ -20,17 +21,7 @@ pub struct BooleanNode {
 
 impl BooleanNode {
     #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
-    }
-
-    #[must_use]
-    pub fn streamable(&self) -> bool {
-        self.streamable
-    }
-
-    #[must_use]
-    pub fn value_elem(&self) -> ImmOrPNode<BooleanId> {
+    pub fn value_elem(&self) -> ImmOrPNode<IntegerId> {
         self.value
     }
 
@@ -50,6 +41,16 @@ impl BooleanNode {
     }
 }
 
+impl INode for BooleanNode {
+    fn node_base(&self) -> NodeBase {
+        NodeBase::new(&self.attr_base, &self.elem_base)
+    }
+
+    fn streamable(&self) -> bool {
+        self.streamable
+    }
+}
+
 impl IBoolean for BooleanNode {
     #[tracing::instrument(skip(self, device, store, cx),
                           level = "trace",
@@ -60,21 +61,15 @@ impl IBoolean for BooleanNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.elem_base.verify_is_readable(device, store, cx)?;
-        match self.value {
-            ImmOrPNode::Imm(vid) => Ok(cx.value_store().boolean_value(vid).unwrap()),
-            ImmOrPNode::PNode(nid) => {
-                let value = nid.expect_iinteger_kind(store)?.value(device, store, cx)?;
-                if value == self.on_value {
-                    Ok(true)
-                } else if value == self.off_value {
-                    Ok(false)
-                } else {
-                    Err(GenApiError::invalid_node(
-                        "the internal integer value cannot be interpreted as boolean".into(),
-                    ))
-                }
-            }
+        let value = self.value.value(device, store, cx)?;
+        if value == self.on_value {
+            Ok(true)
+        } else if value == self.off_value {
+            Ok(false)
+        } else {
+            Err(GenApiError::invalid_node(
+                "the internal integer value cannot be interpreted as boolean".into(),
+            ))
         }
     }
 
@@ -88,37 +83,35 @@ impl IBoolean for BooleanNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        self.elem_base.verify_is_writable(device, store, cx)?;
         cx.invalidate_cache_by(self.node_base().id());
-        match self.value {
-            ImmOrPNode::Imm(vid) => {
-                cx.value_store_mut().update(vid, value);
-                Ok(())
-            }
-            ImmOrPNode::PNode(nid) => {
-                let value = if value { self.on_value } else { self.off_value };
-                nid.expect_iinteger_kind(store)?
-                    .set_value(value, device, store, cx)
-            }
-        }
+        let value = if value { self.on_value } else { self.off_value };
+        self.value.set_value(value, device, store, cx)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_readable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.elem_base.is_readable(device, store, cx)
+        Ok(self.elem_base.is_readable(device, store, cx)?
+            && self.value.is_readable(device, store, cx)?)
     }
 
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn is_writable<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        self.elem_base.is_writable(device, store, cx)
+        Ok(self.elem_base.is_writable(device, store, cx)?
+            && self.value.is_writable(device, store, cx)?)
     }
 }
 
