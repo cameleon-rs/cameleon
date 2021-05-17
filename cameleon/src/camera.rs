@@ -118,13 +118,14 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
         if self.strm.is_loop_running() {
             return Err(StreamError::InStreaming.into());
         }
-        self.ctrl.enable_streaming()?;
 
+        // Enable streaimng.
+        self.ctrl.enable_streaming()?;
         let mut ctxt = self.params_ctxt()?;
         expect_node!(ctxt, "TLParamsLocked", as_integer).set_value(&mut ctxt, 1)?;
         expect_node!(ctxt, "AcquisitionStart", as_command).execute(&mut ctxt)?;
 
-        self.ctrl.enable_streaming()?;
+        // Run streaming loop.
         let (sender, receiver) = channel(cap, DEFAULT_BUFFER_CAP);
         self.strm.run_streaming_loop(sender, &mut self.ctrl)?;
 
@@ -147,10 +148,16 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
         if !self.strm.is_loop_running() {
             return Ok(());
         }
+
+        // Disable streaming.
         let mut ctxt = self.params_ctxt()?;
         expect_node!(ctxt, "AcquisitionStop", as_command).execute(&mut ctxt)?;
         expect_node!(ctxt, "TLParamsLocked", as_integer).set_value(&mut ctxt, 0)?;
         self.ctrl.disable_streaming()?;
+
+        // Stop streaming loop.
+        self.strm.stop_streaming_loop()?;
+
         info!("stop streaming successfully");
         Ok(())
     }
