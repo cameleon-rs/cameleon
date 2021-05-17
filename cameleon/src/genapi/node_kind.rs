@@ -50,6 +50,12 @@ pub struct PortNode(NodeId);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Node(pub(super) NodeId);
 
+impl From<NodeId> for Node {
+    fn from(nid: NodeId) -> Self {
+        Node(nid)
+    }
+}
+
 macro_rules! delegate {
     (
         $expect_kind:ident,
@@ -125,6 +131,24 @@ impl IntegerNode {
        /// Returns [`IntegerRepresentation`] of the node. This feature is mainly for GUI.
        pub fn representation<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> IntegerRepresentation,
     }
+
+    /// Returns unit that describes phisical meaning of the value. e.g. "Hz" or "ms".
+    pub fn unit<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> Option<String>
+    where
+        Ctxt: GenApiCtxt,
+    {
+        let ns = ctxt.node_store();
+        self.0
+            .expect_iinteger_kind(ns)
+            .unwrap()
+            .unit(ns)
+            .map(String::from)
+    }
+
+    /// Upcast to [`Node`].
+    pub fn as_node(self) -> Node {
+        Node(self.0)
+    }
 }
 
 impl FloatNode {
@@ -161,8 +185,7 @@ impl FloatNode {
        pub fn display_notation<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> DisplayNotation,
     }
 
-    /// Returns unit that describes phisical meaning of the value. e.g. "Hz" or "ms". This
-    /// feature is mainly for GUI.
+    /// Returns unit that describes phisical meaning of the value. e.g. "Hz" or "ms".
     pub fn unit<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> Option<String>
     where
         Ctxt: GenApiCtxt,
@@ -173,6 +196,11 @@ impl FloatNode {
             .unwrap()
             .unit(ns)
             .map(String::from)
+    }
+
+    /// Upcast to [`Node`].
+    pub fn as_node(self) -> Node {
+        Node(self.0)
     }
 }
 
@@ -189,6 +217,11 @@ impl StringNode {
         pub fn is_readable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
         /// Returns `true` if the node is writable.
         pub fn is_writable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
+    }
+
+    /// Upcast to [`Node`].
+    pub fn as_node(self) -> Node {
+        Node(self.0)
     }
 }
 
@@ -232,6 +265,11 @@ impl EnumerationNode {
             .entries(ns)
             .to_vec()
     }
+
+    /// Upcast to [`Node`].
+    pub fn as_node(self) -> Node {
+        Node(self.0)
+    }
 }
 
 impl CommandNode {
@@ -243,6 +281,11 @@ impl CommandNode {
         pub fn is_done<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
         /// Returns `true` if the node is writable (executable).
         pub fn is_writable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
+    }
+
+    /// Upcast to [`Node`].
+    pub fn as_node(self) -> Node {
+        Node(self.0)
     }
 }
 
@@ -257,6 +300,11 @@ impl BooleanNode {
         pub fn is_readable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
         /// Returns `true` if the node is writable.
         pub fn is_writable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
+    }
+
+    /// Upcast to [`Node`].
+    pub fn as_node(self) -> Node {
+        Node(self.0)
     }
 }
 
@@ -274,6 +322,11 @@ impl RegisterNode {
         pub fn address<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<i64>,
         /// Returns the length of the register that the node pointing to.
         pub fn length<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<i64>,
+    }
+
+    /// Upcast to [`Node`].
+    pub fn as_node(self) -> Node {
+        Node(self.0)
     }
 }
 
@@ -294,6 +347,11 @@ impl CategoryNode {
                 .collect()
         })
     }
+
+    /// Upcast to [`Node`].
+    pub fn as_node(self) -> Node {
+        Node(self.0)
+    }
 }
 
 impl PortNode {
@@ -303,6 +361,11 @@ impl PortNode {
         pub fn read<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, address: i64, buf: &mut [u8]) -> GenApiResult<()>,
         /// Writes bytes.
         pub fn write<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, address: i64, data: &[u8]) -> GenApiResult<()>,
+    }
+
+    /// Upcast to [`Node`].
+    pub fn as_node(self) -> Node {
+        Node(self.0)
     }
 }
 
@@ -321,6 +384,25 @@ macro_rules! downcast {
                 let ns = ctxt.node_store();
                 self.0.$expect_kind(ns).map(|_| $ty(self.0))
         })*
+    };
+}
+
+macro_rules! delegate_node_base {
+    (
+        $(
+            $(#[$meta:meta])*
+            $vis:vis fn $method:ident<$Ctrl:ident, $Ctxt:ident>($self:ident, ctxt: &ParamsCtxt<Ctrl, Ctxt> $(,$arg:ident: $arg_ty:ty)*) -> $ret_ty:ty,)*) => {
+        $(
+            $(#[$meta])*
+            $vis fn $method<$Ctrl, $Ctxt>($self, ctxt: &ParamsCtxt<$Ctrl, $Ctxt> $(,$arg: $arg_ty)*) -> $ret_ty
+            where
+                  $Ctxt: GenApiCtxt
+            {
+                let ns = ctxt.node_store();
+                let node_base = $self.0.as_inode_kind(ns).unwrap().node_base_precise();
+                node_base.$method($($arg,)*).into()
+            }
+        )*
     };
 }
 
@@ -344,5 +426,46 @@ impl Node {
         (as_category, as_icategory_kind, CategoryNode),
         /// Try downcasting to [`PortNode`]. Returns `None` if downcast failed.
         (as_port, as_iport_kind, PortNode),
+    }
+
+    /// Returns name of the node.
+    pub fn name<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> &str
+    where
+        Ctxt: GenApiCtxt,
+    {
+        let ns = ctxt.node_store();
+        self.0.as_inode_kind(ns).unwrap().name(ns)
+    }
+
+    /// Returns display name of the node. This method is mainly for GUI.
+    pub fn display_name<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> &str
+    where
+        Ctxt: GenApiCtxt,
+    {
+        let ns = ctxt.node_store();
+        let node_base = self.0.as_inode_kind(ns).unwrap().node_base_precise();
+
+        if let Some(desc) = node_base.display_name() {
+            desc
+        } else {
+            self.name(ctxt)
+        }
+    }
+
+    delegate_node_base! {
+        /// Returns name space of the node.
+        pub fn name_space<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> super::NameSpace,
+        /// Returns description of the node if exists. This method is mainly for GUI.
+        pub fn description<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> Option<&str>,
+        /// Returns expose static of the node if exists. This method is mainly for GUI.
+        pub fn expose_static<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> Option<bool>,
+        /// Returns visibility of the node. This method is mainly for GUI.
+        pub fn visibility<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> super::Visibility,
+        /// Returns `true` if the node is marked as deprecated.
+        pub fn is_deprecated<Ctlr, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> bool,
+        /// Returns event id of the node if exists.
+        pub fn event_id<Ctlr, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> Option<u64>,
+        /// Returns tooltip of the node. This method is mainly for GUI.
+        pub fn tooltip<Ctlr, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> Option<&str>,
     }
 }
