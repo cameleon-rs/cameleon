@@ -2,7 +2,7 @@ use std::{convert::TryFrom, sync::Mutex};
 
 use cameleon::{
     genapi::{CompressionType, SharedDefaultGenApiCtxt},
-    u3v::{self, control_handle::U3VDeviceControl, SharedControlHandle, StreamHandle},
+    u3v::{self, SharedControlHandle, StreamHandle},
 };
 use cameleon_impl::memory::prelude::*;
 

@@ -108,7 +108,7 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
                           fields(camera = ?self.info()))]
     pub fn start_streaming(&mut self, cap: usize) -> CameleonResult<PayloadReceiver>
     where
-        Ctrl: DeviceControl<StrmParams = Strm::StrmParams>,
+        Ctrl: DeviceControl,
         Strm: PayloadStream,
         Ctxt: GenApiCtxt,
     {
@@ -118,15 +118,16 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
         if self.strm.is_loop_running() {
             return Err(StreamError::InStreaming.into());
         }
-        self.ctrl.enable_streaming()?;
 
+        // Enable streaimng.
+        self.ctrl.enable_streaming()?;
         let mut ctxt = self.params_ctxt()?;
         expect_node!(ctxt, "TLParamsLocked", as_integer).set_value(&mut ctxt, 1)?;
         expect_node!(ctxt, "AcquisitionStart", as_command).execute(&mut ctxt)?;
 
-        let strm_params = self.ctrl.enable_streaming()?;
+        // Start streaming loop.
         let (sender, receiver) = channel(cap, DEFAULT_BUFFER_CAP);
-        self.strm.run_streaming_loop(sender, strm_params)?;
+        self.strm.start_streaming_loop(sender, &mut self.ctrl)?;
 
         info!("start streaming successfully");
         Ok(receiver)
@@ -147,10 +148,16 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
         if !self.strm.is_loop_running() {
             return Ok(());
         }
+
+        // Disable streaming.
         let mut ctxt = self.params_ctxt()?;
         expect_node!(ctxt, "AcquisitionStop", as_command).execute(&mut ctxt)?;
         expect_node!(ctxt, "TLParamsLocked", as_integer).set_value(&mut ctxt, 0)?;
         self.ctrl.disable_streaming()?;
+
+        // Stop streaming loop.
+        self.strm.stop_streaming_loop()?;
+
         info!("stop streaming successfully");
         Ok(())
     }
@@ -247,9 +254,6 @@ pub struct CameraInfo {
 /// This trait provides operations on the device's memory.
 #[auto_impl(&mut, Box)]
 pub trait DeviceControl: cameleon_genapi::Device {
-    /// A parameter type used for streaming.
-    type StrmParams;
-
     /// Opens the handle.
     fn open(&mut self) -> ControlResult<()>;
 
@@ -271,7 +275,7 @@ pub trait DeviceControl: cameleon_genapi::Device {
     fn genapi(&mut self) -> ControlResult<String>;
 
     /// Enables streaming.
-    fn enable_streaming(&mut self) -> ControlResult<Self::StrmParams>;
+    fn enable_streaming(&mut self) -> ControlResult<()>;
 
     /// Disables streaming.
     fn disable_streaming(&mut self) -> ControlResult<()>;
@@ -280,9 +284,6 @@ pub trait DeviceControl: cameleon_genapi::Device {
 /// This trait provides streaming capability.
 #[auto_impl(&mut, Box)]
 pub trait PayloadStream {
-    /// A parameter type used for streaming.
-    type StrmParams;
-
     /// Opens the handle.
     fn open(&mut self) -> StreamResult<()>;
 
@@ -290,10 +291,10 @@ pub trait PayloadStream {
     fn close(&mut self) -> StreamResult<()>;
 
     /// Starts streaming.
-    fn run_streaming_loop(
+    fn start_streaming_loop(
         &mut self,
         sender: PayloadSender,
-        params: Self::StrmParams,
+        ctrl: &mut dyn DeviceControl,
     ) -> StreamResult<()>;
 
     /// Stops streaming.

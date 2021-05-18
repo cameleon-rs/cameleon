@@ -4,7 +4,7 @@
 //!
 //! ```no_run
 //! use cameleon::Camera;
-//! use cameleon::u3v::{self, U3VDeviceControl};
+//! use cameleon::u3v;
 //! use cameleon::genapi;
 //!
 //! // Enumerates cameras connected to the host.
@@ -46,7 +46,7 @@ pub mod register_map;
 pub mod control_handle;
 pub mod stream_handle;
 
-pub use control_handle::{ControlHandle, SharedControlHandle, U3VDeviceControl};
+pub use control_handle::{ControlHandle, SharedControlHandle};
 pub use stream_handle::{StreamHandle, StreamParams};
 
 pub use cameleon_device::u3v::DeviceInfo;

@@ -60,7 +60,7 @@ impl IPort for PortNode {
         } else {
             device
                 .read_mem(address, buf)
-                .map_err(|e| GenApiError::device(Box::new(e)))
+                .map_err(|e| GenApiError::device(e))
         }
     }
 
@@ -83,7 +83,7 @@ impl IPort for PortNode {
         } else {
             device
                 .write_mem(address, buf)
-                .map_err(|e| GenApiError::device(Box::new(e)))
+                .map_err(|e| GenApiError::device(e))
         }
     }
 }

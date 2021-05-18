@@ -1,4 +1,4 @@
-use cameleon::u3v::{enumerate_cameras, U3VDeviceControl};
+use cameleon::u3v::enumerate_cameras;
 
 fn main() {
     // Build emulator in case libusb is not supported.
