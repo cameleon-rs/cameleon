@@ -52,31 +52,31 @@ pub struct Payload {
 }
 
 impl Payload {
-    /// Return [`PayloadType`] of the payload.
+    /// Returns [`PayloadType`] of the payload.
     pub fn payload_type(&self) -> PayloadType {
         self.payload_type
     }
 
-    /// Return [`ImageInfo`] if `payload_type` is [`PayloadType::Image`] or
+    /// Returns [`ImageInfo`] if `payload_type` is [`PayloadType::Image`] or
     /// [`PayloadType::ImageExtendedChunk`].
     pub fn image_info(&self) -> Option<&ImageInfo> {
         self.image_info.as_ref()
     }
 
-    /// Return the image bytes in the payload if `payload_type` is [`PayloadType::Image`]  or
+    /// Returns the image bytes in the payload if `payload_type` is [`PayloadType::Image`]  or
     /// [`PayloadType::ImageExtendedChunk`].
     pub fn image(&self) -> Option<&[u8]> {
         let image_info = self.image_info()?;
         Some(&self.payload[..image_info.image_size])
     }
 
-    /// Return the whole payload. Use [`Self::image`] instead if you interested only
+    /// Returns the whole payload. Use [`Self::image`] instead if you interested only
     /// in image region of the payload.
     pub fn payload(&self) -> &[u8] {
         &self.payload[..self.valid_payload_size]
     }
 
-    /// Return unique id of `payload`, which sequentially incremented every time the device send a
+    /// Returns unique id of `payload`, which sequentially incremented every time the device send a
     /// `payload`.
     pub fn id(&self) -> u64 {
         self.id
@@ -85,6 +85,12 @@ impl Payload {
     /// Timestamp of the device when the payload is generated.
     pub fn timestamp(&self) -> time::Duration {
         self.timestamp
+    }
+
+    /// Returns the payload as `Vec<u8>`.
+    pub fn into_vec(mut self) -> Vec<u8> {
+        self.payload.resize(self.valid_payload_size, 0);
+        self.payload
     }
 }
 
