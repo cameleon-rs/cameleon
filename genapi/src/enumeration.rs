@@ -55,6 +55,18 @@ impl IEnumeration for EnumerationNode {
     #[tracing::instrument(skip(self, device, store, cx),
                           level = "trace",
                           fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
+    fn current_value<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        self.value.value(device, store, cx)
+    }
+
+    #[tracing::instrument(skip(self, device, store, cx),
+                          level = "trace",
+                          fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
     fn current_entry<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
