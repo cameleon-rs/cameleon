@@ -222,6 +222,13 @@ pub trait IString {
 
 #[delegatable_trait]
 pub trait IEnumeration {
+    fn current_value<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64>;
+
     fn current_entry<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
@@ -556,6 +563,13 @@ impl<'a> IEnumerationKind<'a> {
         match store.node_opt(id)? {
             NodeData::Enumeration(n) => Some(Self::Enumeration(n)),
             _ => None,
+        }
+    }
+
+    /// Returns entries with more precise lifetime.
+    pub fn entries_precise(&self, store: &impl NodeStore) -> &'a [EnumEntryNode] {
+        match self {
+            Self::Enumeration(n) => n.entries(store),
         }
     }
 }

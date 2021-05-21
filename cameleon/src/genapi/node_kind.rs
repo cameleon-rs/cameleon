@@ -5,7 +5,7 @@ use cameleon_genapi::{
     elem_type::{DisplayNotation, FloatRepresentation, IntegerRepresentation},
     interface::IncrementMode,
     prelude::*,
-    Device, EnumEntryNode, GenApiResult, NodeId,
+    Device, EnumEntryNode, GenApiError, GenApiResult, NodeId,
 };
 
 use super::{GenApiCtxt, ParamsCtxt};
@@ -236,24 +236,11 @@ impl EnumerationNode {
         pub fn is_readable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
         /// Returns `true` if the node is writable.
         pub fn is_writable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
-    }
 
-    /// Allows the access to entries of the node.
-    pub fn with_entries<Ctrl, Ctxt, F, R>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>, f: F) -> R
-    where
-        Ctrl: Device,
-        Ctxt: GenApiCtxt,
-        F: FnOnce(&[EnumEntryNode]) -> R,
-    {
-        let ns = ctxt.node_store();
-        f(self.0.expect_ienumeration_kind(ns).unwrap().entries(ns))
     }
 
     /// Returns entries of the node.
-    ///
-    /// This method isn't cheap, consider using [`Self::with_entries`] instead of calling this
-    /// method.
-    pub fn entries<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> Vec<EnumEntryNode>
+    pub fn entries<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> &[EnumEntryNode]
     where
         Ctrl: Device,
         Ctxt: GenApiCtxt,
@@ -262,8 +249,37 @@ impl EnumerationNode {
         self.0
             .expect_ienumeration_kind(ns)
             .unwrap()
-            .entries(ns)
-            .to_vec()
+            .entries_precise(ns)
+    }
+
+    /// Returns current entry of the node.
+    pub fn current_entry<Ctrl, Ctxt>(
+        self,
+        ctxt: &mut ParamsCtxt<Ctrl, Ctxt>,
+    ) -> GenApiResult<&EnumEntryNode>
+    where
+        Ctrl: Device,
+        Ctxt: GenApiCtxt,
+    {
+        let value = ctxt.enter2(|ctrl, ns, vc| {
+            self.0
+                .expect_ienumeration_kind(ns)
+                .unwrap()
+                .current_value(ctrl, ns, vc)
+        })?;
+        let entries = self.entries(ctxt);
+        entries
+            .iter()
+            .find(|ent| ent.value() == value)
+            .ok_or_else(|| {
+                GenApiError::InvalidNode(
+                    format!(
+                        "no entry found corresponding to the current value of {}",
+                        self.as_node().name(ctxt),
+                    )
+                    .into(),
+                )
+            })
     }
 
     /// Upcast to [`Node`].
