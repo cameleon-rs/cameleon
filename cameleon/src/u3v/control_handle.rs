@@ -255,7 +255,7 @@ impl ControlHandle {
                 continue;
             }
 
-            self.next_req_id += 1;
+            self.next_req_id = self.next_req_id.wrapping_add(1);
             ok = Some(recv_len);
             break;
         }
