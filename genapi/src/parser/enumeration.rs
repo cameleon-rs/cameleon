@@ -7,7 +7,7 @@ use crate::{
 
 use super::{
     elem_name::{
-        ENUMERATION, ENUM_ENTRY, IS_SELF_CLEARING, NUMERIC_VALUE, POLLING_TIME, P_SELECTED,
+        ENUMERATION, ENUM_ENTRY, IS_SELF_CLEARING, NAME, NUMERIC_VALUE, POLLING_TIME, P_SELECTED,
         STREAMABLE, SYMBOLIC,
     },
     xml, Parse,
@@ -61,7 +61,7 @@ impl Parse for EnumEntryNode {
         debug!("start parsing `EnumEntryNode`");
         debug_assert_eq!(node.tag_name(), ENUM_ENTRY);
 
-        let attr_base = node.parse(node_builder, value_builder, cache_builder);
+        let name = node.attribute_of(NAME).unwrap().to_string();
         let elem_base = node.parse(node_builder, value_builder, cache_builder);
 
         let value = node.parse(node_builder, value_builder, cache_builder);
@@ -73,7 +73,7 @@ impl Parse for EnumEntryNode {
             .unwrap_or_default();
 
         Self {
-            attr_base,
+            name,
             elem_base,
             value,
             numeric_value,
@@ -119,11 +119,13 @@ mod tests {
         assert_eq!(entries.len(), 2);
 
         let entry0 = &entries[0];
+        assert_eq!(entry0.name(), "Entry0");
         assert_eq!(entry0.value(), 0);
         assert!((entry0.numeric_value() - 1.0).abs() < f64::EPSILON);
         assert_eq!(entry0.is_self_clearing(), true);
 
         let entry1 = &entries[1];
+        assert_eq!(entry1.name(), "Entry1");
         assert_eq!(entry1.value(), 1);
         assert!((entry1.numeric_value() - 10.0).abs() < f64::EPSILON);
         assert_eq!(entry1.is_self_clearing(), false);

@@ -102,14 +102,10 @@ impl IEnumeration for EnumerationNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        let ent_id = store.id_by_name(name).ok_or_else(|| {
-            GenApiError::invalid_data(format! {"no `EnumEntryNode`: {} not found", name}.into())
-        })?;
-
         let value = self
             .entries(store)
             .iter()
-            .find(|ent| ent.node_base().id() == ent_id)
+            .find(|ent| ent.name() == name)
             .ok_or_else(|| {
                 GenApiError::invalid_data(
                     format! {"no `EenumEntryNode`: `{}` not found in `{}`",
@@ -174,7 +170,7 @@ impl ISelector for EnumerationNode {
 
 #[derive(Debug, Clone)]
 pub struct EnumEntryNode {
-    pub(crate) attr_base: NodeAttributeBase,
+    pub(crate) name: String,
     pub(crate) elem_base: NodeElementBase,
 
     pub(crate) value: i64,
@@ -185,8 +181,8 @@ pub struct EnumEntryNode {
 
 impl EnumEntryNode {
     #[must_use]
-    pub fn node_base(&self) -> NodeBase<'_> {
-        NodeBase::new(&self.attr_base, &self.elem_base)
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     #[must_use]
