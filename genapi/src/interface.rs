@@ -239,9 +239,7 @@ pub trait IEnumeration {
     fn entries(&self, store: &impl NodeStore) -> &[EnumEntryNode];
 
     fn entry_by_name(&self, name: &str, store: &impl NodeStore) -> Option<&EnumEntryNode> {
-        self.entries(store)
-            .iter()
-            .find(|ent| ent.node_base().id().name(store) == name)
+        self.entries(store).iter().find(|ent| ent.name() == name)
     }
 
     fn set_entry_by_name<T: ValueStore, U: CacheStore>(
