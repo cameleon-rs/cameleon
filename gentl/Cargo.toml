@@ -10,7 +10,7 @@ publish = false
 
 [dependencies]
 thiserror = "1.0.24"
-semver = "0.11.0"
+semver = "1.0.0"
 url = "2.2.1"
 libc = "0.2.94"
 lazy_static = "1.4.0"
