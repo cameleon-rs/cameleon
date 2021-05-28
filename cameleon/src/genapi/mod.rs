@@ -15,7 +15,7 @@ pub use cameleon_genapi::{
         CacheSink, CacheStore, DefaultCacheStore, DefaultNodeStore, DefaultValueStore, NodeId,
         NodeStore, ValueStore,
     },
-    RegisterDescription, ValueCtxt,
+    GenApiError, RegisterDescription, ValueCtxt,
 };
 
 /// Manages context of parameters of the device.
