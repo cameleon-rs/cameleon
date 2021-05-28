@@ -3,10 +3,11 @@
 //! `Payload` is an abstracted container that is mainly used to transfer an image, but also meta data of the image.
 //! See [`Payload`] and [`ImageInfo`] for more details.
 
+pub use cameleon_device::PixelFormat;
+
 use std::time;
 
 use async_std::channel::{Receiver, Sender};
-use cameleon_device::PixelFormat;
 
 use super::{StreamError, StreamResult};
 
