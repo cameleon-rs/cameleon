@@ -1,5 +1,10 @@
 //! This module provides access to `GenApi` features of `GenICam` a compatible camera.
-pub mod node_kind;
+mod node_kind;
+
+pub use node_kind::{
+    BooleanNode, CategoryNode, CommandNode, EnumerationNode, FloatNode, IntegerNode, Node,
+    PortNode, RegisterNode, StringNode,
+};
 
 use std::{
     convert::TryInto,
@@ -10,7 +15,6 @@ use auto_impl::auto_impl;
 use cameleon_genapi::{builder::GenApiBuilder, store};
 
 use super::{ControlError, ControlResult, DeviceControl};
-use node_kind::Node;
 
 pub use cameleon_genapi::{
     elem_type::{AccessMode, NameSpace, Visibility},

@@ -310,7 +310,7 @@ pub trait PayloadStream {
 
 fn execute<Ctrl, Ctxt>(
     ctxt: &mut ParamsCtxt<Ctrl, Ctxt>,
-    node: genapi::node_kind::CommandNode,
+    node: genapi::CommandNode,
 ) -> CameleonResult<()>
 where
     Ctrl: DeviceControl,
