@@ -3,7 +3,7 @@ Thank you for your interest in contributing to `Cameleon`! We are so happy to ha
 
 ## Code of Conduct 
 We adopt [Rust Code of Conduct](https://www.rust-lang.org/policies/code-of-conduct) for our all projects.  
-All contributors are expected to read and follow the conduct.
+All contributors are expected to read and follow the Code of Conduct.
 
 ## Bug reports
 * Please search for a related issue before opening an issue to avoid duplication

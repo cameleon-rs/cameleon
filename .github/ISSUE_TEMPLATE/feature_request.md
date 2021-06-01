@@ -12,7 +12,7 @@ Thank you for opening an issue! Please fill out the following sections.
 <!-- What is the feature you need? -->
 
 ### Implementation
-<!-- Do you have an idea to implement the features? If so, please describe it.-->
+<!-- Do you have an idea to implement the feature? If so, please describe it.-->
 
 ### Drawbacks
-<!-- Do you think there are any drawbacks to implementing this feature? If so, please describe it.-->
+<!-- Do you think there are any drawbacks of implementing this feature? If so, please describe it.-->

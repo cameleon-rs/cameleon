@@ -14,14 +14,15 @@ Currently, `cameleon` supports only `USB3 Vision` cameras, but it's planned to s
 ## Usage
 
 ### USB3 Vision cameras
-First, you need to install `libusb` to communicate with `U3V` cameras, and add the following to your `Cargo.toml`:
+First, you need to install [libusb](https://libusb.info/) to communicate with `U3V` cameras. Then add the following to your `Cargo.toml`:
+
 
 ```toml
 [dependencies]
 cameleon = { version = 0.1, features = 'libusb'}
 ```
 
-Then you can enumerate all cameras connected to the host, and start streaming.
+You can enumerate all cameras connected to the host, and start streaming.
 
 ```rust
 use cameleon::u3v;
