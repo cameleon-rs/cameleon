@@ -253,7 +253,7 @@ pub struct CameraInfo {
 
 /// This trait provides operations on the device's memory.
 #[auto_impl(&mut, Box)]
-pub trait DeviceControl: cameleon_genapi::Device {
+pub trait DeviceControl {
     /// Opens the handle.
     fn open(&mut self) -> ControlResult<()>;
 

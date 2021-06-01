@@ -1,12 +1,15 @@
 //! This module provides access to `GenApi` features of `GenICam` a compatible camera.
 pub mod node_kind;
 
-use std::sync::{Arc, Mutex};
+use std::{
+    convert::TryInto,
+    sync::{Arc, Mutex},
+};
 
 use auto_impl::auto_impl;
 use cameleon_genapi::{builder::GenApiBuilder, store};
 
-use super::{ControlError, ControlResult};
+use super::{ControlError, ControlResult, DeviceControl};
 use node_kind::Node;
 
 pub use cameleon_genapi::{
@@ -29,7 +32,7 @@ pub struct ParamsCtxt<Ctrl, Ctxt> {
 
 impl<Ctrl, Ctxt> ParamsCtxt<Ctrl, Ctxt>
 where
-    Ctrl: cameleon_genapi::Device,
+    Ctrl: DeviceControl,
     Ctxt: GenApiCtxt,
 {
     /// Enters the context.
@@ -341,4 +344,45 @@ pub enum CompressionType {
     Uncompressed,
     /// ZIP containing a single `GenICam` XML file.
     Zip,
+}
+
+struct GenApiDevice<'a, T> {
+    inner: &'a mut T,
+}
+
+impl<'a, T> GenApiDevice<'a, T> {
+    fn new(inner: &'a mut T) -> Self {
+        Self { inner }
+    }
+}
+
+impl<'a, T> cameleon_genapi::Device for GenApiDevice<'a, T>
+where
+    T: DeviceControl,
+{
+    fn read_mem(
+        &mut self,
+        address: i64,
+        data: &mut [u8],
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let address: u64 = address.try_into().map_err(|_| {
+            ControlError::InvalidData(
+                "invalid address: the given address has negative value".into(),
+            )
+        })?;
+        Ok(self.inner.read(address, data)?)
+    }
+
+    fn write_mem(
+        &mut self,
+        address: i64,
+        data: &[u8],
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let address: u64 = address.try_into().map_err(|_| {
+            ControlError::InvalidData(
+                "invalid address: the given address has negative value".into(),
+            )
+        })?;
+        Ok(self.inner.write(address, data)?)
+    }
 }
