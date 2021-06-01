@@ -318,34 +318,6 @@ macro_rules! unwrap_or_log {
     }};
 }
 
-impl cameleon_genapi::Device for ControlHandle {
-    fn read_mem(
-        &mut self,
-        address: i64,
-        data: &mut [u8],
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let address: u64 = address.try_into().map_err(|_| {
-            ControlError::InvalidData(
-                "invalid address: the given address has negative value".into(),
-            )
-        })?;
-        Ok(self.read(address, data)?)
-    }
-
-    fn write_mem(
-        &mut self,
-        address: i64,
-        data: &[u8],
-    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
-        let address: u64 = address.try_into().map_err(|_| {
-            ControlError::InvalidData(
-                "invalid address: the given address has negative value".into(),
-            )
-        })?;
-        Ok(self.write(address, data)?)
-    }
-}
-
 impl DeviceControl for ControlHandle {
     fn open(&mut self) -> ControlResult<()> {
         if self.is_opened() {
@@ -585,13 +557,6 @@ impl SharedControlHandle {
     pub fn device_info(&self) -> u3v::DeviceInfo {
         self.0.lock().unwrap().device_info().clone()
     }
-}
-
-impl cameleon_genapi::Device for SharedControlHandle {
-    impl_shared_control_handle!(
-        fn read_mem(&mut self, address: i64, data: &mut [u8]) -> std::result::Result<(), Box<dyn std::error::Error>>,
-        fn write_mem(&mut self, address: i64, data: &[u8]) -> std::result::Result<(), Box<dyn std::error::Error>>
-    );
 }
 
 impl DeviceControl for SharedControlHandle {

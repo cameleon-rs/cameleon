@@ -5,10 +5,10 @@ use cameleon_genapi::{
     elem_type::{DisplayNotation, FloatRepresentation, IntegerRepresentation},
     interface::IncrementMode,
     prelude::*,
-    Device, EnumEntryNode, GenApiError, GenApiResult, NodeId,
+    EnumEntryNode, GenApiError, GenApiResult, NodeId,
 };
 
-use super::{GenApiCtxt, ParamsCtxt};
+use super::{DeviceControl, GenApiCtxt, GenApiDevice, ParamsCtxt};
 
 /// A node that has `IInteger` interface.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -65,14 +65,15 @@ macro_rules! delegate {
         $(
             $(#[$meta])*
             $vis fn $method<$Ctrl, $Ctxt>($self, ctxt: &mut ParamsCtxt<$Ctrl, $Ctxt> $(,$arg: $arg_ty)*) -> $ret_ty
-            where $Ctrl: Device,
+            where $Ctrl: DeviceControl,
                   $Ctxt: GenApiCtxt
             {
                 ctxt.enter2(|ctrl, ns, vc| {
+                    let mut device = GenApiDevice::new(ctrl);
                     $self.0
                         .$expect_kind(ns)
                         .unwrap()
-                        .$method($($arg,)* ctrl, ns, vc)
+                        .$method($($arg,)* &mut device, ns, vc)
                 })
             }
         )*
@@ -242,7 +243,7 @@ impl EnumerationNode {
     /// Returns entries of the node.
     pub fn entries<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> &[EnumEntryNode]
     where
-        Ctrl: Device,
+        Ctrl: DeviceControl,
         Ctxt: GenApiCtxt,
     {
         let ns = ctxt.node_store();
@@ -258,14 +259,15 @@ impl EnumerationNode {
         ctxt: &mut ParamsCtxt<Ctrl, Ctxt>,
     ) -> GenApiResult<&EnumEntryNode>
     where
-        Ctrl: Device,
+        Ctrl: DeviceControl,
         Ctxt: GenApiCtxt,
     {
         let value = ctxt.enter2(|ctrl, ns, vc| {
+            let mut device = GenApiDevice::new(ctrl);
             self.0
                 .expect_ienumeration_kind(ns)
                 .unwrap()
-                .current_value(ctrl, ns, vc)
+                .current_value(&mut device, ns, vc)
         })?;
         let entries = self.entries(ctxt);
         entries
@@ -350,7 +352,7 @@ impl CategoryNode {
     /// Returns nodes in the category.
     pub fn nodes<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> Vec<Node>
     where
-        Ctrl: Device,
+        Ctrl: DeviceControl,
         Ctxt: GenApiCtxt,
     {
         ctxt.enter2(|_, ns, _| {

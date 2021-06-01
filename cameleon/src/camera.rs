@@ -1,11 +1,13 @@
 //! This module contains types that is the main entry types of the `Cameleon`.
+use std::time;
+
 use auto_impl::auto_impl;
 use tracing::info;
 
 use super::{
-    genapi::{DefaultGenApiCtxt, FromXml, GenApiCtxt, ParamsCtxt},
+    genapi::{self, DefaultGenApiCtxt, FromXml, GenApiCtxt, ParamsCtxt},
     payload::{channel, PayloadReceiver, PayloadSender},
-    CameleonError, CameleonResult, ControlResult, StreamError, StreamResult,
+    CameleonError, CameleonResult, ControlError, ControlResult, StreamError, StreamResult,
 };
 
 /// Provides easy-to-use access to a `GenICam` compatible camera.
@@ -22,13 +24,13 @@ pub struct Camera<Ctrl, Strm, Ctxt = DefaultGenApiCtxt> {
 }
 
 macro_rules! expect_node {
-    ($ctxt:expr, $name:literal, $as_type:ident) => {{
+    ($ctxt:expr, $name:expr, $as_type:ident) => {{
         let err_msg = std::concat!("missing ", $name);
         let err_msg2 = std::concat!($name, " has invalid interface");
         $ctxt
             .node($name)
             .ok_or_else(|| CameleonError::InvalidGenApiXml(err_msg.into()))?
-            .$as_type(&$ctxt)
+            .$as_type($ctxt)
             .ok_or_else(|| CameleonError::InvalidGenApiXml(err_msg2.into()))?
     }};
 }
@@ -122,8 +124,9 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
         // Enable streaimng.
         self.ctrl.enable_streaming()?;
         let mut ctxt = self.params_ctxt()?;
-        expect_node!(ctxt, "TLParamsLocked", as_integer).set_value(&mut ctxt, 1)?;
-        expect_node!(ctxt, "AcquisitionStart", as_command).execute(&mut ctxt)?;
+        expect_node!(&ctxt, "TLParamsLocked", as_integer).set_value(&mut ctxt, 1)?;
+        let acquisition_start_node = expect_node!(&ctxt, "AcquisitionStart", as_command);
+        execute(&mut ctxt, acquisition_start_node)?;
 
         // Start streaming loop.
         let (sender, receiver) = channel(cap, DEFAULT_BUFFER_CAP);
@@ -151,8 +154,9 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
 
         // Disable streaming.
         let mut ctxt = self.params_ctxt()?;
-        expect_node!(ctxt, "AcquisitionStop", as_command).execute(&mut ctxt)?;
-        expect_node!(ctxt, "TLParamsLocked", as_integer).set_value(&mut ctxt, 0)?;
+        let acquisition_stop_node = expect_node!(&ctxt, "AcquisitionStop", as_command);
+        execute(&mut ctxt, acquisition_stop_node)?;
+        expect_node!(&ctxt, "TLParamsLocked", as_integer).set_value(&mut ctxt, 0)?;
         self.ctrl.disable_streaming()?;
 
         // Stop streaming loop.
@@ -253,7 +257,7 @@ pub struct CameraInfo {
 
 /// This trait provides operations on the device's memory.
 #[auto_impl(&mut, Box)]
-pub trait DeviceControl: cameleon_genapi::Device {
+pub trait DeviceControl {
     /// Opens the handle.
     fn open(&mut self) -> ControlResult<()>;
 
@@ -302,4 +306,25 @@ pub trait PayloadStream {
 
     /// Returns `true` if streaming loop is running.
     fn is_loop_running(&self) -> bool;
+}
+
+fn execute<Ctrl, Ctxt>(
+    ctxt: &mut ParamsCtxt<Ctrl, Ctxt>,
+    node: genapi::CommandNode,
+) -> CameleonResult<()>
+where
+    Ctrl: DeviceControl,
+    Ctxt: GenApiCtxt,
+{
+    const TIMEOUT: time::Duration = time::Duration::from_secs(1);
+
+    node.execute(ctxt)?;
+    let elapsed = time::Instant::now();
+    while !node.is_done(ctxt)? {
+        if elapsed.elapsed() > TIMEOUT {
+            return Err(ControlError::Timeout.into());
+        }
+    }
+
+    Ok(())
 }
