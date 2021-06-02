@@ -119,6 +119,8 @@ echo 1000 > /sys/module/usbcore/parameters/usbfs_memory_mb
 ## Roadmap
 ### [v0.2.0](https://github.com/cameleon-rs/cameleon/milestone/2)
 * Add support for `GigE` cameras
+* Impelment emulator
+* Add support for saving and loading camera parameters
 
 ### [v0.3.0](https://github.com/cameleon-rs/cameleon/milestone/3)
 * Implement payload chunk parser
