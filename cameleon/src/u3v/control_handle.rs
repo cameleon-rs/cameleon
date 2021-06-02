@@ -29,6 +29,8 @@ const INITIAL_MAXIMUM_CMD_LENGTH: u32 = 128;
 /// This value is temporarily used until the device's bootstrap register value is read.
 const INITIAL_MAXIMUM_ACK_LENGTH: u32 = 128;
 
+const PAYLOAD_TRANSFER_SIZE: u32 = 1024 * 64;
+
 /// This handle provides low level API to read and write data from the device.  
 /// See [`ControlHandle::abrm`] and [`register_map`](super::register_map) which provide more
 /// convenient way to communicate with `u3v` specific registers.
@@ -457,7 +459,7 @@ impl DeviceControl for ControlHandle {
         let required_payload_size = unwrap_or_log!(sirm.required_payload_size(self));
         let required_trailer_size = unwrap_or_log!(sirm.required_leader_size(self));
 
-        let payload_transfer_size = align!(required_payload_size, u64) as u32;
+        let payload_transfer_size = align!(PAYLOAD_TRANSFER_SIZE, u32);
         let payload_transfer_count = (required_payload_size / payload_transfer_size as u64) as u32;
         let payload_final_transfer1_size =
             align!(required_payload_size % payload_transfer_size as u64, u64) as u32;
