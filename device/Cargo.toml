@@ -29,7 +29,9 @@ libusb = ["rusb"]
 [[example]]
 name = "u3v_device_enumeration"
 path = "examples/u3v/device_enumeration.rs"
+required-features = ["libusb"]
 
 [[example]]
 name = "u3v_device_control"
 path = "examples/u3v/device_control.rs"
+required-features = ["libusb"]
