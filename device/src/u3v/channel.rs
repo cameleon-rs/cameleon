@@ -5,9 +5,9 @@ use crate::u3v::Result;
 use super::device::RusbDevHandle;
 
 pub struct ControlChannel {
-    device_handle: RusbDevHandle,
-    iface_info: ControlIfaceInfo,
-    is_opened: bool,
+    pub device_handle: RusbDevHandle,
+    pub iface_info: ControlIfaceInfo,
+    pub is_opened: bool,
 }
 
 impl ControlChannel {
@@ -71,9 +71,9 @@ impl ControlChannel {
 }
 
 pub struct ReceiveChannel {
-    device_handle: RusbDevHandle,
-    iface_info: ReceiveIfaceInfo,
-    is_opened: bool,
+    pub device_handle: RusbDevHandle,
+    pub iface_info: ReceiveIfaceInfo,
+    pub is_opened: bool,
 }
 
 impl ReceiveChannel {
@@ -129,16 +129,16 @@ impl ReceiveChannel {
 }
 
 #[derive(Clone, Debug)]
-pub(super) struct ControlIfaceInfo {
-    pub(super) iface_number: u8,
-    pub(super) bulk_in_ep: u8,
-    pub(super) bulk_out_ep: u8,
+pub struct ControlIfaceInfo {
+    pub iface_number: u8,
+    pub bulk_in_ep: u8,
+    pub bulk_out_ep: u8,
 }
 
 #[derive(Clone, Debug)]
-pub(super) struct ReceiveIfaceInfo {
-    pub(super) iface_number: u8,
-    pub(super) bulk_in_ep: u8,
+pub struct ReceiveIfaceInfo {
+    pub iface_number: u8,
+    pub bulk_in_ep: u8,
 }
 
 fn set_halt(handle: &RusbDevHandle, endpoint_number: u8, timeout: time::Duration) -> Result<()> {

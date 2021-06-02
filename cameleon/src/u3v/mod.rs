@@ -41,10 +41,11 @@
 //! ```
 #![allow(clippy::missing_panics_doc)]
 
-pub mod register_map;
-
 pub mod control_handle;
+pub mod register_map;
 pub mod stream_handle;
+
+mod async_read;
 
 pub use control_handle::{ControlHandle, SharedControlHandle};
 pub use stream_handle::{StreamHandle, StreamParams};
