@@ -17,7 +17,7 @@ use crate::{
     ControlError, ControlResult, DeviceControl, StreamError, StreamResult,
 };
 
-use super::register_map::Abrm;
+use super::{async_read::AsyncPool, register_map::Abrm};
 
 /// This type is used to receive stream packets from the device.
 pub struct StreamHandle {
@@ -518,33 +518,26 @@ fn read_payload(
     params: &StreamParams,
     buf: &mut [u8],
 ) -> StreamResult<usize> {
-    let mut read_len = 0;
-
     let payload_size = params.payload_size;
+    let mut async_pool = AsyncPool::new(inner);
+    let mut cursor = 0;
     for _ in 0..params.payload_count {
-        read_len += recv(
-            inner,
-            params,
-            &mut buf[read_len..read_len + payload_size],
-            payload_size,
-        )?;
+        async_pool.submit(&mut buf[cursor..cursor + payload_size])?;
+        cursor += payload_size;
     }
 
-    let payload_final1_size = params.payload_final1_size;
-    read_len += recv(
-        inner,
-        params,
-        &mut buf[read_len..read_len + payload_final1_size],
-        payload_final1_size,
-    )?;
+    if params.payload_final1_size != 0 {
+        async_pool.submit(&mut buf[cursor..cursor + params.payload_final1_size])?;
+        cursor += params.payload_final1_size;
+    }
+    if params.payload_final2_size != 0 {
+        async_pool.submit(&mut buf[cursor..cursor + params.payload_final2_size])?;
+    }
 
-    let payload_final2_size = params.payload_final2_size;
-    read_len += recv(
-        inner,
-        params,
-        &mut buf[read_len..read_len + payload_final2_size],
-        payload_final2_size,
-    )?;
+    let mut read_len = 0;
+    while !async_pool.is_empty() {
+        read_len += async_pool.poll(params.timeout)?;
+    }
 
     Ok(read_len)
 }

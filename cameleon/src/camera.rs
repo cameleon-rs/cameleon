@@ -1,13 +1,12 @@
 //! This module contains types that is the main entry types of the `Cameleon`.
-use std::time;
 
 use auto_impl::auto_impl;
 use tracing::info;
 
 use super::{
-    genapi::{self, DefaultGenApiCtxt, FromXml, GenApiCtxt, ParamsCtxt},
+    genapi::{DefaultGenApiCtxt, FromXml, GenApiCtxt, ParamsCtxt},
     payload::{channel, PayloadReceiver, PayloadSender},
-    CameleonError, CameleonResult, ControlError, ControlResult, StreamError, StreamResult,
+    CameleonError, CameleonResult, ControlResult, StreamError, StreamResult,
 };
 
 /// Provides easy-to-use access to a `GenICam` compatible camera.
@@ -125,8 +124,7 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
         self.ctrl.enable_streaming()?;
         let mut ctxt = self.params_ctxt()?;
         expect_node!(&ctxt, "TLParamsLocked", as_integer).set_value(&mut ctxt, 1)?;
-        let acquisition_start_node = expect_node!(&ctxt, "AcquisitionStart", as_command);
-        execute(&mut ctxt, acquisition_start_node)?;
+        expect_node!(&ctxt, "AcquisitionStart", as_command).execute(&mut ctxt)?;
 
         // Start streaming loop.
         let (sender, receiver) = channel(cap, DEFAULT_BUFFER_CAP);
@@ -154,8 +152,7 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
 
         // Disable streaming.
         let mut ctxt = self.params_ctxt()?;
-        let acquisition_stop_node = expect_node!(&ctxt, "AcquisitionStop", as_command);
-        execute(&mut ctxt, acquisition_stop_node)?;
+        expect_node!(&ctxt, "AcquisitionStop", as_command).execute(&mut ctxt)?;
         expect_node!(&ctxt, "TLParamsLocked", as_integer).set_value(&mut ctxt, 0)?;
         self.ctrl.disable_streaming()?;
 
@@ -306,25 +303,4 @@ pub trait PayloadStream {
 
     /// Returns `true` if streaming loop is running.
     fn is_loop_running(&self) -> bool;
-}
-
-fn execute<Ctrl, Ctxt>(
-    ctxt: &mut ParamsCtxt<Ctrl, Ctxt>,
-    node: genapi::CommandNode,
-) -> CameleonResult<()>
-where
-    Ctrl: DeviceControl,
-    Ctxt: GenApiCtxt,
-{
-    const TIMEOUT: time::Duration = time::Duration::from_secs(1);
-
-    node.execute(ctxt)?;
-    let elapsed = time::Instant::now();
-    while !node.is_done(ctxt)? {
-        if elapsed.elapsed() > TIMEOUT {
-            return Err(ControlError::Timeout.into());
-        }
-    }
-
-    Ok(())
 }
