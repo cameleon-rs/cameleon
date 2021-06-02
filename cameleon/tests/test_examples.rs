@@ -1,3 +1,4 @@
+#[cfg(feature = "libusb")]
 #[test]
 fn test_examples() {
     let t = trybuild::TestCases::new();

@@ -1,8 +1,8 @@
-use std::ffi::CStr;
-use std::time::Duration;
-
 extern crate byteorder;
 extern crate cameleon_device;
+
+use std::ffi::CStr;
+use std::time::Duration;
 
 use cameleon_device::u3v::{
     enumerate_devices,
@@ -12,15 +12,6 @@ use cameleon_device::u3v::{
 };
 
 fn main() {
-    // Need to build emulator in case libusb is not supported.
-    #[cfg(not(feature = "libusb"))]
-    use cameleon_device::u3v::EmulatorBuilder;
-    #[cfg(not(feature = "libusb"))]
-    EmulatorBuilder::new()
-        .user_defined_name("emu")
-        .unwrap()
-        .build();
-
     // Enumerate devices connected to the host.
     let devices: Vec<Device> = enumerate_devices().unwrap().into_iter().collect();
 

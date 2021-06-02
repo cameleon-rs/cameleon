@@ -6,7 +6,11 @@
     clippy::cast_possible_truncation
 )]
 
+#[cfg(feature = "libusb")]
 pub mod u3v;
+
+//// TODO: finish implementation.
+//mod emulator;
 
 mod pixel_format;
 

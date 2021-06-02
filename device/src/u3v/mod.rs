@@ -7,20 +7,14 @@ pub mod prelude {
     use super::protocol;
 }
 
+mod channel;
+mod device;
+mod device_builder;
 mod device_info;
 
-#[cfg(feature = "libusb")]
-mod real;
-
-#[cfg(not(feature = "libusb"))]
-mod emulator;
-
-#[cfg(feature = "libusb")]
-pub use real::*;
-
-#[cfg(not(feature = "libusb"))]
-pub use emulator::*;
-
+pub use channel::{ControlChannel, ReceiveChannel};
+pub use device::Device;
+pub use device_builder::enumerate_devices;
 pub use device_info::{BusSpeed, DeviceInfo};
 
 use std::borrow::Cow;
@@ -76,3 +70,30 @@ pub enum LibUsbError {
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
+
+impl From<rusb::Error> for Error {
+    fn from(err: rusb::Error) -> Error {
+        use LibUsbError::{
+            Access, BadDescriptor, Busy, Interrupted, InvalidParam, Io, NoDevice, NoMem, NotFound,
+            NotSupported, Other, Overflow, Pipe, Timeout,
+        };
+        let kind = match err {
+            rusb::Error::Io => Io,
+            rusb::Error::InvalidParam => InvalidParam,
+            rusb::Error::Access => Access,
+            rusb::Error::NoDevice => NoDevice,
+            rusb::Error::NotFound => NotFound,
+            rusb::Error::Busy => Busy,
+            rusb::Error::Timeout => Timeout,
+            rusb::Error::Overflow => Overflow,
+            rusb::Error::Pipe => Pipe,
+            rusb::Error::Interrupted => Interrupted,
+            rusb::Error::NoMem => NoMem,
+            rusb::Error::NotSupported => NotSupported,
+            rusb::Error::BadDescriptor => BadDescriptor,
+            rusb::Error::Other => Other,
+        };
+
+        Error::LibUsb(kind)
+    }
+}

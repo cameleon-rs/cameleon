@@ -34,38 +34,11 @@ jobs:
       - name: Rustfmt
         run: cargo fmt --all -- --check
 
-      - name: Clippy with default features
+      - name: Clippy
         run: cargo clippy --workspace --all-targets --all-features -- -D clippy::all
 
-  test-default-feature:
-    name: Test with default features
-    defaults:
-      run:
-        shell: bash
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
-          - windows-latest
-        rust:
-          - stable
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ matrix.rust }}
-
-      - name: Test cameleon
-        run: cargo test --all-targets
-      # NOTE. --all-targets option doesn't invoke doctest, see https://github.com/rust-lang/cargo/issues/6669.
-      - name: Doctest cameleon
-        run: cargo test --doc
-
-  test-libusb-feature:
-    name: Test with libusb feature
+  test:
+    name: Test
     defaults:
       run:
         shell: bash
@@ -98,25 +71,9 @@ jobs:
             vcpkg/vcpkg install libusb
           fi
 
-      # Test cameleon-device with libusb feature.
-      - name: Test cameleon-device with libusb
-        run: cargo test --all-targets --features libusb
-        working-directory: device
-      # Doctest cameleon-device with libusb feature. --all-targets option doesn't invoke doctest, see https://github.com/rust-lang/cargo/issues/6669.
-      - name: Doctest cameleon-device
-        run: cargo test --doc --features libusb
-        working-directory: device
+      - name: Test cameleon
+        run: cargo test --workspace --all-targets --all-features
 
-      # Test cameleon-device with libusb feature.
-      - name: Test cameleon-gentl with libusb
-        run: cargo test --all-targets --features libusb
-        working-directory: device
-
-      # Test cameleon with libusb feature.
-      - name: Test cameleon with libusb
-        run: cargo test --all-targets --features libusb
-        working-directory: cameleon
-      # Doctest cameleon with libusb feature. --all-targets option doesn't invoke doctest, see https://github.com/rust-lang/cargo/issues/6669.
+      # NOTE: --all-targets option doesn't invoke doctest, see https://github.com/rust-lang/cargo/issues/6669.
       - name: Doctest cameleon
-        run: cargo test --doc --features libusb
-        working-directory: cameleon
+        run: cargo test --workspace --all-features --doc

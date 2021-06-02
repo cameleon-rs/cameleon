@@ -29,7 +29,9 @@ libusb = ["cameleon-device/libusb"]
 [[example]]
 name = "u3v_register_map"
 path = "examples/u3v/register_map.rs"
+required-features = ["libusb"]
 
 [[example]]
 name = "stream"
 path = "examples/stream.rs"
+required-features = ["libusb"]
