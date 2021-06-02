@@ -17,10 +17,7 @@ lazy_static = "1.4.0"
 const_format = "0.2.14"
 
 cameleon-impl = { path = "../impl" }
-cameleon = { path = "../cameleon" }
-
-[features]
-libusb = ["cameleon/libusb"]
+cameleon = { path = "../cameleon", features = ["libusb"] }
 
 [lib]
 crate-type = ["cdylib"]
