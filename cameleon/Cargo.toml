@@ -18,15 +18,15 @@ tracing = "0.1.26"
 auto_impl = "0.4.1"
 cameleon-device = { path = "../device" }
 cameleon-genapi = { path = "../genapi" }
-
-rusb = { git = 'https://github.com/Y-Nak/rusb', optional = true }
+rusb = { version = "0.8.1", optional = true }
+libusb1-sys = { version = "0.5.0", optional = true }
 libc = { version = "0.2", optional = true }
 
 [dev-dependencies]
 trybuild = "1.0.42"
 
 [features]
-libusb = ["cameleon-device/libusb", "rusb", "libc"]
+libusb = ["cameleon-device/libusb", "rusb", "libc", "libusb1-sys"]
 
 [[example]]
 name = "u3v_register_map"

@@ -10,7 +10,7 @@ repository = "https://github.com/cameleon-rs/cameleon"
 description = """
 Provides device specific protocol decoder and basic I/O operations for GenICam compatible devices.
 """
-categories = ["computer-vision", "parser-implementations"]
+categories = ["computer-vision"] 
 keywords = ["genicam", "camera", "usb3", "gige", "uvc"]
 
 [dependencies]
@@ -23,10 +23,9 @@ const_format = "0.2.14"
 futures = "0.3.14"
 lazy_static = "1.4.0"
 rand = "0.8.3"
-cameleon-impl = { path = "../impl" }
+cameleon-impl = { path = "../impl", version = "0.1.0" }
 
-# Dependencies for libusb.
-rusb = { git = 'https://github.com/Y-Nak/rusb', optional = true }
+rusb = { version = "0.8.1", optional = true }
 
 [dev-dependencies]
 trybuild = "1.0.42"
