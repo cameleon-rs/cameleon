@@ -2,7 +2,23 @@
   <img src="misc/logo.svg">
 </p>
 
+[![Crates.io][crates-badge]][crates-url]
+[![Documentation][docs-badge]][docs-url]
+[![MPL-2.0][mpl-badge]][mpl-url]
+[![Build Status][actions-badge]][actions-url]
+
+[crates-badge]: https://img.shields.io/crates/v/cameleon.svg
+[crates-url]: https://crates.io/crates/cameleon
+[docs-badge]: https://docs.rs/cameleon/badge.svg
+[docs-url]: https://docs.rs/cameleon
+[mpl-badge]: https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg
+[mpl-url]: LICENSE
+[actions-badge]: https://github.com/cameleon-rs/cameleon/workflows/CI/badge.svg
+[actions-url]: https://github.com/cameleon-rs/cameleon/actions/workflows/ci.yml
+
+
 `cameleon` is a safe, fast, and flexible library for [GenICam](https://www.emva.org/standards-technology/genicam/) compatible cameras.
+
 
 ## Overview
 
