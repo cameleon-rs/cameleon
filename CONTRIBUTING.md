@@ -10,7 +10,7 @@ All contributors are expected to read and follow the Code of Conduct.
 * Please add minimal complete and verifiable examples if possible.  This would be a great help for fixing the issue.
 
 ## Finding something to fix/improve
-The best way to dive into the development is to find and work on the issue labeled [good-first-issue](https://github.com/cameleon-rs/cameleon/labels/good-first-issue).
+The best way to dive into the development is to find and work on the issue labeled [good first issue](https://github.com/cameleon-rs/cameleon/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 
 ## Pull Request process
 
