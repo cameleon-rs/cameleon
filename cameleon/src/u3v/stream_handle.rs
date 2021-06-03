@@ -254,7 +254,7 @@ impl StreamingLoop {
                     continue;
                 }
             };
-            unwrap_or_continue!(
+            let read_payload_size = unwrap_or_continue!(
                 read_payload(&mut inner, &self.params, &mut payload_buf),
                 Some(payload_buf)
             );
@@ -267,6 +267,7 @@ impl StreamingLoop {
                 PayloadBuilder {
                     leader,
                     payload_buf,
+                    read_payload_size,
                     trailer
                 }
                 .build(),
@@ -286,6 +287,7 @@ impl StreamingLoop {
 struct PayloadBuilder<'a> {
     leader: u3v_stream::Leader<'a>,
     payload_buf: Vec<u8>,
+    read_payload_size: usize,
     trailer: u3v_stream::Trailer<'a>,
 }
 
@@ -296,6 +298,15 @@ impl<'a> PayloadBuilder<'a> {
             return Err(StreamError::InvalidPayload(
                 format!("trailer status indicates error: {:?}", payload_status).into(),
             ));
+        }
+
+        if self.trailer.valid_payload_size() > self.read_payload_size as u64 {
+            let err_msg = format!("the actual read payload size is smaller than the size specified in the trailer: expected {}, but got {}",
+                                  self.trailer.valid_payload_size(),
+                                  self.read_payload_size);
+            println!("{}", err_msg);
+
+            return Err(StreamError::InvalidPayload(err_msg.into()));
         }
 
         match self.leader.payload_type() {
