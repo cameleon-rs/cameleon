@@ -2,7 +2,23 @@
   <img src="misc/logo.svg">
 </p>
 
+[![Crates.io][crates-badge]][crates-url]
+[![Documentation][docs-badge]][docs-url]
+[![MPL-2.0][mpl-badge]][mpl-url]
+[![Build Status][actions-badge]][actions-url]
+
+[crates-badge]: https://img.shields.io/crates/v/cameleon.svg
+[crates-url]: https://crates.io/crates/cameleon
+[docs-badge]: https://docs.rs/cameleon/badge.svg
+[docs-url]: https://docs.rs/cameleon
+[mpl-badge]: https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg
+[mpl-url]: LICENSE
+[actions-badge]: https://github.com/cameleon-rs/cameleon/workflows/CI/badge.svg
+[actions-url]: https://github.com/cameleon-rs/cameleon/actions/workflows/ci.yml
+
+
 `cameleon` is a safe, fast, and flexible library for [GenICam](https://www.emva.org/standards-technology/genicam/) compatible cameras.
+
 
 ## Overview
 
@@ -27,10 +43,10 @@ You can enumerate all cameras connected to the host, and start streaming.
 use cameleon::u3v;
 
 // Enumerates all cameras connected to the host.
-let cameras = u3v::enumerate_cameras().unwrap();
+let mut cameras = u3v::enumerate_cameras().unwrap();
 
 if cameras.is_empty() {
-    println!("no camera found")
+    println!("no camera found");
     return;
 }
 
@@ -84,7 +100,8 @@ More examples can be found [here](cameleon/examples).
 * [cameleon-genapi](genapi): Provides parser and interpreter of `GenApi` XML.
 * [cameleon-device](device): Provides device specific protocol decoder and basic I/O operations for devices, also provides emulators.
 * [cameleon-gentl](gentl): Provides `GenTL` interfaces as a C library.
-* [cameleon-impl](impl): Provides internal APIs for other crates. `cameleon-impl` is intended to be used only by this project, therefore not published.
+* [cameleon-impl](impl): Provides internal APIs for other crates. `cameleon-impl` is intended to be used only by `cameleon` project.
+* [cameleon-impl-macros](impl/macros): Provides procedural macros for other crates. `cameleon-impl-macros` is intended to be used only by `cameleon` project.
 
 
 ## FAQ

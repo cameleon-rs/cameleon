@@ -13,7 +13,7 @@ use std::{
 };
 
 use cameleon_device::u3v::ReceiveChannel;
-use rusb::{libusb1_sys, UsbContext};
+use rusb::UsbContext;
 use thiserror::Error;
 
 use crate::{StreamError, StreamResult};

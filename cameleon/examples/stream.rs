@@ -1,3 +1,5 @@
+//! This example describes how to start streaming and receive payloads.
+
 use cameleon::u3v::enumerate_cameras;
 
 fn main() {
