@@ -8,7 +8,7 @@ readme = "README.md"
 homepage = "https://github.com/cameleon-rs/cameleon/tree/main/device"
 repository = "https://github.com/cameleon-rs/cameleon"
 description = """
-Provides device specific protocol decoder and basic I/O operations for GenICam compatible devices.
+cameleon-device provides device specific protocol decoders and basic I/O operations for GenICam compatible devices.
 """
 categories = ["computer-vision"] 
 keywords = ["genicam", "camera", "usb3", "gige", "uvc"]
