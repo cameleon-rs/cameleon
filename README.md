@@ -84,7 +84,8 @@ More examples can be found [here](cameleon/examples).
 * [cameleon-genapi](genapi): Provides parser and interpreter of `GenApi` XML.
 * [cameleon-device](device): Provides device specific protocol decoder and basic I/O operations for devices, also provides emulators.
 * [cameleon-gentl](gentl): Provides `GenTL` interfaces as a C library.
-* [cameleon-impl](impl): Provides internal APIs for other crates. `cameleon-impl` is intended to be used only by this project, therefore not published.
+* [cameleon-impl](impl): Provides internal APIs for other crates. `cameleon-impl` is intended to be used only by `cameleon` project.
+* [cameleon-impl-macros](impl/macros): Provides procedural macros for other crates. `cameleon-impl-macros` is intended to be used only by `cameleon` project.
 
 
 ## FAQ
