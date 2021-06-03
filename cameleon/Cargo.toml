@@ -37,3 +37,18 @@ required-features = ["libusb"]
 name = "stream"
 path = "examples/stream.rs"
 required-features = ["libusb"]
+
+[[example]]
+name = "params"
+path = "examples/params.rs"
+required-features = ["libusb"]
+
+[[example]]
+name = "no_cache"
+path = "examples/no_cache.rs"
+required-features = ["libusb"]
+
+[[example]]
+name = "custom_ctxt"
+path = "examples/custom_ctxt.rs"
+required-features = ["libusb"]
