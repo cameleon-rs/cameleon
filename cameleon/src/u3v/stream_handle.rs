@@ -304,8 +304,6 @@ impl<'a> PayloadBuilder<'a> {
             let err_msg = format!("the actual read payload size is smaller than the size specified in the trailer: expected {}, but got {}",
                                   self.trailer.valid_payload_size(),
                                   self.read_payload_size);
-            println!("{}", err_msg);
-
             return Err(StreamError::InvalidPayload(err_msg.into()));
         }
 
