@@ -209,4 +209,31 @@ impl EnumEntryNode {
     pub fn is_self_clearing(&self) -> bool {
         self.is_self_clearing
     }
+
+    pub fn is_locked<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        self.elem_base.is_locked(device, store, cx)
+    }
+
+    pub fn is_implemented<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        self.elem_base.is_implemented(device, store, cx)
+    }
+
+    pub fn is_available<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        self.elem_base.is_available(device, store, cx)
+    }
 }

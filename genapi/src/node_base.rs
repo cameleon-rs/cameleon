@@ -151,7 +151,7 @@ impl NodeElementBase {
             && matches!(self.imposed_access_mode, AccessMode::WO | AccessMode::RW))
     }
 
-    fn is_locked<T: ValueStore, U: CacheStore>(
+    pub(super) fn is_locked<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
@@ -161,7 +161,7 @@ impl NodeElementBase {
             .map_or(Ok(false), |nid| bool_from_id(nid, device, store, cx))
     }
 
-    fn is_implemented<T: ValueStore, U: CacheStore>(
+    pub(super) fn is_implemented<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
@@ -171,7 +171,7 @@ impl NodeElementBase {
             .map_or(Ok(true), |nid| bool_from_id(nid, device, store, cx))
     }
 
-    fn is_available<T: ValueStore, U: CacheStore>(
+    pub(super) fn is_available<T: ValueStore, U: CacheStore>(
         &self,
         device: &mut impl Device,
         store: &impl NodeStore,
