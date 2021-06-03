@@ -1,4 +1,4 @@
-//! This module contains types which implement either one of `IInterface` defined in `GenICam
+//! This module contains types which implement `IInterface` defined in `GenICam
 //! Starndard`.
 
 use cameleon_genapi::{
@@ -10,7 +10,7 @@ use cameleon_genapi::{
 
 use super::{DeviceControl, GenApiCtxt, GenApiDevice, ParamsCtxt};
 
-/// A node that has `IInteger` interface.
+/// A node that has `IInteger` interface
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct IntegerNode(NodeId);
 
@@ -293,7 +293,7 @@ impl EnumerationNode {
 impl CommandNode {
     delegate! {
         expect_icommand_kind,
-        /// Execute the command.
+        /// Executes the command.
         pub fn execute<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<()>,
         /// Returns `true` if the previous command is executed on the device.
         pub fn is_done<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,

@@ -27,10 +27,10 @@ You can enumerate all cameras connected to the host, and start streaming.
 use cameleon::u3v;
 
 // Enumerates all cameras connected to the host.
-let cameras = u3v::enumerate_cameras().unwrap();
+let mut cameras = u3v::enumerate_cameras().unwrap();
 
 if cameras.is_empty() {
-    println!("no camera found")
+    println!("no camera found");
     return;
 }
 

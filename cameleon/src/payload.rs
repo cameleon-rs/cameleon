@@ -11,7 +11,7 @@ use async_std::channel::{Receiver, Sender};
 
 use super::{StreamError, StreamResult};
 
-/// Representing Payload type of the image.
+/// Represents Payload type of the image.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PayloadType {
     /// Payload contains just an image data only.
@@ -41,7 +41,7 @@ pub struct ImageInfo {
     pub image_size: usize,
 }
 
-/// Payload sent from the device.
+/// A payload sent from the device.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Payload {
     pub(crate) id: u64,
@@ -98,59 +98,59 @@ impl Payload {
 /// An Receiver of the `Payload` which is sent from a device.
 #[derive(Debug, Clone)]
 pub struct PayloadReceiver {
-    /// Send back `payload` to the device for reusing it.
+    /// Sends back `payload` to the device for reusing it.
     tx: Sender<Payload>,
 
-    /// Receive `payload` from the device.
+    /// Receives `payload` from the device.
     rx: Receiver<StreamResult<Payload>>,
 }
 
 impl PayloadReceiver {
-    /// Receive [`Payload`] sent from the device.
+    /// Receives [`Payload`] sent from the device.
     pub async fn recv(&self) -> StreamResult<Payload> {
         self.rx.recv().await?
     }
 
-    /// Try to receive [`Payload`].
+    /// Tries to receive [`Payload`].
     /// This method doesn't wait arrival of `payload` and immediately returns `StreamError` if
     /// the channel is empty.
     pub fn try_recv(&self) -> StreamResult<Payload> {
         self.rx.try_recv()?
     }
 
-    /// Send back [`Payload`] to the device to reuse already allocated `payload`.
+    /// Sends back [`Payload`] to the device to reuse already allocated `payload`.
     ///
     /// Sending back `payload` may improve performance of streaming, but not required to call this
     /// method.
     ///
-    /// Return `StreamError` if the channel is full.
+    /// Returns `StreamError` if the channel is full.
     pub fn send_back(&self, payload: Payload) {
         self.tx.try_send(payload).ok();
     }
 }
 
-/// An Sender of the `Payload` which is sent to the host.
+/// A sender of the [`Payload`] which is sent to the host.
 #[derive(Debug, Clone)]
 pub struct PayloadSender {
-    /// Receive from the device.
+    /// Receives from the device.
     tx: Sender<StreamResult<Payload>>,
-    /// Send back payload to reuse it.
+    /// Sends back payload to reuse it.
     rx: Receiver<Payload>,
 }
 
 impl PayloadSender {
-    /// Send [`Payload`] to the host.
+    /// Sends [`Payload`] to the host.
     pub async fn send(&self, payload: StreamResult<Payload>) -> StreamResult<()> {
         Ok(self.tx.send(payload).await?)
     }
 
-    /// Try to send [`Payload`] to the host.
+    /// Tries to send [`Payload`] to the host.
     /// Returns `StreamError` if the channel is full or empty.
     pub fn try_send(&self, payload: StreamResult<Payload>) -> StreamResult<()> {
         Ok(self.tx.try_send(payload)?)
     }
 
-    /// Try to receive [`Payload`].
+    /// Tries to receive [`Payload`].
     /// This method doesn't wait arrival of `payload` and immediately returns `StreamError` if
     /// the channel is empty.
     pub fn try_recv(&self) -> StreamResult<Payload> {
@@ -158,7 +158,7 @@ impl PayloadSender {
     }
 }
 
-/// Create [`PayloadReceiver`] and [`PayloadSender`].
+/// Creates [`PayloadReceiver`] and [`PayloadSender`].
 pub fn channel(payload_cap: usize, buffer_cap: usize) -> (PayloadSender, PayloadReceiver) {
     let (device_tx, host_rx) = async_std::channel::bounded(payload_cap);
     let (host_tx, device_rx) = async_std::channel::bounded(buffer_cap);

@@ -1,4 +1,35 @@
 //! This module provides access to `GenApi` features of `GenICam` a compatible camera.
+//!
+//! # Examples
+//! ```rust
+//! # use cameleon::u3v;
+//! # let mut cameras = u3v::enumerate_cameras().unwrap();
+//! # if cameras.is_empty() {
+//! #     return;
+//! # }
+//! # let mut camera = cameras.pop().unwrap();
+//! // Loads `GenApi` context.
+//! camera.load_context().unwrap();
+//!
+//! let mut params_ctxt = camera.params_ctxt().unwrap();
+//! // Get `Gain` node of `GenApi`.
+//! // `GenApi SFNC` defines that `Gain` node should have `IFloat` interface,
+//! // so this conversion would be success if the camera follows that.
+//! // Some vendors may define `Gain` node as `IInteger`, in that case, use
+//! // `as_integer(&params_ctxt)` instead of `as_float(&params_ctxt).
+//! let gain_node = params_ctxt.node("Gain").unwrap().as_float(&params_ctxt).unwrap();
+//!
+//! // Get the current value of `Gain`.
+//! if gain_node.is_readable(&mut params_ctxt).unwrap() {
+//!     let value = gain_node.value(&mut params_ctxt).unwrap();
+//!     println!("{}", value);
+//! }
+//!
+//! // Set `0.1` to `Gain`.
+//! if gain_node.is_writable(&mut params_ctxt).unwrap() {
+//!     gain_node.set_value(&mut params_ctxt, 0.1).unwrap();
+//! }
+//! ```
 mod node_kind;
 
 pub use node_kind::{
@@ -26,12 +57,59 @@ pub use cameleon_genapi::{
 };
 
 /// Manages context of parameters of the device.
+///
+/// # Examples
+/// ```rust
+/// # use cameleon::u3v;
+/// # let mut cameras = u3v::enumerate_cameras().unwrap();
+/// # if cameras.is_empty() {
+/// #     return;
+/// # }
+/// # let mut camera = cameras.pop().unwrap();
+/// // Loads `GenApi` context.
+/// camera.load_context().unwrap();
+///
+/// let mut params_ctxt = camera.params_ctxt().unwrap();
+/// // Get `Gain` node of `GenApi`.
+/// // `GenApi SFNC` defines that `Gain` node should have `IFloat` interface,
+/// // so this conversion would be success if the camera follows that.
+/// // Some vendors may define `Gain` node as `IInteger`, in that case, use
+/// // `as_integer(&params_ctxt)` instead of `as_float(&params_ctxt).
+/// let gain_node = params_ctxt.node("Gain").unwrap().as_float(&params_ctxt).unwrap();
+///
+/// // Get the current value of `Gain`.
+/// if gain_node.is_readable(&mut params_ctxt).unwrap() {
+///     let value = gain_node.value(&mut params_ctxt).unwrap();
+///     println!("{}", value);
+/// }
+///
+/// // Set `0.1` to `Gain`.
+/// if gain_node.is_writable(&mut params_ctxt).unwrap() {
+///     gain_node.set_value(&mut params_ctxt, 0.1).unwrap();
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub struct ParamsCtxt<Ctrl, Ctxt> {
     /// Control handle of the device.
     pub ctrl: Ctrl,
     /// `GenApi` context of the device.
     pub ctxt: Ctxt,
+}
+
+impl<Ctrl, Ctxt> ParamsCtxt<Ctrl, Ctxt>
+where
+    Ctxt: GenApiCtxt,
+{
+    /// Returns `None` if there is node node with the given name in the context.
+    pub fn node(&self, name: &str) -> Option<Node> {
+        let ns = self.ctxt.node_store();
+        ns.id_by_name(name).map(Node)
+    }
+
+    /// Returns [`NodeStore`] in the context.
+    pub fn node_store(&self) -> &Ctxt::NS {
+        self.ctxt.node_store()
+    }
 }
 
 impl<Ctrl, Ctxt> ParamsCtxt<Ctrl, Ctxt>
@@ -55,22 +133,6 @@ where
         self.enter(|ctrl, ctxt| {
             ctxt.enter(|node_store, value_ctxt| f(ctrl, node_store, value_ctxt))
         })
-    }
-}
-
-impl<Ctrl, Ctxt> ParamsCtxt<Ctrl, Ctxt>
-where
-    Ctxt: GenApiCtxt,
-{
-    /// Returns [`NodeStore`] in the context.
-    pub fn node_store(&self) -> &Ctxt::NS {
-        self.ctxt.node_store()
-    }
-
-    /// Returns Some(...) if there is a node with the given name in the context.
-    pub fn node(&self, name: &str) -> Option<Node> {
-        let ns = self.ctxt.node_store();
-        ns.id_by_name(name).map(Node)
     }
 }
 
