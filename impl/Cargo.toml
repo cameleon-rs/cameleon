@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2018"
 authors = ["Cameleon Project Developers"]
 license = "MPL-2.0"
+readme = "README.md"
 homepage = "https://github.com/cameleon-rs/cameleon/tree/main/impl"
 repository = "https://github.com/cameleon-rs/cameleon"
 description = "Utilities used by other cameleon crates implementation."
