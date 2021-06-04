@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="misc/logo.svg">
+  <img src="https://github.com/cameleon-rs/cameleon/blob/main/misc/logo.svg">
 </p>
 
 [![Crates.io][crates-badge]][crates-url]

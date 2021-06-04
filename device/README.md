@@ -8,7 +8,7 @@
 [docs-badge]: https://docs.rs/cameleon-device/badge.svg
 [docs-url]: https://docs.rs/cameleon-device
 [mpl-badge]: https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg
-[mpl-url]: ../LICENSE
+[mpl-url]: https://github.com/cameleon-rs/cameleon/blob/main/LICENSE
 [actions-badge]: https://github.com/cameleon-rs/cameleon/workflows/CI/badge.svg
 [actions-url]: https://github.com/cameleon-rs/cameleon/actions/workflows/ci.yml
 
