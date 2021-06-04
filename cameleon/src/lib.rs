@@ -142,7 +142,7 @@ pub enum CameleonError {
     #[error("control error: {0}")]
     ControlError(#[from] ControlError),
 
-    /// An rrror from payload stream.
+    /// An error from payload stream.
     #[error("stream error: {0}")]
     StreamError(#[from] StreamError),
 
@@ -175,15 +175,19 @@ pub enum ControlError {
 
     /// IO error.
     #[error("input/output error: {0}")]
-    Io(Box<dyn std::error::Error>),
+    Io(anyhow::Error),
+
+    /// Timeout has occured when receiveing stream payload.
+    #[error("timeout has occured when receiveing stream payload")]
+    Timeout,
 
     /// The device is not opened.
     #[error("device is not opened")]
     NotOpened,
 
-    /// Device internal error.
-    #[error("device internal error: {0}")]
-    InternalError(Box<dyn std::error::Error>),
+    /// The device doesn't follow the spceicifation.
+    #[error("invalid device: {0}")]
+    InvalidDevice(Cow<'static, str>),
 
     /// Buffer is too small to receive data.
     #[error("buffer is too small to recieve data")]
@@ -193,10 +197,6 @@ pub enum ControlError {
     /// e.g. try to write too large data that will overrun register.
     #[error("try to write invalid data to the device: {0}")]
     InvalidData(Box<dyn std::error::Error>),
-
-    /// Timeout has been occurred.
-    #[error("operation timed out")]
-    Timeout,
 }
 
 /// A specialized `Result` type for streaming.
@@ -217,9 +217,21 @@ pub enum StreamError {
     #[error("invalid payload has been sent: {0}")]
     InvalidPayload(Cow<'static, str>),
 
-    /// Can't communicate with device.
-    #[error("can't communicate the device: {0}")]
-    Device(Cow<'static, str>),
+    /// The device is disconnected from the host.
+    #[error("device is disconnected")]
+    Disconnected,
+
+    /// IO error.
+    #[error("can't communicate with the device: {0}")]
+    Io(anyhow::Error),
+
+    /// Timeout has occured when receiveing stream payload.
+    #[error("timeout has occured when receiveing stream payload")]
+    Timeout,
+
+    /// A panic has occurred in streaming loop.
+    #[error("a panic has occurred in streaming loop: {0}")]
+    Poisoned(Cow<'static, str>),
 
     /// Buffer is too small to receive data.
     #[error("buffer is too small to recieve data")]
@@ -234,6 +246,6 @@ pub enum StreamError {
 
 impl From<TryFromIntError> for ControlError {
     fn from(e: TryFromIntError) -> Self {
-        Self::InternalError(format!("internal data has invalid num type: {}", e).into())
+        Self::InvalidDevice(format!("internal data has invalid num type: {}", e).into())
     }
 }

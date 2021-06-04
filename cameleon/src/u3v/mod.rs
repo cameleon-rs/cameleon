@@ -54,7 +54,9 @@ pub use cameleon_device::u3v::DeviceInfo;
 
 use cameleon_device::u3v;
 
-use super::{genapi::DefaultGenApiCtxt, CameleonResult, Camera, CameraInfo, ControlError};
+use super::{
+    genapi::DefaultGenApiCtxt, CameleonResult, Camera, CameraInfo, ControlError, StreamError,
+};
 
 /// Enumerate all U3V compatible cameras connected to the host.
 ///
@@ -100,25 +102,43 @@ pub fn enumerate_cameras() -> CameleonResult<Vec<Camera<ControlHandle, StreamHan
 impl From<u3v::Error> for ControlError {
     fn from(err: u3v::Error) -> ControlError {
         use u3v::Error::{BufferIo, InvalidDevice, InvalidPacket, LibUsb};
+        use u3v::LibUsbError::{
+            Access, BadDescriptor, Busy, Interrupted, InvalidParam, Io, NoDevice, NoMem, NotFound,
+            NotSupported, Other, Overflow, Pipe, Timeout,
+        };
 
         match &err {
-            LibUsb(libusb_error) => {
-                use u3v::LibUsbError::{
-                    Access, BadDescriptor, Busy, Interrupted, InvalidParam, Io, NoDevice, NoMem,
-                    NotFound, NotSupported, Other, Overflow, Pipe, Timeout,
-                };
-                match libusb_error {
-                    Io | InvalidParam | Access | Overflow | Pipe | Interrupted | NoMem
-                    | NotSupported | BadDescriptor | Other => ControlError::Io(err.into()),
-                    Busy => ControlError::Busy,
-                    NoDevice | NotFound => ControlError::Disconnected,
-                    Timeout => ControlError::Timeout,
-                }
-            }
+            LibUsb(libusb_error) => match libusb_error {
+                Io | InvalidParam | Access | Overflow | Pipe | Interrupted | NoMem
+                | NotSupported | BadDescriptor | Other => ControlError::Io(err.into()),
+                Busy => ControlError::Busy,
+                NoDevice | NotFound => ControlError::Disconnected,
+                Timeout => ControlError::Timeout,
+            },
 
             BufferIo(_) | InvalidPacket(_) => ControlError::Io(err.into()),
 
-            InvalidDevice => panic!("device is broken"),
+            InvalidDevice => ControlError::InvalidDevice("invalid device".into()),
+        }
+    }
+}
+
+impl From<u3v::Error> for StreamError {
+    fn from(err: u3v::Error) -> Self {
+        use u3v::Error::LibUsb;
+        use u3v::LibUsbError::{
+            Access, BadDescriptor, Busy, Interrupted, InvalidParam, Io, NoDevice, NoMem, NotFound,
+            NotSupported, Other, Overflow, Pipe, Timeout,
+        };
+
+        match &err {
+            LibUsb(libusb_error) => match libusb_error {
+                Io | InvalidParam | Access | Overflow | Pipe | Interrupted | NoMem
+                | NotSupported | BadDescriptor | Busy | Other => Self::Io(err.into()),
+                NoDevice | NotFound => Self::Disconnected,
+                Timeout => Self::Timeout,
+            },
+            _ => Self::Io(err.into()),
         }
     }
 }

@@ -351,14 +351,14 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
             return Ok(());
         }
 
+        // Stop streaming loop.
+        self.strm.stop_streaming_loop()?;
+
         // Disable streaming.
         let mut ctxt = self.params_ctxt()?;
         expect_node!(&ctxt, "AcquisitionStop", as_command).execute(&mut ctxt)?;
         expect_node!(&ctxt, "TLParamsLocked", as_integer).set_value(&mut ctxt, 0)?;
         self.ctrl.disable_streaming()?;
-
-        // Stop streaming loop.
-        self.strm.stop_streaming_loop()?;
 
         info!("stop streaming successfully");
         Ok(())

@@ -31,10 +31,10 @@ pub struct StreamHandle {
 
 macro_rules! unwrap_or_poisoned {
     ($res:expr) => {{
-        let error = "panics has occurred in running loop";
         $res.map_err(|cause| {
-            error!(error, ?cause);
-            StreamError::Device(error.into())
+            let err = StreamError::Poisoned(cause.to_string().into());
+            error!(?err);
+            err
         })
     }};
 }
@@ -109,7 +109,7 @@ impl PayloadStream for StreamHandle {
     fn open(&mut self) -> StreamResult<()> {
         unwrap_or_poisoned!(self.inner.lock())?.open().map_err(|e| {
             error!(?e);
-            StreamError::Device(format!("{}", e).into())
+            e.into()
         })
     }
 
@@ -121,7 +121,7 @@ impl PayloadStream for StreamHandle {
             .close()
             .map_err(|e| {
                 error!(?e);
-                StreamError::Device(format!("{}", e).into())
+                e.into()
             })
     }
 
@@ -131,7 +131,10 @@ impl PayloadStream for StreamHandle {
         ctrl: &mut dyn DeviceControl,
     ) -> StreamResult<()> {
         self.params = StreamParams::from_control(ctrl).map_err(|e| {
-            StreamError::Device(format!("failed to setup streaming parameters: {}", e).into())
+            StreamError::Io(anyhow::Error::msg(format!(
+                "failed to setup streaming parameters: {}",
+                e
+            )))
         })?;
 
         if self.is_loop_running() {
@@ -164,8 +167,11 @@ impl PayloadStream for StreamHandle {
                 self.cancellation_tx.take().unwrap(),
                 self.completion_rx.take().unwrap(),
             );
-            unwrap_or_poisoned!(cancellation_tx.send(()))?;
-            unwrap_or_poisoned!(task::block_on(completion_rx))?;
+            cancellation_tx.send(()).map_err(|_| {
+                StreamError::Poisoned("failed to send cancellation signal to streaming loop".into())
+            })?;
+            task::block_on(completion_rx)
+                .map_err(|e| StreamError::Poisoned(e.to_string().into()))?;
         }
 
         info!("stop streaming loop successfully");
@@ -246,10 +252,14 @@ impl StreamingLoop {
                 },
             };
 
-            // We don't use `unwrap_or_continue` here not to emit so much logs.
             let leader = match read_leader(&mut inner, &self.params, &mut trailer_buf) {
                 Ok(leader) => leader,
-                Err(_) => {
+                Err(err) => {
+                    // Report and send error if the error is fatal.
+                    if matches!(err, StreamError::Io(..) | StreamError::Disconnected) {
+                        error!(?err);
+                        self.sender.try_send(Err(err)).ok();
+                    }
                     payload_buf_opt = Some(payload_buf);
                     continue;
                 }
@@ -488,7 +498,7 @@ impl StreamParams {
         let sirm = abrm.sbrm(ctrl)?.sirm(ctrl)?.ok_or_else(|| {
             let msg = "the U3V device doesn't have `SIRM`";
             error!(msg);
-            ControlError::InternalError(msg.into())
+            ControlError::InvalidDevice(msg.into())
         })?;
         let leader_size = sirm.maximum_leader_size(ctrl)? as usize;
         let trailer_size = sirm.maximum_trailer_size(ctrl)? as usize;
@@ -579,5 +589,5 @@ fn recv(
 
     inner
         .recv(&mut buf[..len], params.timeout)
-        .map_err(|e| StreamError::Device(format!("{}", e).into()))
+        .map_err(|e| e.into())
 }

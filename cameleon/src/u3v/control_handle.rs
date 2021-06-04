@@ -162,7 +162,7 @@ impl ControlHandle {
         }
 
         let addr = self.sbrm()?.sirm_address(self)?.ok_or_else(|| {
-            ControlError::InternalError("the u3v device doesn't have `SIRM ADDRESS`".into())
+            ControlError::InvalidDevice("the u3v device doesn't have `SIRM ADDRESS`".into())
         })?;
         let sirm = Sirm::new(addr);
         self.sirm = Some(sirm);
@@ -269,22 +269,23 @@ impl ControlHandle {
                 .unwrap()
                 .scd_as()?)
         } else {
-            Err(ControlError::Io(
-                "the number of times pending was returned exceeds the retry_count.".into(),
-            ))
+            Err(ControlError::Io(anyhow::Error::msg(
+                "the number of times pending was returned exceeds the retry_count.",
+            )))
         }
     }
 
     fn verify_ack(&self, ack: &ack::AckPacket) -> ControlResult<()> {
         let status = ack.status().kind();
         if status != ack::StatusKind::GenCp(ack::GenCpStatus::Success) {
-            return Err(ControlError::Io(
-                format!("invalid status: {:?}", ack.status().kind()).into(),
-            ));
+            return Err(ControlError::Io(anyhow::Error::msg(format!(
+                "invalid status: {:?}",
+                ack.status().kind()
+            ))));
         }
 
         if ack.request_id() != self.next_req_id {
-            return Err(ControlError::Io("request id mismatch".into()));
+            return Err(ControlError::Io(anyhow::Error::msg("request id mismatch")));
         }
 
         Ok(())
@@ -298,7 +299,7 @@ impl ControlHandle {
             if xml_hash.as_slice() == hash {
                 Ok(())
             } else {
-                Err(ControlError::InternalError(
+                Err(ControlError::InvalidDevice(
                     "sha1 of retrieved xml file isn't same as entry's hash".into(),
                 ))
             }
@@ -358,7 +359,7 @@ impl DeviceControl for ControlHandle {
 
             if ack.length as usize != chunk_data_len {
                 let err_msg = "write mem failed: written length mismatch";
-                return Err(ControlError::Io(err_msg.into()));
+                return Err(ControlError::Io(anyhow::Error::msg(err_msg)));
             }
         }
 
@@ -392,7 +393,7 @@ impl DeviceControl for ControlHandle {
 
     fn genapi(&mut self) -> ControlResult<String> {
         fn zip_err(err: impl std::fmt::Debug) -> ControlError {
-            ControlError::InternalError(format!("zipped xml file is broken: {:?}", err).into())
+            ControlError::InvalidDevice(format!("zipped xml file is broken: {:?}", err).into())
         }
 
         let table = unwrap_or_log!(self.manifest_table());
@@ -412,7 +413,7 @@ impl DeviceControl for ControlHandle {
         }
 
         let (ent, _, file_info) = unwrap_or_log!(newest_ent.ok_or_else(|| {
-            ControlError::InternalError("device doesn't have valid `ManifestEntry`".into())
+            ControlError::InvalidDevice("device doesn't have valid `ManifestEntry`".into())
         }));
 
         let file_address: u64 = unwrap_or_log!(ent.file_address(self));

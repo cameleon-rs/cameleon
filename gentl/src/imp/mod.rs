@@ -28,7 +28,7 @@ impl From<ControlError> for GenTlError {
 
         match err {
             ControlError::Busy => ResourceInUse,
-            ControlError::Disconnected | ControlError::Io(..) | ControlError::InternalError(..) => {
+            ControlError::Disconnected | ControlError::Io(..) | ControlError::InvalidDevice(..) => {
                 Io(err.into())
             }
             ControlError::NotOpened => NotInitialized,

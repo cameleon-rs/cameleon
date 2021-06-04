@@ -23,16 +23,16 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("libusb error: {}", 0)]
+    #[error("libusb error: {0}")]
     LibUsb(#[from] LibUsbError),
 
-    #[error("packet is broken: {}", 0)]
+    #[error("packet is broken: {0}")]
     InvalidPacket(Cow<'static, str>),
 
-    #[error("buffer io error: {}", 0)]
+    #[error("buffer io error: {0}")]
     BufferIo(#[from] std::io::Error),
 
-    #[error("device doesn't follow specification")]
+    #[error("device doesn't follow the specification")]
     InvalidDevice,
 }
 
