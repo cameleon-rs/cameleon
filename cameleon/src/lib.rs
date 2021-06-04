@@ -218,7 +218,7 @@ pub enum StreamError {
     InvalidPayload(Cow<'static, str>),
 
     /// Can't communicate with device.
-    #[error("can't communicate the device: {0}")]
+    #[error("can't communicate with the device: {0}")]
     Device(Cow<'static, str>),
 
     /// Buffer is too small to receive data.
