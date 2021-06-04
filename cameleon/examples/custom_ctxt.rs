@@ -72,7 +72,7 @@ impl GenApiCtxt for MyGenApiCtxt {
     }
 }
 
-/// Step3: Add utility methods to swich whether the context use the cache or not.
+/// Step3: Add utility methods to switch whether the context use the cache or not.
 impl MyGenApiCtxt {
     /// Enable the context to use cache.
     fn enable_cache(&mut self) {
