@@ -305,6 +305,9 @@ impl AsyncError {
 
 impl From<AsyncError> for StreamError {
     fn from(err: AsyncError) -> Self {
-        StreamError::Device(err.to_string().into())
+        match err {
+            AsyncError::Disconnected => Self::Disconnected,
+            _ => StreamError::Io(err.into()),
+        }
     }
 }

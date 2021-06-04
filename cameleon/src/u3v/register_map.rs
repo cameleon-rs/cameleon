@@ -1014,7 +1014,7 @@ impl GenICamFileInfo {
         match raw {
             0 => Ok(GenICamFileType::DeviceXml),
             1 => Ok(GenICamFileType::BufferXml),
-            _ => Err(ControlError::InternalError(
+            _ => Err(ControlError::InvalidDevice(
                 format!("Invalid U3V GenICamFileType value: {}", raw).into(),
             )),
         }
@@ -1026,7 +1026,7 @@ impl GenICamFileInfo {
         match raw {
             0 => Ok(CompressionType::Uncompressed),
             1 => Ok(CompressionType::Zip),
-            _ => Err(ControlError::InternalError(
+            _ => Err(ControlError::InvalidDevice(
                 format!("Invalid U3V GenICamFilFormat value: {}", raw).into(),
             )),
         }
@@ -1082,7 +1082,7 @@ impl ParseBytes for String {
         );
 
         let s = s.map_err(|_| {
-            ControlError::InternalError("device's string register value is broken".into())
+            ControlError::InvalidDevice("device's string register value is broken".into())
         })?;
 
         Ok(s.into())
@@ -1114,7 +1114,7 @@ impl ParseBytes for u3v::BusSpeed {
             0b1000 => SuperSpeed,
             0b10000 => SuperSpeedPlus,
             other => {
-                return Err(ControlError::InternalError(
+                return Err(ControlError::InvalidDevice(
                     format!("invalid bus speed defined:  {:#b}", other).into(),
                 ))
             }
