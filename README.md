@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="https://github.com/cameleon-rs/cameleon/blob/main/misc/logo.svg">
-</p>
+![cameleon is a safe, fast, and flexible library for GenICam compatible cameras][logo]
 
 [![Crates.io][crates-badge]][crates-url]
 [![Documentation][docs-badge]][docs-url]
@@ -9,6 +7,7 @@
 
 `cameleon` is a safe, fast, and flexible library for [GenICam][genicam-url] compatible cameras.
 
+[logo]: https://raw.githubusercontent.com/cameleon-rs/cameleon/main/misc/logo.svg
 [crates-badge]: https://img.shields.io/crates/v/cameleon.svg
 [crates-url]: https://crates.io/crates/cameleon
 [docs-badge]: https://docs.rs/cameleon/badge.svg
