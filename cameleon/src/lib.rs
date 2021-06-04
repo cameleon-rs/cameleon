@@ -1,17 +1,21 @@
-//! `cameleon` is a safe, fast, and flexible library for [GenICam](https://www.emva.org/standards-technology/genicam/) compatible cameras.
+//! `cameleon` is a safe, fast, and flexible library for [GenICam][genicam-url] compatible cameras.
+//!
+//! [genicam-url]: https://www.emva.org/standards-technology/genicam/
 //!
 //! ## Overview
 //!
-//! `cameleon` is a library for operating on `GenICam` compatible cameras.  
+//! `cameleon` is a library for operating on `GenICam` compatible cameras.
 //! Our main goal is to provide safe, fast, and flexible library for `GenICam` cameras.
-//! Currently, `cameleon` supports only `USB3 Vision` cameras, but it's planned to support other protocols including `GigE Vision`. See [Roadmap](#Roadmap) for more details.
+//!
+//! Currently, `cameleon` supports only `USB3 Vision` cameras, but it's planned to support other protocols including `GigE Vision`. See [Roadmap][roadmap-url] for more details.
+//!
+//! [roadmap-url]: https://github.com/cameleon-rs/cameleon#roadmap
 //!
 //!
 //! ## Usage
 //!
 //! ### USB3 Vision cameras
-//! First, you need to install [libusb](https://libusb.info/) to communicate with `U3V` cameras. Then add the following to your `Cargo.toml`:
-//!
+//! First, you need to install [libusb][libusb-url] to communicate with `U3V` cameras. Then add the following to your `Cargo.toml`:
 //!
 //! ```toml
 //! [dependencies]
@@ -72,7 +76,10 @@
 //! camera.close().unwrap();
 //! ```
 //!
-//! More examples can be found [here](https://github.com/cameleon-rs/cameleon/tree/main/cameleon/examples).
+//! More examples can be found [here][cameleon-example].
+//!
+//! [libusb-url]: https://libusb.info
+//! [cameleon-example]: https://github.com/cameleon-rs/cameleon/tree/main/cameleon/examples
 //!
 //! ## FAQ
 //!
@@ -102,6 +109,11 @@
 //! ```sh
 //! echo 1000 > /sys/module/usbcore/parameters/usbfs_memory_mb
 //! ```
+//!
+//! ## License
+//! This project is licenced under [MPL 2.0][license].
+//!
+//! [license]: https://github.com/cameleon-rs/cameleon/blob/main/LICENSE
 
 #![warn(missing_docs)]
 #![allow(

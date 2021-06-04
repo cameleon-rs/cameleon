@@ -7,30 +7,32 @@
 [![MPL-2.0][mpl-badge]][mpl-url]
 [![Build Status][actions-badge]][actions-url]
 
+`cameleon` is a safe, fast, and flexible library for [GenICam][genicam-url] compatible cameras.
+
 [crates-badge]: https://img.shields.io/crates/v/cameleon.svg
 [crates-url]: https://crates.io/crates/cameleon
 [docs-badge]: https://docs.rs/cameleon/badge.svg
 [docs-url]: https://docs.rs/cameleon
 [mpl-badge]: https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg
-[mpl-url]: LICENSE
+[mpl-url]: https://github.com/cameleon-rs/cameleon/blob/main/LICENSE
 [actions-badge]: https://github.com/cameleon-rs/cameleon/workflows/CI/badge.svg
 [actions-url]: https://github.com/cameleon-rs/cameleon/actions/workflows/ci.yml
-
-
-`cameleon` is a safe, fast, and flexible library for [GenICam](https://www.emva.org/standards-technology/genicam/) compatible cameras.
+[genicam-url]: https://www.emva.org/standards-technology/genicam/
 
 
 ## Overview
 
-`cameleon` is a library for operating on `GenICam` compatible cameras.  
+`cameleon` is a library for operating on `GenICam` compatible cameras.
 Our main goal is to provide safe, fast, and flexible library for `GenICam` cameras.
-Currently, `cameleon` supports only `USB3 Vision` cameras, but it's planned to support other protocols including `GigE Vision`. See [Roadmap](#Roadmap) for more details.
 
+Currently, `cameleon` supports only `USB3 Vision` cameras, but it's planned to support other protocols including `GigE Vision`. See [Roadmap][roadmap-url] for more details.
+
+[roadmap-url]: https://github.com/cameleon-rs/cameleon#roadmap
 
 ## Usage
 
 ### USB3 Vision cameras
-First, you need to install [libusb](https://libusb.info/) to communicate with `U3V` cameras. Then add the following to your `Cargo.toml`:
+First, you need to install [libusb][libusb-url] to communicate with `U3V` cameras. Then add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
@@ -91,17 +93,28 @@ while payload_count < 10 {
 camera.close().unwrap();
 ```
 
-More examples can be found [here](cameleon/examples).
+More examples can be found [here][cameleon-example].
+
+[libusb-url]: https://libusb.info
+[cameleon-example]: https://github.com/cameleon-rs/cameleon/tree/main/cameleon/examples
+
 
 ## Project Layout
 `Cameleon` consists of several crates.
 
-* [cameleon](cameleon): Provides high-level APIs to control cameras. This is the primary crate.
-* [cameleon-genapi](genapi): Provides parser and interpreter of `GenApi` XML.
-* [cameleon-device](device): Provides device specific protocol decoder and basic I/O operations for devices, also provides emulators.
-* [cameleon-gentl](gentl): Provides `GenTL` interfaces as a C library.
-* [cameleon-impl](impl): Provides internal APIs for other crates. `cameleon-impl` is intended to be used only by `cameleon` project.
-* [cameleon-impl-macros](impl/macros): Provides procedural macros for other crates. `cameleon-impl-macros` is intended to be used only by `cameleon` project.
+* [`cameleon`]: Provides high-level APIs to control cameras. This is the primary crate.
+* [`cameleon-genapi`]: Provides parser and interpreter of `GenApi` XML.
+* [`cameleon-device`]: Provides device specific protocol decoder and basic I/O operations for devices, also provides emulators.
+* [`cameleon-gentl`]: Provides `GenTL` interfaces as a C library.
+* [`cameleon-impl`]: Provides internal APIs for other crates. `cameleon-impl` is intended to be used only by `cameleon` project.
+* [`cameleon-impl-macros`]: Provides procedural macros for other crates. `cameleon-impl-macros` is intended to be used only by `cameleon` project.
+
+[`cameleon`]: https://github.com/cameleon-rs/cameleon/tree/main/cameleon
+[`cameleon-genapi`]: https://github.com/cameleon-rs/cameleon/tree/main/genapi
+[`cameleon-device`]: https://github.com/cameleon-rs/cameleon/tree/main/device
+[`cameleon-gentl`]: https://github.com/cameleon-rs/cameleon/tree/main/gentl
+[`cameleon-impl`]: https://github.com/cameleon-rs/cameleon/tree/main/impl
+[`cameleon-impl-macros`]: https://github.com/cameleon-rs/cameleon/tree/main/impl/macros
 
 
 ## FAQ
@@ -151,7 +164,13 @@ We continuously update the minor version every four weeks, until the version rea
 
 ## Contributing
 Thank you for your interest in contributing to `Cameleon`! We are so happy to have you join the development.  
-To start developing, please refer to [CONTRIBUTING.md](CONTRIBUTING.md).
+To start developing, please refer to [CONTRIBUTING.md][contributing].
+
+[contributing]: https://github.com/cameleon-rs/cameleon/blob/main/CONTRIBUTING.md
 
 ## License
-This project is licenced under [MPL 2.0](LICENSE).
+This project is licenced under [MPL 2.0][license].
+
+[license]: https://github.com/cameleon-rs/cameleon/blob/main/LICENSE
+
+
