@@ -4,9 +4,12 @@ use cameleon::u3v;
 fn main() {
     let mut cameras = u3v::enumerate_cameras().unwrap();
     if cameras.is_empty() {
+        println!("no camera found!");
         return;
     }
     let mut camera = cameras.pop().unwrap();
+    // Opens the camera.
+    camera.open().unwrap();
     // Loads `GenApi` context.
     camera.load_context().unwrap();
 
@@ -31,5 +34,12 @@ fn main() {
     // Set `0.1` to `Gain`.
     if gain_node.is_writable(&mut params_ctxt).unwrap() {
         gain_node.set_value(&mut params_ctxt, 0.1).unwrap();
+    }
+
+    // Get the current value of `Gain`.
+    // The float value may be truncated to valid value by the camera.
+    if gain_node.is_readable(&mut params_ctxt).unwrap() {
+        let value = gain_node.value(&mut params_ctxt).unwrap();
+        println!("{}", value);
     }
 }
