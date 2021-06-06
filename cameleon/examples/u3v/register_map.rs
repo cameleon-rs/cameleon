@@ -1,13 +1,6 @@
 use cameleon::u3v::enumerate_cameras;
 
 fn main() {
-    // Build emulator in case libusb is not supported.
-    #[cfg(not(feature = "libusb"))]
-    cameleon_device::u3v::EmulatorBuilder::new()
-        .user_defined_name("cameleon-emulator")
-        .unwrap()
-        .build();
-
     // Enumerates cameras connected to the host.
     let mut cameras = enumerate_cameras().unwrap();
 

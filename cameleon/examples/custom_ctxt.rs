@@ -1,6 +1,6 @@
 //! This example describes how to define custom `GenApi` context.
 //!
-//! In this example, we define a context in which the cache can be dynamically switched on and off.
+//! In this example, we'll define a context in which the cache can be dynamically switched on and off.
 
 use cameleon::genapi::{
     CacheStore, DefaultCacheStore, DefaultGenApiCtxt, DefaultNodeStore, DefaultValueStore,
@@ -48,7 +48,6 @@ impl CacheStore for MyCacheStore {
 struct MyGenApiCtxt {
     node_store: DefaultNodeStore,
     value_ctxt: ValueCtxt<DefaultValueStore, MyCacheStore>,
-    use_cache: bool,
 }
 impl GenApiCtxt for MyGenApiCtxt {
     type NS = DefaultNodeStore;
@@ -59,7 +58,6 @@ impl GenApiCtxt for MyGenApiCtxt {
     where
         F: FnOnce(&Self::NS, &mut ValueCtxt<Self::VS, Self::CS>) -> R,
     {
-        self.value_ctxt.cache_store.use_cache = self.use_cache;
         f(&self.node_store, &mut self.value_ctxt)
     }
 
@@ -76,12 +74,12 @@ impl GenApiCtxt for MyGenApiCtxt {
 impl MyGenApiCtxt {
     /// Enable the context to use cache.
     fn enable_cache(&mut self) {
-        self.use_cache = true;
+        self.value_ctxt.cache_store.use_cache = true;
     }
 
     /// Disable the context to use cache.
     fn disable_cache(&mut self) {
-        self.use_cache = false;
+        self.value_ctxt.cache_store.use_cache = false;
     }
 }
 
@@ -99,13 +97,17 @@ impl From<DefaultGenApiCtxt> for MyGenApiCtxt {
         Self {
             node_store: from.node_store,
             value_ctxt,
-            use_cache: true,
         }
     }
 }
 
 fn main() {
     let mut cameras = u3v::enumerate_cameras().unwrap();
+    if cameras.is_empty() {
+        println!("no camera found!");
+        return;
+    }
+
     let mut camera = cameras.pop().unwrap();
     camera.open().unwrap();
     camera.load_context().unwrap();

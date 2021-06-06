@@ -122,8 +122,6 @@ impl PayloadReceiver {
     ///
     /// Sending back `payload` may improve performance of streaming, but not required to call this
     /// method.
-    ///
-    /// Returns `StreamError` if the channel is full.
     pub fn send_back(&self, payload: Payload) {
         self.tx.try_send(payload).ok();
     }
