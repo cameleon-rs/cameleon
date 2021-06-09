@@ -47,8 +47,8 @@
 //! // Loads `GenApi` context. This is necessary for streaming.
 //! camera.load_context().unwrap();
 //!
-//! // Start streaming.
-//! let payload_rx = camera.start_streaming(10).unwrap();
+//! // Start streaming. Channel capacity is set to 3.
+//! let payload_rx = camera.start_streaming(3).unwrap();
 //!
 //! let mut payload_count = 0;
 //! while payload_count < 10 {

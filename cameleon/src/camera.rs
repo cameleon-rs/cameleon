@@ -24,8 +24,8 @@
 //! // Loads `GenApi` context. This is necessary for streaming.
 //! camera.load_context().unwrap();
 //!
-//! // Start streaming.
-//! let payload_rx = camera.start_streaming(10).unwrap();
+//! // Start streaming. Channel capacity is set to 3.
+//! let payload_rx = camera.start_streaming(3).unwrap();
 //!
 //! let mut payload_count = 0;
 //! while payload_count < 10 {
@@ -85,8 +85,8 @@ use super::{
 /// // Loads `GenApi` context. This is necessary for streaming.
 /// camera.load_context().unwrap();
 ///
-/// // Start streaming.
-/// let payload_rx = camera.start_streaming(10).unwrap();
+/// // Start streaming. Channel capacity is set to 3.
+/// let payload_rx = camera.start_streaming(3).unwrap();
 ///
 /// let mut payload_count = 0;
 /// while payload_count < 10 {
@@ -270,8 +270,8 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
     /// camera.open().unwrap();
     /// camera.load_context().unwrap();
     ///
-    /// // Start streaming, the capacity of the receiver is 10.
-    /// let payload_rx = camera.start_streaming(10).unwrap();
+    /// // Start streaming. Channel capacity is set to 3.
+    /// let payload_rx = camera.start_streaming(3).unwrap();
     /// // The streamed payload can be received like below:
     /// // payload_rx.recv().await.unwrap() or
     /// // payload.rx.try_recv().unwrap();
@@ -337,8 +337,9 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
     /// // Loads `GenApi` context. This is necessary for streaming.
     /// camera.load_context().unwrap();
     ///
-    /// // Start streaming, the capacity of the receiver is 10.
-    /// let payload_rx = camera.start_streaming(10).unwrap();
+    /// // Start streaming. Channel capacity is set to 3.
+    /// let payload_rx = camera.start_streaming(3).unwrap();
+    ///
     /// camera.stop_streaming().unwrap();
     /// ```
     #[tracing::instrument(skip(self),

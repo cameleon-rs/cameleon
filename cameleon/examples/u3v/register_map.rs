@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
+//! This example describes how to read/write `U3V` camera's specific registers.
+
 use cameleon::u3v::enumerate_cameras;
 
 fn main() {
@@ -89,7 +91,7 @@ fn main() {
     //
 
     //  Read SBRM.
-    println!("\n### Technology Specifig Boot Register Map ###\n");
+    println!("\n### Technology Specific Boot Register Map ###\n");
 
     let sbrm = ctrl.sbrm().unwrap();
     println!("u3v_version: {}", sbrm.u3v_version(ctrl).unwrap());

@@ -1,7 +1,7 @@
 # Examples
 
 ## [stream.rs](stream.rs)
-Describes how to start streaming and reeceive payloads.
+Describes how to start streaming and receive payloads.
 
 ```sh
 cargo run --example stream --features=libusb

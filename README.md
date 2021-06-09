@@ -35,7 +35,7 @@ First, you need to install [libusb][libusb-url] to communicate with `U3V` camera
 
 ```toml
 [dependencies]
-cameleon = { version = 0.1, features = 'libusb'}
+cameleon = { version = 0.1, features = 'libusb' }
 ```
 
 You can enumerate all cameras connected to the host, and start streaming.
@@ -59,8 +59,8 @@ camera.open().unwrap();
 // Loads `GenApi` context. This is necessary for streaming.
 camera.load_context().unwrap();
 
-// Start streaming.
-let payload_rx = camera.start_streaming(10).unwrap();
+// Start streaming. Channel capacity is set to 3.
+let payload_rx = camera.start_streaming(3).unwrap();
 
 let mut payload_count = 0;
 while payload_count < 10 {
