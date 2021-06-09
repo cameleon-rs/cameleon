@@ -1,5 +1,5 @@
 error: pub(in ...) can't be used
- --> $DIR/forbidden_visibility.rs:8:9
-  |
-8 |         pub(in super::super) enum ABRM {
-  |         ^^^^^^^^^^^^^^^^^^^^
+  --> $DIR/forbidden_visibility.rs:12:9
+   |
+12 |         pub(in super::super) enum ABRM {
+   |         ^^^^^^^^^^^^^^^^^^^^

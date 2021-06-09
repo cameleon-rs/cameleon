@@ -1,5 +1,5 @@
 error: only BE or LE is allowed for endianness specifier
- --> $DIR/wrong_endianness.rs:5:39
+ --> $DIR/wrong_endianness.rs:9:39
   |
-5 | #[register_map(base = 0, endianness = Le)]
+9 | #[register_map(base = 0, endianness = Le)]
   |                                       ^^

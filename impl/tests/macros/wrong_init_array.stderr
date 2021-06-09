@@ -1,8 +1,8 @@
 error: literal out of range for `u8`
- --> $DIR/wrong_init_array.rs:6:34
-  |
-6 |     ProtocolEndianness = &[0xFF, 1000, 0xFF, 0xFF],
-  |                                  ^^^^
-  |
-  = note: `#[deny(overflowing_literals)]` on by default
-  = note: the literal `1000` does not fit into the type `u8` whose range is `0..=255`
+  --> $DIR/wrong_init_array.rs:10:34
+   |
+10 |     ProtocolEndianness = &[0xFF, 1000, 0xFF, 0xFF],
+   |                                  ^^^^
+   |
+   = note: `#[deny(overflowing_literals)]` on by default
+   = note: the literal `1000` does not fit into the type `u8` whose range is `0..=255`
