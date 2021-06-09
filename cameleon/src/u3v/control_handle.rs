@@ -373,23 +373,18 @@ impl DeviceControl for ControlHandle {
     fn read(&mut self, mut address: u64, buf: &mut [u8]) -> ControlResult<()> {
         unwrap_or_log!(self.assert_open());
 
-        // Chunks buffer if buffer length is larger than u16::MAX.
-        for buf_chunk in buf.chunks_mut(std::u16::MAX as usize) {
-            // Create command for buffer chunk.
-            let cmd = cmd::ReadMem::new(address, buf_chunk.len().try_into().unwrap());
-            let maximum_ack_length = self.config.maximum_ack_length;
+        // Chunks buffer if buffer length is larger than maximum read length calculated from
+        // maximum ack length.
+        for buf_chunk in buf.chunks_mut(cmd::ReadMem::maximum_read_length(
+            self.config.maximum_ack_length as usize,
+        ) as usize)
+        {
+            let read_len: u16 = buf_chunk.len().try_into().unwrap();
 
-            // Chunks command so that each acknowledge packet length fits to maximum_ack_length.
-            let mut total_read_len = 0;
-            for cmd_chunk in cmd.chunks(maximum_ack_length as usize).unwrap() {
-                let read_len = cmd_chunk.read_length();
-                let ack: ack::ReadMem = unwrap_or_log!(self.send_cmd(cmd_chunk));
-                (&mut buf_chunk[total_read_len..total_read_len + read_len as usize])
-                    .copy_from_slice(ack.data);
-                total_read_len += read_len as usize;
-            }
-
-            address += buf_chunk.len() as u64;
+            let cmd = cmd::ReadMem::new(address, read_len);
+            let ack: ack::ReadMem = unwrap_or_log!(self.send_cmd(cmd));
+            buf_chunk.copy_from_slice(ack.data);
+            address += read_len as u64;
         }
 
         Ok(())
@@ -456,6 +451,7 @@ impl DeviceControl for ControlHandle {
         let payload_alignment = unwrap_or_log!(sirm.payload_size_alignment(self));
         macro_rules! align {
             ($expr:expr, $ty: ty) => {
+                // Payload alignment is always power of two.
                 ($expr + (payload_alignment as $ty - 1)) & !(payload_alignment as $ty - 1)
             };
         }
@@ -473,12 +469,12 @@ impl DeviceControl for ControlHandle {
         let maximum_leader_size = if required_leader_size == 0 {
             payload_transfer_size
         } else {
-            required_leader_size
+            align!(required_leader_size, u32)
         };
         let maximum_trailer_size = if required_trailer_size == 0 {
             payload_transfer_size
         } else {
-            required_trailer_size
+            align!(required_trailer_size, u32)
         };
 
         unwrap_or_log!(sirm.set_payload_transfer_size(self, payload_transfer_size));

@@ -130,6 +130,13 @@ impl ReadMem {
         })
     }
 
+    /// Returns maximum read length that corresponding ack length fit into `maximum_ack_len`.
+    pub fn maximum_read_length(maximum_ack_len: usize) -> u16 {
+        (maximum_ack_len - CommandPacket::<ReadMem>::ACK_HEADER_LENGTH)
+            .try_into()
+            .unwrap_or(u16::MAX)
+    }
+
     #[must_use]
     pub fn read_length(&self) -> u16 {
         self.read_length
