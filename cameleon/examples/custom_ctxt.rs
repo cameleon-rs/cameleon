@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+
 //! This example describes how to define custom `GenApi` context.
 //!
 //! In this example, we'll define a context in which the cache can be dynamically switched on and off.

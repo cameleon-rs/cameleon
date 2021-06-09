@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+
 //! This example describes how to use internal type conversions in `Camera`.
 //! See also `cameleon/examples/custom_ctxt.rs` that describes the more advanced use of type conversions
 

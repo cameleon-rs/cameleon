@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+
 //! `cameleon` is a safe, fast, and flexible library for [GenICam][genicam-url] compatible cameras.
 //!
 //! [genicam-url]: https://www.emva.org/standards-technology/genicam/
