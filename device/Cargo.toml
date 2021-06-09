@@ -1,6 +1,6 @@
 [package]
 name = "cameleon-device"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2018"
 authors = ["Cameleon Project Developers"]
 license = "MPL-2.0"
