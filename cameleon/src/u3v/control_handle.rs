@@ -447,6 +447,7 @@ impl DeviceControl for ControlHandle {
         let payload_alignment = unwrap_or_log!(sirm.payload_size_alignment(self));
         macro_rules! align {
             ($expr:expr, $ty: ty) => {
+                // Payload alignment is always power of two.
                 ($expr + (payload_alignment as $ty - 1)) & !(payload_alignment as $ty - 1)
             };
         }
@@ -464,12 +465,12 @@ impl DeviceControl for ControlHandle {
         let maximum_leader_size = if required_leader_size == 0 {
             payload_transfer_size
         } else {
-            required_leader_size
+            align!(required_leader_size, u32)
         };
         let maximum_trailer_size = if required_trailer_size == 0 {
             payload_transfer_size
         } else {
-            required_trailer_size
+            align!(required_trailer_size, u32)
         };
 
         unwrap_or_log!(sirm.set_payload_transfer_size(self, payload_transfer_size));
