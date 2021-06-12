@@ -97,7 +97,6 @@ impl ICommand for CommandNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
         Ok(self.elem_base.is_writable(device, store, cx)?
-            && self.command_value.is_writable(device, store, cx)?
             && self.value.is_writable(device, store, cx)?)
     }
 }
