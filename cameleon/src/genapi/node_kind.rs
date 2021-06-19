@@ -9,7 +9,7 @@ use cameleon_genapi::{
     elem_type::{DisplayNotation, FloatRepresentation, IntegerRepresentation},
     interface::IncrementMode,
     prelude::*,
-    EnumEntryNode, GenApiError, GenApiResult, NodeId,
+    GenApiError, GenApiResult, NodeId,
 };
 
 use super::{DeviceControl, GenApiCtxt, GenApiDevice, ParamsCtxt};
@@ -49,6 +49,10 @@ pub struct CategoryNode(NodeId);
 /// A node that has `IPort` interface.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PortNode(NodeId);
+
+/// Represents an entry of [`EnumerationNode]`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct EnumEntryNode(NodeId);
 
 /// An uninterpreted node.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -232,20 +236,19 @@ impl StringNode {
 
 impl EnumerationNode {
     delegate! {
-    expect_ienumeration_kind,
-        /// Sets entry to the enumeration node by the entry name.
-        pub fn set_entry_by_name<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, name: &str) -> GenApiResult<()>,
+        expect_ienumeration_kind,
+        /// Sets entry to the enumeration node by the entry symbolic name.
+        pub fn set_entry_by_symbolic<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, name: &str) -> GenApiResult<()>,
         /// Sets entry to the enumeration node by the entry value.
         pub fn set_entry_by_value<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>, value: i64) -> GenApiResult<()>,
         /// Returns `true` if the node is readable.
         pub fn is_readable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
         /// Returns `true` if the node is writable.
         pub fn is_writable<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
-
     }
 
     /// Returns entries of the node.
-    pub fn entries<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> &[EnumEntryNode]
+    pub fn entries<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> Vec<EnumEntryNode>
     where
         Ctrl: DeviceControl,
         Ctxt: GenApiCtxt,
@@ -254,14 +257,17 @@ impl EnumerationNode {
         self.0
             .expect_ienumeration_kind(ns)
             .unwrap()
-            .entries_precise(ns)
+            .entries(ns)
+            .iter()
+            .map(|nid| EnumEntryNode(*nid))
+            .collect()
     }
 
     /// Returns current entry of the node.
     pub fn current_entry<Ctrl, Ctxt>(
         self,
         ctxt: &mut ParamsCtxt<Ctrl, Ctxt>,
-    ) -> GenApiResult<&EnumEntryNode>
+    ) -> GenApiResult<EnumEntryNode>
     where
         Ctrl: DeviceControl,
         Ctxt: GenApiCtxt,
@@ -275,8 +281,8 @@ impl EnumerationNode {
         })?;
         let entries = self.entries(ctxt);
         entries
-            .iter()
-            .find(|ent| ent.value() == value)
+            .into_iter()
+            .find(|ent| ent.value(ctxt) == value)
             .ok_or_else(|| {
                 GenApiError::InvalidNode(
                     format!(
@@ -286,6 +292,41 @@ impl EnumerationNode {
                     .into(),
                 )
             })
+    }
+
+    /// Upcast to [`Node`].
+    pub fn as_node(self) -> Node {
+        Node(self.0)
+    }
+}
+
+impl EnumEntryNode {
+    delegate! {
+        expect_enum_entry,
+        /// Returns `true` if the node is temporarily locked.
+        pub fn is_locked<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
+        /// Returns `true` if the node is implemented.
+        pub fn is_implemented<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
+        /// Returns `true` if the node is available.
+        pub fn is_available<Ctrl, Ctxt>(self, ctxt: &mut ParamsCtxt<Ctrl, Ctxt>) -> GenApiResult<bool>,
+    }
+
+    /// Returns integer value of the entry.
+    pub fn value<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> i64
+    where
+        Ctxt: GenApiCtxt,
+    {
+        let ns = ctxt.node_store();
+        self.0.expect_enum_entry(ns).unwrap().value()
+    }
+
+    /// Returns symbolic name of the entry.
+    pub fn symbolic<Ctrl, Ctxt>(self, ctxt: &ParamsCtxt<Ctrl, Ctxt>) -> &str
+    where
+        Ctxt: GenApiCtxt,
+    {
+        let ns = ctxt.node_store();
+        self.0.expect_enum_entry(ns).unwrap().symbolic()
     }
 
     /// Upcast to [`Node`].
@@ -438,6 +479,8 @@ impl Node {
         (as_string ,as_istring_kind, StringNode),
         /// Try downcasting to [`EnumerationNode`]. Returns `None` if downcast failed.
         (as_enumeration ,as_ienumeration_kind, EnumerationNode),
+        /// Try downcasting to [`EnumEntryNode`]. Returns `None` if downcast failed.
+        (as_enum_entry, as_enum_entry, EnumEntryNode),
         /// Try downcasting to [`CommandNode`]. Returns `None` if downcast failed.
         (as_command, as_icommand_kind, CommandNode),
         /// Try downcasting to [`BooleanNode`]. Returns `None` if downcast failed.

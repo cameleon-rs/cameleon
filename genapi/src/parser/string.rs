@@ -65,7 +65,7 @@ mod tests {
         "#;
 
         let (node, _, value_builder, _): (StringNode, _, _, _) = parse_default(xml);
-        assert_eq!(node.streamable(), true);
+        assert!(node.streamable());
         let value = value_builder
             .str_value(node.value_elem().imm().unwrap())
             .unwrap();
@@ -81,7 +81,7 @@ mod tests {
         "#;
 
         let (node, mut node_builder, ..): (StringNode, _, _, _) = parse_default(xml);
-        assert_eq!(node.streamable(), false);
+        assert!(!node.streamable());
         assert_eq!(
             node.value_elem(),
             ImmOrPNode::PNode(node_builder.get_or_intern("AnotherStringNode"))

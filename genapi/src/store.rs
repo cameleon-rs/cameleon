@@ -14,10 +14,10 @@ use super::{
         INode, INodeKind, IPortKind, IRegisterKind, ISelectorKind, IStringKind,
     },
     node_base::NodeBase,
-    BooleanNode, CategoryNode, CommandNode, ConverterNode, EnumerationNode, FloatNode,
-    FloatRegNode, GenApiError, GenApiResult, IntConverterNode, IntRegNode, IntSwissKnifeNode,
-    IntegerNode, MaskedIntRegNode, Node, PortNode, RegisterNode, StringNode, StringRegNode,
-    SwissKnifeNode,
+    BooleanNode, CategoryNode, CommandNode, ConverterNode, EnumEntryNode, EnumerationNode,
+    FloatNode, FloatRegNode, GenApiError, GenApiResult, IntConverterNode, IntRegNode,
+    IntSwissKnifeNode, IntegerNode, MaskedIntRegNode, Node, PortNode, RegisterNode, StringNode,
+    StringRegNode, SwissKnifeNode,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -33,6 +33,7 @@ pub enum NodeData {
     Boolean(Box<BooleanNode>),
     Command(Box<CommandNode>),
     Enumeration(Box<EnumerationNode>),
+    EnumEntry(Box<EnumEntryNode>),
     Float(Box<FloatNode>),
     FloatReg(Box<FloatRegNode>),
     String(Box<StringNode>),
@@ -253,6 +254,18 @@ impl NodeId {
             GenApiError::invalid_node("the node doesn't implement `ISelector`".into())
         })
     }
+
+    pub fn as_enum_entry(self, store: &impl NodeStore) -> Option<&EnumEntryNode> {
+        match store.node_opt(self)? {
+            NodeData::EnumEntry(n) => Some(n),
+            _ => None,
+        }
+    }
+
+    pub fn expect_enum_entry(self, store: &impl NodeStore) -> GenApiResult<&EnumEntryNode> {
+        self.as_enum_entry(store)
+            .ok_or_else(|| GenApiError::invalid_node("the node doesn't `EnumEntryNode`".into()))
+    }
 }
 
 impl NodeData {
@@ -287,6 +300,8 @@ impl NodeData {
 pub struct DefaultNodeStore {
     pub(super) interner: StringInterner<NodeId>,
     pub(super) store: Vec<Option<NodeData>>,
+
+    fresh_id: u32,
 }
 
 impl DefaultNodeStore {
@@ -295,6 +310,7 @@ impl DefaultNodeStore {
         Self {
             interner: StringInterner::new(),
             store: Vec::new(),
+            fresh_id: 0,
         }
     }
 }
@@ -346,6 +362,12 @@ impl builder::NodeStoreBuilder for DefaultNodeStore {
         }
         debug_assert!(self.store[id].is_none());
         self.store[id] = Some(data);
+    }
+
+    fn fresh_id(&mut self) -> u32 {
+        let id = self.fresh_id;
+        self.fresh_id += 1;
+        id
     }
 }
 

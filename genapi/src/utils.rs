@@ -271,8 +271,9 @@ impl<'a> VariableKind<'a> {
             }
             Self::Enum(name) => {
                 if let Some(node) = nid.as_ienumeration_kind(store) {
-                    node.entry_by_name(name, store)
-                        .ok_or_else(|| error(nid, store))?
+                    node.entry_by_symbolic(name, store)
+                        .ok_or_else(|| error(nid, store))
+                        .map(|nid| nid.expect_enum_entry(store).unwrap())?
                         .value()
                         .into()
                 } else {
@@ -363,7 +364,8 @@ fn expr_from_nid<T: ValueStore, U: CacheStore>(
     } else if let Some(node) = nid.as_iboolean_kind(store) {
         node.value(device, store, cx)?.into()
     } else if let Some(node) = nid.as_ienumeration_kind(store) {
-        node.current_entry(device, store, cx)?
+        node.current_entry(device, store, cx)
+            .map(|nid| nid.expect_enum_entry(store).unwrap())?
             .numeric_value()
             .into()
     } else {

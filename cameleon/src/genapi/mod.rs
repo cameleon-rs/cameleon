@@ -34,11 +34,12 @@
 //!     gain_node.set_value(&mut params_ctxt, 0.1).unwrap();
 //! }
 //! ```
+
 mod node_kind;
 
 pub use node_kind::{
-    BooleanNode, CategoryNode, CommandNode, EnumerationNode, FloatNode, IntegerNode, Node,
-    PortNode, RegisterNode, StringNode,
+    BooleanNode, CategoryNode, CommandNode, EnumEntryNode, EnumerationNode, FloatNode, IntegerNode,
+    Node, PortNode, RegisterNode, StringNode,
 };
 
 use std::{

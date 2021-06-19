@@ -46,7 +46,6 @@ pub(super) const POLLING_TIME: &str = "PollingTime";
 pub(super) const ON_VALUE: &str = "OnValue";
 pub(super) const OFF_VALUE: &str = "OffValue";
 pub(super) const NUMERIC_VALUE: &str = "NumericValue";
-pub(super) const SYMBOLIC: &str = "Symbolic";
 pub(super) const IS_SELF_CLEARING: &str = "IsSelfClearing";
 pub(super) const MIN: &str = "Min";
 pub(super) const P_MIN: &str = "pMin";
