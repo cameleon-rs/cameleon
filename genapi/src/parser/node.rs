@@ -70,14 +70,14 @@ mod tests {
         assert_eq!(node_base.id(), node_builder.get_or_intern("TestNode"));
         assert_eq!(node_base.name_space(), NameSpace::Standard);
         assert_eq!(node_base.merge_priority(), MergePriority::High);
-        assert_eq!(node_base.expose_static().unwrap(), false);
+        assert!(!node_base.expose_static().unwrap());
 
         assert_eq!(node_base.tooltip().unwrap(), "tooltip");
         assert_eq!(node_base.description().unwrap(), "the description");
         assert_eq!(node_base.display_name(), Some("display name"));
         assert_eq!(node_base.visibility(), Visibility::Guru);
         assert_eq!(node_base.docu_url().unwrap(), "http://FOO.com");
-        assert_eq!(node_base.is_deprecated(), true);
+        assert!(node_base.is_deprecated());
         assert_eq!(node_base.event_id(), Some(0xF1));
         assert_eq!(
             node_base.p_is_implemented().unwrap(),
@@ -133,7 +133,7 @@ mod tests {
         assert_eq!(node_base.display_name(), None);
         assert_eq!(node_base.visibility(), Visibility::Beginner);
         assert!(node_base.docu_url().is_none());
-        assert_eq!(node_base.is_deprecated(), false);
+        assert!(!node_base.is_deprecated());
         assert!(node_base.event_id().is_none());
         assert!(node_base.p_is_implemented().is_none());
         assert!(node_base.p_is_available().is_none());

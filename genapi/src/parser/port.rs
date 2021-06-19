@@ -73,7 +73,7 @@ mod tests {
 
         let (node, ..): (PortNode, _, _, _) = parse_default(xml);
         assert_eq!(node.chunk_id().unwrap(), &ImmOrPNode::Imm(0x00FD_3219));
-        assert_eq!(node.swap_endianness(), true);
+        assert!(node.swap_endianness());
     }
 
     #[test]
@@ -101,6 +101,6 @@ mod tests {
 
         let (node, ..): (PortNode, _, _, _) = parse_default(xml);
         assert_eq!(node.chunk_id(), None);
-        assert_eq!(node.cache_chunk_data(), true);
+        assert!(node.cache_chunk_data());
     }
 }

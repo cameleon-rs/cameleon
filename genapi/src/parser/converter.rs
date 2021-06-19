@@ -129,6 +129,6 @@ mod tests {
         assert_eq!(expressions[0].name(), "ConstBy2");
         assert_eq!(node.p_value(), node_builder.get_or_intern("Target"));
         assert_eq!(node.slope(), Slope::Increasing);
-        assert_eq!(node.is_linear(), true);
+        assert!(node.is_linear());
     }
 }

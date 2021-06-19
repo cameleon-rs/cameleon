@@ -123,7 +123,7 @@
 #![allow(
     clippy::similar_names,
     clippy::missing_errors_doc,
-    clippy::clippy::module_name_repetitions
+    clippy::module_name_repetitions
 )]
 
 pub mod camera;
