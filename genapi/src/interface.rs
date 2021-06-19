@@ -8,7 +8,7 @@ use super::{
     elem_type::{DisplayNotation, FloatRepresentation, IntegerRepresentation},
     node_base::NodeBase,
     store::{CacheStore, NodeData, NodeId, NodeStore, ValueStore},
-    EnumEntryNode, {Device, GenApiResult, ValueCtxt},
+    {Device, GenApiResult, ValueCtxt},
 };
 
 #[derive(Clone, Debug)]
@@ -238,15 +238,22 @@ pub trait IEnumeration {
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<&EnumEntryNode>;
+    ) -> GenApiResult<NodeId>;
 
-    fn entries(&self, store: &impl NodeStore) -> &[EnumEntryNode];
+    fn entries(&self, store: &impl NodeStore) -> &[NodeId];
 
-    fn entry_by_name(&self, name: &str, store: &impl NodeStore) -> Option<&EnumEntryNode> {
-        self.entries(store).iter().find(|ent| ent.name() == name)
+    /// Get [`NodeId`] of enum entry which has specified symbolic name.
+    fn entry_by_symbolic(&self, name: &str, store: &impl NodeStore) -> Option<NodeId> {
+        for nid in self.entries(store) {
+            let ent = nid.expect_enum_entry(store).unwrap(); // Never fail when parse is succeeded.
+            if ent.symbolic() == name {
+                return Some(*nid);
+            }
+        }
+        None
     }
 
-    fn set_entry_by_name<T: ValueStore, U: CacheStore>(
+    fn set_entry_by_symbolic<T: ValueStore, U: CacheStore>(
         &self,
         name: &str,
         device: &mut impl Device,
@@ -425,6 +432,7 @@ pub enum INodeKind<'a> {
     Category(&'a super::CategoryNode),
     Port(&'a super::PortNode),
     Enumeration(&'a super::EnumerationNode),
+    EnumEntry(&'a super::EnumEntryNode),
     Node(&'a super::Node),
 }
 
@@ -448,6 +456,7 @@ impl<'a> INodeKind<'a> {
             NodeData::Category(n) => Some(Self::Category(n)),
             NodeData::Port(n) => Some(Self::Port(n)),
             NodeData::Enumeration(n) => Some(Self::Enumeration(n)),
+            NodeData::EnumEntry(n) => Some(Self::EnumEntry(n)),
             NodeData::Node(n) => Some(Self::Node(n)),
             _ => None,
         }
@@ -473,6 +482,7 @@ impl<'a> INodeKind<'a> {
             Self::Category(n) => n.node_base(),
             Self::Port(n) => n.node_base(),
             Self::Enumeration(n) => n.node_base(),
+            Self::EnumEntry(n) => n.node_base(),
             Self::Node(n) => n.node_base(),
         }
     }
@@ -565,13 +575,6 @@ impl<'a> IEnumerationKind<'a> {
         match store.node_opt(id)? {
             NodeData::Enumeration(n) => Some(Self::Enumeration(n)),
             _ => None,
-        }
-    }
-
-    /// Returns entries with more precise lifetime.
-    pub fn entries_precise(&self, store: &impl NodeStore) -> &'a [EnumEntryNode] {
-        match self {
-            Self::Enumeration(n) => n.entries(store),
         }
     }
 }

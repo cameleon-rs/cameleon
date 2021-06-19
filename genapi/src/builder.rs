@@ -96,6 +96,9 @@ pub trait NodeStoreBuilder {
     fn get_or_intern<T>(&mut self, node_name: T) -> NodeId
     where
         T: AsRef<str>;
+
+    /// Returns fresh id for each call.
+    fn fresh_id(&mut self) -> u32;
 }
 
 pub trait ValueStoreBuilder {

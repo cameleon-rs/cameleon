@@ -6,14 +6,17 @@ use tracing::debug;
 
 use crate::{
     builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder},
+    node_base::NodeAttributeBase,
+    store::NodeData,
     EnumEntryNode, EnumerationNode,
 };
 
 use super::{
     elem_name::{
-        ENUMERATION, ENUM_ENTRY, IS_SELF_CLEARING, NAME, NUMERIC_VALUE, POLLING_TIME, P_SELECTED,
-        STREAMABLE, SYMBOLIC,
+        ENUMERATION, ENUM_ENTRY, EXPOSE_STATIC, IS_SELF_CLEARING, MERGE_PRIORITY, NAME, NAME_SPACE,
+        NUMERIC_VALUE, POLLING_TIME, P_SELECTED, STREAMABLE,
     },
+    elem_type::convert_to_bool,
     xml, Parse,
 };
 
@@ -36,7 +39,10 @@ impl Parse for EnumerationNode {
             .unwrap_or_default();
         let mut entries = vec![];
         while let Some(mut ent_node) = node.next_if(ENUM_ENTRY) {
-            entries.push(ent_node.parse(node_builder, value_builder, cache_builder));
+            let entry: EnumEntryNode = ent_node.parse(node_builder, value_builder, cache_builder);
+            let nid = entry.attr_base.id;
+            node_builder.store_node(nid, NodeData::EnumEntry(entry.into()));
+            entries.push(nid);
         }
         let value = node.parse(node_builder, value_builder, cache_builder);
         let p_selected = node.parse_while(P_SELECTED, node_builder, value_builder, cache_builder);
@@ -65,19 +71,39 @@ impl Parse for EnumEntryNode {
         debug!("start parsing `EnumEntryNode`");
         debug_assert_eq!(node.tag_name(), ENUM_ENTRY);
 
-        let name = node.attribute_of(NAME).unwrap().to_string();
+        // We can't use `NodeAttributeBase::parse` for needs of generating fresh symbol.
+        let symbolic = node.attribute_of(NAME).unwrap().to_string();
+        let name = format!("${}_{}", symbolic, node_builder.fresh_id());
+        let id = node_builder.get_or_intern(&name);
+        let name_space = node
+            .attribute_of(NAME_SPACE)
+            .map(|text| text.into())
+            .unwrap_or_default();
+        let merge_priority = node
+            .attribute_of(MERGE_PRIORITY)
+            .map(|text| text.into())
+            .unwrap_or_default();
+        let expose_static = node
+            .attribute_of(EXPOSE_STATIC)
+            .map(|text| convert_to_bool(text));
+
+        let attr_base = NodeAttributeBase {
+            id,
+            name_space,
+            merge_priority,
+            expose_static,
+        };
         let elem_base = node.parse(node_builder, value_builder, cache_builder);
 
         let value = node.parse(node_builder, value_builder, cache_builder);
         let numeric_value =
             node.parse_if(NUMERIC_VALUE, node_builder, value_builder, cache_builder);
-        let symbolic = node.parse_if(SYMBOLIC, node_builder, value_builder, cache_builder);
         let is_self_clearing = node
             .parse_if(IS_SELF_CLEARING, node_builder, value_builder, cache_builder)
             .unwrap_or_default();
 
         Self {
-            name,
+            attr_base,
             elem_base,
             value,
             numeric_value,
@@ -89,7 +115,7 @@ impl Parse for EnumEntryNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::elem_type::ImmOrPNode;
+    use crate::{elem_type::ImmOrPNode, interface::IEnumeration};
 
     use super::{super::utils::tests::parse_default, *};
 
@@ -119,17 +145,17 @@ mod tests {
         );
         assert_eq!(node.polling_time(), Some(10));
 
-        let entries = node.entries_elem();
+        let entries = node.entries(&node_builder);
         assert_eq!(entries.len(), 2);
 
-        let entry0 = &entries[0];
-        assert_eq!(entry0.name(), "Entry0");
+        let entry0 = &entries[0].expect_enum_entry(&node_builder).unwrap();
+        assert_eq!(entry0.symbolic(), "Entry0");
         assert_eq!(entry0.value(), 0);
         assert!((entry0.numeric_value() - 1.0).abs() < f64::EPSILON);
         assert_eq!(entry0.is_self_clearing(), true);
 
-        let entry1 = &entries[1];
-        assert_eq!(entry1.name(), "Entry1");
+        let entry1 = &entries[1].expect_enum_entry(&node_builder).unwrap();
+        assert_eq!(entry1.symbolic(), "Entry1");
         assert_eq!(entry1.value(), 1);
         assert!((entry1.numeric_value() - 10.0).abs() < f64::EPSILON);
         assert_eq!(entry1.is_self_clearing(), false);

@@ -17,18 +17,13 @@ pub struct EnumerationNode {
     pub(crate) elem_base: NodeElementBase,
 
     pub(crate) streamable: bool,
-    pub(crate) entries: Vec<EnumEntryNode>,
+    pub(crate) entries: Vec<NodeId>,
     pub(crate) value: ImmOrPNode<IntegerId>,
     pub(crate) p_selected: Vec<NodeId>,
     pub(crate) polling_time: Option<u64>,
 }
 
 impl EnumerationNode {
-    #[must_use]
-    pub fn entries_elem(&self) -> &[EnumEntryNode] {
-        &self.entries
-    }
-
     #[must_use]
     pub fn value_elem(&self) -> ImmOrPNode<IntegerId> {
         self.value
@@ -76,30 +71,32 @@ impl IEnumeration for EnumerationNode {
         device: &mut impl Device,
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
-    ) -> GenApiResult<&EnumEntryNode> {
+    ) -> GenApiResult<NodeId> {
         let value = self.value.value(device, store, cx)?;
-        self.entries(store)
-            .iter()
-            .find(|ent| ent.value() == value)
-            .ok_or_else(|| {
-                GenApiError::invalid_node(
-                    format!(
-                        "no entry found corresponding to the current value of {}",
-                        store.name_by_id(self.node_base().id()).unwrap()
-                    )
-                    .into(),
-                )
-            })
+        for nid in self.entries(store) {
+            let ent = nid.expect_enum_entry(store).unwrap(); // Never fail when parse is succeeded.
+            if ent.value() == value {
+                return Ok(*nid);
+            }
+        }
+
+        Err(GenApiError::invalid_node(
+            format!(
+                "no entry found corresponding to the current value of {}",
+                store.name_by_id(self.node_base().id()).unwrap()
+            )
+            .into(),
+        ))
     }
 
-    fn entries(&self, _: &impl NodeStore) -> &[EnumEntryNode] {
+    fn entries(&self, _: &impl NodeStore) -> &[NodeId] {
         &self.entries
     }
 
     #[tracing::instrument(skip(self, device, store, cx),
                           level = "trace",
                           fields(node = store.name_by_id(self.node_base().id()).unwrap()))]
-    fn set_entry_by_name<T: ValueStore, U: CacheStore>(
+    fn set_entry_by_symbolic<T: ValueStore, U: CacheStore>(
         &self,
         name: &str,
         device: &mut impl Device,
@@ -109,7 +106,8 @@ impl IEnumeration for EnumerationNode {
         let value = self
             .entries(store)
             .iter()
-            .find(|ent| ent.name() == name)
+            .map(|nid| nid.expect_enum_entry(store).unwrap())
+            .find(|ent| ent.symbolic() == name)
             .ok_or_else(|| {
                 GenApiError::invalid_data(
                     format! {"no `EenumEntryNode`: `{}` not found in `{}`",
@@ -130,7 +128,12 @@ impl IEnumeration for EnumerationNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
-        if !self.entries(store).iter().any(|ent| ent.value() == value) {
+        if !self
+            .entries(store)
+            .iter()
+            .map(|nid| nid.expect_enum_entry(store).unwrap())
+            .any(|ent| ent.value() == value)
+        {
             return Err(GenApiError::invalid_data(
                 format!("not found entry with the value `{}`", value).into(),
             ));
@@ -174,21 +177,16 @@ impl ISelector for EnumerationNode {
 
 #[derive(Debug, Clone)]
 pub struct EnumEntryNode {
-    pub(crate) name: String,
+    pub(crate) attr_base: NodeAttributeBase,
     pub(crate) elem_base: NodeElementBase,
 
     pub(crate) value: i64,
     pub(crate) numeric_value: Option<f64>,
-    pub(crate) symbolic: Option<String>,
+    pub(crate) symbolic: String,
     pub(crate) is_self_clearing: bool,
 }
 
 impl EnumEntryNode {
-    #[must_use]
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
     #[must_use]
     pub fn value(&self) -> i64 {
         self.value
@@ -201,12 +199,8 @@ impl EnumEntryNode {
     }
 
     #[must_use]
-    pub fn symbolic(&self) -> Option<&str> {
-        self.symbolic.as_deref()
-    }
-
-    pub fn set_symbolic(&mut self, s: String) {
-        self.symbolic = Some(s)
+    pub fn symbolic(&self) -> &str {
+        &self.symbolic
     }
 
     #[must_use]
@@ -239,5 +233,15 @@ impl EnumEntryNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
         self.elem_base.is_available(device, store, cx)
+    }
+}
+
+impl INode for EnumEntryNode {
+    fn node_base(&self) -> NodeBase {
+        NodeBase::new(&self.attr_base, &self.elem_base)
+    }
+
+    fn streamable(&self) -> bool {
+        false
     }
 }
