@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
+#![doc(hidden)]
 //! This module contains libusb async api wrapper without any overhead.
 //! NEVER make this module public because all functions in this module may cause UB if
 //! preconditions are not followed.
@@ -16,27 +17,27 @@ use std::{
     time::{Duration, Instant},
 };
 
-use cameleon_device::u3v::ReceiveChannel;
+use super::{LibUsbError, ReceiveChannel, Result};
 use rusb::UsbContext;
-use thiserror::Error;
 
-use crate::{StreamError, StreamResult};
-
+#[doc(hidden)]
 /// Represents a pool of asynchronous transfers, that can be polled to completion.
-pub(super) struct AsyncPool<'a> {
+pub struct AsyncPool<'a> {
     device: &'a ReceiveChannel,
     pending: VecDeque<AsyncTransfer>,
 }
 
 impl<'a> AsyncPool<'a> {
-    pub(super) fn new(device: &'a ReceiveChannel) -> Self {
+    #[doc(hidden)]
+    pub fn new(device: &'a ReceiveChannel) -> Self {
         Self {
             device,
             pending: VecDeque::new(),
         }
     }
 
-    pub(super) fn submit(&mut self, buf: &mut [u8]) -> StreamResult<()> {
+    #[doc(hidden)]
+    pub fn submit(&mut self, buf: &mut [u8]) -> Result<()> {
         // Safety: If transfer is submitted, it is pushed onto `pending` where it will be
         // dropped before `device` is freed.
         unsafe {
@@ -51,8 +52,13 @@ impl<'a> AsyncPool<'a> {
         }
     }
 
-    pub(super) fn poll(&mut self, timeout: Duration) -> StreamResult<usize> {
-        let next = self.pending.front().ok_or(AsyncError::NoTransfersPending)?;
+    #[doc(hidden)]
+    /// # Panics
+    ///
+    /// Panics if there is no pending transfer.
+    pub fn poll(&mut self, timeout: Duration) -> Result<usize> {
+        debug_assert!(!self.pending.is_empty());
+        let next = self.pending.front().unwrap();
         if poll_completed(
             self.device.device_handle.context(),
             timeout,
@@ -61,11 +67,12 @@ impl<'a> AsyncPool<'a> {
             let mut transfer = self.pending.pop_front().unwrap();
             Ok(transfer.handle_completed()?)
         } else {
-            Err(AsyncError::Timeout.into())
+            Err(LibUsbError::Timeout.into())
         }
     }
 
-    pub(super) fn cancel_all(&mut self) {
+    #[doc(hidden)]
+    pub fn cancel_all(&mut self) {
         // Cancel in reverse order to avoid a race condition in which one
         // transfer is cancelled but another submitted later makes its way onto
         // the bus.
@@ -75,12 +82,14 @@ impl<'a> AsyncPool<'a> {
     }
 
     /// Returns the number of async transfers pending.
-    pub(super) fn pending(&self) -> usize {
+    #[doc(hidden)]
+    pub fn pending(&self) -> usize {
         self.pending.len()
     }
 
     /// Returns `true` if there is no pending transfer.
-    pub(super) fn is_empty(&self) -> bool {
+    #[doc(hidden)]
+    pub fn is_empty(&self) -> bool {
         self.pending() == 0
     }
 }
@@ -154,10 +163,10 @@ impl AsyncTransfer {
     }
 
     // Step 3 of async API
-    fn submit(&mut self) -> StreamResult<()> {
+    fn submit(&mut self) -> Result<()> {
         self.completed_flag().store(false, SeqCst);
         let errno = unsafe { libusb1_sys::libusb_submit_transfer(self.ptr.as_ptr()) };
-        Ok(AsyncError::from_libusb_error(errno)?)
+        Ok(LibUsbError::from_libusb_error(errno)?)
     }
 
     fn cancel(&mut self) {
@@ -166,7 +175,7 @@ impl AsyncTransfer {
         }
     }
 
-    fn handle_completed(&mut self) -> StreamResult<usize> {
+    fn handle_completed(&mut self) -> Result<usize> {
         assert!(self
             .completed_flag()
             .load(std::sync::atomic::Ordering::Relaxed));
@@ -177,14 +186,14 @@ impl AsyncTransfer {
                 debug_assert!(transfer.length >= transfer.actual_length);
                 return Ok(transfer.actual_length as usize);
             }
-            LIBUSB_TRANSFER_CANCELLED => AsyncError::Cancelled,
-            LIBUSB_TRANSFER_ERROR => AsyncError::Other,
+            LIBUSB_TRANSFER_CANCELLED => LibUsbError::Timeout,
+            LIBUSB_TRANSFER_ERROR => LibUsbError::Other,
             LIBUSB_TRANSFER_TIMED_OUT => {
                 unreachable!("We are using timeout=0 which means no timeout")
             }
-            LIBUSB_TRANSFER_STALL => AsyncError::Stall,
-            LIBUSB_TRANSFER_NO_DEVICE => AsyncError::Disconnected,
-            LIBUSB_TRANSFER_OVERFLOW => AsyncError::Overflow,
+            LIBUSB_TRANSFER_STALL => LibUsbError::Pipe,
+            LIBUSB_TRANSFER_NO_DEVICE => LibUsbError::NoDevice,
+            LIBUSB_TRANSFER_OVERFLOW => LibUsbError::Overflow,
             _ => unreachable!(),
         };
         Err(err.into())
@@ -211,7 +220,7 @@ fn poll_completed(
     ctx: &impl UsbContext,
     timeout: Duration,
     completed: &AtomicBool,
-) -> StreamResult<bool> {
+) -> Result<bool> {
     use libusb1_sys::{constants::*, *};
 
     let deadline = Instant::now() + timeout;
@@ -242,51 +251,13 @@ fn poll_completed(
         match err {
             0 => Ok(completed.load(SeqCst)),
             LIBUSB_ERROR_TIMEOUT => Ok(false),
-            e => Err(AsyncError::from_libusb_error(e).unwrap_err().into()),
+            e => Err(LibUsbError::from_libusb_error(e).unwrap_err().into()),
         }
     }
 }
 
-#[derive(Error, Debug)]
-enum AsyncError {
-    #[error("no transfers pending")]
-    NoTransfersPending,
-    #[error("transfer is stalled")]
-    Stall,
-    #[error("device was disconnected")]
-    Disconnected,
-    #[error("transfer was cancelled")]
-    Cancelled,
-    #[error("input/output error")]
-    Io,
-    #[error("invalid parameter")]
-    InvalidParam,
-    #[error("access denied (insufficient permissions)")]
-    Access,
-    #[error("no such device (it may have been disconnected)")]
-    NoDevice,
-    #[error("entity not found")]
-    NotFound,
-    #[error("resource busy")]
-    Busy,
-    #[error("operation timed out")]
-    Timeout,
-    #[error("overflow")]
-    Overflow,
-    #[error("pipe error")]
-    Pipe,
-    #[error("system call interrupted (perhaps due to signal)")]
-    Interrupted,
-    #[error("insufficient memory")]
-    NoMem,
-    #[error("operation not supported or unimplemented on this platform")]
-    NotSupported,
-    #[error("other error")]
-    Other,
-}
-
-impl AsyncError {
-    fn from_libusb_error(err: i32) -> Result<(), Self> {
+impl LibUsbError {
+    fn from_libusb_error(err: i32) -> std::result::Result<(), Self> {
         match err {
             0 => Ok(()),
             libusb1_sys::constants::LIBUSB_ERROR_IO => Err(Self::Io),
@@ -303,15 +274,6 @@ impl AsyncError {
             libusb1_sys::constants::LIBUSB_ERROR_NOT_SUPPORTED => Err(Self::NotSupported),
             libusb1_sys::constants::LIBUSB_ERROR_OTHER => Err(Self::Other),
             _ => unreachable!(),
-        }
-    }
-}
-
-impl From<AsyncError> for StreamError {
-    fn from(err: AsyncError) -> Self {
-        match err {
-            AsyncError::Disconnected => Self::Disconnected,
-            _ => StreamError::Io(err.into()),
         }
     }
 }

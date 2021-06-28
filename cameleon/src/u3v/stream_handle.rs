@@ -11,7 +11,7 @@ use std::{
 };
 
 use async_std::task;
-use cameleon_device::u3v::{self, protocol::stream as u3v_stream};
+use cameleon_device::u3v::{self, async_read::AsyncPool, protocol::stream as u3v_stream};
 use futures::channel::oneshot;
 use tracing::{error, info, warn};
 
@@ -21,7 +21,7 @@ use crate::{
     ControlError, ControlResult, DeviceControl, StreamError, StreamResult,
 };
 
-use super::{async_read::AsyncPool, register_map::Abrm};
+use super::register_map::Abrm;
 
 /// This type is used to receive stream packets from the device.
 pub struct StreamHandle {
