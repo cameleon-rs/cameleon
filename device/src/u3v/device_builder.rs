@@ -8,7 +8,7 @@ use crate::u3v::{protocol::util::ReadBytes, BusSpeed, DeviceInfo, Error, Result}
 
 use super::{
     channel::{ControlIfaceInfo, ReceiveIfaceInfo},
-    device::{Device, RusbDevHandle, RusbDevice},
+    device::{Device, RusbDevice, RusbDeviceHandle},
 };
 
 const MISCELLANEOUS_CLASS: u8 = 0xEF;
@@ -326,7 +326,7 @@ impl DeviceInfoDescriptor {
         })
     }
 
-    fn interpret(&self, channel: &RusbDevHandle) -> Result<DeviceInfo> {
+    fn interpret(&self, channel: &RusbDeviceHandle) -> Result<DeviceInfo> {
         let gencp_version = Version::new(
             self.gencp_version_major.into(),
             self.gencp_version_minor.into(),

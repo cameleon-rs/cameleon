@@ -17,21 +17,27 @@ use std::{
     time::{Duration, Instant},
 };
 
-use super::{LibUsbError, ReceiveChannel, Result};
+use super::{
+    channel::ReceiveIfaceInfo, device::RusbDeviceHandle, LibUsbError, ReceiveChannel, Result,
+};
 use rusb::UsbContext;
 
 #[doc(hidden)]
 /// Represents a pool of asynchronous transfers, that can be polled to completion.
 pub struct AsyncPool<'a> {
-    device: &'a ReceiveChannel,
+    handle: AsyncHandle<'a>,
+    iface_info: ReceiveIfaceInfo,
     pending: VecDeque<AsyncTransfer>,
 }
 
 impl<'a> AsyncPool<'a> {
     #[doc(hidden)]
-    pub fn new(device: &'a ReceiveChannel) -> Self {
+    pub fn new(channel: &'a ReceiveChannel) -> Self {
+        let iface_info = channel.iface_info.clone();
+        let handle = get_handle(channel);
         Self {
-            device,
+            handle,
+            iface_info,
             pending: VecDeque::new(),
         }
     }
@@ -41,11 +47,8 @@ impl<'a> AsyncPool<'a> {
         // Safety: If transfer is submitted, it is pushed onto `pending` where it will be
         // dropped before `device` is freed.
         unsafe {
-            let mut transfer = AsyncTransfer::new_bulk(
-                self.device.device_handle.as_raw(),
-                self.device.iface_info.bulk_in_ep,
-                buf,
-            );
+            let mut transfer =
+                AsyncTransfer::new_bulk(self.handle.as_raw(), self.iface_info.bulk_in_ep, buf);
             transfer.submit()?;
             self.pending.push_back(transfer);
             Ok(())
@@ -59,11 +62,7 @@ impl<'a> AsyncPool<'a> {
     pub fn poll(&mut self, timeout: Duration) -> Result<usize> {
         debug_assert!(!self.pending.is_empty());
         let next = self.pending.front().unwrap();
-        if poll_completed(
-            self.device.device_handle.context(),
-            timeout,
-            next.completed_flag(),
-        )? {
+        if poll_completed(self.handle.context(), timeout, next.completed_flag())? {
             let mut transfer = self.pending.pop_front().unwrap();
             Ok(transfer.handle_completed()?)
         } else {
@@ -274,6 +273,32 @@ impl LibUsbError {
             libusb1_sys::constants::LIBUSB_ERROR_NOT_SUPPORTED => Err(Self::NotSupported),
             libusb1_sys::constants::LIBUSB_ERROR_OTHER => Err(Self::Other),
             _ => unreachable!(),
+        }
+    }
+}
+
+cfg_if::cfg_if! {
+    if #[cfg(target_os = "windows")] {
+        use std::sync::MutexGuard;
+        struct AsyncHandle<'a>(MutexGuard<'a, Option<RusbDeviceHandle>>);
+
+        impl<'a> AsyncHandle<'a> {
+            fn context(&self) -> &impl UsbContext {
+                self.0.as_ref().unwrap().context()
+            }
+            fn as_raw(&self) -> *mut libusb1_sys::libusb_device_handle {
+                self.0.as_ref().unwrap().as_raw()
+            }
+        }
+
+        fn get_handle(channel: &ReceiveChannel) -> AsyncHandle {
+            AsyncHandle(channel.device_handle.handle.lock().unwrap())
+        }
+    } else {
+        type AsyncHandle<'a> = &'a RusbDeviceHandle;
+
+        fn get_handle(channel: &ReceiveChannel) -> AsyncHandle {
+            &channel.device_handle
         }
     }
 }

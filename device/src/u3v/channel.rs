@@ -6,10 +6,10 @@ use std::time;
 
 use crate::u3v::Result;
 
-use super::device::RusbDevHandle;
+use super::device::LibUsbDeviceHandle;
 
 pub struct ControlChannel {
-    pub device_handle: RusbDevHandle,
+    pub(super) device_handle: LibUsbDeviceHandle,
     pub iface_info: ControlIfaceInfo,
     pub is_opened: bool,
 }
@@ -65,7 +65,7 @@ impl ControlChannel {
         Ok(())
     }
 
-    pub(super) fn new(device_handle: RusbDevHandle, iface_info: ControlIfaceInfo) -> Self {
+    pub(super) fn new(device_handle: LibUsbDeviceHandle, iface_info: ControlIfaceInfo) -> Self {
         Self {
             device_handle,
             iface_info,
@@ -75,7 +75,7 @@ impl ControlChannel {
 }
 
 pub struct ReceiveChannel {
-    pub device_handle: RusbDevHandle,
+    pub(super) device_handle: LibUsbDeviceHandle,
     pub iface_info: ReceiveIfaceInfo,
     pub is_opened: bool,
 }
@@ -123,7 +123,7 @@ impl ReceiveChannel {
         Ok(())
     }
 
-    pub(super) fn new(device_handle: RusbDevHandle, iface_info: ReceiveIfaceInfo) -> Self {
+    pub(super) fn new(device_handle: LibUsbDeviceHandle, iface_info: ReceiveIfaceInfo) -> Self {
         Self {
             device_handle,
             iface_info,
@@ -145,7 +145,11 @@ pub struct ReceiveIfaceInfo {
     pub bulk_in_ep: u8,
 }
 
-fn set_halt(handle: &RusbDevHandle, endpoint_number: u8, timeout: time::Duration) -> Result<()> {
+fn set_halt(
+    handle: &LibUsbDeviceHandle,
+    endpoint_number: u8,
+    timeout: time::Duration,
+) -> Result<()> {
     let request_type = rusb::request_type(
         rusb::Direction::Out,
         rusb::RequestType::Standard,
