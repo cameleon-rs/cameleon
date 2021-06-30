@@ -31,15 +31,15 @@ Currently, `cameleon` supports only `USB3 Vision` cameras, but it's planned to s
 ## Usage
 
 ### USB3 Vision cameras
-First, you need to install [libusb][libusb-url] to communicate with `U3V` cameras. Then add the following to your `Cargo.toml`:
+You need to install `libusb` to use USB3 Vision cameras, see [How to install `libusb`](#how-to-install-libusb).
 
+First, add dependencies like below.
 ```toml
 [dependencies]
 cameleon = { version = 0.1, features = 'libusb' }
 ```
 
-You can enumerate all cameras connected to the host, and start streaming.
-
+Then, you can enumerate all cameras connected to the host, and start streaming.
 ```rust
 use cameleon::u3v;
 
@@ -120,8 +120,28 @@ More examples can be found [here][cameleon-example].
 
 ### USB3 Vision
 
-#### Why isn't a camera found even though it is connected to the host?
-It's probably due to permission issue for USB devices. You could add permissions by editing `udev` rules, a configuration example is found [here](misc/u3v.rules).
+#### How to install `libusb`?
+##### Linux/macOS
+You need to install [libusb][libusb-url] to the place where `pkg-config` can find. Basically all you have to do is just installing `libusb` through your system package manager like `sudo apt install libusb-1.0-0-dev` or `brew install libusb`.
+
+If you use Linux, it's probably needed to edit permissions for USB devices. You could add permissions by editing `udev` rules, a configuration example is found [here](misc/u3v.rules).
+
+##### Windows
+You need to install [libusb][libusb-url] with `vcpkg`, please see [here][libusb-vcpkg] to install `libusb` with `vcpkg`.
+
+Also, you need to install a driver for your device. You can find resource [here][libusb-driver-installation] for driver-installation.  
+NOTE: Make sure to install a driver to a composite device not to its child devices.  
+To do this, you need to list all devices connected to the host computer with `zadig` like below.  
+![describe zadig list option][zadig-list-option]
+
+Then install `WinUSB` to your device.  
+![describe how to install WinUSB driver to your composite device][zadig-composite-device]
+
+[libusb-vcpkg]: https://github.com/libusb/libusb/wiki/Windows#vcpkg_port
+[libusb-driver-installation]: https://github.com/libusb/libusb/wiki/Windows#driver-installation
+[zadig-list-option]: https://user-images.githubusercontent.com/6376004/123678264-11720d00-d881-11eb-98aa-eb649fdf3cb2.png
+[zadig-composite-device]: https://user-images.githubusercontent.com/6376004/123937380-10e88c00-d9d1-11eb-9999-61439b6db788.png
+
 
 #### Why is frame rate so low?
 Frame rate can be affected by several reasons.
@@ -171,5 +191,3 @@ To start developing, please refer to [CONTRIBUTING.md][contributing].
 This project is licenced under [MPL 2.0][license].
 
 [license]: https://github.com/cameleon-rs/cameleon/blob/main/LICENSE
-
-
