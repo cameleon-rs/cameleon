@@ -2,9 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
+use cameleon_impl::bytes_io::ReadBytes;
 use semver::Version;
 
-use crate::u3v::{protocol::util::ReadBytes, BusSpeed, DeviceInfo, Error, Result};
+use crate::u3v::{BusSpeed, DeviceInfo, Error, Result};
 
 use super::{
     channel::{ControlIfaceInfo, ReceiveIfaceInfo},
@@ -281,9 +282,9 @@ impl DeviceInfoDescriptor {
             return Err(Error::InvalidDevice);
         }
 
-        let length: u8 = bytes.read_bytes()?;
-        let descriptor_type = bytes.read_bytes()?;
-        let descriptor_subtype = bytes.read_bytes()?;
+        let length: u8 = bytes.read_bytes_le()?;
+        let descriptor_type = bytes.read_bytes_le()?;
+        let descriptor_subtype = bytes.read_bytes_le()?;
 
         if length < Self::MINIMUM_DESC_LENGTH
             || descriptor_type != Self::DESCRIPTOR_TYPE
@@ -292,19 +293,19 @@ impl DeviceInfoDescriptor {
             return Err(Error::InvalidDevice);
         }
 
-        let gencp_version_minor = bytes.read_bytes()?;
-        let gencp_version_major = bytes.read_bytes()?;
-        let u3v_version_minor = bytes.read_bytes()?;
-        let u3v_version_major = bytes.read_bytes()?;
-        let guid_idx = bytes.read_bytes()?;
-        let vendor_name_idx = bytes.read_bytes()?;
-        let model_name_idx = bytes.read_bytes()?;
-        let family_name_idx = bytes.read_bytes()?;
-        let device_version_idx = bytes.read_bytes()?;
-        let manufacturer_info_idx = bytes.read_bytes()?;
-        let serial_number_idx = bytes.read_bytes()?;
-        let user_defined_name_idx = bytes.read_bytes()?;
-        let supported_speed_mask = bytes.read_bytes()?;
+        let gencp_version_minor = bytes.read_bytes_le()?;
+        let gencp_version_major = bytes.read_bytes_le()?;
+        let u3v_version_minor = bytes.read_bytes_le()?;
+        let u3v_version_major = bytes.read_bytes_le()?;
+        let guid_idx = bytes.read_bytes_le()?;
+        let vendor_name_idx = bytes.read_bytes_le()?;
+        let model_name_idx = bytes.read_bytes_le()?;
+        let family_name_idx = bytes.read_bytes_le()?;
+        let device_version_idx = bytes.read_bytes_le()?;
+        let manufacturer_info_idx = bytes.read_bytes_le()?;
+        let serial_number_idx = bytes.read_bytes_le()?;
+        let user_defined_name_idx = bytes.read_bytes_le()?;
+        let supported_speed_mask = bytes.read_bytes_le()?;
 
         Ok(Self {
             length,
@@ -356,13 +357,13 @@ impl DeviceInfoDescriptor {
         } else {
             Some(channel.read_string_descriptor_ascii(self.user_defined_name_idx)?)
         };
-        let supported_speed = if self.supported_speed_mask >> 4 & 0b1 == 1 {
+        let supported_speed = if self.supported_speed_mask >> 4_i32 & 0b1 == 1 {
             BusSpeed::SuperSpeedPlus
-        } else if self.supported_speed_mask >> 3 & 0b1 == 1 {
+        } else if self.supported_speed_mask >> 3_i32 & 0b1 == 1 {
             BusSpeed::SuperSpeed
-        } else if self.supported_speed_mask >> 2 & 0b1 == 1 {
+        } else if self.supported_speed_mask >> 2_i32 & 0b1 == 1 {
             BusSpeed::HighSpeed
-        } else if self.supported_speed_mask >> 1 & 0b1 == 1 {
+        } else if self.supported_speed_mask >> 1_i32 & 0b1 == 1 {
             BusSpeed::FullSpeed
         } else if self.supported_speed_mask & 0b1 == 1 {
             BusSpeed::LowSpeed

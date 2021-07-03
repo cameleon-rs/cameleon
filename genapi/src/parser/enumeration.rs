@@ -151,13 +151,13 @@ mod tests {
         let entry0 = &entries[0].expect_enum_entry(&node_builder).unwrap();
         assert_eq!(entry0.symbolic(), "Entry0");
         assert_eq!(entry0.value(), 0);
-        assert!((entry0.numeric_value() - 1.0).abs() < f64::EPSILON);
+        assert!((entry0.numeric_value() - 1_f64).abs() < f64::EPSILON);
         assert!(entry0.is_self_clearing());
 
         let entry1 = &entries[1].expect_enum_entry(&node_builder).unwrap();
         assert_eq!(entry1.symbolic(), "Entry1");
         assert_eq!(entry1.value(), 1);
-        assert!((entry1.numeric_value() - 10.0).abs() < f64::EPSILON);
+        assert!((entry1.numeric_value() - 10_f64).abs() < f64::EPSILON);
         assert!(!entry1.is_self_clearing());
     }
 }

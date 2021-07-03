@@ -25,7 +25,7 @@ fn main() {
     // Start streaming. Channel capacity is set to 3.
     let payload_rx = camera.start_streaming(3).unwrap();
 
-    let mut payload_count = 0;
+    let mut payload_count = 0_usize;
     while payload_count < 10 {
         match payload_rx.try_recv() {
             Ok(payload) => {

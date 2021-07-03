@@ -9,12 +9,12 @@ use std::{
     time,
 };
 
+use cameleon_impl::bytes_io::ReadBytes;
+
 use crate::{
     u3v::{Error, Result},
     PixelFormat,
 };
-
-use super::util::ReadBytes;
 
 /// Leader of stream protocol.
 ///
@@ -67,11 +67,11 @@ impl<'a> Leader<'a> {
         let mut cursor = Cursor::new(buf.as_ref());
 
         Self::parse_prefix(&mut cursor)?;
-        let _reserved1: u16 = cursor.read_bytes()?;
-        let leader_size = cursor.read_bytes()?;
-        let block_id = cursor.read_bytes()?;
-        let _reserved2: u16 = cursor.read_bytes()?;
-        let payload_type = cursor.read_bytes::<u16>()?.try_into()?;
+        let _reserved1: u16 = cursor.read_bytes_le()?;
+        let leader_size = cursor.read_bytes_le()?;
+        let block_id = cursor.read_bytes_le()?;
+        let _reserved2: u16 = cursor.read_bytes_le()?;
+        let payload_type = cursor.read_bytes_le::<u16>()?.try_into()?;
 
         let raw_specfic_leader = &cursor.get_ref()[cursor.position() as usize..];
 
@@ -131,7 +131,7 @@ impl<'a> Leader<'a> {
     }
 
     fn parse_prefix(cursor: &mut Cursor<&[u8]>) -> Result<()> {
-        let magic: u32 = cursor.read_bytes()?;
+        let magic: u32 = cursor.read_bytes_le()?;
         if magic == Self::LEADER_MAGIC {
             Ok(())
         } else {
@@ -223,17 +223,17 @@ impl ImageLeader {
 impl SpecificLeader for ImageLeader {
     fn from_bytes(buf: &[u8]) -> Result<Self> {
         let mut cursor = Cursor::new(buf);
-        let timestamp = cursor.read_bytes()?;
+        let timestamp = cursor.read_bytes_le()?;
         let pixel_format = cursor
-            .read_bytes::<u32>()?
+            .read_bytes_le::<u32>()?
             .try_into()
             .map_err(|e: String| Error::InvalidPacket(e.into()))?;
-        let width = cursor.read_bytes()?;
-        let height = cursor.read_bytes()?;
-        let x_offset = cursor.read_bytes()?;
-        let y_offset = cursor.read_bytes()?;
-        let x_padding = cursor.read_bytes()?;
-        let _reserved: u16 = cursor.read_bytes()?;
+        let width = cursor.read_bytes_le()?;
+        let height = cursor.read_bytes_le()?;
+        let x_offset = cursor.read_bytes_le()?;
+        let y_offset = cursor.read_bytes_le()?;
+        let x_padding = cursor.read_bytes_le()?;
+        let _reserved: u16 = cursor.read_bytes_le()?;
 
         Ok(Self {
             timestamp,
@@ -311,17 +311,17 @@ impl ImageExtendedChunkLeader {
 impl SpecificLeader for ImageExtendedChunkLeader {
     fn from_bytes(buf: &[u8]) -> Result<Self> {
         let mut cursor = Cursor::new(buf);
-        let timestamp = cursor.read_bytes()?;
+        let timestamp = cursor.read_bytes_le()?;
         let pixel_format = cursor
-            .read_bytes::<u32>()?
+            .read_bytes_le::<u32>()?
             .try_into()
             .map_err(|e: String| Error::InvalidPacket(e.into()))?;
-        let width = cursor.read_bytes()?;
-        let height = cursor.read_bytes()?;
-        let x_offset = cursor.read_bytes()?;
-        let y_offset = cursor.read_bytes()?;
-        let x_padding = cursor.read_bytes()?;
-        let _reserved: u16 = cursor.read_bytes()?;
+        let width = cursor.read_bytes_le()?;
+        let height = cursor.read_bytes_le()?;
+        let x_offset = cursor.read_bytes_le()?;
+        let y_offset = cursor.read_bytes_le()?;
+        let x_padding = cursor.read_bytes_le()?;
+        let _reserved: u16 = cursor.read_bytes_le()?;
 
         Ok(Self {
             timestamp,
@@ -370,7 +370,7 @@ impl ChunkLeader {
 impl SpecificLeader for ChunkLeader {
     fn from_bytes(buf: &[u8]) -> Result<Self> {
         let mut cursor = Cursor::new(buf);
-        let timestamp = cursor.read_bytes()?;
+        let timestamp = cursor.read_bytes_le()?;
 
         Ok(Self { timestamp })
     }
@@ -395,12 +395,12 @@ impl<'a> Trailer<'a> {
         let mut cursor = Cursor::new(buf.as_ref());
 
         Self::parse_prefix(&mut cursor)?;
-        let _reserved1: u16 = cursor.read_bytes()?;
-        let trailer_size = cursor.read_bytes()?;
-        let block_id = cursor.read_bytes()?;
-        let payload_status = cursor.read_bytes::<u16>()?.try_into()?;
-        let _reserved2: u16 = cursor.read_bytes()?;
-        let valid_payload_size = cursor.read_bytes()?;
+        let _reserved1: u16 = cursor.read_bytes_le()?;
+        let trailer_size = cursor.read_bytes_le()?;
+        let block_id = cursor.read_bytes_le()?;
+        let payload_status = cursor.read_bytes_le::<u16>()?.try_into()?;
+        let _reserved2: u16 = cursor.read_bytes_le()?;
+        let valid_payload_size = cursor.read_bytes_le()?;
 
         let raw_specfic_trailer = &cursor.get_ref()[cursor.position() as usize..];
 
@@ -444,7 +444,7 @@ impl<'a> Trailer<'a> {
     }
 
     fn parse_prefix(cursor: &mut Cursor<&[u8]>) -> Result<()> {
-        let magic: u32 = cursor.read_bytes()?;
+        let magic: u32 = cursor.read_bytes_le()?;
         if magic == Self::TRAILER_MAGIC {
             Ok(())
         } else {
@@ -474,7 +474,7 @@ impl ImageTrailer {
 
 impl SpecificTrailer for ImageTrailer {
     fn from_bytes(mut buf: &[u8]) -> Result<Self> {
-        let actual_height = buf.read_bytes()?;
+        let actual_height = buf.read_bytes_le()?;
         Ok(Self { actual_height })
     }
 }
@@ -509,8 +509,8 @@ impl ImageExtendedChunkTrailer {
 
 impl SpecificTrailer for ImageExtendedChunkTrailer {
     fn from_bytes(mut buf: &[u8]) -> Result<Self> {
-        let actual_height = buf.read_bytes()?;
-        let chunk_layout_id = buf.read_bytes()?;
+        let actual_height = buf.read_bytes_le()?;
+        let chunk_layout_id = buf.read_bytes_le()?;
         Ok(Self {
             actual_height,
             chunk_layout_id,
@@ -538,7 +538,7 @@ impl ChunkTrailer {
 
 impl SpecificTrailer for ChunkTrailer {
     fn from_bytes(mut buf: &[u8]) -> Result<Self> {
-        let chunk_layout_id = buf.read_bytes()?;
+        let chunk_layout_id = buf.read_bytes_le()?;
         Ok(Self { chunk_layout_id })
     }
 }
@@ -581,7 +581,9 @@ impl TryFrom<u16> for PayloadStatus {
 
 #[cfg(test)]
 mod tests {
-    use super::{super::util::WriteBytes, *};
+    use super::*;
+
+    use cameleon_impl::bytes_io::WriteBytes;
 
     /// Return bytes represnts generic leader.
     fn generic_leader_bytes(payload_type: PayloadType) -> Vec<u8> {
@@ -592,17 +594,17 @@ mod tests {
             PayloadType::Chunk => (0x4000, 20),
         };
         // Leader magic.
-        buf.write_bytes(0x4C56_3355_u32).unwrap();
+        buf.write_bytes_le(0x4C56_3355_u32).unwrap();
         // Reserved.
-        buf.write_bytes(0_u16).unwrap();
+        buf.write_bytes_le(0_u16).unwrap();
         // Leader size.
-        buf.write_bytes(size).unwrap();
+        buf.write_bytes_le(size).unwrap();
         // Block_id
-        buf.write_bytes(51_u64).unwrap();
+        buf.write_bytes_le(51_u64).unwrap();
         // Reserved.
-        buf.write_bytes(0_u16).unwrap();
+        buf.write_bytes_le(0_u16).unwrap();
         // Payload type.
-        buf.write_bytes(payload_num).unwrap();
+        buf.write_bytes_le(payload_num).unwrap();
         buf
     }
 
@@ -617,19 +619,19 @@ mod tests {
         let valid_payload_size: u64 = 4096 * 2160;
         let block_id: u64 = 51;
         // Trailer magic.
-        buf.write_bytes(0x5456_3355_u32).unwrap();
+        buf.write_bytes_le(0x5456_3355_u32).unwrap();
         // Reserved.
-        buf.write_bytes(0_u16).unwrap();
+        buf.write_bytes_le(0_u16).unwrap();
         // Trailer size.
-        buf.write_bytes(trailer_size).unwrap();
+        buf.write_bytes_le(trailer_size).unwrap();
         // Block ID.
-        buf.write_bytes(block_id).unwrap();
+        buf.write_bytes_le(block_id).unwrap();
         // Status.
-        buf.write_bytes(0xa100_u16).unwrap();
+        buf.write_bytes_le(0xa100_u16).unwrap();
         // Reserved.
-        buf.write_bytes(0_u16).unwrap();
+        buf.write_bytes_le(0_u16).unwrap();
         // Valid paylaod size.
-        buf.write_bytes(valid_payload_size).unwrap();
+        buf.write_bytes_le(valid_payload_size).unwrap();
 
         buf
     }
@@ -638,17 +640,17 @@ mod tests {
     fn test_parse_generic_leader() {
         let mut buf = vec![];
         // Leader magic.
-        buf.write_bytes(0x4C56_3355_u32).unwrap();
+        buf.write_bytes_le(0x4C56_3355_u32).unwrap();
         // Reserved.
-        buf.write_bytes(0_u16).unwrap();
+        buf.write_bytes_le(0_u16).unwrap();
         // Leader size.
-        buf.write_bytes(20_u16).unwrap();
+        buf.write_bytes_le(20_u16).unwrap();
         // Block ID.
-        buf.write_bytes(51_u64).unwrap();
+        buf.write_bytes_le(51_u64).unwrap();
         // Reserved.
-        buf.write_bytes(0_u16).unwrap();
+        buf.write_bytes_le(0_u16).unwrap();
         // Payload type, Image.
-        buf.write_bytes(0x0001_u16).unwrap();
+        buf.write_bytes_le(0x0001_u16).unwrap();
 
         let leader = Leader::parse(&buf).unwrap();
         assert_eq!(leader.leader_size(), 20);
@@ -660,21 +662,22 @@ mod tests {
     fn test_parse_image_leader() {
         let mut buf = generic_leader_bytes(PayloadType::Image);
         // Time stamp.
-        buf.write_bytes(100_u64).unwrap();
+        buf.write_bytes_le(100_u64).unwrap();
         // Pixel Format.
-        buf.write_bytes::<u32>(PixelFormat::Mono8s.into()).unwrap();
+        buf.write_bytes_le::<u32>(PixelFormat::Mono8s.into())
+            .unwrap();
         // Width.
-        buf.write_bytes(3840_u32).unwrap();
+        buf.write_bytes_le(3840_u32).unwrap();
         // Height.
-        buf.write_bytes(2160_u32).unwrap();
+        buf.write_bytes_le(2160_u32).unwrap();
         // X offset.
-        buf.write_bytes(0_u32).unwrap();
+        buf.write_bytes_le(0_u32).unwrap();
         // Y offset.
-        buf.write_bytes(0_u32).unwrap();
+        buf.write_bytes_le(0_u32).unwrap();
         // X padding.
-        buf.write_bytes(0_u16).unwrap();
+        buf.write_bytes_le(0_u16).unwrap();
         // Reserved.
-        buf.write_bytes(0_u16).unwrap();
+        buf.write_bytes_le(0_u16).unwrap();
 
         let leader = Leader::parse(&buf).unwrap();
         assert_eq!(leader.payload_type(), PayloadType::Image);
@@ -692,22 +695,22 @@ mod tests {
     fn test_parse_image_extended_chunk_leader() {
         let mut buf = generic_leader_bytes(PayloadType::ImageExtendedChunk);
         // Time stamp.
-        buf.write_bytes(100_u64).unwrap();
+        buf.write_bytes_le(100_u64).unwrap();
         // Pixel Format.
-        buf.write_bytes::<u32>(PixelFormat::BayerGR10.into())
+        buf.write_bytes_le::<u32>(PixelFormat::BayerGR10.into())
             .unwrap();
         // Width.
-        buf.write_bytes(3840_u32).unwrap();
+        buf.write_bytes_le(3840_u32).unwrap();
         // Height.
-        buf.write_bytes(2160_u32).unwrap();
+        buf.write_bytes_le(2160_u32).unwrap();
         // X offset.
-        buf.write_bytes(0_u32).unwrap();
+        buf.write_bytes_le(0_u32).unwrap();
         // Y offset.
-        buf.write_bytes(0_u32).unwrap();
+        buf.write_bytes_le(0_u32).unwrap();
         // X padding.
-        buf.write_bytes(0_u16).unwrap();
+        buf.write_bytes_le(0_u16).unwrap();
         // Reserved.
-        buf.write_bytes(0_u16).unwrap();
+        buf.write_bytes_le(0_u16).unwrap();
 
         let leader = Leader::parse(&buf).unwrap();
         assert_eq!(leader.payload_type(), PayloadType::ImageExtendedChunk);
@@ -725,7 +728,7 @@ mod tests {
     fn test_parse_chunk_leader() {
         let mut buf = generic_leader_bytes(PayloadType::Chunk);
         // Time stamp.
-        buf.write_bytes(100_u64).unwrap();
+        buf.write_bytes_le(100_u64).unwrap();
 
         let leader = Leader::parse(&buf).unwrap();
         assert_eq!(leader.payload_type(), PayloadType::Chunk);
@@ -740,19 +743,19 @@ mod tests {
         let block_id: u64 = 51;
         let valid_payload_size: u64 = 4096 * 2160;
         // Trailer magic.
-        buf.write_bytes(0x5456_3355_u32).unwrap();
+        buf.write_bytes_le(0x5456_3355_u32).unwrap();
         // Reserved.
-        buf.write_bytes(0_u16).unwrap();
+        buf.write_bytes_le(0_u16).unwrap();
         // Trailer size.
-        buf.write_bytes(trailer_size).unwrap();
+        buf.write_bytes_le(trailer_size).unwrap();
         // Block ID.
-        buf.write_bytes(block_id).unwrap();
+        buf.write_bytes_le(block_id).unwrap();
         // Status.
-        buf.write_bytes(0xa100_u16).unwrap();
+        buf.write_bytes_le(0xa100_u16).unwrap();
         // Reserved.
-        buf.write_bytes(0_u16).unwrap();
+        buf.write_bytes_le(0_u16).unwrap();
         // Valid paylaod size.
-        buf.write_bytes(valid_payload_size).unwrap();
+        buf.write_bytes_le(valid_payload_size).unwrap();
 
         let trailer = Trailer::parse(&buf).unwrap();
         assert_eq!(trailer.trailer_size(), trailer_size);
@@ -766,7 +769,7 @@ mod tests {
         let mut buf = generic_trailer_bytes(PayloadType::Image);
 
         let actual_height: u32 = 1024;
-        buf.write_bytes(actual_height).unwrap();
+        buf.write_bytes_le(actual_height).unwrap();
 
         let trailer = Trailer::parse(&buf).unwrap();
         let specific_trailer: ImageTrailer = trailer.specific_trailer_as().unwrap();
@@ -779,8 +782,8 @@ mod tests {
 
         let actual_height: u32 = 1024;
         let chunk_layout_id: u32 = 20;
-        buf.write_bytes(actual_height).unwrap();
-        buf.write_bytes(chunk_layout_id).unwrap();
+        buf.write_bytes_le(actual_height).unwrap();
+        buf.write_bytes_le(chunk_layout_id).unwrap();
 
         let trailer = Trailer::parse(&buf).unwrap();
         let specific_trailer: ImageExtendedChunkTrailer = trailer.specific_trailer_as().unwrap();
@@ -793,7 +796,7 @@ mod tests {
         let mut buf = generic_trailer_bytes(PayloadType::Chunk);
 
         let chunk_layout_id: u32 = 20;
-        buf.write_bytes(chunk_layout_id).unwrap();
+        buf.write_bytes_le(chunk_layout_id).unwrap();
 
         let trailer = Trailer::parse(&buf).unwrap();
         let specific_trailer: ChunkTrailer = trailer.specific_trailer_as().unwrap();

@@ -56,7 +56,7 @@ impl From<&GenTlError> for GC_ERROR {
             Io, NoData, NotAvailable, NotImplemented, NotInitialized, OutOfMemory,
             ParsingChunkData, ResourceExhausted, ResourceInUse, Timeout,
         };
-        let code = match val {
+        let code: i32 = match val {
             Error(..) => -1001,
             NotInitialized => -1002,
             NotImplemented => -1003,
@@ -194,8 +194,8 @@ thread_local! {
 impl crate::imp::CharEncoding {
     fn as_raw(self) -> i32 {
         match self {
-            Self::Ascii => 0,
-            Self::UTF8 => 1,
+            Self::Ascii => 0_i32,
+            Self::UTF8 => 1_i32,
         }
     }
 }
