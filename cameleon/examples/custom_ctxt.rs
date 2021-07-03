@@ -128,7 +128,7 @@ fn main() {
         .unwrap()
         .as_float(&params_ctxt)
         .unwrap();
-    gain_node.set_value(&mut params_ctxt, 100.1).unwrap();
+    gain_node.set_value(&mut params_ctxt, 0.1_f64).unwrap();
 
     // Disable cache.
     params_ctxt.ctxt.disable_cache();

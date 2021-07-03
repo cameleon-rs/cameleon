@@ -37,7 +37,7 @@ fn main() {
 
     // Set `0.1` to `Gain`.
     if gain_node.is_writable(&mut params_ctxt).unwrap() {
-        gain_node.set_value(&mut params_ctxt, 0.1).unwrap();
+        gain_node.set_value(&mut params_ctxt, 0.1_f64).unwrap();
     }
 
     // Get the current value of `Gain`.

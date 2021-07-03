@@ -225,22 +225,22 @@ fn poll_completed(
     let deadline = Instant::now() + timeout;
 
     unsafe {
-        let mut err = 0;
-        while err == 0 && !completed.load(SeqCst) && deadline > Instant::now() {
+        let mut err = 0_i32;
+        while err == 0_i32 && !completed.load(SeqCst) && deadline > Instant::now() {
             let remaining = deadline.saturating_duration_since(Instant::now());
             let timeval = libc::timeval {
                 tv_sec: remaining.as_secs().try_into().unwrap(),
                 tv_usec: remaining.subsec_micros().try_into().unwrap(),
             };
 
-            if libusb_try_lock_events(ctx.as_raw()) == 0 {
-                if !completed.load(SeqCst) && libusb_event_handling_ok(ctx.as_raw()) != 0 {
+            if libusb_try_lock_events(ctx.as_raw()) == 0_i32 {
+                if !completed.load(SeqCst) && libusb_event_handling_ok(ctx.as_raw()) != 0_i32 {
                     err = libusb_handle_events_locked(ctx.as_raw(), &timeval as *const _);
                 }
                 libusb_unlock_events(ctx.as_raw());
             } else {
                 libusb_lock_event_waiters(ctx.as_raw());
-                if !completed.load(SeqCst) && libusb_event_handler_active(ctx.as_raw()) != 0 {
+                if !completed.load(SeqCst) && libusb_event_handler_active(ctx.as_raw()) != 0_i32 {
                     libusb_wait_for_event(ctx.as_raw(), &timeval as *const _);
                 }
                 libusb_unlock_event_waiters(ctx.as_raw());
@@ -248,7 +248,7 @@ fn poll_completed(
         }
 
         match err {
-            0 => Ok(completed.load(SeqCst)),
+            0_i32 => Ok(completed.load(SeqCst)),
             LIBUSB_ERROR_TIMEOUT => Ok(false),
             e => Err(LibUsbError::from_libusb_error(e).unwrap_err().into()),
         }
@@ -258,7 +258,7 @@ fn poll_completed(
 impl LibUsbError {
     fn from_libusb_error(err: i32) -> std::result::Result<(), Self> {
         match err {
-            0 => Ok(()),
+            0_i32 => Ok(()),
             libusb1_sys::constants::LIBUSB_ERROR_IO => Err(Self::Io),
             libusb1_sys::constants::LIBUSB_ERROR_INVALID_PARAM => Err(Self::InvalidParam),
             libusb1_sys::constants::LIBUSB_ERROR_ACCESS => Err(Self::Access),

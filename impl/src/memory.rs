@@ -79,7 +79,7 @@ impl AccessRight {
 
     #[must_use]
     pub const fn is_writable(self) -> bool {
-        self.as_num() >> 1 == 1
+        self.as_num() >> 1_i32 == 1
     }
 
     #[must_use]
@@ -136,7 +136,7 @@ impl AccessRight {
     #[doc(hidden)]
     #[must_use]
     pub fn from_num(num: u8) -> Self {
-        debug_assert!(num >> 2 == 0);
+        debug_assert!(num >> 2_i32 == 0);
         match num {
             0b00 => Self::NA,
             0b01 => Self::RO,

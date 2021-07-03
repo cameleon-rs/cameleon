@@ -227,7 +227,7 @@ impl SystemModule {
             ($array:expr, $array_size:literal, $result_ty: ty) => {{
                 let mut result = $array[0] as $result_ty;
                 for i in 1..$array_size {
-                    result <<= 8;
+                    result <<= 8_i32;
                     result += $array[i] as $result_ty;
                 }
                 result

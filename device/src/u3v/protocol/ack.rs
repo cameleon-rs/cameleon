@@ -190,7 +190,7 @@ impl Status {
 
     #[must_use]
     pub fn is_fatal(self) -> bool {
-        self.code >> 15 == 1
+        self.code >> 15_i32 == 1
     }
 
     #[must_use]
@@ -206,7 +206,7 @@ impl Status {
     fn parse(cursor: &mut Cursor<&[u8]>) -> Result<Self> {
         let code: u16 = cursor.read_bytes_le()?;
 
-        let namespace = (code >> 13) & 0x11;
+        let namespace = (code >> 13_i32) & 0x11;
         match namespace {
             0b00 => Self::parse_gencp_status(code),
             0b01 => Self::parse_usb_status(code),
@@ -260,7 +260,7 @@ impl Status {
             StreamEndpointHalted,
         };
 
-        debug_assert!(code >> 13 & 0b11 == 0b01);
+        debug_assert!(code >> 13_i32 & 0b11 == 0b01);
 
         let status = match code {
             0xA001 => ResendNotSupported,

@@ -136,7 +136,7 @@ impl Abrm {
     ) -> ControlResult<semver::Version> {
         let gencp_version: u32 = self.read_register(device, abrm::GENCP_VERSION)?;
         let gencp_version_minor = gencp_version & 0xff;
-        let gencp_version_major = (gencp_version >> 16) & 0xff;
+        let gencp_version_major = (gencp_version >> 16_i32) & 0xff;
         Ok(semver::Version::new(
             u64::from(gencp_version_major),
             u64::from(gencp_version_minor),
@@ -389,7 +389,7 @@ impl Sbrm {
     ) -> ControlResult<semver::Version> {
         let u3v_version: u32 = self.read_register(device, sbrm::U3V_VERSION)?;
         let u3v_version_minor = u3v_version & 0xff;
-        let u3v_version_major = (u3v_version >> 16) & 0xff;
+        let u3v_version_major = (u3v_version >> 16_i32) & 0xff;
 
         Ok(semver::Version::new(
             u64::from(u3v_version_major),
@@ -565,7 +565,7 @@ impl Sirm {
     ) -> ControlResult<usize> {
         let si_info: u32 = self.read_register(device, sirm::SI_INFO)?;
         // Upper 8 bits specifies the exp of the alignment.
-        Ok(1 << (si_info >> 24))
+        Ok(1 << (si_info >> 24_i32))
     }
 
     /// Enables stream.
@@ -832,8 +832,8 @@ impl ManifestEntry {
     ) -> ControlResult<semver::Version> {
         let file_version: u32 = self.read_register(device, manifest_entry::GENICAM_FILE_VERSION)?;
         let subminor = file_version & 0xff;
-        let minor = (file_version >> 16) & 0xff;
-        let major = (file_version >> 24) & 0xff;
+        let minor = (file_version >> 16_i32) & 0xff;
+        let major = (file_version >> 24_i32) & 0xff;
 
         Ok(semver::Version::new(
             u64::from(major),
@@ -932,19 +932,19 @@ impl DeviceConfiguration {
     /// Indicate multi event is enabled on the device.
     #[must_use]
     pub fn is_multi_event_enabled(self) -> bool {
-        is_bit_set!(self.0, 1)
+        is_bit_set!(self.0, 1_i32)
     }
 
     /// Sets multi event enable bit.
     /// To reflect the configuration change, call [`Abrm::write_device_configuration`].
     pub fn set_multi_event_enable_bit(&mut self) {
-        set_bit!(self.0, 1)
+        set_bit!(self.0, 1_i32)
     }
 
     /// Unsets bit multi event of the device.
     /// To reflect the configuration change, call [`Abrm::write_device_configuration`].
     pub fn disable_multi_event(&mut self) {
-        unset_bit!(self.0, 1)
+        unset_bit!(self.0, 1_i32)
     }
 }
 
@@ -956,31 +956,31 @@ impl DeviceCapability {
     /// Indicate whether use defined name is supported or not.
     #[must_use]
     pub fn is_user_defined_name_supported(self) -> bool {
-        is_bit_set!(self.0, 0)
+        is_bit_set!(self.0, 0_i32)
     }
 
     /// Indicate whether family name is supported or not.
     #[must_use]
     pub fn is_family_name_supported(self) -> bool {
-        is_bit_set!(self.0, 8)
+        is_bit_set!(self.0, 8_i32)
     }
 
     /// Indicate whether the device supports multiple events in a single event command packet.
     #[must_use]
     pub fn is_multi_event_supported(self) -> bool {
-        is_bit_set!(self.0, 12)
+        is_bit_set!(self.0, 12_i32)
     }
 
     /// Indicate whether the device supports stacked commands (`ReadMemStacked` and `WriteMemStacked`).
     #[must_use]
     pub fn is_stacked_commands_supported(self) -> bool {
-        is_bit_set!(self.0, 13)
+        is_bit_set!(self.0, 13_i32)
     }
 
     /// Indicate whether the device supports software interface version is supported.
     #[must_use]
     pub fn is_device_software_interface_version_supported(self) -> bool {
-        is_bit_set!(self.0, 14)
+        is_bit_set!(self.0, 14_i32)
     }
 }
 
@@ -992,19 +992,19 @@ impl U3VCapablitiy {
     /// Indicate whether SIRM is available or not.
     #[must_use]
     pub fn is_sirm_available(self) -> bool {
-        is_bit_set!(&self.0, 0)
+        is_bit_set!(&self.0, 0_i32)
     }
 
     /// Indicate whether EIRM is available or not.
     #[must_use]
     pub fn is_eirm_available(self) -> bool {
-        is_bit_set!(&self.0, 1)
+        is_bit_set!(&self.0, 1_i32)
     }
 
     /// Indicate whether IIDC2 is available or not.
     #[must_use]
     pub fn is_iidc2_available(self) -> bool {
-        is_bit_set!(&self.0, 2)
+        is_bit_set!(&self.0, 2_i32)
     }
 }
 
@@ -1026,7 +1026,7 @@ impl GenICamFileInfo {
 
     /// Compression type of the XML File.
     pub fn compression_type(&self) -> ControlResult<CompressionType> {
-        let raw = (self.0 >> 10) & 0b11_1111;
+        let raw = (self.0 >> 10_i32) & 0b11_1111;
         match raw {
             0 => Ok(CompressionType::Uncompressed),
             1 => Ok(CompressionType::Zip),
@@ -1039,8 +1039,8 @@ impl GenICamFileInfo {
     /// `GenICam` schema version of the XML file compiles with.
     #[must_use]
     pub fn schema_version(&self) -> semver::Version {
-        let major = (self.0 >> 24) & 0xff;
-        let minor = (self.0 >> 16) & 0xff;
+        let major = (self.0 >> 24_i32) & 0xff;
+        let minor = (self.0 >> 16_i32) & 0xff;
         semver::Version::new(u64::from(major), u64::from(minor), 0)
     }
 }

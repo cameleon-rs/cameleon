@@ -126,7 +126,7 @@ impl EvaluationResult {
     pub fn as_bool(self) -> bool {
         match self {
             Self::Integer(i) => i != 0,
-            Self::Float(f) => f != 0.,
+            Self::Float(f) => f != 0_f64,
         }
     }
 

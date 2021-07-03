@@ -149,7 +149,7 @@ mod tests {
     fn serialize_header(scd_len: u16, request_id: u16) -> Vec<u8> {
         let mut ccd = vec![];
         ccd.write_bytes_le(0x4556_3355_u32).unwrap(); // Magic.
-        ccd.write_bytes_le(1_u16 << 14).unwrap(); // Request ack for now.
+        ccd.write_bytes_le(1_u16 << 14_i32).unwrap(); // Request ack for now.
         ccd.write_bytes_le(0x0c00_u16).unwrap();
         ccd.write_bytes_le(scd_len).unwrap();
         ccd.write_bytes_le(request_id).unwrap();
