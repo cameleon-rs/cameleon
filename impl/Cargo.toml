@@ -15,7 +15,6 @@ keywords = ["genicam", "camera"]
 [dependencies]
 cameleon-impl-macros = { path = "macros", version = "0.1.0" }
 thiserror = "1.0.24"
-byteorder = "1.4.3"
 semver = "1.0.0"
 
 [dev-dependencies]

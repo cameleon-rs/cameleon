@@ -8,10 +8,8 @@
     clippy::missing_errors_doc
 )]
 
+pub mod bytes_io;
 pub mod memory;
-
-#[doc(hidden)]
-pub use byteorder;
 
 #[doc(hidden)]
 pub use semver;

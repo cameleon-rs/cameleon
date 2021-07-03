@@ -90,7 +90,7 @@ impl RegisterMap {
         let impls = quote! {
             use std::{convert::TryInto, ops::{Index, IndexMut}};
 
-            use cameleon_impl::{memory::*, byteorder::{LE, BE, WriteBytesExt, ReadBytesExt}};
+            use cameleon_impl::{memory::*, bytes_io::{WriteBytes, ReadBytes}};
 
             use super::*;
 
@@ -333,15 +333,9 @@ impl Register {
             },
 
             RegisterType::BitField(bf) => {
-                let read_integral = format_ident!("read_{}", bf.ty.associated_ty());
-                let value = if bf.ty.integral_bits() == 8 {
-                    quote! {
-                        data.#read_integral().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))?
-                    }
-                } else {
-                    quote! {
-                        data.#read_integral::<#endianness>().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))?
-                    }
+                let read_bytes = quote_read_bytes(endianness, ty);
+                let value = quote! {
+                    data.#read_bytes().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))?
                 };
                 let lsb = bf.lsb(endianness);
                 let msb = bf.msb(endianness);
@@ -370,15 +364,9 @@ impl Register {
             }
 
             _ => {
-                let read_integral = format_ident!("read_{}", ty.associated_ty());
-                if ty.numerical_bits() == 8 {
-                    quote! {
-                        data.#read_integral().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
-                    }
-                } else {
-                    quote! {
-                        data.#read_integral::<#endianness>().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
-                    }
+                let read_bytes = quote_read_bytes(endianness, ty);
+                quote! {
+                    data.#read_bytes().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))
                 }
             }
         };
@@ -414,20 +402,12 @@ impl Register {
                 }
             },
 
-            RegisterType::BitField(ref bf) => {
-                let write_integral = format_ident!("write_{}", ty.associated_ty());
-                let serialize_to_bytes = if bf.ty.integral_bits() == 8 {
-                    quote! {
-                        let mut result = std::vec::Vec::with_capacity(#len);
-                        result.#write_integral(data).unwrap();
-                    }
-                } else {
-                    quote! {
-                        let mut result = std::vec::Vec::with_capacity(#len);
-                        result.#write_integral::<#endianness>(data).unwrap();
-                    }
+            RegisterType::BitField(_) => {
+                let write_bytes = quote_write_bytes(endianness);
+                let serialize_to_bytes = quote! {
+                    let mut result = std::vec::Vec::with_capacity(#len);
+                    result.#write_bytes(data).unwrap();
                 };
-
                 quote! {
                    let data = Self::masked_int(data)?;
                    #serialize_to_bytes
@@ -435,17 +415,10 @@ impl Register {
             }
 
             _ => {
-                let write_integral = format_ident!("write_{}", ty.associated_ty());
-                if ty.numerical_bits() == 8 {
-                    quote! {
-                        let mut result = std::vec::Vec::with_capacity(#len);
-                        result.#write_integral(data).unwrap();
-                    }
-                } else {
-                    quote! {
-                        let mut result = std::vec::Vec::with_capacity(#len);
-                        result.#write_integral::<#endianness>(data).unwrap();
-                    }
+                let write_bytes = quote_write_bytes(endianness);
+                quote! {
+                    let mut result = std::vec::Vec::with_capacity(#len);
+                    result.#write_bytes(data).unwrap();
                 }
             }
         };
@@ -463,29 +436,16 @@ impl Register {
     fn impl_write(&self, endianness: Endianness) -> TokenStream {
         match &self.reg_attr.ty {
             RegisterType::BitField(ref bf) => {
-                let read_integral = format_ident!("read_{}", bf.ty.associated_ty());
-                let write_integral = format_ident!("write_{}", bf.ty.associated_ty());
-                if bf.ty.integral_bits() == 8 {
-                    quote! {
-                        fn write(data: Self::Ty, memory: &mut[u8]) -> MemoryResult<()> {
-                            let range = Self::range();
-                            let data = Self::masked_int(data)?;
-                            let original_data = memory.index(range.clone()).#read_integral().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))?;
-                            let new_data = (original_data & !Self::mask()) | data;
-                            memory.index_mut(range).#write_integral(new_data).unwrap();
-                            Ok(())
-                        }
-                    }
-                } else {
-                    quote! {
-                        fn write(data: Self::Ty, memory: &mut[u8]) -> MemoryResult<()> {
-                            let range = Self::range();
-                            let data = Self::masked_int(data)?;
-                            let original_data = memory.index(range.clone()).#read_integral::<#endianness>().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))?;
-                            let new_data = (original_data & !Self::mask()) | data;
-                            memory.index_mut(range).#write_integral::<#endianness>(new_data).unwrap();
-                            Ok(())
-                        }
+                let read_bytes = quote_read_bytes(endianness, &*bf.ty);
+                let write_bytes = quote_write_bytes(endianness);
+                quote! {
+                    fn write(data: Self::Ty, memory: &mut[u8]) -> MemoryResult<()> {
+                        let range = Self::range();
+                        let data = Self::masked_int(data)?;
+                        let original_data = memory.index(range.clone()).#read_bytes().map_err(|e| MemoryError::InvalidRegisterData(format! {"{}", e}.into()))?;
+                        let new_data = (original_data & !Self::mask()) | data;
+                        memory.index_mut(range).#write_bytes(new_data).unwrap();
+                        Ok(())
                     }
                 }
             }
@@ -702,17 +662,6 @@ impl RegisterType {
             U16 | I16 => 16,
             U32 | I32 => 32,
             U64 | I64 => 64,
-            _ => panic!(),
-        }
-    }
-
-    fn numerical_bits(&self) -> usize {
-        use RegisterType::{F32, F64, I16, I32, I64, I8, U16, U32, U64, U8};
-        match self {
-            U8 | I8 => 8,
-            U16 | I16 => 16,
-            U32 | I32 | F32 => 32,
-            U64 | I64 | F64 => 64,
             _ => panic!(),
         }
     }
@@ -1055,5 +1004,21 @@ fn prepend_super_if_needed(path: &syn::Path) -> syn::Path {
     }
 
     let leading_super = format_ident!("super");
-    syn::parse(quote! { #leading_super::#path }.into()).unwrap()
+    syn::parse(quote! {#leading_super::#path}.into()).unwrap()
+}
+
+fn quote_read_bytes(endianness: Endianness, ty: &RegisterType) -> TokenStream {
+    let read_bytes = match endianness {
+        Endianness::BE => format_ident!("read_bytes_be"),
+        Endianness::LE => format_ident!("read_bytes_le"),
+    };
+    quote! {#read_bytes::<#ty>}
+}
+
+fn quote_write_bytes(endianness: Endianness) -> TokenStream {
+    let write_bytes = match endianness {
+        Endianness::BE => format_ident!("write_bytes_be"),
+        Endianness::LE => format_ident!("write_bytes_le"),
+    };
+    quote!(#write_bytes)
 }
