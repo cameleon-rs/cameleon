@@ -10,6 +10,8 @@
     clippy::cast_possible_truncation
 )]
 
+pub mod gige;
+
 #[cfg(feature = "libusb")]
 pub mod u3v;
 
