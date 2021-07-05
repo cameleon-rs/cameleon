@@ -8,7 +8,7 @@ use cameleon_impl::bytes_io::WriteBytes;
 
 use crate::gige::{Error, Result};
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CommandPacket<T> {
     header: CommandHeader,
     command_data: T,
@@ -33,7 +33,7 @@ where
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CommandHeader {
     flag: CommandFlag,
     command_kind: CommandKind,
@@ -66,7 +66,7 @@ impl CommandHeader {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CommandKind {
     Discovery,
     ReadReg,
@@ -106,7 +106,7 @@ pub trait CommandData: Sized {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct Discovery {
     bloadcast: bool,
 }
@@ -144,7 +144,7 @@ impl CommandData for Discovery {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct ReadReg {
     addresses: Vec<u32>,
 }
@@ -196,7 +196,7 @@ impl CommandData for ReadReg {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct WriteRegEntry {
     address: u32,
     data: u32,
@@ -224,7 +224,7 @@ impl WriteRegEntry {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WriteReg {
     entries: Vec<WriteRegEntry>,
     need_ack: bool,
@@ -290,6 +290,7 @@ impl CommandData for WriteReg {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ReadMem {
     address: u32,
     length: u16,
@@ -337,6 +338,7 @@ impl CommandData for ReadMem {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WriteMem<'a> {
     address: u32,
     data: &'a [u8],
@@ -396,6 +398,7 @@ impl<'a> CommandData for WriteMem<'a> {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PacketResend {
     is_extended_id: bool,
     stream_channel_index: u16,
@@ -490,7 +493,7 @@ impl CommandData for PacketResend {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct CommandFlag(u8);
 
 impl CommandFlag {
