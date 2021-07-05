@@ -476,7 +476,7 @@ impl CommandData for PacketResend {
     fn serialize(&self, mut buf: impl io::Write) -> Result<()> {
         buf.write_bytes_be(self.stream_channel_index)?;
         if self.is_extended_id {
-            buf.write_bytes_be(0 as u16)?;
+            buf.write_bytes_be(0_u16)?;
         } else {
             buf.write_bytes_be(self.block_id as u16)?;
         }

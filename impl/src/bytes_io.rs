@@ -11,11 +11,11 @@ pub trait ReadBytes {
 }
 
 pub trait WriteBytes {
-    fn write_bytes_be<T>(&mut self, value: T) -> io::Result<usize>
+    fn write_bytes_be<T>(&mut self, value: T) -> io::Result<()>
     where
         T: BytesConvertible;
 
-    fn write_bytes_le<T>(&mut self, value: T) -> io::Result<usize>
+    fn write_bytes_le<T>(&mut self, value: T) -> io::Result<()>
     where
         T: BytesConvertible;
 }
@@ -43,14 +43,14 @@ impl<W> WriteBytes for W
 where
     W: io::Write,
 {
-    fn write_bytes_be<T>(&mut self, value: T) -> io::Result<usize>
+    fn write_bytes_be<T>(&mut self, value: T) -> io::Result<()>
     where
         T: BytesConvertible,
     {
         value.write_bytes_be(self)
     }
 
-    fn write_bytes_le<T>(&mut self, value: T) -> io::Result<usize>
+    fn write_bytes_le<T>(&mut self, value: T) -> io::Result<()>
     where
         T: BytesConvertible,
     {
@@ -69,12 +69,12 @@ pub trait BytesConvertible {
         Self: Sized,
         R: io::Read;
 
-    fn write_bytes_be<W>(self, buf: &mut W) -> io::Result<usize>
+    fn write_bytes_be<W>(self, buf: &mut W) -> io::Result<()>
     where
         Self: Sized,
         W: io::Write;
 
-    fn write_bytes_le<W>(self, buf: &mut W) -> io::Result<usize>
+    fn write_bytes_le<W>(self, buf: &mut W) -> io::Result<()>
     where
         Self: Sized,
         W: io::Write;
@@ -102,20 +102,20 @@ macro_rules! impl_bytes_convertible {
                     Ok(<$ty>::from_le_bytes(tmp))
                 }
 
-                fn write_bytes_be<W>(self, buf: &mut W) -> io::Result<usize>
+                fn write_bytes_be<W>(self, buf: &mut W) -> io::Result<()>
                 where
                     W: io::Write,
                 {
                     let tmp = self.to_be_bytes();
-                    buf.write(&tmp)
+                    buf.write_all(&tmp)
                 }
 
-                fn write_bytes_le<W>(self, buf: &mut W) -> io::Result<usize>
+                fn write_bytes_le<W>(self, buf: &mut W) -> io::Result<()>
                 where
                     W: io::Write,
                 {
                     let tmp = self.to_le_bytes();
-                    buf.write(&tmp)
+                    buf.write_all(&tmp)
                 }
             }
         )*
