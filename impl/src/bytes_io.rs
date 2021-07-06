@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, net::Ipv4Addr};
 
 pub trait ReadBytes {
     fn read_bytes_be<T>(&mut self) -> io::Result<T>
@@ -133,4 +133,42 @@ impl_bytes_convertible! {
     i64,
     f32,
     f64,
+}
+
+impl BytesConvertible for Ipv4Addr {
+    fn read_bytes_be<R>(buf: &mut R) -> io::Result<Self>
+    where
+        R: io::Read,
+    {
+        let mut tmp = [0; 4];
+        buf.read_exact(&mut tmp)?;
+        Ok(tmp.into())
+    }
+
+    fn read_bytes_le<R>(buf: &mut R) -> io::Result<Self>
+    where
+        R: io::Read,
+    {
+        let mut tmp = [0; 4];
+        buf.read_exact(&mut tmp)?;
+        Ok(tmp.into())
+    }
+
+    fn write_bytes_be<W>(self, buf: &mut W) -> io::Result<()>
+    where
+        W: io::Write,
+    {
+        let raw = self.octets();
+        buf.write_all(&raw)?;
+        Ok(())
+    }
+
+    fn write_bytes_le<W>(self, buf: &mut W) -> io::Result<()>
+    where
+        W: io::Write,
+    {
+        let raw = self.octets();
+        buf.write_all(&raw)?;
+        Ok(())
+    }
 }
