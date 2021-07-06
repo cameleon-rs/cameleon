@@ -21,3 +21,13 @@ pub mod u3v;
 mod pixel_format;
 
 pub use pixel_format::PixelFormat;
+
+pub enum Endianness {
+    BE,
+    LE,
+}
+
+pub enum CharacterEncoding {
+    Utf8,
+    Ascii,
+}

@@ -3,6 +3,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 pub mod protocol;
+pub mod register_map;
 
 use thiserror::Error;
 
