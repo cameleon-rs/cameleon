@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-/// (Address, Length, Access Right) of registers in Technology Agnostic Boot Register Map (ABRM).
+/// (Address, Length) of registers in Technology Agnostic Boot Register Map (ABRM).
 pub mod abrm {
     pub const GENCP_VERSION: (u64, u16) = (0x0000, 4);
     pub const MANUFACTURER_NAME: (u64, u16) = (0x0004, 64);
@@ -28,7 +28,7 @@ pub mod abrm {
     pub const DEVICE_SOFTWARE_INTERFACE_VERSION: (u64, u16) = (0x0210, 64);
 }
 
-/// (Offset, Length, Access Right) of registers in Technology Specific Boot Register Map (SBRM).
+/// (Offset, Length) of registers in Technology Specific Boot Register Map (SBRM).
 /// SBRM base address can be obtained by reading `abrm::SBRM_ADDRESS`.
 pub mod sbrm {
     pub const U3V_VERSION: (u64, u16) = (0x0000, 4);
@@ -45,7 +45,7 @@ pub mod sbrm {
     pub const CURRENT_SPEED: (u64, u16) = (0x040, 4);
 }
 
-/// (Offset, Length, Access Right) of registers in Event Interface Register Map (EIRM).
+/// (Offset, Length) of registers in Event Interface Register Map (EIRM).
 /// SIRM base address can be obtained by
 /// [`sbrm::EIRM_ADDRESS`].
 pub mod eirm {
