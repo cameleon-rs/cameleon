@@ -476,7 +476,7 @@ impl<'a> Parser<'a> {
     }
 
     fn pow(&mut self) -> Expr {
-        let expr = self.call();
+        let expr = self.primary();
         if self.eat(&Token::DoubleStar) {
             let rhs = self.unop();
             Expr::BinOp {
@@ -486,20 +486,6 @@ impl<'a> Parser<'a> {
             }
         } else {
             expr
-        }
-    }
-
-    fn call(&mut self) -> Expr {
-        if let Some(op_kind) = self.next_call() {
-            self.expect(&Token::LParen);
-            let expr = self.expr();
-            self.expect(&Token::RParen);
-            Expr::UnOp {
-                kind: op_kind,
-                expr: expr.into(),
-            }
-        } else {
-            self.primary()
         }
     }
 
@@ -514,7 +500,35 @@ impl<'a> Parser<'a> {
             Expr::Float(f)
         } else {
             let s = self.next_ident().unwrap();
-            Expr::Ident(s)
+            if self.eat(&Token::LParen) {
+                let op = match s.as_str() {
+                    "NEG" => UnOpKind::Neg,
+                    "SIN" => UnOpKind::Sin,
+                    "COS" => UnOpKind::Cos,
+                    "TAN" => UnOpKind::Tan,
+                    "ASIN" => UnOpKind::Asin,
+                    "ACOS" => UnOpKind::Acos,
+                    "ATAN" => UnOpKind::Atan,
+                    "ABS" => UnOpKind::Abs,
+                    "EXP" => UnOpKind::Exp,
+                    "LN" => UnOpKind::Ln,
+                    "LG" => UnOpKind::Lg,
+                    "SQRT" => UnOpKind::Sqrt,
+                    "TRUNC" => UnOpKind::Trunc,
+                    "FLOOR" => UnOpKind::Floor,
+                    "CEIL" => UnOpKind::Ceil,
+                    "ROUND" => UnOpKind::Round,
+                    other => panic!("{} is not a keyword or function name", other),
+                };
+                let expr = self.expr();
+                self.expect(&Token::RParen);
+                Expr::UnOp {
+                    kind: op,
+                    expr: expr.into(),
+                }
+            } else {
+                Expr::Ident(s)
+            }
         }
     }
 
@@ -526,35 +540,6 @@ impl<'a> Parser<'a> {
             }
             _ => false,
         }
-    }
-
-    fn next_call(&mut self) -> Option<UnOpKind> {
-        let s = match self.lexer.peek() {
-            Some(Token::Ident(s)) => s,
-            _ => return None,
-        };
-        let op = Some(match s.as_str() {
-            "NEG" => UnOpKind::Neg,
-            "SIN" => UnOpKind::Sin,
-            "COS" => UnOpKind::Cos,
-            "TAN" => UnOpKind::Tan,
-            "ASIN" => UnOpKind::Asin,
-            "ACOS" => UnOpKind::Acos,
-            "ATAN" => UnOpKind::Atan,
-            "ABS" => UnOpKind::Abs,
-            "EXP" => UnOpKind::Exp,
-            "LN" => UnOpKind::Ln,
-            "LG" => UnOpKind::Lg,
-            "SQRT" => UnOpKind::Sqrt,
-            "TRUNC" => UnOpKind::Trunc,
-            "FLOOR" => UnOpKind::Floor,
-            "CEIL" => UnOpKind::Ceil,
-            "ROUND" => UnOpKind::Round,
-            _ => return None,
-        });
-
-        self.lexer.next();
-        op
     }
 
     fn next_integer(&mut self) -> Option<i64> {
@@ -903,6 +888,7 @@ mod tests {
         let env = vec![
             ("VAR1", Expr::Integer(1)),
             ("EPS", Expr::Float(f64::EPSILON)),
+            ("EXP", Expr::Float(1.0)),
         ]
         .into_iter()
         .collect();
@@ -913,5 +899,6 @@ mod tests {
         test_eval_impl("ABS(2 ** -1 - 1. / 2.) < EPS", &env);
         test_eval_impl("ABS(2 ** -1 ** 2 - 1. / 2.) < EPS", &env);
         test_eval_impl("ABS(VAR1 + 1 / 4 - 1.25) < EPS", &env);
+        test_eval_impl("( EXP = 1 ) ? 1 : 0", &env);
     }
 }
