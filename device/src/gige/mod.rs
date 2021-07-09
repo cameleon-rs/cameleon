@@ -2,8 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
+pub mod channel;
 pub mod protocol;
 pub mod register_map;
+
+pub use device::enumerate_devices;
 
 use thiserror::Error;
 
@@ -16,4 +19,10 @@ pub enum Error {
 
     #[error("packet is broken: {0}")]
     InvalidPacket(std::borrow::Cow<'static, str>),
+
+    #[error("device is not opened")]
+    NotOpened,
+
+    #[error("device is not closed")]
+    NotClosed,
 }

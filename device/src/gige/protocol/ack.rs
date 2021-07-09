@@ -239,7 +239,7 @@ impl Discovery {
             .iter()
             .position(|c| *c == 0)
             .unwrap_or(str_end);
-        let s = String::from_utf8_lossy(&inner[..str_end]).to_string();
+        let s = String::from_utf8_lossy(&inner[str_start..str_start + str_end]).to_string();
         cursor.seek(io::SeekFrom::Current(maximum_string_len as i64))?;
         Ok(s)
     }

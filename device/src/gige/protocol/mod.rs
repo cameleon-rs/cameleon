@@ -4,3 +4,7 @@
 
 pub mod ack;
 pub mod cmd;
+
+pub mod prelude {
+    pub use super::cmd::CommandData;
+}

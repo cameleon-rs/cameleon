@@ -83,7 +83,7 @@ pub mod bootstrap {
     pub const PHYSICAL_LINK_CONFIGURATION: (u32, u16) = (0x0968, 4);
     pub const IEEE_1588_STATUS: (u32, u16) = (0x096C, 4);
     pub const SCHEDULED_ACTION_COMMAND_QUEUE_SIZE: (u32, u16) = (0x0970, 4);
-    pub const CONTROL_CHANNEL_PRIVILEGE: (u32, u16) = (0x0A00, 4);
+    pub const CONTROL_CHANNEL_PRIVILEDGE: (u32, u16) = (0x0A00, 4);
     pub const PRIMARY_APPLICATION_PORT: (u32, u16) = (0x0A04, 4);
     pub const PRIMARY_APPLICATION_IP_ADDRESS: (u32, u16) = (0x0A14, 4);
     pub const MESSAGE_CHANNEL_PORT: (u32, u16) = (0x0B00, 4);
@@ -242,3 +242,6 @@ impl NicConfiguration {
         self.0 & 0b1 == 1
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ControlChannelPriviledge(u32);

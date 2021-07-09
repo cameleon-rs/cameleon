@@ -31,6 +31,10 @@ where
         self.command_data.serialize(&mut buf)?;
         Ok(())
     }
+
+    pub fn length(&self) -> u16 {
+        self.header.length() + self.command_data.length()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -63,6 +67,10 @@ impl CommandHeader {
         buf.write_bytes_be(self.length)?;
         buf.write_bytes_be(self.request_id)?;
         Ok(())
+    }
+
+    const fn length(&self) -> u16 {
+        8
     }
 }
 
@@ -108,7 +116,7 @@ pub trait CommandData: Sized {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct Discovery {
-    bloadcast: bool,
+    broadcast: bool,
 }
 
 impl Discovery {
@@ -116,15 +124,15 @@ impl Discovery {
         Self::default()
     }
 
-    pub fn set_bloadcast(&mut self, is_allow: bool) {
-        self.bloadcast = is_allow;
+    pub fn set_broadcast(&mut self, is_allow: bool) {
+        self.broadcast = is_allow;
     }
 }
 
 impl CommandData for Discovery {
     fn flag(&self) -> CommandFlag {
         let flag = CommandFlag::new().need_ack();
-        if self.bloadcast {
+        if self.broadcast {
             flag.set_bit(3)
         } else {
             flag
@@ -320,7 +328,7 @@ impl ReadMem {
 
 impl CommandData for ReadMem {
     fn flag(&self) -> CommandFlag {
-        CommandFlag::new()
+        CommandFlag::new().need_ack()
     }
 
     fn kind(&self) -> CommandKind {
@@ -502,13 +510,13 @@ impl CommandFlag {
     }
 
     pub fn set_bit(self, pos: u8) -> Self {
-        debug_assert!(pos <= 8);
-        Self(self.0 | 1_u8 << pos)
+        debug_assert!(pos < 8);
+        Self(self.0 | 1_u8 << 7 - pos)
     }
 
     pub fn clear_bit(self, pos: u8) -> Self {
-        debug_assert!(pos <= 8);
-        Self(self.0 & !(1_u8 << pos))
+        debug_assert!(pos < 8);
+        Self(self.0 & !(1_u8 << (7 - pos)))
     }
 
     pub fn need_ack(self) -> Self {
