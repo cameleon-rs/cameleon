@@ -2,6 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
+use cameleon_impl::bit_op::BitOp;
+
 use crate::{CharacterEncoding, Endianness};
 
 /// (Address, Length) of registers of Bootstrap Register Map.
@@ -245,3 +247,50 @@ impl NicConfiguration {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ControlChannelPriviledge(u32);
+
+impl ControlChannelPriviledge {
+    pub fn switchover_key(self) -> u16 {
+        (self.0 >> 16) as u16
+    }
+
+    pub fn set_switchover_key(self, key: u16) -> Self {
+        let key = key as u32;
+        Self((self.0.overflowing_shl(16).0 >> 16) | (key << 16))
+    }
+
+    pub fn enable_switchover(self) -> Self {
+        Self(self.0.set_bit(29))
+    }
+
+    pub fn disable_switchover(self) -> Self {
+        Self(self.0.clear_bit(29))
+    }
+
+    pub fn is_switchover_enabled(self) -> bool {
+        self.0.is_set(29)
+    }
+
+    pub fn enable_control_access(self) -> Self {
+        Self(self.0.set_bit(30))
+    }
+
+    pub fn disable_control_access(self) -> Self {
+        Self(self.0.clear_bit(30))
+    }
+
+    pub fn is_control_access_enabled(self) -> bool {
+        self.0.is_set(30)
+    }
+
+    pub fn enable_exclusive_access(self) -> Self {
+        Self(self.0.set_bit(31))
+    }
+
+    pub fn disable_exclusive_access(self) -> Self {
+        Self(self.0.clear_bit(31))
+    }
+
+    pub fn is_exclusive_access_enabled(self) -> bool {
+        self.0.is_set(31)
+    }
+}

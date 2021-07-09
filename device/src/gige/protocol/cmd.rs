@@ -4,7 +4,7 @@
 
 use std::io;
 
-use cameleon_impl::bytes_io::WriteBytes;
+use cameleon_impl::{bit_op::BitOp, bytes_io::WriteBytes};
 
 use crate::gige::{Error, Result};
 
@@ -510,13 +510,11 @@ impl CommandFlag {
     }
 
     pub fn set_bit(self, pos: u8) -> Self {
-        debug_assert!(pos < 8);
-        Self(self.0 | 1_u8 << 7 - pos)
+        Self(self.0.set_bit(pos))
     }
 
     pub fn clear_bit(self, pos: u8) -> Self {
-        debug_assert!(pos < 8);
-        Self(self.0 & !(1_u8 << (7 - pos)))
+        Self(self.0.clear_bit(pos))
     }
 
     pub fn need_ack(self) -> Self {
