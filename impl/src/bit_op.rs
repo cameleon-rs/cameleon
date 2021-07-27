@@ -8,7 +8,7 @@ pub trait BitOp: Sized {
     /// Pos is defined as a distance from MSB.
     fn clear_bit(self, pos: u8) -> Self;
     /// Pos is defined as a distance from MSB.
-    fn is_set(self, pos: u8) -> bool;
+    fn is_set(&self, pos: u8) -> bool;
 }
 
 macro_rules! impl_bit_op{
@@ -29,7 +29,7 @@ macro_rules! impl_bit_op{
                     self & !(1 << (num_bits - 1 - pos))
                 }
 
-                fn is_set(self, pos: u8) -> bool {
+                fn is_set(&self, pos: u8) -> bool {
                     let num_bits = (std::mem::size_of::<Self>() * 8) as Self;
                     let pos = pos as Self;
                     debug_assert!(pos < num_bits);
@@ -68,9 +68,9 @@ mod tests {
         assert_eq!(x.set_bit(7), 0b0000_0001);
 
         let x = 0b1001_0100_u8;
-        assert_eq!(x.is_set(0), true);
-        assert_eq!(x.is_set(3), true);
-        assert_eq!(x.is_set(4), false);
-        assert_eq!(x.is_set(7), false);
+        assert!(x.is_set(0));
+        assert!(x.is_set(3));
+        assert!(!x.is_set(4));
+        assert!(!x.is_set(7));
     }
 }
