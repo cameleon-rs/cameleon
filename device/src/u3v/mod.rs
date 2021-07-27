@@ -37,8 +37,8 @@ pub enum Error {
     #[error("buffer io error: {0}")]
     BufferIo(#[from] std::io::Error),
 
-    #[error("device doesn't follow the specification")]
-    InvalidDevice,
+    #[error("device doesn't follow the specification: {0}")]
+    InvalidDevice(Cow<'static, str>),
 }
 
 /// Errors raised from libusb.

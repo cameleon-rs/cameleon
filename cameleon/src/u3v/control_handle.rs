@@ -14,6 +14,7 @@ use std::{
 use cameleon_device::{
     u3v,
     u3v::protocol::{ack, cmd},
+    GenICamFileType,
 };
 use tracing::error;
 
@@ -400,7 +401,7 @@ impl DeviceControl for ControlHandle {
         let mut newest_ent = None;
         for ent in unwrap_or_log!(table.entries(self)) {
             let file_info = unwrap_or_log!(ent.file_info(self));
-            if unwrap_or_log!(file_info.file_type()) == register_map::GenICamFileType::DeviceXml {
+            if unwrap_or_log!(file_info.file_type()) == GenICamFileType::DeviceXml {
                 let version = unwrap_or_log!(ent.genicam_file_version(self));
                 match &newest_ent {
                     Some((_, cur_version, _)) if &version <= cur_version => {

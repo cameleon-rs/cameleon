@@ -109,8 +109,8 @@ impl From<u3v::Error> for ControlError {
             NotSupported, Other, Overflow, Pipe, Timeout,
         };
 
-        match &err {
-            LibUsb(libusb_error) => match libusb_error {
+        match err {
+            LibUsb(ref libusb_error) => match libusb_error {
                 Io | InvalidParam | Access | Overflow | Pipe | Interrupted | NoMem
                 | NotSupported | BadDescriptor | Other => ControlError::Io(err.into()),
                 Busy => ControlError::Busy,
@@ -120,7 +120,7 @@ impl From<u3v::Error> for ControlError {
 
             BufferIo(_) | InvalidPacket(_) => ControlError::Io(err.into()),
 
-            InvalidDevice => ControlError::InvalidDevice("invalid device".into()),
+            InvalidDevice(msg) => ControlError::InvalidDevice(msg),
         }
     }
 }

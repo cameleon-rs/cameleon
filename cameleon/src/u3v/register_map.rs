@@ -50,10 +50,13 @@ use std::{convert::TryInto, time::Duration};
 
 use cameleon_device::u3v::{
     self,
-    register_map::{abrm, manifest_entry, sbrm, sirm},
+    register_map::{
+        abrm, manifest_entry, sbrm, sirm, DeviceCapability, DeviceConfiguration, GenICamFileInfo,
+        U3VCapablitiy,
+    },
 };
 
-use crate::{genapi::CompressionType, ControlError, ControlResult, DeviceControl};
+use crate::{ControlError, ControlResult, DeviceControl};
 
 /// Represent Technology Agnostic Boot Register Map (`ABRM`), refer to `GenCP` specification for more
 /// information about `ABRM`.
@@ -905,144 +908,6 @@ where
     let mut buf = vec![0; len];
     device.read(addr, &mut buf[..len])?;
     T::parse_bytes(&buf[..len])
-}
-
-macro_rules! is_bit_set {
-    ($val:expr, $bit:expr) => {
-        (($val >> $bit) & 1) == 1
-    };
-}
-
-macro_rules! set_bit {
-    ($val:expr,  $bit:expr) => {
-        $val |= (1 << $bit)
-    };
-}
-
-macro_rules! unset_bit {
-    ($val:expr,  $bit:expr) => {
-        $val &= !(1 << $bit)
-    };
-}
-
-/// Configuration of the device.
-#[derive(Clone, Copy, Debug)]
-pub struct DeviceConfiguration(u64);
-impl DeviceConfiguration {
-    /// Indicate multi event is enabled on the device.
-    #[must_use]
-    pub fn is_multi_event_enabled(self) -> bool {
-        is_bit_set!(self.0, 1_i32)
-    }
-
-    /// Sets multi event enable bit.
-    /// To reflect the configuration change, call [`Abrm::write_device_configuration`].
-    pub fn set_multi_event_enable_bit(&mut self) {
-        set_bit!(self.0, 1_i32)
-    }
-
-    /// Unsets bit multi event of the device.
-    /// To reflect the configuration change, call [`Abrm::write_device_configuration`].
-    pub fn disable_multi_event(&mut self) {
-        unset_bit!(self.0, 1_i32)
-    }
-}
-
-/// Indicate some optional features are supported or not.
-#[derive(Clone, Copy, Debug)]
-pub struct DeviceCapability(u64);
-
-impl DeviceCapability {
-    /// Indicate whether use defined name is supported or not.
-    #[must_use]
-    pub fn is_user_defined_name_supported(self) -> bool {
-        is_bit_set!(self.0, 0_i32)
-    }
-
-    /// Indicate whether family name is supported or not.
-    #[must_use]
-    pub fn is_family_name_supported(self) -> bool {
-        is_bit_set!(self.0, 8_i32)
-    }
-
-    /// Indicate whether the device supports multiple events in a single event command packet.
-    #[must_use]
-    pub fn is_multi_event_supported(self) -> bool {
-        is_bit_set!(self.0, 12_i32)
-    }
-
-    /// Indicate whether the device supports stacked commands (`ReadMemStacked` and `WriteMemStacked`).
-    #[must_use]
-    pub fn is_stacked_commands_supported(self) -> bool {
-        is_bit_set!(self.0, 13_i32)
-    }
-
-    /// Indicate whether the device supports software interface version is supported.
-    #[must_use]
-    pub fn is_device_software_interface_version_supported(self) -> bool {
-        is_bit_set!(self.0, 14_i32)
-    }
-}
-
-/// Indicate some optional U3V specific features are supported or not.
-#[derive(Clone, Copy, Debug)]
-pub struct U3VCapablitiy(u64);
-
-impl U3VCapablitiy {
-    /// Indicate whether SIRM is available or not.
-    #[must_use]
-    pub fn is_sirm_available(self) -> bool {
-        is_bit_set!(&self.0, 0_i32)
-    }
-
-    /// Indicate whether EIRM is available or not.
-    #[must_use]
-    pub fn is_eirm_available(self) -> bool {
-        is_bit_set!(&self.0, 1_i32)
-    }
-
-    /// Indicate whether IIDC2 is available or not.
-    #[must_use]
-    pub fn is_iidc2_available(self) -> bool {
-        is_bit_set!(&self.0, 2_i32)
-    }
-}
-
-/// XML file information.
-pub struct GenICamFileInfo(u32);
-
-impl GenICamFileInfo {
-    /// Type of the XML file.
-    pub fn file_type(&self) -> ControlResult<GenICamFileType> {
-        let raw = self.0 & 0b111;
-        match raw {
-            0 => Ok(GenICamFileType::DeviceXml),
-            1 => Ok(GenICamFileType::BufferXml),
-            _ => Err(ControlError::InvalidDevice(
-                format!("Invalid U3V GenICamFileType value: {}", raw).into(),
-            )),
-        }
-    }
-
-    /// Compression type of the XML File.
-    pub fn compression_type(&self) -> ControlResult<CompressionType> {
-        let raw = (self.0 >> 10_i32) & 0b11_1111;
-        match raw {
-            0 => Ok(CompressionType::Uncompressed),
-            1 => Ok(CompressionType::Zip),
-            _ => Err(ControlError::InvalidDevice(
-                format!("Invalid U3V GenICamFilFormat value: {}", raw).into(),
-            )),
-        }
-    }
-
-    /// `GenICam` schema version of the XML file compiles with.
-    #[must_use]
-    pub fn schema_version(&self) -> semver::Version {
-        let major = (self.0 >> 24_i32) & 0xff;
-        let minor = (self.0 >> 16_i32) & 0xff;
-        semver::Version::new(u64::from(major), u64::from(minor), 0)
-    }
 }
 
 /// Represent file type of `GenICam` XML file on the device's memory.

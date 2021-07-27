@@ -31,3 +31,21 @@ pub enum CharacterEncoding {
     Utf8,
     Ascii,
 }
+
+/// Represent file type of `GenICam` XML file on the device's memory.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GenICamFileType {
+    /// This is the “normal” `GenICam` device XML containing all device features.
+    DeviceXml,
+    /// This is optional XML-file that contains only the chunkdata related nodes.
+    BufferXml,
+}
+
+/// Represents `CompressionType` of `GenICam` XML file on the device's memory.
+#[derive(Debug, Clone, Copy)]
+pub enum CompressionType {
+    /// Uncompressed `GenICam` XML file.
+    Uncompressed,
+    /// ZIP containing a single `GenICam` XML file.
+    Zip,
+}
