@@ -3,7 +3,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 use std::{
-    convert::TryInto,
     io::{self, Read, Seek},
     net::Ipv4Addr,
     time,
@@ -42,6 +41,10 @@ impl<'a> AckPacket<'a> {
 
     pub fn header(&self) -> &Header {
         &self.header
+    }
+
+    pub fn ack_kind(&self) -> AckKind {
+        self.header.ack_kind
     }
 
     pub fn ack_data_as<T: ParseAckData<'a>>(&self) -> Result<T> {
@@ -312,7 +315,7 @@ impl<'a> ReadReg<'a> {
         self.entry_num
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &'a [u8; 4]> {
+    pub fn iter(&self) -> ReadRegIter {
         ReadRegIter {
             entry_num: self.entry_num,
             current_entry: 0,
@@ -355,7 +358,7 @@ pub struct ReadRegIter<'a> {
 }
 
 impl<'a> IntoIterator for ReadReg<'a> {
-    type Item = &'a [u8; 4];
+    type Item = u32;
     type IntoIter = ReadRegIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -368,7 +371,7 @@ impl<'a> IntoIterator for ReadReg<'a> {
 }
 
 impl<'a> Iterator for ReadRegIter<'a> {
-    type Item = &'a [u8; 4];
+    type Item = u32;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.current_entry > self.entry_num {
@@ -376,8 +379,8 @@ impl<'a> Iterator for ReadRegIter<'a> {
         } else {
             let current_index = self.current_entry as usize * 4;
             let item = Some(
-                self.reg_data[current_index..current_index + 4]
-                    .try_into()
+                (&self.reg_data[current_index..current_index + 4])
+                    .read_bytes_be()
                     .unwrap(),
             );
             self.current_entry += 1;

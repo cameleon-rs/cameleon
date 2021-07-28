@@ -324,6 +324,10 @@ impl ReadMem {
             Ok(Self { address, length })
         }
     }
+
+    pub const fn maximum_read_length() -> usize {
+        536
+    }
 }
 
 impl CommandData for ReadMem {
@@ -368,6 +372,10 @@ impl<'a> WriteMem<'a> {
                 )
                 .into(),
             ))
+        } else if data.len() % 4 != 0 {
+            Err(Error::InvalidPacket(
+                "a data length of `WriteMem` command must be a multiple of 4".into(),
+            ))
         } else {
             Ok(Self {
                 address,
@@ -379,6 +387,10 @@ impl<'a> WriteMem<'a> {
 
     pub fn set_need_ack(&mut self, need_ack: bool) {
         self.need_ack = need_ack
+    }
+
+    pub const fn maximum_data_length() -> usize {
+        536
     }
 }
 
