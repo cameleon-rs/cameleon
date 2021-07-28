@@ -314,18 +314,6 @@ impl ControlHandle {
     }
 }
 
-macro_rules! unwrap_or_log {
-    ($expr:expr) => {{
-        match $expr {
-            Ok(v) => v,
-            Err(error) => {
-                error!(?error);
-                return Err(error.into());
-            }
-        }
-    }};
-}
-
 impl DeviceControl for ControlHandle {
     fn open(&mut self) -> ControlResult<()> {
         if self.is_opened() {

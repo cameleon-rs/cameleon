@@ -136,15 +136,19 @@
 //!
 //! [license]: https://github.com/cameleon-rs/cameleon/blob/main/LICENSE
 
-#![warn(missing_docs)]
+//#![warn(missing_docs)]
 #![allow(
     clippy::similar_names,
     clippy::missing_errors_doc,
     clippy::module_name_repetitions
 )]
 
+#[macro_use]
+pub(crate) mod utils;
+
 pub mod camera;
 pub mod genapi;
+pub mod gige;
 pub mod payload;
 #[cfg(feature = "libusb")]
 pub mod u3v;
