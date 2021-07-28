@@ -541,19 +541,13 @@ pub trait DeviceControl {
     fn read(&mut self, address: u64, buf: &mut [u8]) -> ControlResult<()>;
 
     /// Reads 4 bytes data from the address.
-    fn read_reg(&mut self, address: u64) -> ControlResult<[u8; 4]> {
-        let mut buf = [0; 4];
-        self.read(address, &mut buf)?;
-        Ok(buf)
-    }
+    fn read_reg(&mut self, address: u64) -> ControlResult<u32>;
 
     /// Writes data to the device's memory.
     fn write(&mut self, address: u64, data: &[u8]) -> ControlResult<()>;
 
     /// Writes 4 bytes data to the address.
-    fn write_reg(&mut self, address: u64, data: &[u8; 4]) -> ControlResult<()> {
-        self.write(address, data)
-    }
+    fn write_reg(&mut self, address: u64, data: u32) -> ControlResult<()>;
 
     /// Returns `GenICam` xml string.
     fn genapi(&mut self) -> ControlResult<String>;
