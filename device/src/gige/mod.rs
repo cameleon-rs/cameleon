@@ -59,10 +59,4 @@ pub enum Error {
 
     #[error("packet is broken: {0}")]
     InvalidPacket(std::borrow::Cow<'static, str>),
-
-    #[error("device is not opened")]
-    NotOpened,
-
-    #[error("device is not closed")]
-    NotClosed,
 }
