@@ -202,8 +202,8 @@ pub enum ControlError {
     #[error("input/output error: {0}")]
     Io(anyhow::Error),
 
-    /// Timeout has occured when receiveing stream payload.
-    #[error("timeout has occured when receiveing stream payload")]
+    /// Timeout has occured when sending/receiveing a packet.
+    #[error("timeout has occured when sending/receiveing a packet")]
     Timeout,
 
     /// The device is not opened.
