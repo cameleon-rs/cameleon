@@ -16,6 +16,7 @@ use cameleon_device::{
     u3v::protocol::{ack, cmd},
     GenICamFileType,
 };
+
 use tracing::error;
 
 use super::register_map::{self, Abrm, ManifestTable, Sbrm, Sirm};
@@ -340,6 +341,32 @@ impl DeviceControl for ControlHandle {
         Ok(())
     }
 
+    fn read(&mut self, mut address: u64, buf: &mut [u8]) -> ControlResult<()> {
+        unwrap_or_log!(self.assert_open());
+
+        // Chunks buffer if buffer length is larger than maximum read length calculated from
+        // maximum ack length.
+        for buf_chunk in buf.chunks_mut(cmd::ReadMem::maximum_read_length(
+            self.config.maximum_ack_length as usize,
+        ) as usize)
+        {
+            let read_len: u16 = buf_chunk.len().try_into().unwrap();
+
+            let cmd = cmd::ReadMem::new(address, read_len);
+            let ack: ack::ReadMem = unwrap_or_log!(self.send_cmd(cmd));
+            buf_chunk.copy_from_slice(ack.data);
+            address += read_len as u64;
+        }
+
+        Ok(())
+    }
+
+    fn read_reg(&mut self, address: u64) -> ControlResult<u32> {
+        let mut buf = [0; 4];
+        self.read(address, &mut buf)?;
+        Ok(u32::from_le_bytes(buf))
+    }
+
     fn write(&mut self, address: u64, data: &[u8]) -> ControlResult<()> {
         unwrap_or_log!(self.assert_open());
 
@@ -359,24 +386,8 @@ impl DeviceControl for ControlHandle {
         Ok(())
     }
 
-    fn read(&mut self, mut address: u64, buf: &mut [u8]) -> ControlResult<()> {
-        unwrap_or_log!(self.assert_open());
-
-        // Chunks buffer if buffer length is larger than maximum read length calculated from
-        // maximum ack length.
-        for buf_chunk in buf.chunks_mut(cmd::ReadMem::maximum_read_length(
-            self.config.maximum_ack_length as usize,
-        ) as usize)
-        {
-            let read_len: u16 = buf_chunk.len().try_into().unwrap();
-
-            let cmd = cmd::ReadMem::new(address, read_len);
-            let ack: ack::ReadMem = unwrap_or_log!(self.send_cmd(cmd));
-            buf_chunk.copy_from_slice(ack.data);
-            address += read_len as u64;
-        }
-
-        Ok(())
+    fn write_reg(&mut self, address: u64, data: u32) -> ControlResult<()> {
+        self.write(address, &data.to_le_bytes())
     }
 
     fn genapi(&mut self) -> ControlResult<String> {
@@ -560,7 +571,9 @@ impl DeviceControl for SharedControlHandle {
         fn open(&mut self) -> ControlResult<()>,
         fn close(&mut self) -> ControlResult<()>,
         fn read(&mut self, address: u64, buf: &mut [u8]) -> ControlResult<()>,
+        fn read_reg(&mut self, address:u64) -> ControlResult<u32>,
         fn write(&mut self, address: u64, data: &[u8]) -> ControlResult<()>,
+        fn write_reg(&mut self, address:u64, data: u32) -> ControlResult<()>,
         fn genapi(&mut self) -> ControlResult<String>,
         fn enable_streaming(&mut self) -> ControlResult<()>,
         fn disable_streaming(&mut self) -> ControlResult<()>
