@@ -172,3 +172,36 @@ impl BytesConvertible for Ipv4Addr {
         Ok(())
     }
 }
+
+impl<const N: usize> BytesConvertible for [u8; N] {
+    fn read_bytes_be<R>(buf: &mut R) -> io::Result<Self>
+    where
+        R: io::Read,
+    {
+        let mut res = [0; N];
+        buf.read_exact(&mut res)?;
+        Ok(res)
+    }
+
+    fn read_bytes_le<R>(buf: &mut R) -> io::Result<Self>
+    where
+        R: io::Read,
+    {
+        Self::read_bytes_be(buf)
+    }
+
+    fn write_bytes_be<W>(self, buf: &mut W) -> io::Result<()>
+    where
+        W: io::Write,
+    {
+        buf.write_all(&self)?;
+        Ok(())
+    }
+
+    fn write_bytes_le<W>(self, buf: &mut W) -> io::Result<()>
+    where
+        W: io::Write,
+    {
+        self.write_bytes_be(buf)
+    }
+}
