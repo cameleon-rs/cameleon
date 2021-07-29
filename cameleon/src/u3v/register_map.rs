@@ -46,14 +46,15 @@
 //!     abrm.set_user_defined_name(ctrl, "cameleon").unwrap();
 //! }
 //! ```
+pub use cameleon_device::u3v::register_map::{
+    DeviceCapability, DeviceConfiguration, GenICamFileInfo, U3VCapablitiy,
+};
+
 use std::{convert::TryInto, time::Duration};
 
 use cameleon_device::u3v::{
     self,
-    register_map::{
-        abrm, manifest_entry, sbrm, sirm, DeviceCapability, DeviceConfiguration, GenICamFileInfo,
-        U3VCapablitiy,
-    },
+    register_map::{abrm, manifest_entry, sbrm, sirm},
 };
 
 use crate::{ControlError, ControlResult, DeviceControl};
