@@ -294,3 +294,60 @@ impl ControlChannelPriviledge {
         self.0.is_set(31)
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GvcpCapability(u32);
+
+impl GvcpCapability {
+    pub fn is_user_defined_name_supported(self) -> bool {
+        self.0.is_set(0)
+    }
+
+    pub fn is_serial_number_supported(self) -> bool {
+        self.0.is_set(1)
+    }
+
+    pub fn is_heartbeat_disable_supported(self) -> bool {
+        self.0.is_set(2)
+    }
+
+    pub fn is_linkspeed_register_supported(self) -> bool {
+        self.0.is_set(3)
+    }
+
+    pub fn is_manifest_table_supported(self) -> bool {
+        self.0.is_set(5)
+    }
+
+    pub fn is_switchover_supported(self) -> bool {
+        self.0.is_set(10)
+    }
+
+    pub fn is_action_supported(self) -> bool {
+        self.0.is_set(25)
+    }
+
+    pub fn is_pending_ack_supported(self) -> bool {
+        self.0.is_set(26)
+    }
+
+    pub fn is_event_data_supported(self) -> bool {
+        self.0.is_set(27)
+    }
+
+    pub fn is_event_supported(self) -> bool {
+        self.0.is_set(28)
+    }
+
+    pub fn is_packet_resend_supported(self) -> bool {
+        self.0.is_set(29)
+    }
+
+    pub fn is_write_mem_supported(self) -> bool {
+        self.0.is_set(30)
+    }
+
+    pub fn is_multiple_register_access_supported(self) -> bool {
+        self.0.is_set(31)
+    }
+}
