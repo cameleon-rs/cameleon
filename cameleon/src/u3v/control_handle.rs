@@ -361,10 +361,10 @@ impl DeviceControl for ControlHandle {
         Ok(())
     }
 
-    fn read_reg(&mut self, address: u64) -> ControlResult<u32> {
+    fn read_reg(&mut self, address: u64) -> ControlResult<[u8; 4]> {
         let mut buf = [0; 4];
         self.read(address, &mut buf)?;
-        Ok(u32::from_le_bytes(buf))
+        Ok(buf)
     }
 
     fn write(&mut self, address: u64, data: &[u8]) -> ControlResult<()> {
@@ -386,8 +386,8 @@ impl DeviceControl for ControlHandle {
         Ok(())
     }
 
-    fn write_reg(&mut self, address: u64, data: u32) -> ControlResult<()> {
-        self.write(address, &data.to_le_bytes())
+    fn write_reg(&mut self, address: u64, data: [u8; 4]) -> ControlResult<()> {
+        self.write(address, &data)
     }
 
     fn genapi(&mut self) -> ControlResult<String> {

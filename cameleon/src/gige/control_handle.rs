@@ -169,7 +169,7 @@ impl DeviceControl for ControlHandleInner {
         Ok(())
     }
 
-    fn read_reg(&mut self, address: u64) -> ControlResult<u32> {
+    fn read_reg(&mut self, address: u64) -> ControlResult<[u8; 4]> {
         let address: u32 = address.try_into().map_err(|_| {
             ControlError::InvalidData(
                 "the address of `ReadReg` command must be smaller than u32::MAX".into(),
@@ -181,7 +181,8 @@ impl DeviceControl for ControlHandleInner {
         let ack: ack::ReadReg = unwrap_or_log!(task::block_on(self.send_cmd(cmd)));
         Ok(unwrap_or_log!(ack.iter().next().ok_or_else(|| {
             ControlError::Io(anyhow::Error::msg("no entry in `ReadReg` ack packet"))
-        })))
+        }))
+        .clone())
     }
 
     fn write(&mut self, mut address: u64, data: &[u8]) -> ControlResult<()> {
@@ -211,7 +212,7 @@ impl DeviceControl for ControlHandleInner {
         Ok(())
     }
 
-    fn write_reg(&mut self, address: u64, data: u32) -> ControlResult<()> {
+    fn write_reg(&mut self, address: u64, data: [u8; 4]) -> ControlResult<()> {
         let address: u32 = address.try_into().map_err(|_| {
             ControlError::InvalidData(
                 "the address of `ReadReg` command must be smaller than u32::MAX".into(),

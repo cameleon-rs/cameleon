@@ -3,6 +3,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 use std::{
+    convert::TryInto,
     io::{self, Read, Seek},
     net::Ipv4Addr,
     time,
@@ -358,7 +359,7 @@ pub struct ReadRegIter<'a> {
 }
 
 impl<'a> IntoIterator for ReadReg<'a> {
-    type Item = u32;
+    type Item = &'a [u8; 4];
     type IntoIter = ReadRegIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -371,7 +372,7 @@ impl<'a> IntoIterator for ReadReg<'a> {
 }
 
 impl<'a> Iterator for ReadRegIter<'a> {
-    type Item = u32;
+    type Item = &'a [u8; 4];
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.current_entry > self.entry_num {
@@ -380,7 +381,7 @@ impl<'a> Iterator for ReadRegIter<'a> {
             let current_index = self.current_entry as usize * 4;
             let item = Some(
                 (&self.reg_data[current_index..current_index + 4])
-                    .read_bytes_be()
+                    .try_into()
                     .unwrap(),
             );
             self.current_entry += 1;

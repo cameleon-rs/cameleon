@@ -207,11 +207,11 @@ impl CommandData for ReadReg {
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct WriteRegEntry {
     address: u32,
-    data: u32,
+    data: [u8; 4],
 }
 
 impl WriteRegEntry {
-    pub fn new(address: u32, data: u32) -> Result<Self> {
+    pub fn new(address: u32, data: [u8; 4]) -> Result<Self> {
         if address % 4 == 0 {
             Ok(Self { address, data })
         } else {
@@ -227,7 +227,7 @@ impl WriteRegEntry {
 
     fn serialize(&self, mut buf: impl io::Write) -> Result<()> {
         buf.write_bytes_be(self.address)?;
-        buf.write_bytes_be(self.data)?;
+        buf.write_all(&self.data)?;
         Ok(())
     }
 }
