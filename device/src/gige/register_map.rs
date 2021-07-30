@@ -68,6 +68,7 @@ pub mod bootstrap {
     pub const NUMBER_OF_ACTION_SIGNALS: (u32, u16) = (0x0908, 4);
     pub const ACTION_DEVICE_KEY: (u32, u16) = (0x090C, 4);
     pub const NUMBER_OF_ACTIVE_LINKS: (u32, u16) = (0x0910, 4);
+    pub const GVSP_CAPABILITY: (u32, u16) = (0x092c, 4);
     pub const MESSAGE_CHANNEL_CAPABILITY: (u32, u16) = (0x0930, 4);
     pub const GVCP_CAPABILITY: (u32, u16) = (0x0934, 4);
     pub const HEARTBEAT_TIMEOUT: (u32, u16) = (0x0938, 4);
@@ -191,28 +192,32 @@ pub enum LinkConfiguration {
 pub struct NicCapability(u32);
 
 impl NicCapability {
+    pub fn as_raw(self) -> u32 {
+        self.0
+    }
+
     pub fn from_raw(raw: u32) -> Self {
         Self(raw)
     }
 
     pub fn is_pause_reception_supported(self) -> bool {
-        self.0 >> 31_u8 == 1
+        self.0.is_set(0)
     }
 
     pub fn is_pause_generation_supported(self) -> bool {
-        (self.0 >> 31_u8) & 0b1 == 1
+        self.0.is_set(1)
     }
 
     pub fn is_link_local_address_supported(self) -> bool {
-        (self.0 >> 2_u8) & 0b1 == 1
+        self.0.is_set(29)
     }
 
     pub fn is_dhcp_supported(self) -> bool {
-        (self.0 >> 1_u8) & 0b1 == 1
+        self.0.is_set(30)
     }
 
     pub fn is_force_ip_supported(self) -> bool {
-        self.0 & 0b1 == 1
+        self.0.is_set(31)
     }
 }
 
@@ -220,28 +225,56 @@ impl NicCapability {
 pub struct NicConfiguration(u32);
 
 impl NicConfiguration {
+    pub fn as_raw(self) -> u32 {
+        self.0
+    }
+
     pub fn from_raw(raw: u32) -> Self {
         Self(raw)
     }
 
     pub fn is_pause_reception_enabled(self) -> bool {
-        self.0 >> 31_u8 == 1
+        self.0.is_set(0)
+    }
+
+    pub fn enable_pause_reception(self) -> Self {
+        Self(self.0.set_bit(0))
+    }
+
+    pub fn disable_pause_reception(self) -> Self {
+        Self(self.0.set_bit(0))
     }
 
     pub fn is_pause_generation_enabled(self) -> bool {
-        (self.0 >> 31_u8) & 0b1 == 1
+        self.0.is_set(1)
+    }
+
+    pub fn enable_pause_generation(self) -> Self {
+        Self(self.0.set_bit(1))
+    }
+
+    pub fn disable_pause_generation(self) -> Self {
+        Self(self.0.clear_bit(1))
     }
 
     pub fn is_link_local_address_enabled(self) -> bool {
-        (self.0 >> 2_u8) & 0b1 == 1
+        self.0.is_set(29)
     }
 
     pub fn is_dhcp_enabled(self) -> bool {
-        (self.0 >> 1_u8) & 0b1 == 1
+        self.0.is_set(30)
     }
 
     pub fn is_force_ip_enabled(self) -> bool {
-        self.0 & 0b1 == 1
+        self.0.is_set(31)
+    }
+
+    pub fn enable_force_ip(self) -> Self {
+        Self(self.0.set_bit(31))
+    }
+
+    pub fn disable_force_ip(self) -> Self {
+        Self(self.0.clear_bit(31))
     }
 }
 
@@ -249,6 +282,14 @@ impl NicConfiguration {
 pub struct ControlChannelPriviledge(u32);
 
 impl ControlChannelPriviledge {
+    pub fn as_raw(self) -> u32 {
+        self.0
+    }
+
+    pub fn from_raw(raw: u32) -> Self {
+        Self(raw)
+    }
+
     pub fn switchover_key(self) -> u16 {
         (self.0 >> 16) as u16
     }
@@ -299,6 +340,14 @@ impl ControlChannelPriviledge {
 pub struct GvcpCapability(u32);
 
 impl GvcpCapability {
+    pub fn as_raw(self) -> u32 {
+        self.0
+    }
+
+    pub fn from_raw(raw: u32) -> Self {
+        Self(raw)
+    }
+
     pub fn is_user_defined_name_supported(self) -> bool {
         self.0.is_set(0)
     }
@@ -349,5 +398,43 @@ impl GvcpCapability {
 
     pub fn is_multiple_register_access_supported(self) -> bool {
         self.0.is_set(31)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GvspCapability(u32);
+
+impl GvspCapability {
+    pub fn as_raw(self) -> u32 {
+        self.0
+    }
+
+    pub fn from_raw(raw: u32) -> Self {
+        Self(raw)
+    }
+
+    pub fn is_scsp_register_supported(self) -> bool {
+        self.0.is_set(0)
+    }
+
+    pub fn is_16bit_block_id_supported(self) -> bool {
+        self.0.is_set(1)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MessageChannelCapability(u32);
+
+impl MessageChannelCapability {
+    pub fn as_raw(self) -> u32 {
+        self.0
+    }
+
+    pub fn from_raw(raw: u32) -> Self {
+        Self(raw)
+    }
+
+    pub fn is_mcsp_register_supported(self) -> bool {
+        self.0.is_set(0)
     }
 }
