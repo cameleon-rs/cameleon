@@ -9,12 +9,12 @@
 //!
 pub use cameleon_device::gige::register_map::{
     ControlChannelPriviledge, DeviceMode, GvcpCapability, GvspCapability, MessageChannelCapability,
-    NicCapability, NicConfiguration,
+    NicCapability, NicConfiguration, StreamChannelPort, StreamPacketSize,
 };
 
 use std::{convert::TryInto, net::Ipv4Addr, time};
 
-use cameleon_device::gige::register_map::bootstrap;
+use cameleon_device::gige::register_map::{bootstrap, stream};
 use cameleon_impl::bytes_io::{BytesConvertible, ReadBytes, StaticString, WriteBytes};
 use semver::Version;
 
@@ -205,21 +205,21 @@ impl Bootstrap {
         self,
         device: &mut Ctrl,
     ) -> ControlResult<u32> {
-        self.read_mem(device, bootstrap::NUMBER_OF_NETWORK_INTERFACES)
+        self.read_reg(device, bootstrap::NUMBER_OF_NETWORK_INTERFACES)
     }
 
     pub fn number_of_message_channel<Ctrl: DeviceControl + ?Sized>(
         self,
         device: &mut Ctrl,
     ) -> ControlResult<u32> {
-        self.read_mem(device, bootstrap::NUMBER_OF_MESSAGE_CHANNELS)
+        self.read_reg(device, bootstrap::NUMBER_OF_MESSAGE_CHANNELS)
     }
 
     pub fn number_of_stream_channel<Ctrl: DeviceControl + ?Sized>(
         self,
         device: &mut Ctrl,
     ) -> ControlResult<u32> {
-        self.read_mem(device, bootstrap::NUMBER_OF_STREAM_CHANNELS)
+        self.read_reg(device, bootstrap::NUMBER_OF_STREAM_CHANNELS)
     }
 
     pub fn gvcp_capability<Ctrl: DeviceControl + ?Sized>(
@@ -233,7 +233,7 @@ impl Bootstrap {
         self,
         device: &mut Ctrl,
     ) -> ControlResult<GvspCapability> {
-        let cap = GvspCapability::from_raw(self.read_mem(device, bootstrap::GVSP_CAPABILITY)?);
+        let cap = GvspCapability::from_raw(self.read_reg(device, bootstrap::GVSP_CAPABILITY)?);
         Ok(cap)
     }
 
@@ -242,7 +242,7 @@ impl Bootstrap {
         device: &mut Ctrl,
     ) -> ControlResult<MessageChannelCapability> {
         let cap = MessageChannelCapability::from_raw(
-            self.read_mem(device, bootstrap::MESSAGE_CHANNEL_CAPABILITY)?,
+            self.read_reg(device, bootstrap::MESSAGE_CHANNEL_CAPABILITY)?,
         );
         Ok(cap)
     }
@@ -251,7 +251,7 @@ impl Bootstrap {
         self,
         device: &mut Ctrl,
     ) -> ControlResult<time::Duration> {
-        let time_raw: u32 = self.read_mem(device, bootstrap::HEARTBEAT_TIMEOUT)?;
+        let time_raw: u32 = self.read_reg(device, bootstrap::HEARTBEAT_TIMEOUT)?;
         let time = time::Duration::from_millis(time_raw as u64);
         Ok(time)
     }
@@ -273,14 +273,14 @@ impl Bootstrap {
                     .into()
                 )));
 
-        self.write_mem(device, bootstrap::HEARTBEAT_TIMEOUT, time_raw)
+        self.write_reg(device, bootstrap::HEARTBEAT_TIMEOUT, time_raw)
     }
 
     pub fn pending_timeout<Ctrl: DeviceControl + ?Sized>(
         self,
         device: &mut Ctrl,
     ) -> ControlResult<time::Duration> {
-        let time_raw: u32 = self.read_mem(device, bootstrap::PENDING_TIMEOUT)?;
+        let time_raw: u32 = self.read_reg(device, bootstrap::PENDING_TIMEOUT)?;
         let time = time::Duration::from_millis(time_raw as u64);
         Ok(time)
     }
@@ -290,7 +290,7 @@ impl Bootstrap {
         device: &mut Ctrl,
     ) -> ControlResult<ControlChannelPriviledge> {
         let priviledge = ControlChannelPriviledge::from_raw(
-            self.read_mem(device, bootstrap::CONTROL_CHANNEL_PRIVILEDGE)?,
+            self.read_reg(device, bootstrap::CONTROL_CHANNEL_PRIVILEDGE)?,
         );
         Ok(priviledge)
     }
@@ -300,7 +300,7 @@ impl Bootstrap {
         device: &mut Ctrl,
         priviledge: ControlChannelPriviledge,
     ) -> ControlResult<()> {
-        self.write_mem(
+        self.write_reg(
             device,
             bootstrap::CONTROL_CHANNEL_PRIVILEDGE,
             priviledge.as_raw(),
@@ -347,6 +347,78 @@ impl Bootstrap {
         T: BytesConvertible,
     {
         write_mem(device, register, value)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StreamRegister {
+    index: u32,
+}
+
+impl StreamRegister {
+    pub fn new(index: u32) -> Self {
+        Self { index }
+    }
+
+    pub fn channel_port<Ctrl: DeviceControl + ?Sized>(
+        self,
+        device: &mut Ctrl,
+    ) -> ControlResult<StreamChannelPort> {
+        let register = self.register(stream::STREAM_CHANNEL_PORT);
+        let stream_channel_port = StreamChannelPort::from_raw(read_reg(device, register)?);
+
+        Ok(stream_channel_port)
+    }
+
+    pub fn set_channel_port<Ctrl: DeviceControl + ?Sized>(
+        self,
+        device: &mut Ctrl,
+        port: StreamChannelPort,
+    ) -> ControlResult<()> {
+        let register = self.register(stream::STREAM_CHANNEL_PORT);
+        write_reg(device, register, port.as_raw())
+    }
+
+    pub fn packet_size<Ctrl: DeviceControl + ?Sized>(
+        self,
+        device: &mut Ctrl,
+    ) -> ControlResult<StreamPacketSize> {
+        let register = self.register(stream::STREAM_CHANNEL_PACKET_SIZE);
+        let packet_size = StreamPacketSize::from_raw(read_reg(device, register)?);
+
+        Ok(packet_size)
+    }
+
+    pub fn set_packet_size<Ctrl: DeviceControl + ?Sized>(
+        self,
+        device: &mut Ctrl,
+        size: StreamPacketSize,
+    ) -> ControlResult<()> {
+        let register = self.register(stream::STREAM_CHANNEL_PACKET_SIZE);
+        write_reg(device, register, size.as_raw())
+    }
+
+    pub fn destination_address<Ctrl: DeviceControl + ?Sized>(
+        self,
+        device: &mut Ctrl,
+    ) -> ControlResult<Ipv4Addr> {
+        let register = self.register(stream::STREAM_CHANNEL_DESTINATION_ADDRESS);
+        read_reg(device, register)
+    }
+
+    pub fn set_destination_address<Ctrl: DeviceControl + ?Sized>(
+        self,
+        device: &mut Ctrl,
+        address: Ipv4Addr,
+    ) -> ControlResult<()> {
+        let register = self.register(stream::STREAM_CHANNEL_DESTINATION_ADDRESS);
+        write_reg(device, register, address)
+    }
+
+    fn register(self, register: (u32, u16)) -> (u32, u16) {
+        let base = stream::base_address(self.index);
+        let addr = base + register.0;
+        (addr, register.1)
     }
 }
 

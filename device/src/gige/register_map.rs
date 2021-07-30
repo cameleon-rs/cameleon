@@ -441,3 +441,65 @@ impl MessageChannelCapability {
         self.0.is_set(0)
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StreamChannelPort(u32);
+
+impl StreamChannelPort {
+    pub fn as_raw(self) -> u32 {
+        self.0
+    }
+
+    pub fn from_raw(raw: u32) -> Self {
+        Self(raw)
+    }
+
+    pub fn network_interface_index(self) -> u32 {
+        (self.0 >> 16) & 0xf
+    }
+
+    pub fn host_port(self) -> u16 {
+        (self.0 & 0xffff) as u16
+    }
+
+    pub fn set_host_port(self, port: u16) -> Self {
+        Self((self.0 & 0xffff_0000) | port as u32)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StreamPacketSize(u32);
+
+impl StreamPacketSize {
+    pub fn as_raw(self) -> u32 {
+        self.0
+    }
+
+    pub fn from_raw(raw: u32) -> Self {
+        Self(raw)
+    }
+
+    pub fn trigger_test_packet(self) -> Self {
+        Self(self.0.set_bit(0))
+    }
+
+    pub fn disallow_fragmentation(self) -> Self {
+        Self(self.0.set_bit(1))
+    }
+
+    pub fn packet_size(self) -> u16 {
+        (self.0 & 0xffff) as u16
+    }
+
+    pub fn set_packet_size(self, size: u16) -> Self {
+        Self((self.0 & 0xffff_0000) | size as u32)
+    }
+
+    pub fn host_port(self) -> u16 {
+        (self.0 & 0xffff) as u16
+    }
+
+    pub fn set_host_port(self, port: u16) -> Self {
+        Self((self.0 & 0xffff_0000) | port as u32)
+    }
+}
