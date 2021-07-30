@@ -89,11 +89,6 @@ pub mod bootstrap {
     pub const CONTROL_CHANNEL_PRIVILEDGE: (u32, u16) = (0x0A00, 4);
     pub const PRIMARY_APPLICATION_PORT: (u32, u16) = (0x0A04, 4);
     pub const PRIMARY_APPLICATION_IP_ADDRESS: (u32, u16) = (0x0A14, 4);
-    pub const MESSAGE_CHANNEL_PORT: (u32, u16) = (0x0B00, 4);
-    pub const MESSAGE_CHANNEL_DESTINATION: (u32, u16) = (0x0B10, 4);
-    pub const MESSAGE_CHANNEL_TRANSMISSION_TIMEOUT: (u32, u16) = (0x0B14, 4);
-    pub const MESSAGE_CHANNEL_RETRY_COUNT: (u32, u16) = (0x0B18, 4);
-    pub const MESSAGE_CHANNEL_SOURCE_PORT: (u32, u16) = (0x0B1C, 4);
     pub const MANIFEST_TABLE: (u32, u16) = (0x9000, 512);
 }
 
@@ -112,6 +107,14 @@ pub mod stream {
     pub fn base_address(channel_index: u32) -> u32 {
         0x0D00 + 0x0040 * channel_index
     }
+}
+
+pub mod message {
+    pub const MESSAGE_CHANNEL_PORT: (u32, u16) = (0x0B00, 4);
+    pub const MESSAGE_CHANNEL_DESTINATION: (u32, u16) = (0x0B10, 4);
+    pub const MESSAGE_CHANNEL_TRANSMISSION_TIMEOUT: (u32, u16) = (0x0B14, 4);
+    pub const MESSAGE_CHANNEL_RETRY_COUNT: (u32, u16) = (0x0B18, 4);
+    pub const MESSAGE_CHANNEL_SOURCE_PORT: (u32, u16) = (0x0B1C, 4);
 }
 
 /// (Offset, Length) of registers of ActionGroup Register map.
