@@ -571,9 +571,9 @@ impl DeviceControl for SharedControlHandle {
         fn open(&mut self) -> ControlResult<()>,
         fn close(&mut self) -> ControlResult<()>,
         fn read(&mut self, address: u64, buf: &mut [u8]) -> ControlResult<()>,
-        fn read_reg(&mut self, address:u64) -> ControlResult<u32>,
+        fn read_reg(&mut self, address:u64) -> ControlResult<[u8; 4]>,
         fn write(&mut self, address: u64, data: &[u8]) -> ControlResult<()>,
-        fn write_reg(&mut self, address:u64, data: u32) -> ControlResult<()>,
+        fn write_reg(&mut self, address:u64, data: [u8; 4]) -> ControlResult<()>,
         fn genapi(&mut self) -> ControlResult<String>,
         fn enable_streaming(&mut self) -> ControlResult<()>,
         fn disable_streaming(&mut self) -> ControlResult<()>

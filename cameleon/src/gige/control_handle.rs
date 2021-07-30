@@ -179,10 +179,13 @@ impl DeviceControl for ControlHandleInner {
         let mut cmd = cmd::ReadReg::new();
         unwrap_or_log!(cmd.add_entry(address));
         let ack: ack::ReadReg = unwrap_or_log!(task::block_on(self.send_cmd(cmd)));
-        Ok(unwrap_or_log!(ack.iter().next().ok_or_else(|| {
-            ControlError::Io(anyhow::Error::msg("no entry in `ReadReg` ack packet"))
-        }))
-        .clone())
+        Ok(unwrap_or_log!(ack
+            .iter()
+            .next()
+            .ok_or_else(|| {
+                ControlError::Io(anyhow::Error::msg("no entry in `ReadReg` ack packet"))
+            })
+            .map(|v| *v)))
     }
 
     fn write(&mut self, mut address: u64, data: &[u8]) -> ControlResult<()> {

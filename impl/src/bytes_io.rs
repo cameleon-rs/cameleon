@@ -205,3 +205,66 @@ impl<const N: usize> BytesConvertible for [u8; N] {
         self.write_bytes_be(buf)
     }
 }
+
+pub struct StaticString<const N: usize>(String);
+
+impl<const N: usize> StaticString<N> {
+    pub fn from_string(s: String) -> io::Result<Self> {
+        if !s.is_ascii() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "the data must be an ascii string",
+            ));
+        }
+
+        if s.len() > N {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("string length exceeds {}", N),
+            ));
+        }
+
+        Ok(Self(s))
+    }
+
+    pub fn into_string(self) -> String {
+        self.0
+    }
+}
+
+impl<const N: usize> BytesConvertible for StaticString<N> {
+    fn read_bytes_be<R>(buf: &mut R) -> io::Result<Self>
+    where
+        R: io::Read,
+    {
+        let mut tmp = [0; N];
+        buf.read_exact(&mut tmp)?;
+        let str_end = tmp.iter().position(|c| *c == 0).unwrap_or(N);
+
+        let s = String::from_utf8_lossy(&tmp[0..str_end]);
+        Ok(Self(s.to_string()))
+    }
+
+    fn read_bytes_le<R>(buf: &mut R) -> io::Result<Self>
+    where
+        R: io::Read,
+    {
+        Self::read_bytes_be(buf)
+    }
+
+    fn write_bytes_be<W>(self, buf: &mut W) -> io::Result<()>
+    where
+        W: io::Write,
+    {
+        let mut bytes = self.0.into_bytes();
+        bytes.resize(N, 0);
+        buf.write_all(&bytes)
+    }
+
+    fn write_bytes_le<W>(self, buf: &mut W) -> io::Result<()>
+    where
+        W: io::Write,
+    {
+        self.write_bytes_be(buf)
+    }
+}
