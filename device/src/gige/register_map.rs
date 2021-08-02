@@ -5,6 +5,7 @@
 use std::path::PathBuf;
 
 use cameleon_impl::bit_op::BitOp;
+use semver::Version;
 use url::Url;
 
 use crate::{CharacterEncoding, CompressionType, Endianness};
@@ -94,7 +95,14 @@ pub mod bootstrap {
     pub const CONTROL_CHANNEL_PRIVILEDGE: (u32, u16) = (0x0A00, 4);
     pub const PRIMARY_APPLICATION_PORT: (u32, u16) = (0x0A04, 4);
     pub const PRIMARY_APPLICATION_IP_ADDRESS: (u32, u16) = (0x0A14, 4);
-    pub const MANIFEST_TABLE: (u32, u16) = (0x9000, 512);
+    pub const MANIFEST_HEADER: (u32, u16) = (0x9000, 8);
+
+    pub const fn manifest_table(entry_index: u32) -> (u32, u16) {
+        (
+            MANIFEST_HEADER.0 + (MANIFEST_HEADER.1 as u32 + entry_index * 8),
+            8,
+        )
+    }
 }
 
 /// (Offset, Length) of registers of Stream Register map.
@@ -109,7 +117,7 @@ pub mod stream {
     pub const STREAM_CHANNEL_ZONE: (u32, u16) = (0x0028, 4);
     pub const STREAM_CHANNEL_ZONE_DIRECTION: (u32, u16) = (0x002C, 4);
 
-    pub fn base_address(channel_index: u32) -> u32 {
+    pub const fn base_address(channel_index: u32) -> u32 {
         0x0D00 + 0x0040 * channel_index
     }
 }
@@ -127,7 +135,7 @@ pub mod action_group {
     pub const ACTION_GROUP_KEY: (u32, u16) = (0x0000, 4);
     pub const ACTION_GROUP_MASK: (u32, u16) = (0x0004, 4);
 
-    pub fn base_address(action_index: u32) -> u32 {
+    pub const fn base_address(action_index: u32) -> u32 {
         0x9800 + 0x0010 * action_index
     }
 }
@@ -509,6 +517,7 @@ impl StreamPacketSize {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum XmlFileLocation {
     Device {
         file_name: String,
@@ -609,6 +618,39 @@ impl CompressionType {
                 format!("invalid xml file extension: {}", other).into(),
             )),
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ManifestHeader(u64);
+
+impl ManifestHeader {
+    pub fn entry_num(self) -> u32 {
+        (self.0 >> 58) as u32
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ManifestEntry(u64);
+
+impl ManifestEntry {
+    pub fn xml_file_version(self) -> Version {
+        let major = self.0 >> 58;
+        let minor = (self.0 >> 52) & 0x3f;
+        let subminor = (self.0 >> 46) & 0x3f;
+        Version::new(major, minor, subminor)
+    }
+
+    pub fn schema_version(self) -> Version {
+        let major = (self.0 >> 40) & 0x3f;
+        let minor = (self.0 >> 34) & 0x3f;
+        let subminor = (self.0 >> 28) & 0x3f;
+        Version::new(major, minor, subminor)
+    }
+
+    pub fn url_register(self) -> (u32, u16) {
+        let address = (self.0) & 0xffff_ffff;
+        (address as u32, bootstrap::FIRST_URL.1)
     }
 }
 
