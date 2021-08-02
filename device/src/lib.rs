@@ -42,7 +42,7 @@ pub enum GenICamFileType {
 }
 
 /// Represents `CompressionType` of `GenICam` XML file on the device's memory.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompressionType {
     /// Uncompressed `GenICam` XML file.
     Uncompressed,

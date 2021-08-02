@@ -14,6 +14,7 @@ impl From<gige::Error> for ControlError {
         match err {
             gige::Error::Io(err) => ControlError::Io(err.into()),
             gige::Error::InvalidPacket(msg) => ControlError::InvalidData(msg.into()),
+            gige::Error::InvalidData(msg) => ControlError::InvalidData(msg.into()),
         }
     }
 }

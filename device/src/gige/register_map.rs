@@ -2,9 +2,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-use cameleon_impl::bit_op::BitOp;
+use std::path::PathBuf;
 
-use crate::{CharacterEncoding, Endianness};
+use cameleon_impl::bit_op::BitOp;
+use url::Url;
+
+use crate::{CharacterEncoding, CompressionType, Endianness};
+
+use super::{Error, Result};
 
 /// (Address, Length) of registers of Bootstrap Register Map.
 pub mod bootstrap {
@@ -501,5 +506,165 @@ impl StreamPacketSize {
 
     pub fn set_host_port(self, port: u16) -> Self {
         Self((self.0 & 0xffff_0000) | port as u32)
+    }
+}
+
+pub enum XmlFileLocation {
+    Device {
+        file_name: String,
+        compression_type: CompressionType,
+        address: u64,
+        size: u64,
+    },
+
+    Net {
+        url: String,
+        compression_type: CompressionType,
+    },
+
+    Host {
+        path: PathBuf,
+        compression_type: CompressionType,
+    },
+}
+
+impl XmlFileLocation {
+    pub fn parse(s: &str) -> Result<Self> {
+        let url = Url::parse(s)
+            .map_err(|e| Error::InvalidData(format!("invalid xml file url: {}", e).into()))?;
+
+        match url.scheme() {
+            "local" => Self::parse_device_xml(url),
+            "http" => Self::parse_net_xml(url),
+            "file" => Self::parse_host_xml(url),
+            other => Err(Error::InvalidData(
+                format!("invalid scheme in xml file url: {}", other).into(),
+            )),
+        }
+    }
+
+    fn parse_device_xml(url: Url) -> Result<Self> {
+        let invalid_url =
+            || Error::InvalidData(format!("invalid url of `local` xml: {}", url).into());
+
+        let mut xml_info = url.path().split(';');
+        let file_name = xml_info.next().ok_or_else(invalid_url)?;
+        let address = u64::from_str_radix(xml_info.next().ok_or_else(invalid_url)?, 16)
+            .map_err(|_| invalid_url())?;
+        let size = u64::from_str_radix(xml_info.next().ok_or_else(invalid_url)?, 16)
+            .map_err(|_| invalid_url())?;
+        let compression_type =
+            CompressionType::from_extension(file_name.split('.').last().ok_or_else(invalid_url)?)?;
+
+        Ok(Self::Device {
+            file_name: file_name.to_string(),
+            compression_type,
+            address,
+            size,
+        })
+    }
+
+    fn parse_net_xml(url: Url) -> Result<Self> {
+        let invalid_url =
+            || Error::InvalidData(format!("invalid url of `http` xml: {}", url).into());
+
+        let extension = url
+            .path()
+            .split('/')
+            .last()
+            .ok_or_else(invalid_url)?
+            .split('.')
+            .last()
+            .ok_or_else(invalid_url)?;
+        let compression_type = CompressionType::from_extension(extension)?;
+
+        Ok(Self::Net {
+            url: url.to_string(),
+            compression_type,
+        })
+    }
+
+    fn parse_host_xml(url: Url) -> Result<Self> {
+        let invalid_url =
+            || Error::InvalidData(format!("invalid url of `file` xml: {}", url).into());
+
+        let path = url.to_file_path().map_err(|_| invalid_url())?;
+        let extension = path.extension().ok_or_else(invalid_url)?;
+        let compression_type =
+            CompressionType::from_extension(extension.to_str().ok_or_else(invalid_url)?)?;
+
+        Ok(Self::Host {
+            path,
+            compression_type,
+        })
+    }
+}
+
+impl CompressionType {
+    fn from_extension(s: &str) -> Result<Self> {
+        match s {
+            "xml" => Ok(Self::Uncompressed),
+            "zip" => Ok(Self::Zip),
+            other => Err(Error::InvalidData(
+                format!("invalid xml file extension: {}", other).into(),
+            )),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_local_url() {
+        let src = "local:test_xml.zip;F2154;F128";
+        let loc = XmlFileLocation::parse(src).unwrap();
+        match loc {
+            XmlFileLocation::Device {
+                file_name,
+                compression_type,
+                address,
+                size,
+            } => {
+                assert_eq!(file_name, "test_xml.zip");
+                assert_eq!(compression_type, CompressionType::Zip);
+                assert_eq!(address, 0xF2154);
+                assert_eq!(size, 0xF128);
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn test_parse_http_url() {
+        let src = "http://www.test_xml.org/genicam/test_xml.xml";
+        let loc = XmlFileLocation::parse(src).unwrap();
+        match loc {
+            XmlFileLocation::Net {
+                url,
+                compression_type,
+            } => {
+                assert_eq!(url, src);
+                assert_eq!(compression_type, CompressionType::Uncompressed);
+            }
+            _ => panic!(),
+        };
+    }
+
+    #[test]
+    fn test_parse_file_url() {
+        let src = "file:test_xml.zip";
+        let loc = XmlFileLocation::parse(src).unwrap();
+        match loc {
+            XmlFileLocation::Host {
+                path,
+                compression_type,
+            } => {
+                assert_eq!(path, std::path::Path::new("/test_xml.zip"));
+                assert_eq!(compression_type, CompressionType::Zip);
+            }
+            _ => panic!(),
+        };
     }
 }

@@ -59,4 +59,7 @@ pub enum Error {
 
     #[error("packet is broken: {0}")]
     InvalidPacket(std::borrow::Cow<'static, str>),
+
+    #[error("invalid data: {0}")]
+    InvalidData(std::borrow::Cow<'static, str>),
 }
