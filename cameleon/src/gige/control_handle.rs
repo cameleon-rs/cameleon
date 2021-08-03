@@ -31,7 +31,7 @@ pub struct ControlHandleInner {
 
 macro_rules! align {
     ($data:expr) => {
-        ($data + 1) & !0x11
+        ($data + 3) & !0b11
     };
 }
 
@@ -67,6 +67,22 @@ impl ControlHandleInner {
             let data = self.read_reg(address)?;
             let chunk_len = buf_chunk.len();
             buf_chunk.copy_from_slice(&data[..chunk_len]);
+            address += chunk_len as u64;
+        }
+
+        Ok(())
+    }
+
+    fn write_reg_fallback(&mut self, mut address: u64, data: &[u8]) -> ControlResult<()> {
+        for data_chunk in data.chunks(4) {
+            let chunk_len = data_chunk.len();
+            if chunk_len == 4 {
+                self.write_reg(address, data_chunk.try_into().unwrap())?;
+            } else {
+                let mut aligned_data = [0; 4];
+                aligned_data[..chunk_len].copy_from_slice(data_chunk);
+                self.write_reg(address, aligned_data)?;
+            }
             address += chunk_len as u64;
         }
 
@@ -207,8 +223,12 @@ impl DeviceControl for ControlHandleInner {
     }
 
     fn write(&mut self, mut address: u64, data: &[u8]) -> ControlResult<()> {
-        debug_assert_eq!(cmd::WriteMem::maximum_data_length() % 4, 0);
+        let capability = self.capability.ok_or(ControlError::NotOpened)?;
+        if data.len() == 4 || !capability.is_write_mem_supported() {
+            return self.write_reg_fallback(address, data);
+        }
 
+        debug_assert_eq!(cmd::WriteMem::maximum_data_length() % 4, 0);
         for data_chunk in data.chunks(cmd::WriteMem::maximum_data_length()) {
             let target_addr: u32 = address.try_into().map_err(|_| {
                 ControlError::InvalidData(
@@ -223,7 +243,7 @@ impl DeviceControl for ControlHandleInner {
             } else {
                 let mut aligned_data = vec![0; aligned_data_len];
                 aligned_data[..data_chunk.len()].copy_from_slice(data_chunk);
-                let cmd = unwrap_or_log!(cmd::WriteMem::new(target_addr, data_chunk));
+                let cmd = unwrap_or_log!(cmd::WriteMem::new(target_addr, &aligned_data));
                 unwrap_or_log!(task::block_on(self.send_cmd(cmd)))
             };
 
