@@ -6,9 +6,11 @@ use std::{convert::TryInto, time};
 
 use async_std::{future, net::UdpSocket, task};
 
+use cameleon_device::gige::protocol::{ack, cmd};
+
 use crate::{ControlError, ControlResult, DeviceControl};
 
-use cameleon_device::gige::protocol::{ack, cmd};
+use super::register_map::GvcpCapability;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OpenMode {
@@ -24,6 +26,7 @@ pub struct ControlHandleInner {
     config: ConnectionConfig,
     next_req_id: u16,
     buf: Vec<u8>,
+    capability: Option<GvcpCapability>,
 }
 
 macro_rules! align {
@@ -57,6 +60,17 @@ impl ControlHandleInner {
         } else {
             Err(ControlError::NotOpened)
         }
+    }
+
+    fn read_reg_fallback(&mut self, mut address: u64, buf: &mut [u8]) -> ControlResult<()> {
+        for buf_chunk in buf.chunks_mut(4) {
+            let data = self.read_reg(address)?;
+            let chunk_len = buf_chunk.len();
+            buf_chunk.copy_from_slice(&data[..chunk_len]);
+            address += chunk_len as u64;
+        }
+
+        Ok(())
     }
 
     async fn send_cmd<'a, T, U>(&'a mut self, cmd: T) -> ControlResult<U>
@@ -148,8 +162,12 @@ impl DeviceControl for ControlHandleInner {
     }
 
     fn read(&mut self, mut address: u64, buf: &mut [u8]) -> ControlResult<()> {
-        debug_assert_eq!(cmd::ReadMem::maximum_read_length() % 4, 0);
+        let capability = self.capability.ok_or(ControlError::NotOpened)?;
+        if buf.len() == 4 || !capability.is_write_mem_supported() {
+            return self.read_reg_fallback(address, buf);
+        }
 
+        debug_assert_eq!(cmd::ReadMem::maximum_read_length() % 4, 0);
         for buf_chunk in buf.chunks_mut(cmd::ReadMem::maximum_read_length()) {
             let target_addr: u32 = address.try_into().map_err(|_| {
                 ControlError::InvalidData(

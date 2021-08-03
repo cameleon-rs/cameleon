@@ -223,11 +223,8 @@ impl Bootstrap {
         read_reg(device, bootstrap::NUMBER_OF_STREAM_CHANNELS)
     }
 
-    pub fn gvcp_capability<Ctrl: DeviceControl + ?Sized>(
-        self,
-        _device: &mut Ctrl,
-    ) -> ControlResult<GvcpCapability> {
-        Ok(self.capability)
+    pub fn gvcp_capability(self) -> GvcpCapability {
+        self.capability
     }
 
     pub fn gvsp_capability<Ctrl: DeviceControl + ?Sized>(
