@@ -97,7 +97,7 @@ pub mod bootstrap {
     pub const PRIMARY_APPLICATION_IP_ADDRESS: (u32, u16) = (0x0A14, 4);
     pub const MANIFEST_HEADER: (u32, u16) = (0x9000, 8);
 
-    pub const fn manifest_table(entry_index: u32) -> (u32, u16) {
+    pub const fn manifest_entry(entry_index: u32) -> (u32, u16) {
         (
             MANIFEST_HEADER.0 + (MANIFEST_HEADER.1 as u32 + entry_index * 8),
             8,
@@ -625,6 +625,14 @@ impl CompressionType {
 pub struct ManifestHeader(u64);
 
 impl ManifestHeader {
+    pub fn as_raw(self) -> u64 {
+        self.0
+    }
+
+    pub fn from_raw(raw: u64) -> Self {
+        Self(raw)
+    }
+
     pub fn entry_num(self) -> u32 {
         (self.0 >> 58) as u32
     }
@@ -634,6 +642,14 @@ impl ManifestHeader {
 pub struct ManifestEntry(u64);
 
 impl ManifestEntry {
+    pub fn as_raw(self) -> u64 {
+        self.0
+    }
+
+    pub fn from_raw(raw: u64) -> Self {
+        Self(raw)
+    }
+
     pub fn xml_file_version(self) -> Version {
         let major = self.0 >> 58;
         let minor = (self.0 >> 52) & 0x3f;
