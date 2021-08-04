@@ -268,3 +268,54 @@ impl<const N: usize> BytesConvertible for StaticString<N> {
         self.write_bytes_be(buf)
     }
 }
+
+pub struct DynamicString {
+    size: usize,
+    inner: String,
+}
+
+impl DynamicString {
+    pub fn new(size: usize, inner: String) -> Self {
+        Self { size, inner }
+    }
+}
+
+impl BytesConvertible for DynamicString {
+    fn read_bytes_be<R>(buf: &mut R) -> io::Result<Self>
+    where
+        R: io::Read,
+    {
+        let mut tmp = Vec::new();
+        buf.read_to_end(&mut tmp)?;
+        let str_end = tmp.iter().position(|c| *c == 0).unwrap_or(tmp.len());
+
+        let s = String::from_utf8_lossy(&tmp[0..str_end]);
+        Ok(Self {
+            size: s.len(),
+            inner: s.to_string(),
+        })
+    }
+
+    fn read_bytes_le<R>(buf: &mut R) -> io::Result<Self>
+    where
+        R: io::Read,
+    {
+        Self::read_bytes_be(buf)
+    }
+
+    fn write_bytes_be<W>(self, buf: &mut W) -> io::Result<()>
+    where
+        W: io::Write,
+    {
+        let mut bytes = self.inner.into_bytes();
+        bytes.resize(self.size, 0);
+        buf.write_all(&bytes)
+    }
+
+    fn write_bytes_le<W>(self, buf: &mut W) -> io::Result<()>
+    where
+        W: io::Write,
+    {
+        self.write_bytes_be(buf)
+    }
+}
