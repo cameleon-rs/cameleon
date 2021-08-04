@@ -22,15 +22,12 @@ use semver::Version;
 use crate::{ControlError, ControlResult, DeviceControl};
 
 /// Represents Bootstrap register map of a `GigE` device.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Bootstrap {
-    capability: GvcpCapability,
-}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Bootstrap {}
 
 impl Bootstrap {
-    pub fn new<Ctrl: DeviceControl + ?Sized>(device: &mut Ctrl) -> ControlResult<Self> {
-        let capability = GvcpCapability::from_raw(read_reg(device, bootstrap::GVCP_CAPABILITY)?);
-        Ok(Self { capability })
+    pub fn new() -> Self {
+        Self {}
     }
 
     pub fn version<Ctrl: DeviceControl + ?Sized>(
@@ -148,26 +145,18 @@ impl Bootstrap {
         self,
         device: &mut Ctrl,
     ) -> ControlResult<String> {
-        if self.capability.is_serial_number_supported() {
-            const LEN: usize = bootstrap::SERIAL_NUMBER.1 as usize;
-            let name: StaticString<LEN> = read_mem(device, bootstrap::SERIAL_NUMBER)?;
-            Ok(name.into_string())
-        } else {
-            Ok("".to_string())
-        }
+        const LEN: usize = bootstrap::SERIAL_NUMBER.1 as usize;
+        let name: StaticString<LEN> = read_mem(device, bootstrap::SERIAL_NUMBER)?;
+        Ok(name.into_string())
     }
 
     pub fn user_defined_name<Ctrl: DeviceControl + ?Sized>(
         self,
         device: &mut Ctrl,
     ) -> ControlResult<String> {
-        if self.capability.is_user_defined_name_supported() {
-            const LEN: usize = bootstrap::USER_DEFINED_NAME.1 as usize;
-            let name: StaticString<LEN> = read_mem(device, bootstrap::USER_DEFINED_NAME)?;
-            Ok(name.into_string())
-        } else {
-            Ok("".to_string())
-        }
+        const LEN: usize = bootstrap::USER_DEFINED_NAME.1 as usize;
+        let name: StaticString<LEN> = read_mem(device, bootstrap::USER_DEFINED_NAME)?;
+        Ok(name.into_string())
     }
 
     pub fn set_user_defined_name<Ctrl: DeviceControl + ?Sized>(
@@ -175,13 +164,9 @@ impl Bootstrap {
         device: &mut Ctrl,
         name: &str,
     ) -> ControlResult<()> {
-        if self.capability.is_user_defined_name_supported() {
-            const LEN: usize = bootstrap::USER_DEFINED_NAME.1 as usize;
-            let name: StaticString<LEN> = StaticString::from_string(name.to_string())?;
-            write_mem(device, bootstrap::USER_DEFINED_NAME, name)
-        } else {
-            Ok(())
-        }
+        const LEN: usize = bootstrap::USER_DEFINED_NAME.1 as usize;
+        let name: StaticString<LEN> = StaticString::from_string(name.to_string())?;
+        write_mem(device, bootstrap::USER_DEFINED_NAME, name)
     }
 
     pub fn first_url<Ctrl: DeviceControl + ?Sized>(
@@ -223,8 +208,12 @@ impl Bootstrap {
         read_reg(device, bootstrap::NUMBER_OF_STREAM_CHANNELS)
     }
 
-    pub fn gvcp_capability(self) -> GvcpCapability {
-        self.capability
+    pub fn gvcp_capability<Ctrl: DeviceControl + ?Sized>(
+        self,
+        device: &mut Ctrl,
+    ) -> ControlResult<GvcpCapability> {
+        let capability = GvcpCapability::from_raw(read_reg(device, bootstrap::GVCP_CAPABILITY)?);
+        Ok(capability)
     }
 
     pub fn gvsp_capability<Ctrl: DeviceControl + ?Sized>(
