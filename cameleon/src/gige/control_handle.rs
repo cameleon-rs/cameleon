@@ -6,11 +6,14 @@ use std::{convert::TryInto, time};
 
 use async_std::{future, net::UdpSocket, task};
 
-use cameleon_device::gige::protocol::{ack, cmd};
+use cameleon_device::gige::{
+    protocol::{ack, cmd},
+    register_map::ControlChannelPriviledge,
+};
 
 use crate::{ControlError, ControlResult, DeviceControl};
 
-use super::register_map::GvcpCapability;
+use super::register_map::{Bootstrap, GvcpCapability};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OpenMode {
@@ -162,15 +165,50 @@ impl ControlHandleInner {
 
 impl DeviceControl for ControlHandleInner {
     fn open(&mut self) -> ControlResult<()> {
-        match self.config.open_mode {
-            OpenMode::Exclusive => todo!(),
-            OpenMode::Control => todo!(),
-            OpenMode::MonitorAccess => Ok(()),
+        if self.is_opened() {
+            return Ok(());
         }
+
+        let bs = Bootstrap::new();
+        match self.config.open_mode {
+            OpenMode::Exclusive => {
+                let ccp = ControlChannelPriviledge::new().enable_exclusive_access();
+                bs.set_control_channel_priviledge(self, ccp)?;
+            }
+
+            OpenMode::Control => {
+                let ccp = ControlChannelPriviledge::new().enable_control_access();
+                bs.set_control_channel_priviledge(self, ccp)?;
+            }
+
+            OpenMode::MonitorAccess => {
+                let ccp = bs.control_channel_priviledge(self)?;
+                if ccp.is_exclusive_access_enabled() {
+                    return Err(ControlError::Busy);
+                }
+            }
+        }
+
+        self.is_opened = true;
+        Ok(())
     }
 
     fn close(&mut self) -> ControlResult<()> {
-        todo!()
+        if !self.is_opened() {
+            return Ok(());
+        }
+
+        match self.config.open_mode {
+            OpenMode::Exclusive | OpenMode::Control => {
+                let bs = Bootstrap::new();
+                let ccp = ControlChannelPriviledge::new();
+                bs.set_control_channel_priviledge(self, ccp)?;
+            }
+            OpenMode::MonitorAccess => {}
+        }
+
+        self.is_opened = false;
+        Ok(())
     }
 
     fn is_opened(&self) -> bool {

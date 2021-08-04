@@ -294,10 +294,14 @@ impl NicConfiguration {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ControlChannelPriviledge(u32);
 
 impl ControlChannelPriviledge {
+    pub fn new() -> Self {
+        Self(0)
+    }
+
     pub fn as_raw(self) -> u32 {
         self.0
     }
