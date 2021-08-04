@@ -222,6 +222,10 @@ pub enum ControlError {
     /// e.g. try to write too large data that will overrun register.
     #[error("try to write invalid data to the device: {0}")]
     InvalidData(Box<dyn std::error::Error>),
+
+    /// Try to use unsupported feature.
+    #[error("try to use unsupported feature: {0}")]
+    NotSupported(Cow<'static, str>),
 }
 
 /// A specialized `Result` type for streaming.
