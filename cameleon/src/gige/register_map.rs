@@ -8,14 +8,13 @@
 //! its registers.
 //!
 pub use cameleon_device::gige::register_map::{
-    ControlChannelPriviledge, DeviceMode, GvcpCapability, GvspCapability, ManifestEntry,
-    ManifestHeader, MessageChannelCapability, NicCapability, NicConfiguration, StreamChannelPort,
-    StreamPacketSize,
+    ControlChannelPriviledge, DeviceMode, GvcpCapability, GvspCapability, MessageChannelCapability,
+    NicCapability, NicConfiguration, StreamChannelPort, StreamPacketSize,
 };
 
 use std::{convert::TryInto, net::Ipv4Addr, time};
 
-use cameleon_device::gige::register_map::{bootstrap, stream};
+use cameleon_device::gige::register_map::{self, bootstrap, stream};
 use cameleon_impl::bytes_io::{BytesConvertible, ReadBytes, StaticString, WriteBytes};
 use semver::Version;
 
@@ -300,18 +299,8 @@ impl Bootstrap {
         self,
         device: &mut Ctrl,
     ) -> ControlResult<ManifestHeader> {
-        let header = ManifestHeader::from_raw(read_reg(device, bootstrap::MANIFEST_HEADER)?);
+        let header = ManifestHeader::new(device)?;
         Ok(header)
-    }
-
-    pub fn manifest_entry<Ctrl: DeviceControl + ?Sized>(
-        self,
-        device: &mut Ctrl,
-        index: u32,
-    ) -> ControlResult<ManifestEntry> {
-        let register = bootstrap::manifest_entry(index);
-        let entry = ManifestEntry::from_raw(read_reg(device, register)?);
-        Ok(entry)
     }
 }
 
@@ -384,6 +373,51 @@ impl StreamRegister {
         let base = stream::base_address(self.index);
         let addr = base + register.0;
         (addr, register.1)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ManifestHeader(register_map::ManifestHeader);
+
+impl ManifestHeader {
+    fn new<Ctrl: DeviceControl + ?Sized>(device: &mut Ctrl) -> ControlResult<Self> {
+        let inner =
+            register_map::ManifestHeader::from_raw(read_reg(device, bootstrap::MANIFEST_HEADER)?);
+        Ok(Self(inner))
+    }
+
+    pub fn entries<'a, Ctrl: DeviceControl + ?Sized>(
+        self,
+        device: &'a mut Ctrl,
+    ) -> impl Iterator<Item = ControlResult<ManifestEntry>> + 'a {
+        (0..self.0.entry_num()).into_iter().map(move |id| {
+            let entry_reg = bootstrap::manifest_entry(id);
+            let inner = register_map::ManifestEntry::from_raw(read_reg(device, entry_reg)?);
+            Ok(ManifestEntry(inner))
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ManifestEntry(register_map::ManifestEntry);
+
+impl ManifestEntry {
+    pub fn xml_file_version(self) -> Version {
+        self.0.xml_file_version()
+    }
+
+    pub fn schema_version(self) -> Version {
+        self.0.schema_version()
+    }
+
+    pub fn url_string<Ctrl: DeviceControl + ?Sized>(
+        self,
+        device: &mut Ctrl,
+    ) -> ControlResult<String> {
+        const LEN: usize = bootstrap::FIRST_URL.1 as usize;
+        let url_address = self.0.url_register().0;
+        let url_string: StaticString<LEN> = read_mem(device, (url_address, LEN as u16))?;
+        Ok(url_string.into_string())
     }
 }
 
