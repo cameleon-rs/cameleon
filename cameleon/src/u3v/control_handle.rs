@@ -6,7 +6,6 @@
 
 use std::{
     convert::TryInto,
-    io::Read,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -21,7 +20,10 @@ use tracing::error;
 
 use super::register_map::{self, Abrm, ManifestTable, Sbrm, Sirm};
 
-use crate::{camera::DeviceControl, genapi::CompressionType, ControlError, ControlResult};
+use crate::{
+    camera::DeviceControl, genapi::CompressionType, utils::unzip_genxml, ControlError,
+    ControlResult,
+};
 
 /// Initial timeout duration for transaction between device and host.
 /// This value is temporarily used until the device's bootstrap register value is read.
@@ -391,10 +393,6 @@ impl DeviceControl for ControlHandle {
     }
 
     fn genapi(&mut self) -> ControlResult<String> {
-        fn zip_err(err: impl std::fmt::Debug) -> ControlError {
-            ControlError::InvalidDevice(format!("zipped xml file is broken: {:?}", err).into())
-        }
-
         let table = unwrap_or_log!(self.manifest_table());
         // Use newest version if there are more than one entries.
         let mut newest_ent = None;
@@ -430,14 +428,7 @@ impl DeviceControl for ControlHandle {
 
         match comp_type {
             CompressionType::Zip => {
-                let mut zip = zip::ZipArchive::new(std::io::Cursor::new(buf)).unwrap();
-                if zip.len() != 1 {
-                    return Err(zip_err("more than one files in zipped GenApi XML"));
-                }
-                let mut file = unwrap_or_log!(zip.by_index(0).map_err(zip_err));
-                let file_size: usize = unwrap_or_log!(file.size().try_into());
-                let mut xml = Vec::with_capacity(file_size);
-                unwrap_or_log!(file.read_to_end(&mut xml).map_err(zip_err));
+                let xml = unwrap_or_log!(unzip_genxml(buf));
                 Ok(String::from_utf8_lossy(&xml).into())
             }
 

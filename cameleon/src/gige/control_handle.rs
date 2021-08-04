@@ -2,18 +2,17 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-use std::{convert::TryInto, time};
+use std::{convert::TryInto, io::Read, time};
 
 use async_std::{future, net::UdpSocket, task};
 
-use cameleon_device::gige::{
-    protocol::{ack, cmd},
-    register_map::ControlChannelPriviledge,
+use cameleon_device::gige::protocol::{ack, cmd};
+
+use crate::{
+    genapi::CompressionType, utils::unzip_genxml, ControlError, ControlResult, DeviceControl,
 };
 
-use crate::{ControlError, ControlResult, DeviceControl};
-
-use super::register_map::{Bootstrap, GvcpCapability};
+use super::register_map::{Bootstrap, ControlChannelPriviledge, GvcpCapability, XmlFileLocation};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OpenMode {
@@ -28,7 +27,7 @@ pub struct ControlHandleInner {
     is_opened: bool,
     config: ConnectionConfig,
     next_req_id: u16,
-    buf: Vec<u8>,
+    buffer: Vec<u8>,
     capability: Option<GvcpCapability>,
 }
 
@@ -55,6 +54,21 @@ impl ControlHandleInner {
 
     pub fn timeout(&self) -> time::Duration {
         self.config.timeout
+    }
+
+    /// Capacity of the buffer, the buffer is used for
+    /// serializing/deserializing packet. This buffer automatically extend according to packet
+    /// length.
+    pub fn buffer_capacity(&self) -> usize {
+        self.buffer.capacity()
+    }
+
+    /// Resize the capacity of the buffer, the buffer is used for
+    /// serializing/deserializing packet. This buffer automatically extend according to packet
+    /// length.
+    pub fn resize_buffer(&mut self, size: usize) {
+        self.buffer.resize(size, 0);
+        self.buffer.shrink_to_fit();
     }
 
     fn assert_open(&self) -> ControlResult<()> {
@@ -100,7 +114,7 @@ impl ControlHandleInner {
         unwrap_or_log!(self.assert_open());
         let cmd = cmd.finalize(self.next_req_id);
         let cmd_len = cmd.length() as usize;
-        cmd.serialize(self.buf.as_mut_slice())?;
+        cmd.serialize(self.buffer.as_mut_slice())?;
 
         self.send(cmd_len).await?;
 
@@ -109,7 +123,7 @@ impl ControlHandleInner {
 
         loop {
             self.recv().await?;
-            let ack = ack::AckPacket::parse(&self.buf)?;
+            let ack = ack::AckPacket::parse(&self.buffer)?;
             self.verify_ack(&ack)?;
 
             if ack.ack_kind() == ack::AckKind::Pending {
@@ -119,7 +133,7 @@ impl ControlHandleInner {
                 retry_count -= 1;
                 if retry_count == 0 {
                     return Err(ControlError::Io(anyhow::Error::msg(
-                        "the number of times pending was returned exceeds the retry_count.",
+                        "the number of times pending was returned exceeds the retry_count",
                     )));
                 }
                 continue;
@@ -129,7 +143,7 @@ impl ControlHandleInner {
             break;
         }
 
-        ack::AckPacket::parse(&self.buf)?
+        ack::AckPacket::parse(&self.buffer)?
             .ack_data_as()
             .map_err(Into::into)
     }
@@ -151,13 +165,13 @@ impl ControlHandleInner {
     }
 
     pub async fn send(&self, len: usize) -> ControlResult<usize> {
-        timeout(self.timeout(), self.sock.send(&self.buf[..len]))
+        timeout(self.timeout(), self.sock.send(&self.buffer[..len]))
             .await?
             .map_err(Into::into)
     }
 
     pub async fn recv(&mut self) -> ControlResult<usize> {
-        timeout(self.timeout(), self.sock.recv(&mut self.buf))
+        timeout(self.timeout(), self.sock.recv(&mut self.buffer))
             .await?
             .map_err(Into::into)
     }
@@ -312,7 +326,73 @@ impl DeviceControl for ControlHandleInner {
     }
 
     fn genapi(&mut self) -> ControlResult<String> {
-        todo!()
+        let capability = self.capability.ok_or(ControlError::NotOpened)?;
+        let bs = Bootstrap::new();
+
+        let url_string = if !capability.is_manifest_table_supported() {
+            bs.first_url(self)?
+        } else {
+            let header = bs.manifest_header(self)?;
+            let ent = header
+                .entries(self)
+                .filter_map(Result::ok)
+                .max_by_key(|ent| ent.xml_file_version())
+                .ok_or_else(|| {
+                    ControlError::Io(anyhow::Error::msg(
+                        "failed to retrieve `GigE` manifest entry",
+                    ))
+                })?;
+            ent.url_string(self)?
+        };
+
+        let (xml, compression_type) = match XmlFileLocation::parse(&url_string)? {
+            XmlFileLocation::Device {
+                address,
+                size,
+                compression_type,
+                ..
+            } => {
+                // Store current capacity so that we can set back it after XML retrieval because this needs exceptional large size of internal buffer.
+                let current_capacity = self.buffer_capacity();
+                let mut buf = vec![0; size as usize];
+                unwrap_or_log!(self.read(address, &mut buf));
+                self.resize_buffer(current_capacity);
+                (buf, compression_type)
+            }
+
+            XmlFileLocation::Net {
+                url,
+                compression_type,
+            } => {
+                let request = ureq::get(&url);
+                let response =
+                    unwrap_or_log!(request.call().map_err(|err| ControlError::Io(err.into())));
+                if response.status() == 200 {
+                    let mut buf = vec![];
+                    unwrap_or_log!(response.into_reader().read_to_end(&mut buf));
+                    (buf, compression_type)
+                } else {
+                    return Err(ControlError::Io(anyhow::Error::msg(format!(
+                        "can't retrieve `GenApi` XML from vendor website: {:?}",
+                        response
+                    ))));
+                }
+            }
+
+            XmlFileLocation::Host { .. } => {
+                return Err(ControlError::NotSupported(
+                    "can't retrieve `GenApi` XML from host storage".into(),
+                ))
+            }
+        };
+
+        match compression_type {
+            CompressionType::Zip => {
+                let xml = unwrap_or_log!(unzip_genxml(xml));
+                Ok(String::from_utf8_lossy(&xml).into())
+            }
+            CompressionType::Uncompressed => Ok(String::from_utf8_lossy(&xml).into()),
+        }
     }
 
     fn enable_streaming(&mut self) -> ControlResult<()> {

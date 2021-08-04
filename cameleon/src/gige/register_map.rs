@@ -9,7 +9,7 @@
 //!
 pub use cameleon_device::gige::register_map::{
     ControlChannelPriviledge, DeviceMode, GvcpCapability, GvspCapability, MessageChannelCapability,
-    NicCapability, NicConfiguration, StreamChannelPort, StreamPacketSize,
+    NicCapability, NicConfiguration, StreamChannelPort, StreamPacketSize, XmlFileLocation,
 };
 
 use std::{convert::TryInto, net::Ipv4Addr, time};
@@ -386,10 +386,10 @@ impl ManifestHeader {
         Ok(Self(inner))
     }
 
-    pub fn entries<'a, Ctrl: DeviceControl + ?Sized>(
+    pub fn entries<Ctrl: DeviceControl + ?Sized>(
         self,
-        device: &'a mut Ctrl,
-    ) -> impl Iterator<Item = ControlResult<ManifestEntry>> + 'a {
+        device: &mut Ctrl,
+    ) -> impl Iterator<Item = ControlResult<ManifestEntry>> + '_ {
         (0..self.0.entry_num()).into_iter().map(move |id| {
             let entry_reg = bootstrap::manifest_entry(id);
             let inner = register_map::ManifestEntry::from_raw(read_reg(device, entry_reg)?);
