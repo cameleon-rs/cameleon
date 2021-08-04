@@ -28,6 +28,7 @@ cameleon-device = { path = "../device", version = "0.1.1" }
 cameleon-genapi = { path = "../genapi", version = "0.1.1" }
 cameleon-impl = { path = "../impl", version = "0.1.0" }
 anyhow = "1.0.40"
+ureq = "2.1"
 
 [dev-dependencies]
 trybuild = "1.0.42"
