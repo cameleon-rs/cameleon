@@ -229,7 +229,7 @@ impl DeviceControl for ControlHandleInner {
         self.is_opened
     }
 
-    fn read(&mut self, mut address: u64, buf: &mut [u8]) -> ControlResult<()> {
+    fn read_mem(&mut self, mut address: u64, buf: &mut [u8]) -> ControlResult<()> {
         let capability = self.capability.ok_or(ControlError::NotOpened)?;
         if buf.len() == 4 || !capability.is_write_mem_supported() {
             return self.read_reg_fallback(address, buf);
@@ -274,7 +274,7 @@ impl DeviceControl for ControlHandleInner {
             .map(|v| *v)))
     }
 
-    fn write(&mut self, mut address: u64, data: &[u8]) -> ControlResult<()> {
+    fn write_mem(&mut self, mut address: u64, data: &[u8]) -> ControlResult<()> {
         let capability = self.capability.ok_or(ControlError::NotOpened)?;
         if data.len() == 4 || !capability.is_write_mem_supported() {
             return self.write_reg_fallback(address, data);
@@ -355,7 +355,7 @@ impl DeviceControl for ControlHandleInner {
                 // Store current capacity so that we can set back it after XML retrieval because this needs exceptional large size of internal buffer.
                 let current_capacity = self.buffer_capacity();
                 let mut buf = vec![0; size as usize];
-                unwrap_or_log!(self.read(address, &mut buf));
+                unwrap_or_log!(self.read_mem(address, &mut buf));
                 self.resize_buffer(current_capacity);
                 (buf, compression_type)
             }

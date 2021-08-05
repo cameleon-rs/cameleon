@@ -434,7 +434,7 @@ where
                 "invalid address: the given address has negative value".into(),
             )
         })?;
-        Ok(self.inner.read(address, data)?)
+        Ok(self.inner.read_mem(address, data)?)
     }
 
     fn write_mem(
@@ -447,6 +447,6 @@ where
                 "invalid address: the given address has negative value".into(),
             )
         })?;
-        Ok(self.inner.write(address, data)?)
+        Ok(self.inner.write_mem(address, data)?)
     }
 }

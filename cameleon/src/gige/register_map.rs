@@ -446,7 +446,7 @@ where
     T: BytesConvertible,
 {
     let mut buf = vec![0; register.0 as usize];
-    device.read(register.0 as u64, &mut buf)?;
+    device.read_mem(register.0 as u64, &mut buf)?;
     buf.as_slice().read_bytes_be().map_err(Into::into)
 }
 
@@ -457,5 +457,5 @@ where
 {
     let mut buf = vec![0; register.0 as usize];
     buf.write_bytes_be(data)?;
-    device.write(register.0 as u64, &buf)
+    device.write_mem(register.0 as u64, &buf)
 }
