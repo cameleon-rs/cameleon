@@ -4,6 +4,7 @@
 
 pub mod control_handle;
 pub mod register_map;
+pub mod stream_handle;
 
 use cameleon_device::gige;
 
