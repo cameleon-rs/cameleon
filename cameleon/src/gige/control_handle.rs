@@ -2,9 +2,16 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-use std::{convert::TryInto, io::Read, time};
+use std::{
+    convert::TryInto,
+    io::Read,
+    sync::{Arc, Mutex},
+    thread, time,
+};
 
-use async_std::{future, net::UdpSocket, task};
+use async_std::{channel, future, net::UdpSocket, task};
+use futures_channel::oneshot;
+use futures_util::{select, FutureExt};
 
 use cameleon_device::gige::protocol::{ack, cmd};
 
@@ -12,7 +19,122 @@ use crate::{
     genapi::CompressionType, utils::unzip_genxml, ControlError, ControlResult, DeviceControl,
 };
 
+use tracing::{debug, error};
+
 use super::register_map::{Bootstrap, ControlChannelPriviledge, GvcpCapability, XmlFileLocation};
+
+pub struct ControlHandle {
+    inner: Arc<Mutex<ControlHandleInner>>,
+    event_tx: Option<channel::Sender<HeartbeatEvent>>,
+    completion_rx: Option<oneshot::Receiver<()>>,
+}
+
+impl ControlHandle {
+    pub fn set_heartbeat_timeout(&mut self, timeout: time::Duration) -> ControlResult<()> {
+        unwrap_or_log!(Bootstrap::new().set_heartbeat_timeout(self, timeout));
+        self.event_tx
+            .as_ref()
+            .map(|tx| tx.try_send(HeartbeatEvent::TimeoutChanged(timeout)));
+
+        Ok(())
+    }
+}
+
+impl DeviceControl for ControlHandle {
+    fn open(&mut self) -> ControlResult<()> {
+        let (timeout, need_heartbeat) = {
+            let mut inner = self.inner.lock().unwrap();
+            unwrap_or_log!(inner.open());
+
+            let timeout = unwrap_or_log!(Bootstrap::new().heartbeat_timeout(&mut *inner));
+            let need_heartbeat = matches!(
+                inner.config.open_mode,
+                OpenMode::Exclusive | OpenMode::Control
+            );
+            (timeout, need_heartbeat)
+        };
+
+        let (event_tx, event_rx) = channel::unbounded();
+        let (completion_tx, completion_rx) = oneshot::channel();
+        let heartbeat_loop = HeartbeatLoop {
+            inner: self.inner.clone(),
+            timeout,
+            event_rx,
+            need_heartbeat,
+        };
+
+        self.event_tx = Some(event_tx);
+        self.completion_rx = Some(completion_rx);
+
+        thread::spawn(|| task::block_on(heartbeat_loop.run(completion_tx)));
+        Ok(())
+    }
+
+    fn close(&mut self) -> ControlResult<()> {
+        match (self.event_tx.take(), self.completion_rx.take()) {
+            (Some(event_tx), Some(completion_rx)) => {
+                event_tx.try_send(HeartbeatEvent::ChannelClosed).unwrap();
+                task::block_on(completion_rx).ok();
+            }
+            (None, None) => {}
+            _ => unreachable!(),
+        }
+
+        unwrap_or_log!(self.inner.lock().unwrap().close());
+        Ok(())
+    }
+
+    fn is_opened(&self) -> bool {
+        self.inner.lock().unwrap().is_opened()
+    }
+
+    fn read_mem(&mut self, address: u64, buf: &mut [u8]) -> ControlResult<()> {
+        let mut inner = self.inner.lock().unwrap();
+        unwrap_or_log!(assert_open(&mut *inner));
+        unwrap_or_log!(inner.read_mem(address, buf));
+        Ok(())
+    }
+
+    fn read_reg(&mut self, address: u64) -> ControlResult<[u8; 4]> {
+        let mut inner = self.inner.lock().unwrap();
+        unwrap_or_log!(assert_open(&mut *inner));
+        Ok(unwrap_or_log!(inner.read_reg(address)))
+    }
+
+    fn write_mem(&mut self, address: u64, data: &[u8]) -> ControlResult<()> {
+        let mut inner = self.inner.lock().unwrap();
+        unwrap_or_log!(assert_open(&mut *inner));
+        unwrap_or_log!(inner.write_mem(address, data));
+        Ok(())
+    }
+
+    fn write_reg(&mut self, address: u64, data: [u8; 4]) -> ControlResult<()> {
+        let mut inner = self.inner.lock().unwrap();
+        unwrap_or_log!(assert_open(&mut *inner));
+        unwrap_or_log!(inner.write_reg(address, data));
+        Ok(())
+    }
+
+    fn genapi(&mut self) -> ControlResult<String> {
+        let mut inner = self.inner.lock().unwrap();
+        unwrap_or_log!(assert_open(&mut *inner));
+        Ok(unwrap_or_log!(inner.genapi()))
+    }
+
+    fn enable_streaming(&mut self) -> ControlResult<()> {
+        let mut inner = self.inner.lock().unwrap();
+        unwrap_or_log!(assert_open(&mut *inner));
+        unwrap_or_log!(inner.enable_streaming());
+        Ok(())
+    }
+
+    fn disable_streaming(&mut self) -> ControlResult<()> {
+        let mut inner = self.inner.lock().unwrap();
+        unwrap_or_log!(assert_open(&mut *inner));
+        unwrap_or_log!(inner.disable_streaming());
+        Ok(())
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OpenMode {
@@ -21,62 +143,36 @@ pub enum OpenMode {
     MonitorAccess,
 }
 
-#[derive(Debug)]
-pub struct ControlHandleInner {
-    sock: UdpSocket,
-    is_opened: bool,
-    config: ConnectionConfig,
-    next_req_id: u16,
-    buffer: Vec<u8>,
-    capability: Option<GvcpCapability>,
-}
-
 macro_rules! align {
     ($data:expr) => {
         ($data + 3) & !0b11
     };
 }
 
+#[derive(Debug)]
+struct ControlHandleInner {
+    sock: UdpSocket,
+    config: ConnectionConfig,
+    next_req_id: u16,
+    buffer: Vec<u8>,
+    capability: Option<GvcpCapability>,
+    is_opened: bool,
+}
+
 impl ControlHandleInner {
-    /// Sets [`OpenMode`] of the handle. Default is [`OpenMode::Exclusive`].
-    pub fn set_open_mode(&mut self, mode: OpenMode) {
-        self.config.open_mode = mode;
-    }
-
-    pub fn open_mode(&self) -> OpenMode {
-        self.config.open_mode
-    }
-
-    /// Sets timeout duration of each transaction.
-    pub fn set_timeout(&mut self, timeout: time::Duration) {
-        self.config.timeout = timeout;
-    }
-
-    pub fn timeout(&self) -> time::Duration {
-        self.config.timeout
-    }
-
     /// Capacity of the buffer, the buffer is used for
     /// serializing/deserializing packet. This buffer automatically extend according to packet
     /// length.
-    pub fn buffer_capacity(&self) -> usize {
+    fn buffer_capacity(&self) -> usize {
         self.buffer.capacity()
     }
 
     /// Resize the capacity of the buffer, the buffer is used for
     /// serializing/deserializing packet. This buffer automatically extend according to packet
     /// length.
-    pub fn resize_buffer(&mut self, size: usize) {
+    fn resize_buffer(&mut self, size: usize) {
         self.buffer.resize(size, 0);
         self.buffer.shrink_to_fit();
-    }
-
-    fn assert_open(&self) -> ControlResult<()> {
-        if self.is_opened() {
-            Ok(())
-        } else {
-            Err(ControlError::NotOpened)
-        }
     }
 
     fn read_reg_fallback(&mut self, mut address: u64, buf: &mut [u8]) -> ControlResult<()> {
@@ -111,7 +207,6 @@ impl ControlHandleInner {
         T: cmd::CommandData,
         U: ack::ParseAckData<'a>,
     {
-        unwrap_or_log!(self.assert_open());
         let cmd = cmd.finalize(self.next_req_id);
         let cmd_len = cmd.length() as usize;
         cmd.serialize(self.buffer.as_mut_slice())?;
@@ -164,14 +259,24 @@ impl ControlHandleInner {
         Ok(())
     }
 
+    fn capability(&mut self) -> ControlResult<GvcpCapability> {
+        if let Some(capability) = self.capability {
+            Ok(capability)
+        } else {
+            let capability = Bootstrap::new().gvcp_capability(self)?;
+            self.capability = Some(capability);
+            Ok(capability)
+        }
+    }
+
     pub async fn send(&self, len: usize) -> ControlResult<usize> {
-        timeout(self.timeout(), self.sock.send(&self.buffer[..len]))
+        timeout(self.config.timeout, self.sock.send(&self.buffer[..len]))
             .await?
             .map_err(Into::into)
     }
 
     pub async fn recv(&mut self) -> ControlResult<usize> {
-        timeout(self.timeout(), self.sock.recv(&mut self.buffer))
+        timeout(self.config.timeout, self.sock.recv(&mut self.buffer))
             .await?
             .map_err(Into::into)
     }
@@ -179,10 +284,6 @@ impl ControlHandleInner {
 
 impl DeviceControl for ControlHandleInner {
     fn open(&mut self) -> ControlResult<()> {
-        if self.is_opened() {
-            return Ok(());
-        }
-
         let bs = Bootstrap::new();
         match self.config.open_mode {
             OpenMode::Exclusive => {
@@ -208,10 +309,6 @@ impl DeviceControl for ControlHandleInner {
     }
 
     fn close(&mut self) -> ControlResult<()> {
-        if !self.is_opened() {
-            return Ok(());
-        }
-
         match self.config.open_mode {
             OpenMode::Exclusive | OpenMode::Control => {
                 let bs = Bootstrap::new();
@@ -230,7 +327,7 @@ impl DeviceControl for ControlHandleInner {
     }
 
     fn read_mem(&mut self, mut address: u64, buf: &mut [u8]) -> ControlResult<()> {
-        let capability = self.capability.ok_or(ControlError::NotOpened)?;
+        let capability = self.capability()?;
         if buf.len() == 4 || !capability.is_write_mem_supported() {
             return self.read_reg_fallback(address, buf);
         }
@@ -245,8 +342,8 @@ impl DeviceControl for ControlHandleInner {
             let read_len = buf_chunk.len() as u16;
             let aligned_read_len = align!(read_len);
 
-            let cmd = unwrap_or_log!(cmd::ReadMem::new(target_addr, aligned_read_len));
-            let ack: ack::ReadMem = unwrap_or_log!(task::block_on(self.send_cmd(cmd)));
+            let cmd = cmd::ReadMem::new(target_addr, aligned_read_len)?;
+            let ack: ack::ReadMem = task::block_on(self.send_cmd(cmd))?;
             buf_chunk.copy_from_slice(&ack.data()[..read_len as usize]);
 
             address += read_len as u64;
@@ -263,19 +360,16 @@ impl DeviceControl for ControlHandleInner {
         })?;
 
         let mut cmd = cmd::ReadReg::new();
-        unwrap_or_log!(cmd.add_entry(address));
-        let ack: ack::ReadReg = unwrap_or_log!(task::block_on(self.send_cmd(cmd)));
-        Ok(unwrap_or_log!(ack
-            .iter()
+        cmd.add_entry(address)?;
+        let ack: ack::ReadReg = task::block_on(self.send_cmd(cmd))?;
+        ack.iter()
             .next()
-            .ok_or_else(|| {
-                ControlError::Io(anyhow::Error::msg("no entry in `ReadReg` ack packet"))
-            })
-            .map(|v| *v)))
+            .ok_or_else(|| ControlError::Io(anyhow::Error::msg("no entry in `ReadReg` ack packet")))
+            .map(|v| *v)
     }
 
     fn write_mem(&mut self, mut address: u64, data: &[u8]) -> ControlResult<()> {
-        let capability = self.capability.ok_or(ControlError::NotOpened)?;
+        let capability = self.capability()?;
         if data.len() == 4 || !capability.is_write_mem_supported() {
             return self.write_reg_fallback(address, data);
         }
@@ -290,13 +384,13 @@ impl DeviceControl for ControlHandleInner {
             let aligned_data_len = align!(data_chunk.len());
 
             let _: ack::WriteMem = if aligned_data_len == data_chunk.len() {
-                let cmd = unwrap_or_log!(cmd::WriteMem::new(target_addr, data_chunk));
-                unwrap_or_log!(task::block_on(self.send_cmd(cmd)))
+                let cmd = cmd::WriteMem::new(target_addr, data_chunk)?;
+                task::block_on(self.send_cmd(cmd))?
             } else {
                 let mut aligned_data = vec![0; aligned_data_len];
                 aligned_data[..data_chunk.len()].copy_from_slice(data_chunk);
-                let cmd = unwrap_or_log!(cmd::WriteMem::new(target_addr, &aligned_data));
-                unwrap_or_log!(task::block_on(self.send_cmd(cmd)))
+                let cmd = cmd::WriteMem::new(target_addr, &aligned_data)?;
+                task::block_on(self.send_cmd(cmd))?
             };
 
             address += aligned_data_len as u64;
@@ -313,20 +407,20 @@ impl DeviceControl for ControlHandleInner {
         })?;
 
         let mut cmd = cmd::WriteReg::new();
-        unwrap_or_log!(cmd.add_entry(unwrap_or_log!(cmd::WriteRegEntry::new(address, data))));
-        let ack: ack::WriteReg = unwrap_or_log!(task::block_on(self.send_cmd(cmd)));
+        cmd.add_entry(cmd::WriteRegEntry::new(address, data)?)?;
+        let ack: ack::WriteReg = task::block_on(self.send_cmd(cmd))?;
 
         if ack.entry_num() == 1 {
             Ok(())
         } else {
-            unwrap_or_log!(Err(ControlError::Io(anyhow::Error::msg(
-                "`WriteReg` failed: written entry num mismatch"
-            ))))
+            Err(ControlError::Io(anyhow::Error::msg(
+                "`WriteReg` failed: written entry num mismatch",
+            )))
         }
     }
 
     fn genapi(&mut self) -> ControlResult<String> {
-        let capability = self.capability.ok_or(ControlError::NotOpened)?;
+        let capability = self.capability()?;
         let bs = Bootstrap::new();
 
         let url_string = if !capability.is_manifest_table_supported() {
@@ -355,7 +449,7 @@ impl DeviceControl for ControlHandleInner {
                 // Store current capacity so that we can set back it after XML retrieval because this needs exceptional large size of internal buffer.
                 let current_capacity = self.buffer_capacity();
                 let mut buf = vec![0; size as usize];
-                unwrap_or_log!(self.read_mem(address, &mut buf));
+                self.read_mem(address, &mut buf)?;
                 self.resize_buffer(current_capacity);
                 (buf, compression_type)
             }
@@ -365,11 +459,10 @@ impl DeviceControl for ControlHandleInner {
                 compression_type,
             } => {
                 let request = ureq::get(&url);
-                let response =
-                    unwrap_or_log!(request.call().map_err(|err| ControlError::Io(err.into())));
+                let response = request.call().map_err(|err| ControlError::Io(err.into()))?;
                 if response.status() == 200 {
                     let mut buf = vec![];
-                    unwrap_or_log!(response.into_reader().read_to_end(&mut buf));
+                    response.into_reader().read_to_end(&mut buf)?;
                     (buf, compression_type)
                 } else {
                     return Err(ControlError::Io(anyhow::Error::msg(format!(
@@ -388,7 +481,7 @@ impl DeviceControl for ControlHandleInner {
 
         match compression_type {
             CompressionType::Zip => {
-                let xml = unwrap_or_log!(unzip_genxml(xml));
+                let xml = unzip_genxml(xml)?;
                 Ok(String::from_utf8_lossy(&xml).into())
             }
             CompressionType::Uncompressed => Ok(String::from_utf8_lossy(&xml).into()),
@@ -417,6 +510,56 @@ struct ConnectionConfig {
     retry_count: u32,
 }
 
+struct HeartbeatLoop {
+    inner: Arc<Mutex<ControlHandleInner>>,
+    timeout: time::Duration,
+    event_rx: channel::Receiver<HeartbeatEvent>,
+    need_heartbeat: bool,
+}
+
+impl HeartbeatLoop {
+    async fn run(mut self, _completion_tx: oneshot::Sender<()>) {
+        if self.need_heartbeat {
+            loop {
+                select! {
+                    _ = task::sleep(self.timeout / 3).fuse() => {
+                        let bs = Bootstrap::new();
+                        debug!("reset heartbeat counter");
+                        if let Err(err) = bs.control_channel_priviledge(&mut *self.inner.lock().unwrap()) {
+                            error!("failed to reset heartbeat counter: {}", err);
+                        }
+                    }
+                    event = self.event_rx.recv().fuse() => {
+                        match event {
+                            Ok(HeartbeatEvent::TimeoutChanged(timeout)) => self.timeout = timeout,
+                            Ok(HeartbeatEvent::ChannelClosed) => break,
+                            Err(err) => {
+                                error!("failed to receive heartbeat event: {}", err);
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            loop {
+                let event = self.event_rx.recv().await;
+                match event {
+                    Ok(HeartbeatEvent::ChannelClosed) => break,
+                    Ok(_) => {}
+                    Err(err) => {
+                        error!("failed to receive heartbeat event: {}", err);
+                    }
+                }
+            }
+        }
+    }
+}
+
+enum HeartbeatEvent {
+    TimeoutChanged(time::Duration),
+    ChannelClosed,
+}
+
 impl From<async_std::io::Error> for ControlError {
     fn from(err: async_std::io::Error) -> Self {
         ControlError::Io(err.into())
@@ -430,4 +573,11 @@ where
     future::timeout(timeout, f)
         .await
         .map_err(|_| ControlError::Timeout)
+}
+
+fn assert_open<Ctrl: DeviceControl>(device: Ctrl) -> ControlResult<()> {
+    device
+        .is_opened()
+        .then(|| ())
+        .ok_or(ControlError::NotOpened)
 }
