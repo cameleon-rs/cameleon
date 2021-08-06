@@ -19,6 +19,30 @@ macro_rules! unwrap_or_log {
     }};
 }
 
+macro_rules! impl_shared_control_handle {
+    ($(
+            $(#[$meta:meta])*
+            $vis:vis fn $method:ident(&$self:ident $(,$arg:ident: $arg_ty:ty)*) -> $ret_ty:ty),*) => {
+        $(
+            $(#[$meta])*
+            $vis fn $method(&$self, $($arg: $arg_ty),*) -> $ret_ty {
+                $self.0.lock().unwrap().$method($($arg),*)
+            }
+        )*
+    };
+
+    ($(
+            $(#[$meta:meta])*
+            $vis:vis fn $method:ident(&mut $self:ident $(,$arg:ident: $arg_ty:ty)*) -> $ret_ty:ty),*) => {
+        $(
+            $(#[$meta])*
+            $vis fn $method(&mut $self, $($arg: $arg_ty),*) -> $ret_ty {
+                $self.0.lock().unwrap().$method($($arg),*)
+            }
+        )*
+    }
+}
+
 pub(crate) fn unzip_genxml(file: Vec<u8>) -> ControlResult<Vec<u8>> {
     fn zip_err(err: impl std::fmt::Debug) -> ControlError {
         ControlError::InvalidDevice(format!("zipped xml file is broken: {:?}", err).into())

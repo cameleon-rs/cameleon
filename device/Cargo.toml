@@ -19,7 +19,8 @@ log = "0.4.14"
 semver = "1.0.0"
 async-std = { version = "1.9.0", features = ["unstable"] }
 const_format = "0.2.14"
-futures = "0.3.14"
+futures-channel = "0.3.16"
+futures-util = { version = "0.3.16", features = ["async-await"] }
 lazy_static = "1.4.0"
 rand = "0.8.3"
 cfg-if = "1.0.0"
