@@ -23,13 +23,40 @@ use tracing::{debug, error};
 
 use super::register_map::{Bootstrap, ControlChannelPriviledge, GvcpCapability, XmlFileLocation};
 
+const GVCP_DEFAULT_PORT: u16 = 3956;
+
+/// Initial timeout duration for transaction between device and host.
+/// This value is temporarily used until the device's bootstrap register value is read in
+/// [`Device::Open`]
+const INITIAL_TIMEOUT_DURATION: time::Duration = time::Duration::from_millis(500);
+
+/// Default maximum retry count which determines how many times to retry when
+/// pending acknowledge is returned from the device.
+const DEFAULT_RETRY_COUNT: u16 = 3;
+
+const GVCP_BUFFER_SIZE: usize = 1024;
+
+pub type DeviceInfo = ack::Discovery;
+
 pub struct ControlHandle {
     inner: Arc<Mutex<ControlHandleInner>>,
     event_tx: Option<channel::Sender<HeartbeatEvent>>,
     completion_rx: Option<oneshot::Receiver<()>>,
+    info: DeviceInfo,
 }
 
 impl ControlHandle {
+    pub fn new(info: DeviceInfo) -> ControlResult<Self> {
+        let inner = Arc::new(Mutex::new(task::block_on(ControlHandleInner::new(&info))?));
+
+        Ok(Self {
+            inner,
+            event_tx: None,
+            completion_rx: None,
+            info,
+        })
+    }
+
     pub fn set_heartbeat_timeout(&mut self, timeout: time::Duration) -> ControlResult<()> {
         unwrap_or_log!(Bootstrap::new().set_heartbeat_timeout(self, timeout));
         self.event_tx
@@ -38,27 +65,35 @@ impl ControlHandle {
 
         Ok(())
     }
+
+    pub fn device_info(&self) -> &DeviceInfo {
+        &self.info
+    }
+
+    pub fn bootstrap_register(&self) -> Bootstrap {
+        Bootstrap::new()
+    }
 }
 
 impl DeviceControl for ControlHandle {
     fn open(&mut self) -> ControlResult<()> {
-        let (timeout, need_heartbeat) = {
+        let (heartbeat_timeout, need_heartbeat) = {
             let mut inner = self.inner.lock().unwrap();
             unwrap_or_log!(inner.open());
 
-            let timeout = unwrap_or_log!(Bootstrap::new().heartbeat_timeout(&mut *inner));
+            let heartbeat_timeout = unwrap_or_log!(Bootstrap::new().heartbeat_timeout(&mut *inner));
             let need_heartbeat = matches!(
                 inner.config.open_mode,
                 OpenMode::Exclusive | OpenMode::Control
             );
-            (timeout, need_heartbeat)
+            (heartbeat_timeout, need_heartbeat)
         };
 
         let (event_tx, event_rx) = channel::unbounded();
         let (completion_tx, completion_rx) = oneshot::channel();
         let heartbeat_loop = HeartbeatLoop {
             inner: self.inner.clone(),
-            timeout,
+            timeout: heartbeat_timeout,
             event_rx,
             need_heartbeat,
         };
@@ -143,6 +178,12 @@ pub enum OpenMode {
     MonitorAccess,
 }
 
+impl Default for OpenMode {
+    fn default() -> Self {
+        OpenMode::Exclusive
+    }
+}
+
 macro_rules! align {
     ($data:expr) => {
         ($data + 3) & !0b11
@@ -160,19 +201,23 @@ struct ControlHandleInner {
 }
 
 impl ControlHandleInner {
-    /// Capacity of the buffer, the buffer is used for
-    /// serializing/deserializing packet. This buffer automatically extend according to packet
-    /// length.
-    fn buffer_capacity(&self) -> usize {
-        self.buffer.capacity()
-    }
+    async fn new(info: &DeviceInfo) -> ControlResult<Self> {
+        let sock = UdpSocket::bind("0.0.0.0:0")
+            .await
+            .map_err(|err| ControlError::Io(err.into()))?;
+        let peer_ip = info.ip;
+        sock.connect((peer_ip, GVCP_DEFAULT_PORT))
+            .await
+            .map_err(|err| ControlError::Io(err.into()))?;
 
-    /// Resize the capacity of the buffer, the buffer is used for
-    /// serializing/deserializing packet. This buffer automatically extend according to packet
-    /// length.
-    fn resize_buffer(&mut self, size: usize) {
-        self.buffer.resize(size, 0);
-        self.buffer.shrink_to_fit();
+        Ok(Self {
+            sock,
+            config: ConnectionConfig::default(),
+            next_req_id: 1,
+            buffer: vec![0; GVCP_BUFFER_SIZE],
+            capability: None,
+            is_opened: false,
+        })
     }
 
     fn read_reg_fallback(&mut self, mut address: u64, buf: &mut [u8]) -> ControlResult<()> {
@@ -213,9 +258,7 @@ impl ControlHandleInner {
 
         self.send(cmd_len).await?;
 
-        self.recv().await?;
         let mut retry_count = self.config.retry_count;
-
         loop {
             self.recv().await?;
             let ack = ack::AckPacket::parse(&self.buffer)?;
@@ -234,12 +277,24 @@ impl ControlHandleInner {
                 continue;
             }
 
-            self.next_req_id += 1;
+            self.next_req_id = self.next_req_id.checked_add(1).unwrap_or(1);
             break;
         }
 
         ack::AckPacket::parse(&self.buffer)?
             .ack_data_as()
+            .map_err(Into::into)
+    }
+
+    async fn send(&self, len: usize) -> ControlResult<usize> {
+        timeout(self.config.timeout, self.sock.send(&self.buffer[..len]))
+            .await?
+            .map_err(Into::into)
+    }
+
+    async fn recv(&mut self) -> ControlResult<usize> {
+        timeout(self.config.timeout, self.sock.recv(&mut self.buffer))
+            .await?
             .map_err(Into::into)
     }
 
@@ -268,18 +323,6 @@ impl ControlHandleInner {
             Ok(capability)
         }
     }
-
-    pub async fn send(&self, len: usize) -> ControlResult<usize> {
-        timeout(self.config.timeout, self.sock.send(&self.buffer[..len]))
-            .await?
-            .map_err(Into::into)
-    }
-
-    pub async fn recv(&mut self) -> ControlResult<usize> {
-        timeout(self.config.timeout, self.sock.recv(&mut self.buffer))
-            .await?
-            .map_err(Into::into)
-    }
 }
 
 impl DeviceControl for ControlHandleInner {
@@ -302,6 +345,11 @@ impl DeviceControl for ControlHandleInner {
                     return Err(ControlError::Busy);
                 }
             }
+        }
+        let capability = bs.gvcp_capability(self)?;
+        if capability.is_pending_ack_supported() {
+            let timeout = bs.pending_timeout(self)?;
+            self.config.timeout = timeout;
         }
 
         self.is_opened = true;
@@ -446,11 +494,8 @@ impl DeviceControl for ControlHandleInner {
                 compression_type,
                 ..
             } => {
-                // Store current capacity so that we can set back it after XML retrieval because this needs exceptional large size of internal buffer.
-                let current_capacity = self.buffer_capacity();
                 let mut buf = vec![0; size as usize];
                 self.read_mem(address, &mut buf)?;
-                self.resize_buffer(current_capacity);
                 (buf, compression_type)
             }
 
@@ -507,7 +552,17 @@ struct ConnectionConfig {
 
     /// The value determines how many times to retry when pending acknowledge is returned from the
     /// device.
-    retry_count: u32,
+    retry_count: u16,
+}
+
+impl Default for ConnectionConfig {
+    fn default() -> Self {
+        Self {
+            open_mode: OpenMode::default(),
+            timeout: INITIAL_TIMEOUT_DURATION,
+            retry_count: DEFAULT_RETRY_COUNT,
+        }
+    }
 }
 
 struct HeartbeatLoop {

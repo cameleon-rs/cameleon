@@ -382,7 +382,7 @@ pub struct ManifestHeader(register_map::ManifestHeader);
 impl ManifestHeader {
     fn new<Ctrl: DeviceControl + ?Sized>(device: &mut Ctrl) -> ControlResult<Self> {
         let inner =
-            register_map::ManifestHeader::from_raw(read_reg(device, bootstrap::MANIFEST_HEADER)?);
+            register_map::ManifestHeader::from_raw(read_mem(device, bootstrap::MANIFEST_HEADER)?);
         Ok(Self(inner))
     }
 
@@ -392,7 +392,7 @@ impl ManifestHeader {
     ) -> impl Iterator<Item = ControlResult<ManifestEntry>> + '_ {
         (0..self.0.entry_num()).into_iter().map(move |id| {
             let entry_reg = bootstrap::manifest_entry(id);
-            let inner = register_map::ManifestEntry::from_raw(read_reg(device, entry_reg)?);
+            let inner = register_map::ManifestEntry::from_raw(read_mem(device, entry_reg)?);
             Ok(ManifestEntry(inner))
         })
     }
@@ -445,7 +445,7 @@ where
     Ctrl: DeviceControl + ?Sized,
     T: BytesConvertible,
 {
-    let mut buf = vec![0; register.0 as usize];
+    let mut buf = vec![0; register.1 as usize];
     device.read_mem(register.0 as u64, &mut buf)?;
     buf.as_slice().read_bytes_be().map_err(Into::into)
 }
