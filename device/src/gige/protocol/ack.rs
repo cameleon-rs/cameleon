@@ -49,7 +49,7 @@ impl<'a> AckPacket<'a> {
     }
 
     pub fn ack_data_as<T: ParseAckData<'a>>(&self) -> Result<T> {
-        T::parse(&self.raw_ack_data, &self.header)
+        T::parse(self.raw_ack_data, &self.header)
     }
 
     pub fn raw_ack_data(&self) -> &[u8] {
