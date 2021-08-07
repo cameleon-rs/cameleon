@@ -222,7 +222,7 @@ impl WriteRegEntry {
     }
 
     const fn length() -> u16 {
-        64
+        8
     }
 
     fn serialize(&self, mut buf: impl io::Write) -> Result<()> {
@@ -306,17 +306,15 @@ pub struct ReadMem {
 
 impl ReadMem {
     pub fn new(address: u32, length: u16) -> Result<Self> {
-        const MAXIMUM_READ_LENGTH: u16 = 536;
-
         if address % 4 != 0 && length % 4 != 0 {
             Err(Error::InvalidPacket(
                 "address and length fields of `ReadMem` command must be a multiple of 4".into(),
             ))
-        } else if length > MAXIMUM_READ_LENGTH {
+        } else if length > Self::maximum_read_length() as u16 {
             Err(Error::InvalidPacket(
                 format!(
                     "length must be smaller or equal than {}",
-                    MAXIMUM_READ_LENGTH
+                    Self::maximum_read_length()
                 )
                 .into(),
             ))
@@ -340,11 +338,12 @@ impl CommandData for ReadMem {
     }
 
     fn length(&self) -> u16 {
-        6
+        8
     }
 
     fn serialize(&self, mut buf: impl io::Write) -> Result<()> {
         buf.write_bytes_be(self.address)?;
+        buf.write_bytes_be(0_u16)?;
         buf.write_bytes_be(self.length)?;
         Ok(())
     }

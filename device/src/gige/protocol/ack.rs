@@ -447,7 +447,7 @@ impl<'a> ParseAckData<'a> for ReadMem<'a> {
         }
         let address = raw_data.read_bytes_be()?;
 
-        let data_length = header.length as usize - 32;
+        let data_length = header.length as usize - 4;
         Ok(Self {
             address,
             data: &raw_data[..data_length],
