@@ -37,6 +37,10 @@ const INITIAL_MAXIMUM_CMD_LENGTH: u32 = 128;
 /// This value is temporarily used until the device's bootstrap register value is read.
 const INITIAL_MAXIMUM_ACK_LENGTH: u32 = 128;
 
+/// Default maximum retry count which determines how many times to retry when
+/// pending acknowledge is returned from the device.
+const DEFAULT_RETRY_COUNT: u16 = 3;
+
 const PAYLOAD_TRANSFER_SIZE: u32 = 1024 * 64;
 
 /// This handle provides low level API to read and write data from the device.  
@@ -566,7 +570,7 @@ impl Default for ConnectionConfig {
     fn default() -> Self {
         Self {
             timeout_duration: INITIAL_TIMEOUT_DURATION,
-            retry_count: 3,
+            retry_count: INITIAL_RETRY_COUNT,
             maximum_cmd_length: INITIAL_MAXIMUM_CMD_LENGTH,
             maximum_ack_length: INITIAL_MAXIMUM_ACK_LENGTH,
         }
