@@ -1,8 +1,13 @@
-use std::io;
+// TODO:
+#![allow(unused)]
+use std::{convert::TryInto, io};
 
 use cameleon_impl::{bit_op::BitOp, bytes_io::ReadBytes};
 
-use crate::gige::{Error, Result};
+use crate::{
+    gige::{Error, Result},
+    PixelFormat,
+};
 
 use super::PacketStatus;
 
@@ -121,5 +126,97 @@ impl PayloadType {
 
     pub fn is_extended_chunk(self) -> bool {
         self.0.is_set(1)
+    }
+
+    fn parse(cursor: &mut io::Cursor<&[u8]>) -> Result<Self> {
+        cursor.read_bytes_be().map(Self).map_err(Into::into)
+    }
+}
+
+pub struct ImageLeader {
+    field_id: u8,
+    field_count: u8,
+    payload_type: PayloadType,
+    timestamp: u64,
+    pixel_format: PixelFormat,
+    width: u32,
+    height: u32,
+    x_offset: u32,
+    y_offset: u32,
+    x_padding: u16,
+    y_padding: u16,
+}
+
+impl ImageLeader {
+    pub fn field_id(&self) -> u8 {
+        self.field_id
+    }
+
+    pub fn field_count(&self) -> u8 {
+        self.field_count
+    }
+
+    pub fn payload_type(&self) -> PayloadType {
+        self.payload_type
+    }
+
+    pub fn timestamp(&self) -> u64 {
+        self.timestamp
+    }
+
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    pub fn height(&self) -> u32 {
+        self.height
+    }
+
+    pub fn x_offset(&self) -> u32 {
+        self.x_offset
+    }
+
+    pub fn y_offset(&self) -> u32 {
+        self.y_offset
+    }
+
+    pub fn x_padding(&self) -> u16 {
+        self.x_padding
+    }
+
+    pub fn y_padding(&self) -> u16 {
+        self.y_padding
+    }
+
+    fn parse(cursor: &mut io::Cursor<&[u8]>) -> Result<Self> {
+        let field: u8 = cursor.read_bytes_be()?;
+        let field_id = field >> 4;
+        let field_count = field & 0x0f;
+        let _reserved: u8 = cursor.read_bytes_be()?;
+        let payload_type = PayloadType::parse(cursor)?;
+        let timestamp = cursor.read_bytes_be()?;
+        let pixel_format = cursor
+            .read_bytes_be::<u32>()?
+            .try_into()
+            .map_err(|e: String| Error::InvalidPacket(e.into()))?;
+        let width = cursor.read_bytes_be()?;
+        let height = cursor.read_bytes_be()?;
+        let x_offset = cursor.read_bytes_be()?;
+        let y_offset = cursor.read_bytes_be()?;
+        let x_padding = cursor.read_bytes_be()?;
+        let y_padding = cursor.read_bytes_be()?;
+        Ok(Self {
+            field_id,
+            field_count,
+            payload_type,
+            timestamp,
+            pixel_format,
+            width,
+            height,
+            x_offset,
+            y_offset,
+            x_padding,
+            y_padding,
+        })
     }
 }
