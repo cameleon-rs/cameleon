@@ -570,7 +570,7 @@ impl Default for ConnectionConfig {
     fn default() -> Self {
         Self {
             timeout_duration: INITIAL_TIMEOUT_DURATION,
-            retry_count: INITIAL_RETRY_COUNT,
+            retry_count: DEFAULT_RETRY_COUNT,
             maximum_cmd_length: INITIAL_MAXIMUM_CMD_LENGTH,
             maximum_ack_length: INITIAL_MAXIMUM_ACK_LENGTH,
         }
