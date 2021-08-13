@@ -87,3 +87,39 @@ impl StreamFlag {
         self.0.is_set(15)
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PayloadType(u16);
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PayloadTypeKind {
+    Image,
+    RawData,
+    File,
+    ChunkData,
+    Jpeg,
+    Jpeg2000,
+    H264,
+    MultiZone,
+    DeviceSpecific(u16),
+}
+
+impl PayloadType {
+    pub fn kind(self) -> PayloadTypeKind {
+        match self.0 & 0x000f {
+            1 => PayloadTypeKind::Image,
+            2 => PayloadTypeKind::RawData,
+            3 => PayloadTypeKind::File,
+            4 => PayloadTypeKind::ChunkData,
+            6 => PayloadTypeKind::Jpeg,
+            7 => PayloadTypeKind::Jpeg2000,
+            8 => PayloadTypeKind::H264,
+            9 => PayloadTypeKind::MultiZone,
+            _ => PayloadTypeKind::DeviceSpecific(self.0),
+        }
+    }
+
+    pub fn is_extended_chunk(self) -> bool {
+        self.0.is_set(1)
+    }
+}
