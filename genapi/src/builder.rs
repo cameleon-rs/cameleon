@@ -11,20 +11,11 @@ use super::{
     RegisterDescription, ValueCtxt,
 };
 
+#[derive(Default)]
 pub struct GenApiBuilder<T = DefaultNodeStore, U = DefaultValueStore, S = DefaultCacheStore> {
     node_store: T,
     value_store: U,
     cache_store: S,
-}
-
-impl Default for GenApiBuilder {
-    fn default() -> Self {
-        Self {
-            node_store: DefaultNodeStore::default(),
-            value_store: DefaultValueStore::default(),
-            cache_store: DefaultCacheStore::default(),
-        }
-    }
 }
 
 pub type BuildResult<T, U, S> = parser::ParseResult<(RegisterDescription, T, ValueCtxt<U, S>)>;
