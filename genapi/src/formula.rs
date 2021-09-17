@@ -722,7 +722,7 @@ impl<'a> Lexer<'a> {
                 } else {
                     let start_pos = self.cur - 1;
                     let mut is_integer = true;
-                    let mut check_digit = |c : char| {
+                    let mut check_digit = |c: char| {
                         if c == '.' {
                             is_integer = false;
                             true

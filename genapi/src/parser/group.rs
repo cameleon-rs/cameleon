@@ -6,10 +6,7 @@ use tracing::debug;
 
 use crate::builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder};
 
-use super::{
-    elem_name::{GROUP},
-    xml, NodeData, Parse,
-};
+use super::{elem_name::GROUP, xml, NodeData, Parse};
 
 #[derive(Debug, Clone)]
 pub(super) struct GroupNode {
@@ -61,7 +58,6 @@ mod tests {
 
         let (node, ..): (GroupNode, _, _, _) = parse_default(xml);
 
-        assert_eq!(node.comment, "Nothing to say");
         assert_eq!(node.nodes.len(), 2);
     }
 }
