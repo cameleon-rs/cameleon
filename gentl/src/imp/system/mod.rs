@@ -272,7 +272,7 @@ impl Port for SystemModule {
     }
 
     fn write(&mut self, address: u64, data: &[u8]) -> GenTlResult<usize> {
-        self.vm.write_raw(address as usize, &data)?;
+        self.vm.write_raw(address as usize, data)?;
 
         self.handle_events()?;
 

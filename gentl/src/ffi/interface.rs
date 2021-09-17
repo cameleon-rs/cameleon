@@ -32,7 +32,7 @@ impl<'a> std::ops::Deref for InterfaceModuleRef<'a> {
     type Target = Mutex<dyn imp::interface::Interface>;
 
     fn deref(&self) -> &Self::Target {
-        &self.inner
+        self.inner
     }
 }
 
