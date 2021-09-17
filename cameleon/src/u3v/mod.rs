@@ -56,9 +56,7 @@ pub use cameleon_device::u3v::DeviceInfo;
 
 use cameleon_device::u3v;
 
-use super::{
-    genapi::DefaultGenApiCtxt, CameleonResult, Camera, CameraInfo, ControlError, StreamError,
-};
+use super::{CameleonResult, Camera, CameraInfo, ControlError, StreamError};
 
 /// Enumerate all U3V compatible cameras connected to the host.
 ///
@@ -93,7 +91,7 @@ pub fn enumerate_cameras() -> CameleonResult<Vec<Camera<ControlHandle, StreamHan
             serial_number: dev_info.serial_number,
         };
 
-        let camera: Camera<ControlHandle, StreamHandle, DefaultGenApiCtxt> =
+        let camera: Camera<ControlHandle, StreamHandle> =
             Camera::new(ctrl, strm, ctxt, camera_info);
         cameras.push(camera)
     }
@@ -109,8 +107,8 @@ impl From<u3v::Error> for ControlError {
             NotSupported, Other, Overflow, Pipe, Timeout,
         };
 
-        match &err {
-            LibUsb(libusb_error) => match libusb_error {
+        match err {
+            LibUsb(ref libusb_error) => match libusb_error {
                 Io | InvalidParam | Access | Overflow | Pipe | Interrupted | NoMem
                 | NotSupported | BadDescriptor | Other => ControlError::Io(err.into()),
                 Busy => ControlError::Busy,
@@ -120,7 +118,7 @@ impl From<u3v::Error> for ControlError {
 
             BufferIo(_) | InvalidPacket(_) => ControlError::Io(err.into()),
 
-            InvalidDevice => ControlError::InvalidDevice("invalid device".into()),
+            InvalidDevice(msg) => ControlError::InvalidDevice(msg),
         }
     }
 }

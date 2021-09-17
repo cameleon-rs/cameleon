@@ -61,6 +61,8 @@ pub use cameleon_genapi::{
     GenApiError, RegisterDescription, ValueCtxt,
 };
 
+pub use cameleon_device::CompressionType;
+
 /// Manages context of parameters of the device.
 ///
 /// # Examples
@@ -408,15 +410,6 @@ impl From<DefaultGenApiCtxt> for SharedNoCacheGenApiCtxt {
     }
 }
 
-/// Represents `CompressionType` of `GenICam` XML file on the device's memory.
-#[derive(Debug, Clone, Copy)]
-pub enum CompressionType {
-    /// Uncompressed `GenICam` XML file.
-    Uncompressed,
-    /// ZIP containing a single `GenICam` XML file.
-    Zip,
-}
-
 struct GenApiDevice<'a, T> {
     inner: &'a mut T,
 }
@@ -441,7 +434,7 @@ where
                 "invalid address: the given address has negative value".into(),
             )
         })?;
-        Ok(self.inner.read(address, data)?)
+        Ok(self.inner.read_mem(address, data)?)
     }
 
     fn write_mem(
@@ -454,6 +447,6 @@ where
                 "invalid address: the given address has negative value".into(),
             )
         })?;
-        Ok(self.inner.write(address, data)?)
+        Ok(self.inner.write_mem(address, data)?)
     }
 }

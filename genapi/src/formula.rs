@@ -700,6 +700,7 @@ impl<'a> Lexer<'a> {
             '.' => {
                 let start_pos = self.cur - 1;
                 while self.eat_char(char::is_numeric) {}
+                self.eat_float_exponent();
                 let end_pos = self.cur;
                 let f = f64::from_str(self.sub_string(start_pos, end_pos)).unwrap();
                 Token::Float(f)
@@ -731,8 +732,9 @@ impl<'a> Lexer<'a> {
                         }
                     };
                     while self.eat_char(&mut check_digit) {}
-                    let end_pos = self.cur;
-                    let s = self.sub_string(start_pos, end_pos);
+                    is_integer &= !self.eat_float_exponent();
+
+                    let s = self.sub_string(start_pos, self.cur);
                     if is_integer {
                         Token::Integer(i64::from_str(s).unwrap())
                     } else {
@@ -745,6 +747,16 @@ impl<'a> Lexer<'a> {
         });
 
         self.peek.as_ref()
+    }
+
+    fn eat_float_exponent(&mut self) -> bool {
+        if self.eat_char(|c| c == 'e' || c == 'E') {
+            self.eat_char(|c| c == '+' || c == '-');
+            while self.eat_char(char::is_numeric) {}
+            true
+        } else {
+            false
+        }
     }
 
     fn next_char(&mut self) -> Option<char> {
@@ -852,6 +864,15 @@ mod tests {
         assert_eq!(Token::DoubleStar, lexer.next().unwrap());
         assert_eq!(Token::Shr, lexer.next().unwrap());
         assert_eq!(Token::Shl, lexer.next().unwrap());
+
+        let t = Lexer::new("0.3e-1").next().unwrap();
+        assert!(matches!(t, Token::Float(_)));
+
+        let t = Lexer::new("0.3e+1").next().unwrap();
+        assert!(matches!(t, Token::Float(_)));
+
+        let t = Lexer::new("0.3E1").next().unwrap();
+        assert!(matches!(t, Token::Float(_)));
     }
 
     fn test_eval_impl(expr: &str, var_env: &HashMap<&str, Expr>) {
@@ -901,5 +922,6 @@ mod tests {
         test_eval_impl("ABS(2 ** -1 ** 2 - 1. / 2.) < EPS", &env);
         test_eval_impl("ABS(VAR1 + 1 / 4 - 1.25) < EPS", &env);
         test_eval_impl("( EXP = 1 ) ? 1 : 0", &env);
+        test_eval_impl("((VAR1 = 0) ? (1e6/VAR1) : 0) < EPS", &env);
     }
 }

@@ -19,11 +19,14 @@ log = "0.4.14"
 semver = "1.0.0"
 async-std = { version = "1.9.0", features = ["unstable"] }
 const_format = "0.2.14"
-futures = "0.3.14"
+futures-channel = "0.3.16"
+futures-util = { version = "0.3.16", features = ["async-await"] }
 lazy_static = "1.4.0"
 rand = "0.8.3"
 cfg-if = "1.0.0"
 cameleon-impl = { path = "../impl", version = "0.1.0" }
+tracing = "0.1.26"
+url = "2.2.2"
 
 rusb = { version = "0.8.1", optional = true }
 libusb1-sys = { version = "0.5.0", optional = true }
@@ -45,6 +48,7 @@ required-features = ["libusb"]
 name = "u3v_device_control"
 path = "examples/u3v/device_control.rs"
 required-features = ["libusb"]
+
 
 [package.metadata.docs.rs]
 all-features = true

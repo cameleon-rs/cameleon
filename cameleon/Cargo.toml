@@ -21,12 +21,15 @@ semver = "1.0.0"
 zip = "0.5.12"
 sha-1 = "0.9.5"
 async-std = { version = "1.9.0", features = ["unstable"] }
-futures = "0.3.14"
+futures-channel = "0.3.16"
+futures-util = { version = "0.3.16", features = ["async-await"] }
 tracing = "0.1.26"
 auto_impl = "0.4.1"
 cameleon-device = { path = "../device", version = "0.1.1" }
 cameleon-genapi = { path = "../genapi", version = "0.1.1" }
+cameleon-impl = { path = "../impl", version = "0.1.0" }
 anyhow = "1.0.40"
+ureq = "2.1"
 
 [dev-dependencies]
 trybuild = "1.0.42"
