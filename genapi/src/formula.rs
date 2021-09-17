@@ -722,14 +722,15 @@ impl<'a> Lexer<'a> {
                 } else {
                     let start_pos = self.cur - 1;
                     let mut is_integer = true;
-                    while self.eat_char(|c| {
+                    let mut check_digit = |c : char| {
                         if c == '.' {
                             is_integer = false;
                             true
                         } else {
                             c.is_numeric()
                         }
-                    }) {}
+                    };
+                    while self.eat_char(&mut check_digit) {}
                     let end_pos = self.cur;
                     let s = self.sub_string(start_pos, end_pos);
                     if is_integer {
