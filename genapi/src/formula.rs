@@ -262,7 +262,7 @@ impl Expr {
     {
         use std::ops::Neg;
 
-        let res = self.eval(&var_env)?;
+        let res = self.eval(var_env)?;
         macro_rules! apply_op {
             ($f:ident) => {
                 match res {

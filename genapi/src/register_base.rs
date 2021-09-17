@@ -105,7 +105,7 @@ impl RegisterBase {
             .expect_iport_kind(store)?
             .read(address, buf, device, store, cx)?;
         if self.cacheable != CachingMode::NoCache {
-            cx.cache_data(nid, address, length, &buf);
+            cx.cache_data(nid, address, length, buf);
         }
 
         Ok(())
@@ -133,7 +133,7 @@ impl RegisterBase {
             .write(address, buf, device, store, cx)?;
 
         if self.cacheable == CachingMode::WriteThrough {
-            cx.cache_data(nid, address, length, &buf);
+            cx.cache_data(nid, address, length, buf);
         }
         Ok(())
     }
