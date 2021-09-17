@@ -75,7 +75,6 @@ pub(super) const INDEX: &str = "Index";
 pub(super) const P_INDEX: &str = "pIndex";
 pub(super) const ACCESS_MODE: &str = "AccessMode";
 pub(super) const CACHEABLE: &str = "Cachable"; // Schema typos "Cacheable" to "Cachable"
-pub(super) const COMMENT: &str = "Comment";
 pub(super) const VALUE: &str = "Value";
 pub(super) const P_VALUE: &str = "pValue";
 pub(super) const P_VALUE_COPY: &str = "pValueCopy";
