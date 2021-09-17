@@ -6,15 +6,10 @@ use tracing::debug;
 
 use crate::builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder};
 
-use super::{
-    elem_name::{COMMENT, GROUP},
-    xml, NodeData, Parse,
-};
+use super::{elem_name::GROUP, xml, NodeData, Parse};
 
 #[derive(Debug, Clone)]
 pub(super) struct GroupNode {
-    comment: String,
-
     pub(super) nodes: Vec<NodeData>,
 }
 
@@ -28,7 +23,6 @@ impl Parse for GroupNode {
     ) -> Self {
         debug!("start parsing `GroupNode`");
         debug_assert_eq!(node.tag_name(), GROUP);
-        let comment = node.attribute_of(COMMENT).unwrap().into();
 
         let mut nodes = vec![];
         while let Some(ref mut child) = node.next() {
@@ -38,7 +32,7 @@ impl Parse for GroupNode {
             }
         }
 
-        Self { comment, nodes }
+        Self { nodes }
     }
 }
 
@@ -64,7 +58,6 @@ mod tests {
 
         let (node, ..): (GroupNode, _, _, _) = parse_default(xml);
 
-        assert_eq!(node.comment, "Nothing to say");
         assert_eq!(node.nodes.len(), 2);
     }
 }

@@ -15,7 +15,7 @@ use crate::{
 
 use super::{
     elem_name::{
-        ACCESS_MODE, CACHEABLE, COMMENT, ENDIANNESS, POLLING_TIME, P_INVALIDATOR, P_SELECTED,
+        ACCESS_MODE, CACHEABLE, ENDIANNESS, POLLING_TIME, P_INVALIDATOR, P_SELECTED,
         REPRESENTATION, SIGN, STREAMABLE, STRUCT_ENTRY, STRUCT_REG, UNIT,
     },
     xml, Parse,
@@ -23,7 +23,6 @@ use super::{
 
 #[derive(Debug, Clone)]
 pub(super) struct StructRegNode {
-    comment: String,
     register_base: RegisterBase,
 
     endianness: Endianness,
@@ -56,7 +55,6 @@ impl Parse for StructRegNode {
         debug!("start parsing `StructRegNode`");
         debug_assert_eq!(node.tag_name(), STRUCT_REG);
 
-        let comment = node.attribute_of(COMMENT).unwrap().into();
         let register_base = node.parse(node_builder, value_builder, cache_builder);
 
         let endianness = node
@@ -69,7 +67,6 @@ impl Parse for StructRegNode {
         }
 
         Self {
-            comment,
             register_base,
             endianness,
             entries,

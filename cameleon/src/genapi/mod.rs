@@ -238,7 +238,7 @@ impl FromXml for DefaultGenApiCtxt {
     where
         Self: Sized + GenApiCtxt,
     {
-        let (reg_desc, node_store, value_ctxt) = GenApiBuilder::default()
+        let (reg_desc, node_store, value_ctxt) = GenApiBuilder::<DefaultNodeStore>::default()
             .build(xml)
             .map_err(|e| ControlError::InvalidData(e.into()))?;
         Ok(Self {
@@ -332,7 +332,7 @@ impl FromXml for NoCacheGenApiCtxt {
     where
         Self: Sized + GenApiCtxt,
     {
-        let (reg_desc, node_store, value_ctxt) = GenApiBuilder::default()
+        let (reg_desc, node_store, value_ctxt) = GenApiBuilder::<DefaultNodeStore>::default()
             .no_cache()
             .build(xml)
             .map_err(|e| ControlError::InvalidData(e.into()))?;

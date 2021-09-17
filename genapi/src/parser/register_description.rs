@@ -35,14 +35,14 @@ impl Parse for RegisterDescription {
         let tooltip = node.attribute_of(TOOL_TIP).map(Into::into);
         let standard_name_space = node.attribute_of(STANDARD_NAME_SPCACE).unwrap().into();
         let schema_major_version =
-            convert_to_uint(&node.attribute_of(SCHEMA_MAJOR_VERSION).unwrap());
+            convert_to_uint(node.attribute_of(SCHEMA_MAJOR_VERSION).unwrap());
         let schema_minor_version =
-            convert_to_uint(&node.attribute_of(SCHEMA_MINOR_VERSION).unwrap());
+            convert_to_uint(node.attribute_of(SCHEMA_MINOR_VERSION).unwrap());
         let schema_subminor_version =
-            convert_to_uint(&node.attribute_of(SCHEMA_SUB_MINOR_VERSION).unwrap());
-        let major_version = convert_to_uint(&node.attribute_of(MAJOR_VERSION).unwrap());
-        let minor_version = convert_to_uint(&node.attribute_of(MINOR_VERSION).unwrap());
-        let subminor_version = convert_to_uint(&node.attribute_of(SUB_MINOR_VERSION).unwrap());
+            convert_to_uint(node.attribute_of(SCHEMA_SUB_MINOR_VERSION).unwrap());
+        let major_version = convert_to_uint(node.attribute_of(MAJOR_VERSION).unwrap());
+        let minor_version = convert_to_uint(node.attribute_of(MINOR_VERSION).unwrap());
+        let subminor_version = convert_to_uint(node.attribute_of(SUB_MINOR_VERSION).unwrap());
         let product_guid = node.attribute_of(PRODUCT_GUID).unwrap().into();
         let version_guid = node.attribute_of(VERSION_GUID).unwrap().into();
 

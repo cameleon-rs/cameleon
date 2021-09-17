@@ -173,7 +173,7 @@ impl Port for U3VDeviceModule {
     fn write(&mut self, address: u64, data: &[u8]) -> GenTlResult<usize> {
         self.assert_open()?;
 
-        self.vm.write_raw(address as usize, &data)?;
+        self.vm.write_raw(address as usize, data)?;
         self.handle_events();
 
         Ok(data.len())

@@ -216,7 +216,7 @@ impl<'a> WriteMem<'a> {
 
         Ok(WriteMemChunks {
             address: self.address,
-            data: &self.data,
+            data: self.data,
             data_idx: 0,
             maximum_data_len,
         })
