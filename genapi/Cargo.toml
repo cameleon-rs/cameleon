@@ -18,7 +18,7 @@ keywords = ["genicam", "camera", "genapi"]
 [dependencies]
 roxmltree = "0.14.1"
 thiserror = "1.0.24"
-string-interner = "0.12.2"
+string-interner = "0.13.0"
 auto_impl = "0.4.1"
 tracing = "0.1.26"
 ambassador = "0.2.1"
