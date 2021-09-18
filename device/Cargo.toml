@@ -25,7 +25,7 @@ rand = "0.8.3"
 cfg-if = "1.0.0"
 cameleon-impl = { path = "../impl", version = "0.1.0" }
 
-rusb = { version = "0.8.1", optional = true }
+rusb = { version = "0.9.0", optional = true }
 libusb1-sys = { version = "0.5.0", optional = true }
 libc = { version = "0.2", optional = true }
 
