@@ -23,7 +23,7 @@ sha-1 = "0.9.5"
 async-std = { version = "1.9.0", features = ["unstable"] }
 futures = "0.3.14"
 tracing = "0.1.26"
-auto_impl = "0.4.1"
+auto_impl = "0.5.0"
 cameleon-device = { path = "../device", version = "0.1.1" }
 cameleon-genapi = { path = "../genapi", version = "0.1.1" }
 anyhow = "1.0.40"
