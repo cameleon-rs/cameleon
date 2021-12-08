@@ -83,9 +83,7 @@ impl Parse for EnumEntryNode {
             .attribute_of(MERGE_PRIORITY)
             .map(|text| text.into())
             .unwrap_or_default();
-        let expose_static = node
-            .attribute_of(EXPOSE_STATIC)
-            .map(|text| convert_to_bool(text));
+        let expose_static = node.attribute_of(EXPOSE_STATIC).map(convert_to_bool);
 
         let attr_base = NodeAttributeBase {
             id,
