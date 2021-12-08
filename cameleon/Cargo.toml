@@ -19,7 +19,7 @@ keywords = ["genicam", "camera", "usb3", "gige", "uvc"]
 thiserror = "1.0.24"
 semver = "1.0.0"
 zip = "0.5.12"
-sha-1 = "0.9.5"
+sha-1 = "0.10.0"
 async-std = { version = "1.9.0", features = ["unstable"] }
 futures = "0.3.14"
 tracing = "0.1.26"
