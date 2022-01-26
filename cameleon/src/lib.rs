@@ -24,7 +24,7 @@
 //! First, add dependencies like below.
 //! ```toml
 //! [dependencies]
-//! cameleon = { version = 0.1, features = 'libusb' }
+//! cameleon = { version = "0.1", features = ["libusb"] }
 //! ```
 //!
 //! Then, you can enumerate all cameras connected to the host, and start streaming.
