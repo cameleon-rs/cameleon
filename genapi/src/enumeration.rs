@@ -195,7 +195,7 @@ impl EnumEntryNode {
     #[must_use]
     #[allow(clippy::cast_precision_loss)]
     pub fn numeric_value(&self) -> f64 {
-        self.numeric_value.unwrap_or_else(|| self.value as f64)
+        self.numeric_value.unwrap_or(self.value as f64)
     }
 
     #[must_use]
