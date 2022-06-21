@@ -93,12 +93,20 @@ pub(super) fn bytes_from_float(
     endianness: Endianness,
 ) -> GenApiResult<()> {
     match (buf.len(), endianness) {
-        (8, Endianness::LE) | (4, Endianness::LE) => {
+        (8, Endianness::LE) => {
             buf.copy_from_slice(&value.to_le_bytes());
             Ok(())
         }
-        (8, Endianness::BE) | (4, Endianness::BE) => {
+        (4, Endianness::LE) => {
+            buf.copy_from_slice(&(value as f32).to_le_bytes());
+            Ok(())
+        }
+        (8, Endianness::BE) => {
             buf.copy_from_slice(&value.to_be_bytes());
+            Ok(())
+        }
+        (4, Endianness::BE) => {
+            buf.copy_from_slice(&(value as f32).to_be_bytes());
             Ok(())
         }
         _ => Err(GenApiError::invalid_buffer(
@@ -373,4 +381,25 @@ fn expr_from_nid<T: ValueStore, U: CacheStore>(
             format!("{}`", nid.name(store)).into(),
         ));
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_bytes_from_float() {
+        let mut f32_output = vec![0; 4];
+        let mut f64_output = vec![0; 8];
+
+        let value = 1024.0f64;
+
+        bytes_from_float(value, &mut f32_output, Endianness::BE).unwrap();
+        bytes_from_float(value, &mut f64_output, Endianness::BE).unwrap();
+
+        bytes_from_float(value, &mut f32_output, Endianness::LE).unwrap();
+        bytes_from_float(value, &mut f64_output, Endianness::LE).unwrap();
+
+        assert!(bytes_from_float(value, &mut [], Endianness::LE).is_err());
+    }
 }
