@@ -1,6 +1,6 @@
 [package]
 name = "cameleon-device"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2018"
 authors = ["Cameleon Project Developers"]
 license = "MPL-2.0"
@@ -23,7 +23,7 @@ futures = "0.3.14"
 lazy_static = "1.4.0"
 rand = "0.8.3"
 cfg-if = "1.0.0"
-cameleon-impl = { path = "../impl", version = "0.1.4" }
+cameleon-impl = { path = "../impl", version = "0.1.5" }
 
 rusb = { version = "0.9.0", optional = true }
 libusb1-sys = { version = "0.6.0", optional = true }
