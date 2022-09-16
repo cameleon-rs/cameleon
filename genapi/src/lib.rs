@@ -80,15 +80,23 @@ pub mod prelude {
 
 #[auto_impl(&mut, Box)]
 pub trait Device {
-    fn read_mem(&mut self, address: i64, buf: &mut [u8]) -> Result<(), Box<dyn std::error::Error>>;
+    fn read_mem(
+        &mut self,
+        address: i64,
+        buf: &mut [u8],
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
-    fn write_mem(&mut self, address: i64, data: &[u8]) -> Result<(), Box<dyn std::error::Error>>;
+    fn write_mem(
+        &mut self,
+        address: i64,
+        data: &[u8],
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum GenApiError {
     #[error("device I/O error: {0}")]
-    Device(Box<dyn std::error::Error>),
+    Device(Box<dyn std::error::Error + Send + Sync>),
 
     /// The node is not writable.
     #[error("attempt to write a value to non writable node")]
@@ -114,7 +122,7 @@ pub enum GenApiError {
 }
 
 impl GenApiError {
-    fn device(inner: Box<dyn std::error::Error>) -> Self {
+    fn device(inner: Box<dyn std::error::Error + Send + Sync>) -> Self {
         let err = GenApiError::Device(inner);
         error!("{}", err);
         err
