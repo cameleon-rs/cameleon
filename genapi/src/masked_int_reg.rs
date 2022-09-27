@@ -353,7 +353,7 @@ impl BitMask {
         let bits_len = reg_byte_len * 8;
         match endianness {
             Endianness::LE => lsb,
-            Endianness::BE => (bits_len - lsb - 1),
+            Endianness::BE => bits_len - lsb - 1,
         }
     }
 
@@ -366,7 +366,7 @@ impl BitMask {
         let bits_len = reg_byte_len * 8;
         match endianness {
             Endianness::LE => msb,
-            Endianness::BE => (bits_len - msb - 1),
+            Endianness::BE => bits_len - msb - 1,
         }
     }
 
