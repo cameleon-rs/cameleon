@@ -725,7 +725,7 @@ impl BitField {
         let len = self.ty.integral_bits();
         match endianness {
             Endianness::LE => self.lsb.base10_parse().unwrap(),
-            Endianness::BE => (len - self.lsb.base10_parse::<usize>().unwrap() - 1),
+            Endianness::BE => len - self.lsb.base10_parse::<usize>().unwrap() - 1,
         }
     }
 
@@ -733,7 +733,7 @@ impl BitField {
         let len = self.ty.integral_bits();
         match endianness {
             Endianness::LE => self.msb.base10_parse().unwrap(),
-            Endianness::BE => (len - self.msb.base10_parse::<usize>().unwrap() - 1),
+            Endianness::BE => len - self.msb.base10_parse::<usize>().unwrap() - 1,
         }
     }
 
