@@ -436,7 +436,7 @@ impl Register {
     fn impl_write(&self, endianness: Endianness) -> TokenStream {
         match &self.reg_attr.ty {
             RegisterType::BitField(ref bf) => {
-                let read_bytes = quote_read_bytes(endianness, &*bf.ty);
+                let read_bytes = quote_read_bytes(endianness, &bf.ty);
                 let write_bytes = quote_write_bytes(endianness);
                 quote! {
                     fn write(data: Self::Ty, memory: &mut[u8]) -> MemoryResult<()> {

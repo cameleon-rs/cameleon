@@ -518,10 +518,10 @@ mod tests {
     fn serialize_header(command_id: [u8; 2], scd_len: [u8; 2], req_id: [u8; 2]) -> Vec<u8> {
         let mut ccd = vec![];
         ccd.write_bytes_le(0x4356_3355_u32).unwrap(); // Magic.
-        ccd.extend(&[0x00, 0x40]); // Packet flag: Request Ack.
-        ccd.extend(&command_id);
-        ccd.extend(&scd_len);
-        ccd.extend(&req_id);
+        ccd.extend([0x00, 0x40]); // Packet flag: Request Ack.
+        ccd.extend(command_id);
+        ccd.extend(scd_len);
+        ccd.extend(req_id);
         ccd
     }
 

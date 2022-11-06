@@ -484,7 +484,7 @@ mod tests {
     #[test]
     fn test_write_mem_stacked_ack() {
         let mut scd = vec![0x00, 0x00, 0x03, 0x00]; // Written length 0: 3 bytes written.
-        scd.extend(&[0x00, 0x00, 0x0a, 0x00]); // Written length 1: 10 bytes written.
+        scd.extend([0x00, 0x00, 0x0a, 0x00]); // Written length 1: 10 bytes written.
         let mut raw_packet = serialize_header(0x0000, 0x0809, scd.len() as u16, 1);
         raw_packet.extend(&scd);
 
