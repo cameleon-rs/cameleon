@@ -12,8 +12,8 @@ use super::{
     elem_name::{
         DESCRIPTION, DISPLAY_NAME, DOCU_URL, EVENT_ID, EXPOSE_STATIC, EXTENSION,
         IMPOSED_ACCESS_MODE, IS_DEPRECATED, MERGE_PRIORITY, NAME, NAME_SPACE, P_ALIAS,
-        P_BLOCK_POLLING, P_CAST_ALIAS, P_ERROR, P_IS_AVAILABLE, P_IS_IMPLEMENTED, P_IS_LOCKED,
-        TOOL_TIP, VISIBILITY,
+        P_BLOCK_POLLING, P_CAST_ALIAS, P_ERROR, P_INVALIDATOR, P_IS_AVAILABLE, P_IS_IMPLEMENTED,
+        P_IS_LOCKED, TOOL_TIP, VISIBILITY,
     },
     elem_type::convert_to_bool,
     xml, Parse,
@@ -27,7 +27,7 @@ impl Parse for NodeAttributeBase {
         _: &mut impl CacheStoreBuilder,
     ) -> Self {
         let name = node.attribute_of(NAME).unwrap();
-        let id = node_builder.get_or_intern(&name);
+        let id = node_builder.get_or_intern(name);
         let name_space = node
             .attribute_of(NAME_SPACE)
             .map(|text| text.into())
@@ -89,6 +89,8 @@ impl Parse for NodeElementBase {
         let p_errors = node.parse_while(P_ERROR, node_builder, value_builder, cache_builder);
         let p_alias = node.parse_if(P_ALIAS, node_builder, value_builder, cache_builder);
         let p_cast_alias = node.parse_if(P_CAST_ALIAS, node_builder, value_builder, cache_builder);
+        let p_invalidators =
+            node.parse_while(P_INVALIDATOR, node_builder, value_builder, cache_builder);
 
         Self {
             tooltip,
@@ -106,6 +108,7 @@ impl Parse for NodeElementBase {
             p_errors,
             p_alias,
             p_cast_alias,
+            p_invalidators,
         }
     }
 }

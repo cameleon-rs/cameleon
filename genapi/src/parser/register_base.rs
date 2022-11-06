@@ -5,6 +5,7 @@
 use crate::{
     builder::{CacheStoreBuilder, NodeStoreBuilder, ValueStoreBuilder},
     elem_type::AccessMode,
+    node_base::NodeElementBase,
     store::NodeId,
     RegisterBase,
 };
@@ -36,7 +37,7 @@ impl Parse for RegisterBase {
         value_builder: &mut impl ValueStoreBuilder,
         cache_builder: &mut impl CacheStoreBuilder,
     ) -> Self {
-        let elem_base = node.parse(node_builder, value_builder, cache_builder);
+        let elem_base: NodeElementBase = node.parse(node_builder, value_builder, cache_builder);
 
         let streamable = node
             .parse_if(STREAMABLE, node_builder, value_builder, cache_builder)
@@ -61,6 +62,9 @@ impl Parse for RegisterBase {
         let polling_time = node.parse_if(POLLING_TIME, node_builder, value_builder, cache_builder);
         let p_invalidators =
             node.parse_while(P_INVALIDATOR, node_builder, value_builder, cache_builder);
+
+        // Ensure `ElementBase` doesn't consume `p]invalidator`.
+        debug_assert!(elem_base.p_invalidators.is_empty());
 
         Self {
             elem_base,
