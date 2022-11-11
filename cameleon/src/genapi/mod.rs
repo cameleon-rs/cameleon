@@ -12,6 +12,7 @@
 //! #     return;
 //! # }
 //! # let mut camera = cameras.pop().unwrap();
+//! # camera.open().unwrap();
 //! // Loads `GenApi` context.
 //! camera.load_context().unwrap();
 //!
@@ -33,6 +34,8 @@
 //! if gain_node.is_writable(&mut params_ctxt).unwrap() {
 //!     gain_node.set_value(&mut params_ctxt, 0.1).unwrap();
 //! }
+//!
+//! # camera.close().unwrap();
 //! ```
 
 mod node_kind;
@@ -71,6 +74,7 @@ pub use cameleon_genapi::{
 /// #     return;
 /// # }
 /// # let mut camera = cameras.pop().unwrap();
+/// # camera.open().unwrap();
 /// // Loads `GenApi` context.
 /// camera.load_context().unwrap();
 ///
@@ -92,6 +96,8 @@ pub use cameleon_genapi::{
 /// if gain_node.is_writable(&mut params_ctxt).unwrap() {
 ///     gain_node.set_value(&mut params_ctxt, 0.1).unwrap();
 /// }
+///
+/// # camera.close().unwrap();
 /// ```
 #[derive(Debug, Clone)]
 pub struct ParamsCtxt<Ctrl, Ctxt> {
