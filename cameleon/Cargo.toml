@@ -1,6 +1,6 @@
 [package]
 name = "cameleon"
-version = "0.1.7"
+version = "0.1.8"
 authors = ["Cameleon Project Developers"]
 edition = "2018"
 license = "MPL-2.0"
@@ -24,8 +24,8 @@ async-std = { version = "1.9.0", features = ["unstable"] }
 futures = "0.3.14"
 tracing = "0.1.26"
 auto_impl = "1.0.1"
-cameleon-device = { path = "../device", version = "0.1.7" }
-cameleon-genapi = { path = "../genapi", version = "0.1.7" }
+cameleon-device = { path = "../device", version = "0.1.8" }
+cameleon-genapi = { path = "../genapi", version = "0.1.8" }
 anyhow = "1.0.40"
 
 [dev-dependencies]
