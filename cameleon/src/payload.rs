@@ -122,6 +122,12 @@ impl PayloadReceiver {
         self.rx.try_recv()?
     }
 
+    /// Receives [`Payload`] sent from the device.
+    /// If the channel is empty, this method blocks until the device produces the payload.
+    pub fn recv_blocking(&self) -> StreamResult<Payload> {
+        self.rx.recv_blocking()?
+    }
+
     /// Sends back [`Payload`] to the device to reuse already allocated `payload`.
     ///
     /// Sending back `payload` may improve performance of streaming, but not required to call this

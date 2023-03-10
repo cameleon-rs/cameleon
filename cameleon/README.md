@@ -62,30 +62,28 @@ camera.load_context().unwrap();
 // Start streaming. Channel capacity is set to 3.
 let payload_rx = camera.start_streaming(3).unwrap();
 
-let mut payload_count = 0;
-while payload_count < 10 {
-    match payload_rx.try_recv() {
-        Ok(payload) => {
-            println!(
-                "payload received! block_id: {:?}, timestamp: {:?}",
-                payload.id(),
-                payload.timestamp()
-            );
-            if let Some(image_info) = payload.image_info() {
-                println!("{:?}\n", image_info);
-                let image = payload.image();
-                // do something with the image.
-                // ...
-            }
-            payload_count += 1;
-
-            // Send back payload to streaming loop to reuse the buffer. This is optional.
-            payload_rx.send_back(payload);
-        }
-        Err(_err) => {
+for _ in 0..10 {
+    let payload = match payload_rx.recv_blocking() {
+        Ok(payload) => payload,
+        Err(e) => {
+            println!("payload receive error: {e}");
             continue;
         }
+    };
+    println!(
+        "payload received! block_id: {:?}, timestamp: {:?}",
+        payload.id(),
+        payload.timestamp()
+    );
+    if let Some(image_info) = payload.image_info() {
+        println!("{:?}\n", image_info);
+        let image = payload.image();
+        // do something with the image.
+        // ...
     }
+
+    // Send back payload to streaming loop to reuse the buffer. This is optional.
+    payload_rx.send_back(payload);
 }
 
 // Closes the camera.
@@ -188,4 +186,3 @@ To start developing, please refer to [CONTRIBUTING.md][contributing].
 This project is licenced under [MPL 2.0][license].
 
 [license]: https://github.com/cameleon-rs/cameleon/blob/main/LICENSE
-
