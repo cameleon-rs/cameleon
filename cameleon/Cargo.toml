@@ -20,7 +20,7 @@ thiserror = "1.0.24"
 semver = "1.0.0"
 zip = "0.6.0"
 sha-1 = "0.10.0"
-async-std = { version = "1.12.0", features = ["unstable"] }
+async-channel = "1.7.0" # 1.7.0 has added recv_blocking()
 tracing = "0.1.26"
 auto_impl = "1.0.1"
 cameleon-device = { path = "../device", version = "0.1.8" }

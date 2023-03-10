@@ -11,7 +11,7 @@ pub use cameleon_device::PixelFormat;
 
 use std::time;
 
-use async_std::channel::{Receiver, Sender};
+use async_channel::{Receiver, Sender};
 
 use super::{StreamError, StreamResult};
 
@@ -168,8 +168,8 @@ impl PayloadSender {
 
 /// Creates [`PayloadReceiver`] and [`PayloadSender`].
 pub fn channel(payload_cap: usize, buffer_cap: usize) -> (PayloadSender, PayloadReceiver) {
-    let (device_tx, host_rx) = async_std::channel::bounded(payload_cap);
-    let (host_tx, device_rx) = async_std::channel::bounded(buffer_cap);
+    let (device_tx, host_rx) = async_channel::bounded(payload_cap);
+    let (host_tx, device_rx) = async_channel::bounded(buffer_cap);
     (
         PayloadSender {
             tx: device_tx,
@@ -182,26 +182,26 @@ pub fn channel(payload_cap: usize, buffer_cap: usize) -> (PayloadSender, Payload
     )
 }
 
-impl From<async_std::channel::RecvError> for StreamError {
-    fn from(err: async_std::channel::RecvError) -> Self {
+impl From<async_channel::RecvError> for StreamError {
+    fn from(err: async_channel::RecvError) -> Self {
         StreamError::ReceiveError(err.to_string().into())
     }
 }
 
-impl From<async_std::channel::TryRecvError> for StreamError {
-    fn from(err: async_std::channel::TryRecvError) -> Self {
+impl From<async_channel::TryRecvError> for StreamError {
+    fn from(err: async_channel::TryRecvError) -> Self {
         StreamError::ReceiveError(err.to_string().into())
     }
 }
 
-impl<T> From<async_std::channel::SendError<T>> for StreamError {
-    fn from(err: async_std::channel::SendError<T>) -> Self {
+impl<T> From<async_channel::SendError<T>> for StreamError {
+    fn from(err: async_channel::SendError<T>) -> Self {
         StreamError::ReceiveError(err.to_string().into())
     }
 }
 
-impl<T> From<async_std::channel::TrySendError<T>> for StreamError {
-    fn from(err: async_std::channel::TrySendError<T>) -> Self {
+impl<T> From<async_channel::TrySendError<T>> for StreamError {
+    fn from(err: async_channel::TrySendError<T>) -> Self {
         StreamError::ReceiveError(err.to_string().into())
     }
 }
