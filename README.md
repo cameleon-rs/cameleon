@@ -62,30 +62,24 @@ camera.load_context().unwrap();
 // Start streaming. Channel capacity is set to 3.
 let payload_rx = camera.start_streaming(3).unwrap();
 
-let mut payload_count = 0;
-while payload_count < 10 {
-    match payload_rx.try_recv() {
-        Ok(payload) => {
-            println!(
-                "payload received! block_id: {:?}, timestamp: {:?}",
-                payload.id(),
-                payload.timestamp()
-            );
-            if let Some(image_info) = payload.image_info() {
-                println!("{:?}\n", image_info);
-                let image = payload.image();
-                // do something with the image.
-                // ...
-            }
-            payload_count += 1;
-
-            // Send back payload to streaming loop to reuse the buffer. This is optional.
-            payload_rx.send_back(payload);
-        }
-        Err(_err) => {
-            continue;
-        }
+for _ in 0..10 {
+    let payload = payload_rx
+        .recv_blocking()
+        .expect("should receive a payload");
+    println!(
+        "payload received! block_id: {:?}, timestamp: {:?}",
+        payload.id(),
+        payload.timestamp()
+    );
+    if let Some(image_info) = payload.image_info() {
+        println!("{:?}\n", image_info);
+        let image = payload.image();
+        // do something with the image.
+        // ...
     }
+
+    // Send back payload to streaming loop to reuse the buffer. This is optional.
+    payload_rx.send_back(payload);
 }
 
 // Closes the camera.
