@@ -396,7 +396,7 @@ impl<'a> ParseScd<'a> for WriteMemStacked {
     fn parse(buf: &'a [u8], ccd: &AckCcd) -> Result<Self> {
         let mut cursor = Cursor::new(buf);
         let mut to_read = ccd.scd_len as usize;
-        let mut lengths = Vec::with_capacity(to_read as usize / 4);
+        let mut lengths = Vec::with_capacity(to_read / 4);
 
         while to_read > 0 {
             let reserved: u16 = cursor.read_bytes_le()?;

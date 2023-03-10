@@ -121,7 +121,7 @@ impl IInteger for MaskedIntRegNode {
         let new_reg_value =
             self.bit_mask
                 .masked_value(old_reg_value, value, length, self.endianness, self.sign)?;
-        let mut buf = vec![0; length as usize];
+        let mut buf = vec![0; length];
         utils::bytes_from_int(new_reg_value, &mut buf, self.endianness, self.sign)?;
         reg.write_and_cache(nid, &buf, device, store, cx)?;
 
