@@ -793,9 +793,7 @@ impl ManifestTable {
         let entry_num: u64 = self.read_register(device, (0, 8))?;
         let first_entry_addr = self.manifest_address + 8;
 
-        Ok((0..entry_num)
-            .into_iter()
-            .map(move |i| ManifestEntry::new(first_entry_addr + i * 64)))
+        Ok((0..entry_num).map(move |i| ManifestEntry::new(first_entry_addr + i * 64)))
     }
 
     fn read_register<T, Ctrl: DeviceControl + ?Sized>(

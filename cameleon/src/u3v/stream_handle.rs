@@ -570,7 +570,7 @@ fn read_trailer<'a>(
     params: &StreamParams,
     buf: &'a mut [u8],
 ) -> StreamResult<u3v_stream::Trailer<'a>> {
-    let trailer_size = params.trailer_size as usize;
+    let trailer_size = params.trailer_size;
     recv(inner, params, buf, trailer_size)?;
 
     u3v_stream::Trailer::parse(buf)
