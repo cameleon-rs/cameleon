@@ -10,7 +10,7 @@ repository = "https://github.com/cameleon-rs/cameleon"
 description = """
 cameleon is a safe, fast, and flexible library for GenICam compatible cameras.
 """
-categories = ["computer-vision"] 
+categories = ["computer-vision"]
 keywords = ["genicam", "camera", "usb3", "gige", "uvc"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -21,7 +21,6 @@ semver = "1.0.0"
 zip = "0.6.0"
 sha-1 = "0.10.0"
 async-std = { version = "1.9.0", features = ["unstable"] }
-futures = "0.3.14"
 tracing = "0.1.26"
 auto_impl = "1.0.1"
 cameleon-device = { path = "../device", version = "0.1.8" }
