@@ -6,13 +6,12 @@
 
 use std::{
     convert::TryInto,
-    sync::{Arc, Mutex, MutexGuard},
+    sync::mpsc,
+    sync::{mpsc::TryRecvError, Arc, Mutex, MutexGuard},
     time::Duration,
 };
 
-use async_std::task;
 use cameleon_device::u3v::{self, async_read::AsyncPool, protocol::stream as u3v_stream};
-use futures::channel::oneshot;
 use tracing::{error, info, warn};
 
 use crate::{
@@ -29,8 +28,7 @@ pub struct StreamHandle {
     pub inner: Arc<Mutex<u3v::ReceiveChannel>>,
     /// Parameters for streaming.
     params: StreamParams,
-    cancellation_tx: Option<oneshot::Sender<()>>,
-    completion_rx: Option<oneshot::Receiver<()>>,
+    cancellation_tx: Option<mpsc::SyncSender<()>>,
 }
 
 macro_rules! unwrap_or_poisoned {
@@ -104,7 +102,6 @@ impl StreamHandle {
             inner: Arc::new(Mutex::new(inner)),
             params: StreamParams::default(),
             cancellation_tx: None,
-            completion_rx: None,
         }))
     }
 }
@@ -145,16 +142,14 @@ impl PayloadStream for StreamHandle {
             return Err(StreamError::InStreaming);
         }
 
-        let (cancellation_tx, cancellation_rx) = oneshot::channel();
-        let (completion_tx, completion_rx) = oneshot::channel();
+        // Sync channel of capacity 0 is a special rendez-vous mode, where every send() blocks.
+        let (cancellation_tx, cancellation_rx) = mpsc::sync_channel(0);
         self.cancellation_tx = Some(cancellation_tx);
-        self.completion_rx = Some(completion_rx);
 
         let strm_loop = StreamingLoop {
             inner: self.inner.clone(),
             params: self.params.clone(),
             sender,
-            completion_tx,
             cancellation_rx,
         };
         std::thread::spawn(|| {
@@ -167,15 +162,12 @@ impl PayloadStream for StreamHandle {
 
     fn stop_streaming_loop(&mut self) -> StreamResult<()> {
         if self.is_loop_running() {
-            let (cancellation_tx, completion_rx) = (
-                self.cancellation_tx.take().unwrap(),
-                self.completion_rx.take().unwrap(),
-            );
+            let cancellation_tx = self.cancellation_tx.take().unwrap();
+            // Since `cancellation` channel has a capacity of 0, this blocks until the streaming
+            // loop receives it.
             cancellation_tx.send(()).map_err(|_| {
                 StreamError::Poisoned("failed to send cancellation signal to streaming loop".into())
             })?;
-            task::block_on(completion_rx)
-                .map_err(|e| StreamError::Poisoned(e.to_string().into()))?;
         }
 
         info!("stop streaming loop successfully");
@@ -183,8 +175,7 @@ impl PayloadStream for StreamHandle {
     }
 
     fn is_loop_running(&self) -> bool {
-        debug_assert_eq!(self.completion_rx.is_some(), self.cancellation_tx.is_some());
-        self.completion_rx.is_some()
+        self.cancellation_tx.is_some()
     }
 }
 
@@ -206,12 +197,11 @@ struct StreamingLoop {
     inner: Arc<Mutex<u3v::ReceiveChannel>>,
     params: StreamParams,
     sender: PayloadSender,
-    completion_tx: oneshot::Sender<()>,
-    cancellation_rx: oneshot::Receiver<()>,
+    cancellation_rx: mpsc::Receiver<()>,
 }
 
 impl StreamingLoop {
-    fn run(mut self) {
+    fn run(self) {
         let mut trailer_buf = vec![0; self.params.trailer_size];
         let mut payload_buf_opt = None;
         let mut leader_buf = vec![0; self.params.leader_size];
@@ -236,8 +226,9 @@ impl StreamingLoop {
             // Stop the loop when
             // 1. `cancellation_tx` sends signal.
             // 2. `cancellation_tx` is dropped.
-            if self.cancellation_rx.try_recv().transpose().is_some() {
-                break;
+            match self.cancellation_rx.try_recv() {
+                Ok(()) | Err(TryRecvError::Disconnected) => break,
+                Err(TryRecvError::Empty) => {}
             }
 
             let maximum_payload_size = self.params.maximum_payload_size();
@@ -290,10 +281,6 @@ impl StreamingLoop {
             if let Err(err) = self.sender.try_send(Ok(payload)) {
                 warn!(?err);
             }
-        }
-
-        if let Err(e) = self.completion_tx.send(()) {
-            error!(?e);
         }
     }
 }
