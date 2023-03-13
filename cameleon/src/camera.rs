@@ -303,15 +303,19 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
             return Err(StreamError::InStreaming.into());
         }
 
-        // Enable streaimng.
+        // Lock TLParams to prevent changing parameters while streaming.
+        // Some camera models require this to obtain parameters for streaming.
         self.ctrl.enable_streaming()?;
         let mut ctxt = self.params_ctxt()?;
         expect_node!(&ctxt, "TLParamsLocked", as_integer).set_value(&mut ctxt, 1)?;
-        expect_node!(&ctxt, "AcquisitionStart", as_command).execute(&mut ctxt)?;
 
         // Start streaming loop.
         let (sender, receiver) = channel(cap, DEFAULT_BUFFER_CAP);
         self.strm.start_streaming_loop(sender, &mut self.ctrl)?;
+
+        // Enable streaming.
+        let mut ctxt = self.params_ctxt()?;
+        expect_node!(&ctxt, "AcquisitionStart", as_command).execute(&mut ctxt)?;
 
         info!("start streaming successfully");
         Ok(receiver)
@@ -358,14 +362,13 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
             return Ok(());
         }
 
-        // Stop streaming loop.
-        self.strm.stop_streaming_loop()?;
-
         // Disable streaming.
         let mut ctxt = self.params_ctxt()?;
         expect_node!(&ctxt, "AcquisitionStop", as_command).execute(&mut ctxt)?;
         expect_node!(&ctxt, "TLParamsLocked", as_integer).set_value(&mut ctxt, 0)?;
         self.ctrl.disable_streaming()?;
+        // Stop streaming loop.
+        self.strm.stop_streaming_loop()?;
 
         info!("stop streaming successfully");
         Ok(())
