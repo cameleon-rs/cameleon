@@ -10,14 +10,14 @@ repository = "https://github.com/cameleon-rs/cameleon"
 description = """
 cameleon-device provides device specific protocol decoders and basic I/O operations for GenICam compatible devices.
 """
-categories = ["computer-vision"] 
+categories = ["computer-vision"]
 keywords = ["genicam", "camera", "usb3", "gige", "uvc"]
 
 [dependencies]
 thiserror = "1.0.24"
 log = "0.4.14"
 semver = "1.0.0"
-async-std = { version = "1.9.0", features = ["unstable"] }
+async-std = { version = "1.12.0", features = ["unstable"] }
 const_format = "0.2.14"
 futures = "0.3.14"
 lazy_static = "1.4.0"
@@ -28,7 +28,6 @@ cameleon-impl = { path = "../impl", version = "0.1.8" }
 rusb = { version = "0.9.0", optional = true }
 libusb1-sys = { version = "0.6.0", optional = true }
 libc = { version = "0.2", optional = true }
-
 
 [dev-dependencies]
 trybuild = "1.0.42"
