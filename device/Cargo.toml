@@ -17,11 +17,6 @@ keywords = ["genicam", "camera", "usb3", "gige", "uvc"]
 thiserror = "1.0.24"
 log = "0.4.14"
 semver = "1.0.0"
-async-std = { version = "1.12.0", features = ["unstable"] }
-const_format = "0.2.14"
-futures = "0.3.14"
-lazy_static = "1.4.0"
-rand = "0.8.3"
 cfg-if = "1.0.0"
 cameleon-impl = { path = "../impl", version = "0.1.8" }
 

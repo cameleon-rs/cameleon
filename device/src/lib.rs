@@ -13,9 +13,6 @@
 #[cfg(feature = "libusb")]
 pub mod u3v;
 
-//// TODO: finish implementation.
-//mod emulator;
-
 mod pixel_format;
 
 pub use pixel_format::PixelFormat;
