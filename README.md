@@ -176,9 +176,6 @@ echo 1000 > /sys/module/usbcore/parameters/usbfs_memory_mb
 ### [v0.4.0](https://github.com/cameleon-rs/cameleon/milestone/4)
 * Add support for `UVC` cameras
 
-## Release cycle
-We continuously update the minor version every four weeks, until the version reaches `1.0.0`.
-
 ## Contributing
 Thank you for your interest in contributing to `Cameleon`! We are so happy to have you join the development.  
 To start developing, please refer to [CONTRIBUTING.md][contributing].
