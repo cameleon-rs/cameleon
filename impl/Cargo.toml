@@ -1,6 +1,6 @@
 [package]
 name = "cameleon-impl"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2018"
 authors = ["Cameleon Project Developers"]
 license = "MPL-2.0"
@@ -13,7 +13,7 @@ keywords = ["genicam", "camera"]
 
 
 [dependencies]
-cameleon-impl-macros = { path = "macros", version = "0.1.8" }
+cameleon-impl-macros = { path = "macros", version = "0.1.9" }
 thiserror = "1.0.24"
 semver = "1.0.0"
 
