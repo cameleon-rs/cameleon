@@ -1,6 +1,6 @@
 [package]
 name = "cameleon-genapi"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2018"
 authors = ["Cameleon Project Developers"]
 license = "MPL-2.0"

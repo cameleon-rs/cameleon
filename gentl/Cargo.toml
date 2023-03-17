@@ -1,6 +1,6 @@
 [package]
 name = "cameleon-gentl"
-version = "0.1.8"
+version = "0.1.9"
 authors = ["Cameleon Project Developers"]
 edition = "2018"
 license = "MPL-2.0"
