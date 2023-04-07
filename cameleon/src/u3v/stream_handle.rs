@@ -247,7 +247,7 @@ impl StreamingLoop {
                 },
             };
 
-            let leader = match read_leader(&mut inner, &self.params, &mut trailer_buf) {
+            let leader = match read_leader(&mut inner, &self.params, &mut leader_buf) {
                 Ok(leader) => leader,
                 Err(err) => {
                     // Report and send error if the error is fatal.
@@ -264,7 +264,7 @@ impl StreamingLoop {
                 Some(payload_buf)
             );
             let trailer = unwrap_or_continue!(
-                read_trailer(&mut inner, &self.params, &mut leader_buf),
+                read_trailer(&mut inner, &self.params, &mut trailer_buf),
                 Some(payload_buf)
             );
 
