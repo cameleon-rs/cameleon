@@ -1,6 +1,6 @@
 [package]
 name = "cameleon"
-version = "0.1.9"
+version = "0.1.10"
 authors = ["Cameleon Project Developers"]
 edition = "2018"
 license = "MPL-2.0"
@@ -23,8 +23,8 @@ sha-1 = "0.10.0"
 async-channel = "1.7.0" # 1.7.0 has added recv_blocking()
 tracing = "0.1.26"
 auto_impl = "1.0.1"
-cameleon-device = { path = "../device", version = "0.1.9" }
-cameleon-genapi = { path = "../genapi", version = "0.1.9" }
+cameleon-device = { path = "../device", version = "0.1.10" }
+cameleon-genapi = { path = "../genapi", version = "0.1.10" }
 anyhow = "1.0.40"
 
 [dev-dependencies]
