@@ -208,21 +208,6 @@ impl StreamingLoop {
         let mut inner = self.inner.lock().unwrap();
 
         loop {
-            macro_rules! unwrap_or_continue {
-                ($result:expr, $payload_buf:expr) => {
-                    match $result {
-                        Ok(v) => v,
-                        Err(e) => {
-                            warn!(?e);
-                            // Reuse `payload_buf`.
-                            payload_buf_opt = $payload_buf;
-                            self.sender.try_send(Err(e)).ok();
-                            continue;
-                        }
-                    }
-                };
-            }
-
             // Stop the loop when
             // 1. `cancellation_tx` sends signal.
             // 2. `cancellation_tx` is dropped.
@@ -259,25 +244,49 @@ impl StreamingLoop {
                     continue;
                 }
             };
-            let read_payload_size = unwrap_or_continue!(
-                read_payload(&mut inner, &self.params, &mut payload_buf),
-                Some(payload_buf)
-            );
-            let trailer = unwrap_or_continue!(
-                read_trailer(&mut inner, &self.params, &mut trailer_buf),
-                Some(payload_buf)
-            );
 
-            let payload = unwrap_or_continue!(
-                PayloadBuilder {
-                    leader,
-                    payload_buf,
-                    read_payload_size,
-                    trailer
+            let read_payload_size = match read_payload(&mut inner, &self.params, &mut payload_buf) {
+                Ok(size) => size,
+                Err(e) => {
+                    warn!(?e);
+                    // Reuse `payload_buf`.
+                    payload_buf_opt = Some(payload_buf);
+                    self.sender.try_send(Err(e)).ok();
+                    continue;
                 }
-                .build(),
-                None
-            );
+            };
+
+            let trailer = match read_trailer(&mut inner, &self.params, &mut trailer_buf) {
+                Ok(trailer) => trailer,
+                Err(e) => {
+                    warn!(?e);
+                    // Reuse `payload_buf`.
+                    payload_buf_opt = Some(payload_buf);
+                    self.sender.try_send(Err(e)).ok();
+                    continue;
+                }
+            };
+
+            let builder_result = PayloadBuilder {
+                leader,
+                payload_buf,
+                read_payload_size,
+                trailer,
+            }
+            .build();
+
+            let payload = match builder_result {
+                Ok(payload) => payload,
+                Err(e) => {
+                    warn!(?e);
+                    // Can't reuse `payload_buf` because we moved it
+                    // into PayloadBuilder above.
+                    payload_buf_opt = None;
+                    self.sender.try_send(Err(e)).ok();
+                    continue;
+                }
+            };
+
             if let Err(err) = self.sender.try_send(Ok(payload)) {
                 warn!(?err);
             }
