@@ -164,7 +164,7 @@ impl StreamingLoop {
         let mut leader_buf = vec![0; self.params.leader_size];
         let inner = self.inner.lock().unwrap();
 
-        loop {
+        'outer: loop {
             // Stop the loop when
             // 1. `cancellation_tx` sends signal.
             // 2. `cancellation_tx` is dropped.
@@ -230,7 +230,7 @@ impl StreamingLoop {
                         // Can't reuse `payload_buf` because we're in a loop.
                         payload_buf_opt = None;
                         self.sender.try_send(Err(err.into())).ok();
-                        continue;
+                        continue 'outer;
                     }
                 };
 
