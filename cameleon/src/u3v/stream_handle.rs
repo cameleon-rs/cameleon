@@ -218,7 +218,9 @@ impl StreamingLoop {
             };
 
             // We've submitted the bulk transfers, now wait for them.
-            let mut read_lengths = vec![]; // TODO(bschwind) - Probably don't need a vec for this.
+            let mut first_buf_len = None;
+            let mut last_buf_len = None;
+            let mut payload_len = 0;
 
             while !async_pool.is_empty() {
                 let len = match async_pool.poll(self.params.timeout) {
@@ -232,10 +234,16 @@ impl StreamingLoop {
                     }
                 };
 
-                read_lengths.push(len);
+                if first_buf_len.is_none() {
+                    first_buf_len = Some(len);
+                    last_buf_len = Some(len);
+                } else {
+                    last_buf_len = Some(len);
+                    payload_len += len;
+                }
             }
 
-            let read_payload_size = read_lengths[1..(read_lengths.len() - 1)].iter().sum();
+            let payload_len = payload_len - last_buf_len.unwrap();
 
             // We received the data from the bulk transfers, try to parse stuff now.
             let leader = match u3v_stream::Leader::parse(&leader_buf)
@@ -267,7 +275,7 @@ impl StreamingLoop {
             let builder_result = PayloadBuilder {
                 leader,
                 payload_buf,
-                read_payload_size,
+                read_payload_size: payload_len,
                 trailer,
             }
             .build();
