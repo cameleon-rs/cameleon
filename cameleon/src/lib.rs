@@ -198,8 +198,8 @@ pub enum ControlError {
     #[error("input/output error: {0}")]
     Io(anyhow::Error),
 
-    /// Timeout has occured when receiveing stream payload.
-    #[error("timeout has occured when receiveing stream payload")]
+    /// Timeout has occured when receiving stream payload.
+    #[error("timeout has occured when receiving stream payload")]
     Timeout,
 
     /// The device is not opened.
@@ -246,8 +246,8 @@ pub enum StreamError {
     #[error("can't communicate with the device: {0}")]
     Io(anyhow::Error),
 
-    /// Timeout has occured when receiveing stream payload.
-    #[error("timeout has occured when receiveing stream payload")]
+    /// Timeout has occured when receiving stream payload.
+    #[error("timeout has occured when receiving stream payload")]
     Timeout,
 
     /// A panic has occurred in streaming loop.
