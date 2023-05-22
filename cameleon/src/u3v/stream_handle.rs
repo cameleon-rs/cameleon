@@ -228,7 +228,6 @@ impl StreamingLoop {
                     Err(err) => {
                         warn!(?err);
                         // Can't reuse `payload_buf` because we're in a loop.
-                        payload_buf_opt = None;
                         self.sender.try_send(Err(err.into())).ok();
                         continue 'outer;
                     }
@@ -236,11 +235,11 @@ impl StreamingLoop {
 
                 if first_buf_len.is_none() {
                     first_buf_len = Some(len);
-                    last_buf_len = Some(len);
                 } else {
-                    last_buf_len = Some(len);
                     payload_len += len;
                 }
+
+                last_buf_len = Some(len);
             }
 
             let payload_len = payload_len - last_buf_len.unwrap();
