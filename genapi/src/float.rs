@@ -198,7 +198,7 @@ impl IFloat for FloatNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
         Ok(self.elem_base.is_readable(device, store, cx)?
-            && self.value_kind.is_readable(device, store, cx)?)
+            && IValue::<f64>::is_readable(&self.value_kind, device, store, cx)?)
     }
 
     #[tracing::instrument(skip(self, device, store, cx),
@@ -211,6 +211,6 @@ impl IFloat for FloatNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
         Ok(self.elem_base.is_writable(device, store, cx)?
-            && self.value_kind.is_writable(device, store, cx)?)
+            && IValue::<f64>::is_writable(&self.value_kind, device, store, cx)?)
     }
 }
