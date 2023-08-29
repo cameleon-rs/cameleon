@@ -4,7 +4,7 @@
 
 use super::{
     elem_type::ImmOrPNode,
-    interface::{ICommand, IInteger, INode},
+    interface::{ICommand, INode},
     ivalue::IValue,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, IntegerId, NodeStore, ValueStore},
@@ -59,7 +59,7 @@ impl ICommand for CommandNode {
     ) -> GenApiResult<()> {
         cx.invalidate_cache_by(self.node_base().id());
 
-        let value = self.command_value.value(device, store, cx)?;
+        let value: i64 = self.command_value.value(device, store, cx)?;
         self.value.set_value(value, device, store, cx)
     }
 
@@ -71,15 +71,14 @@ impl ICommand for CommandNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        let nid = match self.value {
+        let node = match self.value {
             ImmOrPNode::Imm(..) => return Ok(true),
             ImmOrPNode::PNode(nid) => nid,
         };
 
-        cx.invalidate_cache_of(nid);
-        let node = nid.expect_iinteger_kind(store)?;
-        if node.is_readable(device, store, cx)? {
-            let command_value = self.command_value.value(device, store, cx)?;
+        cx.invalidate_cache_of(node);
+        if IValue::<i64>::is_readable(&node, device, store, cx)? {
+            let command_value: i64 = self.command_value.value(device, store, cx)?;
             let reg_value = node.value(device, store, cx)?;
             Ok(command_value != reg_value)
         } else {
@@ -97,6 +96,6 @@ impl ICommand for CommandNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
         Ok(self.elem_base.is_writable(device, store, cx)?
-            && self.value.is_writable(device, store, cx)?)
+            && IValue::<i64>::is_writable(&self.value, device, store, cx)?)
     }
 }

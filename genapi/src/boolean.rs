@@ -65,7 +65,7 @@ impl IBoolean for BooleanNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
-        let value = self.value.value(device, store, cx)?;
+        let value: i64 = self.value.value(device, store, cx)?;
         if value == self.on_value {
             Ok(true)
         } else if value == self.off_value {
@@ -102,7 +102,7 @@ impl IBoolean for BooleanNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
         Ok(self.elem_base.is_readable(device, store, cx)?
-            && self.value.is_readable(device, store, cx)?)
+            && IValue::<i64>::is_readable(&self.value, device, store, cx)?)
     }
 
     #[tracing::instrument(skip(self, device, store, cx),
@@ -115,7 +115,7 @@ impl IBoolean for BooleanNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<bool> {
         Ok(self.elem_base.is_writable(device, store, cx)?
-            && self.value.is_writable(device, store, cx)?)
+            && IValue::<i64>::is_writable(&self.value, device, store, cx)?)
     }
 }
 

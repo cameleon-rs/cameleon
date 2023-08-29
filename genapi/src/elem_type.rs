@@ -6,7 +6,6 @@
 use std::marker::PhantomData;
 
 use super::{
-    interface::IInteger,
     ivalue::IValue,
     store::{CacheStore, NodeId, NodeStore, ValueStore},
     Device, GenApiResult, ValueCtxt,
@@ -281,7 +280,7 @@ impl AddressKind {
     ) -> GenApiResult<i64> {
         match self {
             Self::Address(i) => i.value(device, store, cx),
-            Self::IntSwissKnife(nid) => nid.expect_iinteger_kind(store)?.value(device, store, cx),
+            Self::IntSwissKnife(nid) => nid.value(device, store, cx),
             Self::PIndex(p_index) => p_index.value(device, store, cx),
         }
     }
@@ -310,12 +309,10 @@ impl RegPIndex {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
-        let base = self
-            .p_index
-            .expect_iinteger_kind(store)?
-            .value(device, store, cx)?;
+        let base = self.p_index.value(device, store, cx)?;
         if let Some(offset) = &self.offset {
-            Ok(base + offset.value(device, store, cx)?)
+            let offset: i64 = offset.value(device, store, cx)?;
+            Ok(base + offset)
         } else {
             Ok(base)
         }

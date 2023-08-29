@@ -217,7 +217,7 @@ impl Drop for AsyncTransfer {
 /// timeout, or error, instead of potentially returning early.
 ///
 /// This design is based on
-/// https://libusb.sourceforge.io/api-1.0/libusb_mtasync.html#threadwait
+/// <https://libusb.sourceforge.io/api-1.0/libusb_mtasync.html#threadwait>
 fn poll_completed(
     ctx: &impl UsbContext,
     timeout: Duration,
