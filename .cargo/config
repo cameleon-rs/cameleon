@@ -1,5 +1,2 @@
-[target.'cfg(all())']
-rustflags = ["-D", "warnings"]
-
 [env]
 RUST_TEST_THREADS = "1"
