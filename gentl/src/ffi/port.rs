@@ -232,7 +232,7 @@ gentl_api! {
         let handle = unsafe { ModuleHandle::from_raw_manually_drop(hPort)? };
         let url = with_port!(handle, |port| {
             // Use first  info.
-            let xml_info = port.xml_infos()?.get(0).ok_or_else(|| GenTlError::Error("no xml information in the device".into()))?;
+            let xml_info = port.xml_infos()?.first().ok_or_else(|| GenTlError::Error("no xml information in the device".into()))?;
             file_location_to_url(xml_info, port.port_info()?)
         });
 

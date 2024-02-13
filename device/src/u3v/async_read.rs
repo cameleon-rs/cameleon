@@ -233,6 +233,8 @@ fn poll_completed(
             let remaining = deadline.saturating_duration_since(Instant::now());
             let timeval = libc::timeval {
                 tv_sec: remaining.as_secs().try_into().unwrap(),
+                // tv_usec is i64 on Linux (with infallible conversion from u32), but i32 on Mac.
+                #[allow(clippy::unnecessary_fallible_conversions)]
                 tv_usec: remaining.subsec_micros().try_into().unwrap(),
             };
 
