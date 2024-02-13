@@ -233,7 +233,7 @@ fn poll_completed(
             let remaining = deadline.saturating_duration_since(Instant::now());
             let timeval = libc::timeval {
                 tv_sec: remaining.as_secs().try_into().unwrap(),
-                tv_usec: remaining.subsec_micros().try_into().unwrap(),
+                tv_usec: remaining.subsec_micros().into(),
             };
 
             if libusb_try_lock_events(ctx.as_raw()) == 0_i32 {
