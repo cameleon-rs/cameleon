@@ -76,7 +76,7 @@ impl RegisterBase {
     ) -> GenApiResult<R> {
         let length = self.length(device, store, cx)?;
         let address = self.address(device, store, cx)?;
-        if let Some(cache) = cx.get_cache(nid, length, address) {
+        if let Some(cache) = cx.get_cache(nid, address, length) {
             f(cache)
         } else {
             let mut buf = vec![0; length as usize];
