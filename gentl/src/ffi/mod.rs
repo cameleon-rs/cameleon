@@ -183,7 +183,7 @@ lazy_static::lazy_static! {
 }
 
 thread_local! {
-    static LAST_ERROR: RefCell<LastError> = {
+    static LAST_ERROR: RefCell<LastError> = const {
         let last_error = LastError {
             err: None,
         };
