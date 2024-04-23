@@ -312,7 +312,7 @@ impl RegPIndex {
         let base = self.p_index.value(device, store, cx)?;
         if let Some(offset) = &self.offset {
             let offset: i64 = offset.value(device, store, cx)?;
-            Ok(base + offset)
+            Ok(base * offset)
         } else {
             Ok(base)
         }
