@@ -522,7 +522,7 @@ impl CacheStore for DefaultCacheStore {
             .and_modify(|level1| {
                 level1
                     .entry((address, length))
-                    .and_modify(|level2| *level2 = data.to_owned())
+                    .and_modify(|level2| data.clone_into(level2))
                     .or_insert_with(|| data.to_owned());
             })
             .or_insert_with(|| {
