@@ -61,7 +61,7 @@ impl DeviceBuilder {
 
     fn build(self) -> Result<Device> {
         // TODO: Log it when device is broken or invalid.
-        let mut dev_channel = self.device.open()?;
+        let dev_channel = self.device.open()?;
         if dev_channel.active_configuration()? != self.config_desc.number() {
             dev_channel.set_active_configuration(self.config_desc.number())?;
         }
