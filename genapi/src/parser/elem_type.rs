@@ -473,7 +473,7 @@ impl Parse for NodeId {
         _: &mut impl CacheStoreBuilder,
     ) -> Self {
         let text = node.next_text().unwrap();
-        node_builder.get_or_intern(&text.view())
+        node_builder.get_or_intern(text.view())
     }
 }
 

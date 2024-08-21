@@ -378,7 +378,7 @@ impl BitMask {
         match sign {
             Sign::Signed => {
                 if msb - lsb == 63 {
-                    std::i64::MIN
+                    i64::MIN
                 } else {
                     let value = 1 << (msb - lsb) as i64;
                     -value
@@ -394,13 +394,13 @@ impl BitMask {
             self.msb(reg_byte_len, endianness),
         );
         if msb - lsb == 63 {
-            return std::i64::MAX;
+            return i64::MAX;
         }
         match sign {
             Sign::Signed => (1 << (msb - lsb)) - 1,
             Sign::Unsigned => {
                 if msb - lsb == 63 {
-                    std::i64::MAX
+                    i64::MAX
                 } else {
                     (1 << (msb - lsb + 1)) - 1
                 }
@@ -517,7 +517,7 @@ mod tests {
 
         let sign = Sign::Unsigned;
         assert_eq!(mask.min(reg_len, endianness, sign), 0);
-        assert_eq!(mask.max(reg_len, endianness, sign), std::i64::MAX);
+        assert_eq!(mask.max(reg_len, endianness, sign), i64::MAX);
         let value = mask.apply_mask(reg_value, reg_len, endianness, sign);
         assert_eq!(value, i64::MAX);
         let new_value = mask
@@ -526,13 +526,13 @@ mod tests {
         assert_eq!(new_value, 0);
 
         let sign = Sign::Signed;
-        assert_eq!(mask.min(reg_len, endianness, sign), std::i64::MIN);
-        assert_eq!(mask.max(reg_len, endianness, sign), std::i64::MAX);
+        assert_eq!(mask.min(reg_len, endianness, sign), i64::MIN);
+        assert_eq!(mask.max(reg_len, endianness, sign), i64::MAX);
         let value = mask.apply_mask(reg_value, reg_len, endianness, sign);
-        assert_eq!(value, std::i64::MAX);
+        assert_eq!(value, i64::MAX);
         let new_value = mask
-            .masked_value(reg_value, std::i64::MIN, reg_len, endianness, sign)
+            .masked_value(reg_value, i64::MIN, reg_len, endianness, sign)
             .unwrap();
-        assert_eq!(new_value, std::i64::MIN);
+        assert_eq!(new_value, i64::MIN);
     }
 }

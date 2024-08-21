@@ -36,7 +36,7 @@ const INITIAL_MAXIMUM_ACK_LENGTH: u32 = 128;
 const PAYLOAD_TRANSFER_SIZE: u32 = 1024 * 64;
 
 /// This handle provides low level API to read and write data from the device.  
-/// See [`ControlHandle::abrm`] and [`register_map`](super::register_map) which provide more
+/// See [`ControlHandle::abrm`] and [`register_map`] which provide more
 /// convenient way to communicate with `u3v` specific registers.
 ///
 /// # Examples
