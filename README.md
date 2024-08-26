@@ -185,9 +185,9 @@ To start developing, please refer to [CONTRIBUTING.md][contributing].
 
 ## Releasing
 ### 1. Publish
-1. Bump up all the crate versions in the workspace using `cargo release version <major|minor|patch>`
-2. Open a PR to reflect the changes.
-3. Publish the crates with [`cargo release`](https://github.com/crate-ci/cargo-release)
+1. Check commits since the last release and determine whether they're semver-breaking.
+2. Bump up all the crate versions and publish using [`cargo release <major|minor|patch>`](https://github.com/crate-ci/cargo-release)
+3. Open a PR to reflect the changes.
 
 ### 2. Changelog
 1. Create a new release on the GitHub page from the tag that `cargo release` has created
