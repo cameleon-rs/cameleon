@@ -2,8 +2,9 @@
 
 [![Crates.io][crates-badge]][crates-url]
 [![Documentation][docs-badge]][docs-url]
-[![MPL-2.0][mpl-badge]][mpl-url]
 [![Build Status][actions-badge]][actions-url]
+[![Actively Maintained](https://img.shields.io/badge/Maintenance%20Level-Actively%20Maintained-green.svg)](https://gist.github.com/cheerfulstoic/d107229326a01ff0f333a1d3476e068d)
+[![MPL-2.0][mpl-badge]][mpl-url]
 
 `cameleon` is a safe, fast, and flexible library for [GenICam][genicam-url] compatible cameras.
 
@@ -181,6 +182,16 @@ Thank you for your interest in contributing to `Cameleon`! We are so happy to ha
 To start developing, please refer to [CONTRIBUTING.md][contributing].
 
 [contributing]: https://github.com/cameleon-rs/cameleon/blob/main/CONTRIBUTING.md
+
+## Releasing
+### 1. Publish
+1. Check commits since the last release and determine whether they're semver-breaking.
+2. Bump up all the crate versions and publish using [`cargo release <major|minor|patch>`](https://github.com/crate-ci/cargo-release)
+3. Open a PR to reflect the changes.
+
+### 2. Changelog
+1. Create a new release on the GitHub page from the tag that `cargo release` has created
+2. Use [automatically generated release notes](https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes) and modify it *manually*
 
 ## License
 This project is licenced under [MPL 2.0][license].
