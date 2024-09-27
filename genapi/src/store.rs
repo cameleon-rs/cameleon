@@ -5,7 +5,7 @@
 use std::{collections::HashMap, convert::TryFrom};
 
 use auto_impl::auto_impl;
-use string_interner::{StringInterner, Symbol};
+use string_interner::{DefaultBackend, StringInterner, Symbol};
 
 use super::{
     builder,
@@ -298,7 +298,7 @@ impl NodeData {
 
 #[derive(Debug)]
 pub struct DefaultNodeStore {
-    pub(super) interner: StringInterner<NodeId>,
+    pub(super) interner: StringInterner<DefaultBackend<NodeId>>,
     pub(super) store: Vec<Option<NodeData>>,
 
     fresh_id: u32,

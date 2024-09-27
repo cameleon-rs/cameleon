@@ -40,7 +40,7 @@ pub enum AccessMode {
     RW,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ImmOrPNode<T> {
     Imm(T),
     PNode(NodeId),
@@ -139,7 +139,7 @@ pub enum CachingMode {
     NoCache,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NamedValue<T> {
     pub(crate) name: String,
     pub(crate) value: T,

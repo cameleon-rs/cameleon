@@ -436,7 +436,7 @@ impl Register {
     fn impl_write(&self, endianness: Endianness) -> TokenStream {
         match &self.reg_attr.ty {
             RegisterType::BitField(ref bf) => {
-                let read_bytes = quote_read_bytes(endianness, &*bf.ty);
+                let read_bytes = quote_read_bytes(endianness, &bf.ty);
                 let write_bytes = quote_write_bytes(endianness);
                 quote! {
                     fn write(data: Self::Ty, memory: &mut[u8]) -> MemoryResult<()> {
@@ -725,7 +725,7 @@ impl BitField {
         let len = self.ty.integral_bits();
         match endianness {
             Endianness::LE => self.lsb.base10_parse().unwrap(),
-            Endianness::BE => (len - self.lsb.base10_parse::<usize>().unwrap() - 1),
+            Endianness::BE => len - self.lsb.base10_parse::<usize>().unwrap() - 1,
         }
     }
 
@@ -733,7 +733,7 @@ impl BitField {
         let len = self.ty.integral_bits();
         match endianness {
             Endianness::LE => self.msb.base10_parse().unwrap(),
-            Endianness::BE => (len - self.msb.base10_parse::<usize>().unwrap() - 1),
+            Endianness::BE => len - self.msb.base10_parse::<usize>().unwrap() - 1,
         }
     }
 

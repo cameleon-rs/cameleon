@@ -428,7 +428,7 @@ where
         &mut self,
         address: i64,
         data: &mut [u8],
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let address: u64 = address.try_into().map_err(|_| {
             ControlError::InvalidData(
                 "invalid address: the given address has negative value".into(),
@@ -441,7 +441,7 @@ where
         &mut self,
         address: i64,
         data: &[u8],
-    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    ) -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let address: u64 = address.try_into().map_err(|_| {
             ControlError::InvalidData(
                 "invalid address: the given address has negative value".into(),

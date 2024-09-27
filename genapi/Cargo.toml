@@ -1,6 +1,6 @@
 [package]
 name = "cameleon-genapi"
-version = "0.1.1"
+version = "0.1.7"
 edition = "2018"
 authors = ["Cameleon Project Developers"]
 license = "MPL-2.0"
@@ -16,9 +16,9 @@ keywords = ["genicam", "camera", "genapi"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-roxmltree = "0.14.1"
+roxmltree = "0.15.0"
 thiserror = "1.0.24"
-string-interner = "0.12.2"
-auto_impl = "0.4.1"
+string-interner = "0.14.0"
+auto_impl = "1.0.1"
 tracing = "0.1.26"
 ambassador = "0.2.1"

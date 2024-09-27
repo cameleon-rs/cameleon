@@ -84,9 +84,7 @@ impl DeviceBuilder {
             .descriptors()
             .next()
             .ok_or_else(|| Error::InvalidDevice("control interface descriptor not found".into()))?;
-        let device_info_desc = ctrl_iface_desc.extra().ok_or_else(|| {
-            Error::InvalidDevice("no extra bytes in control interface descriptor".into())
-        })?;
+        let device_info_desc = ctrl_iface_desc.extra();
         let device_info_desc = DeviceInfoDescriptor::from_bytes(device_info_desc)?;
         let device_info = device_info_desc.interpret(&dev_channel)?;
 
@@ -145,11 +143,9 @@ impl DeviceBuilder {
     }
 
     fn find_u3v_iad_in_config_desc(desc: &rusb::ConfigDescriptor) -> Option<Iad> {
-        if let Some(extra) = desc.extra() {
-            if let Some(iad) = Iad::from_bytes(extra) {
-                if Self::is_u3v_iad(&iad) {
-                    return Some(iad);
-                }
+        if let Some(iad) = Iad::from_bytes(desc.extra()) {
+            if Self::is_u3v_iad(&iad) {
+                return Some(iad);
             }
         }
 
@@ -165,11 +161,9 @@ impl DeviceBuilder {
     }
 
     fn find_u3v_iad_in_if_desc(desc: &rusb::InterfaceDescriptor) -> Option<Iad> {
-        if let Some(extra) = desc.extra() {
-            if let Some(iad) = Iad::from_bytes(extra) {
-                if Self::is_u3v_iad(&iad) {
-                    return Some(iad);
-                }
+        if let Some(iad) = Iad::from_bytes(desc.extra()) {
+            if Self::is_u3v_iad(&iad) {
+                return Some(iad);
             }
         }
 

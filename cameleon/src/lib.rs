@@ -24,7 +24,7 @@
 //! First, add dependencies like below.
 //! ```toml
 //! [dependencies]
-//! cameleon = { version = 0.1, features = 'libusb' }
+//! cameleon = { version = "0.1", features = ["libusb"] }
 //! ```
 //!
 //! Then, you can enumerate all cameras connected to the host, and start streaming.
@@ -221,11 +221,7 @@ pub enum ControlError {
     /// Try to write invalid data to the device, or received data from the device is semantically invalid.
     /// e.g. try to write too large data that will overrun register.
     #[error("try to write invalid data to the device: {0}")]
-    InvalidData(Box<dyn std::error::Error>),
-
-    /// Try to use unsupported feature.
-    #[error("try to use unsupported feature: {0}")]
-    NotSupported(Cow<'static, str>),
+    InvalidData(Box<dyn std::error::Error + Send + Sync>),
 }
 
 /// A specialized `Result` type for streaming.
@@ -277,4 +273,21 @@ impl From<TryFromIntError> for ControlError {
     fn from(e: TryFromIntError) -> Self {
         Self::InvalidDevice(format!("internal data has invalid num type: {}", e).into())
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Taken from https://stackoverflow.com/a/32765782/4345715
+    // Can be replaced by https://crates.io/crates/static_assertions
+    const _: () = {
+        fn assert_send<T: Send>() {}
+        fn assert_sync<T: Sync>() {}
+
+        fn assert_cameleon_error_is_send_sync() {
+            assert_send::<CameleonError>();
+            assert_sync::<CameleonError>();
+        }
+    };
 }

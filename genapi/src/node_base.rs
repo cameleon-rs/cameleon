@@ -129,6 +129,9 @@ pub(crate) struct NodeElementBase {
     pub(crate) p_errors: Vec<NodeId>,
     pub(crate) p_alias: Option<NodeId>,
     pub(crate) p_cast_alias: Option<NodeId>,
+    /// `pInvalidator` works only for `Register` kind nodes. It is not used in this crate.
+    /// See https://github.com/cameleon-rs/cameleon/issues/138 for more details.
+    pub(crate) p_invalidators: Vec<NodeId>,
 }
 
 impl NodeElementBase {

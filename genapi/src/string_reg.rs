@@ -49,10 +49,7 @@ impl IString for StringRegNode {
         let nid = self.node_base().id();
         let reg = self.register_base();
         reg.with_cache_or_read(nid, device, store, cx, |data| {
-            let str_end = data
-                .iter()
-                .position(|b| *b == 0)
-                .unwrap_or_else(|| data.len());
+            let str_end = data.iter().position(|b| *b == 0).unwrap_or(data.len());
             Ok(String::from_utf8_lossy(&data[..str_end]).to_string())
         })
     }

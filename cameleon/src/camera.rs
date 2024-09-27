@@ -513,7 +513,7 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
 }
 
 /// Information of the camera.
-#[derive(Clone, Debug, PartialEq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CameraInfo {
     /// Vendor name of the camera.
     pub vendor_name: String,

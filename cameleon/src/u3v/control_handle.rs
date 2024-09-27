@@ -516,7 +516,6 @@ impl SharedControlHandle {
         pub fn resize_buffer(&self, size: usize) -> (),
         #[must_use]
         /// Thread safe version of [`ControlHandle::timeout_duration`].
-        #[must_use]
         pub fn timeout_duration(&self) -> Duration,
         /// Thread safe version of [`ControlHandle::set_timeout_duration`].
         pub fn set_timeout_duration(&self, duration: Duration) -> (),
