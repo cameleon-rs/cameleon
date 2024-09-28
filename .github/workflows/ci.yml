@@ -65,6 +65,13 @@ jobs:
           elif [[ ${{ matrix.os }} == "macos-latest" ]]; then
             brew install pkg-config libusb
           elif [[ ${{ matrix.os }} == "windows-latest" ]]; then
+            # Workaround, see:
+            # https://github.com/microsoft/vcpkg/issues/41199#issuecomment-2378255699
+
+            export SystemDrive="$SYSTEMDRIVE"
+            export SystemRoot="$SYSTEMROOT"
+            export windir="$WINDIR"
+
             git clone https://github.com/microsoft/vcpkg.git --depth 1
             vcpkg/bootstrap-vcpkg.bat
             vcpkg/vcpkg update
