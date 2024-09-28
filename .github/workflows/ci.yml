@@ -67,6 +67,7 @@ jobs:
           elif [[ ${{ matrix.os }} == "windows-latest" ]]; then
             git clone https://github.com/microsoft/vcpkg.git --depth 1
             vcpkg/bootstrap-vcpkg.bat
+            vcpkg/vcpkg update
             vcpkg/vcpkg integrate install
             vcpkg/vcpkg install libusb
           fi
