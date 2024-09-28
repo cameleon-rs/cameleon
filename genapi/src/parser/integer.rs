@@ -45,7 +45,7 @@ impl Parse for IntegerNode {
         let inc = node
             .parse_if(INC, node_builder, value_builder, cache_builder)
             .or_else(|| node.parse_if(P_INC, node_builder, value_builder, cache_builder))
-            .unwrap_or(ImmOrPNode::Imm(10));
+            .unwrap_or(ImmOrPNode::Imm(1));
         let unit = node.parse_if(UNIT, node_builder, value_builder, cache_builder);
         let representation: IntegerRepresentation = node
             .parse_if(REPRESENTATION, node_builder, value_builder, cache_builder)
