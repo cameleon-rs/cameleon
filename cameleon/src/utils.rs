@@ -43,6 +43,14 @@ macro_rules! impl_shared_control_handle {
     }
 }
 
+macro_rules! ensure {
+    ($cond:expr, $err:expr) => {
+        if !($cond) {
+            return Result::Err($err);
+        }
+    };
+}
+
 pub(crate) fn unzip_genxml(file: Vec<u8>) -> ControlResult<Vec<u8>> {
     fn zip_err(err: impl std::fmt::Debug) -> ControlError {
         ControlError::InvalidDevice(format!("zipped xml file is broken: {:?}", err).into())

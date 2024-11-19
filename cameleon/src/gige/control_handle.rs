@@ -13,7 +13,10 @@ use async_std::{channel, future, net::UdpSocket, task};
 use futures_channel::oneshot;
 use futures_util::{select, FutureExt};
 
-use cameleon_device::gige::protocol::{ack, cmd};
+use cameleon_device::gige::{
+    protocol::{ack, cmd},
+    register_map::{self, bootstrap, StreamChannelPort, StreamPacketSize},
+};
 
 use crate::{
     genapi::CompressionType, utils::unzip_genxml, ControlError, ControlResult, DeviceControl,
@@ -21,9 +24,12 @@ use crate::{
 
 use tracing::{debug, error};
 
-use super::register_map::{Bootstrap, ControlChannelPriviledge, GvcpCapability, XmlFileLocation};
+use super::register_map::{
+    Bootstrap, ControlChannelPriviledge, GvcpCapability, StreamRegister, XmlFileLocation,
+};
 
 const GVCP_DEFAULT_PORT: u16 = 3956;
+const GVSP_DEFAULT_PORT: u16 = 59983;
 
 /// Initial timeout duration for transaction between device and host.
 /// This value is temporarily used until the device's bootstrap register value is read in
@@ -77,6 +83,7 @@ impl ControlHandle {
 
 impl DeviceControl for ControlHandle {
     fn open(&mut self) -> ControlResult<()> {
+        debug!("opening camera");
         let (heartbeat_timeout, need_heartbeat) = {
             let mut inner = self.inner.lock().unwrap();
             unwrap_or_log!(inner.open());
@@ -88,7 +95,7 @@ impl DeviceControl for ControlHandle {
             );
             (heartbeat_timeout, need_heartbeat)
         };
-
+        debug!("heartbeat timeout: {:#?}", heartbeat_timeout);
         let (event_tx, event_rx) = channel::unbounded();
         let (completion_tx, completion_rx) = oneshot::channel();
         let heartbeat_loop = HeartbeatLoop {
@@ -486,6 +493,7 @@ impl DeviceControl for ControlHandleInner {
                 })?;
             ent.url_string(self)?
         };
+        tracing::info!("retrieving GenICam file from: {}", url_string);
 
         let (xml, compression_type) = match XmlFileLocation::parse(&url_string)? {
             XmlFileLocation::Device {
@@ -534,11 +542,24 @@ impl DeviceControl for ControlHandleInner {
     }
 
     fn enable_streaming(&mut self) -> ControlResult<()> {
-        todo!()
+        ensure!(
+            Bootstrap::new().number_of_stream_channel(self)? == 1,
+            ControlError::NotSupported("Number of stream channels other than 1".into())
+        );
+
+        let packet_size = StreamRegister::new(0).packet_size(self)?;
+        StreamRegister::new(0).set_packet_size(self, packet_size)?;
+
+        let port = StreamRegister::new(0).channel_port(self)?;
+        StreamRegister::new(0).set_channel_port(self, port.set_host_port(GVSP_DEFAULT_PORT))?;
+
+        Ok(())
     }
 
     fn disable_streaming(&mut self) -> ControlResult<()> {
-        todo!()
+        let port = StreamRegister::new(0).channel_port(self)?;
+        StreamRegister::new(0).set_channel_port(self, port.set_host_port(0))?;
+        Ok(())
     }
 }
 
