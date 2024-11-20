@@ -24,17 +24,29 @@ use crate::{
 
 use super::register_map::{Bootstrap, StreamRegister};
 
+#[derive(Debug)]
+pub struct StreamParams {
+    pub host_addr: Ipv4Addr,
+    pub host_port: u16,
+}
+
 pub struct StreamHandle {
     completion: Option<Arc<(Mutex<bool>, Condvar)>>,
     cancellation_tx: Option<oneshot::Sender<()>>,
+    sock: Arc<UdpSocket>,
 }
 
 impl StreamHandle {
-    pub fn new() -> StreamResult<Self> {
+    pub fn new(sock: UdpSocket) -> StreamResult<Self> {
         Ok(Self {
             completion: None,
             cancellation_tx: None,
+            sock: Arc::new(sock),
         })
+    }
+
+    pub fn port(&self) -> u16 {
+        self.sock.local_addr().unwrap().port()
     }
 }
 
@@ -52,7 +64,7 @@ impl PayloadStream for StreamHandle {
     fn start_streaming_loop(
         &mut self,
         sender: PayloadSender,
-        ctrl: &mut dyn DeviceControl,
+        _ctrl: &mut dyn DeviceControl,
     ) -> StreamResult<()> {
         if self.is_loop_running() {
             return Err(StreamError::InStreaming);
@@ -62,14 +74,15 @@ impl PayloadStream for StreamHandle {
         let completion = Arc::new((Mutex::new(false), Condvar::new()));
         self.completion = Some(completion.clone());
 
-        let stream_port = StreamRegister::new(0).channel_port(ctrl).unwrap(); // TODO: redo unwrap
-        let packet_size = StreamRegister::new(0).packet_size(ctrl).unwrap();
+        // let stream_port = StreamRegister::new(0).channel_port(ctrl).unwrap().packet_size() as usize; // TODO: redo unwrap
+        // let packet_size = StreamRegister::new(0).packet_size(ctrl).unwrap().host_port();
+        let packet_size = 8996;
 
         let strm_loop = StreamingLoop {
-            buffer: vec![0u8; packet_size.packet_size() as usize],
+            buffer: vec![0u8; packet_size],
             cancellation_rx,
             completion,
-            sock: UdpSocket::bind(("0.0.0.0", stream_port.host_port()))?,
+            sock: self.sock.clone(),
             sender,
         };
 
@@ -90,7 +103,7 @@ impl PayloadStream for StreamHandle {
                     if *guard {
                         return Ok(());
                     }
-                    condvar.wait_while(guard, |g| !*g).unwrap();
+                    drop(condvar.wait_while(guard, |g| !*g).unwrap());
                     Ok(())
                 }
                 None => Err(StreamError::Disconnected),
@@ -114,7 +127,7 @@ struct StreamingLoop {
     buffer: Vec<u8>,
     cancellation_rx: oneshot::Receiver<()>,
     completion: Arc<(Mutex<bool>, Condvar)>,
-    sock: UdpSocket,
+    sock: Arc<UdpSocket>,
     sender: PayloadSender,
 }
 
@@ -162,7 +175,11 @@ impl StreamingLoop {
         }
 
         loop {
-            self.sock.recv(&mut self.buffer).unwrap();
+            if self.cancellation_rx.try_recv().is_ok() {
+                *self.completion.0.lock().unwrap() = true;
+                self.completion.1.notify_all();
+            }
+            let length = self.sock.recv(&mut self.buffer).unwrap();
             let mut cursor = Cursor::new(&self.buffer[..]);
             let header = unwrap_or_continue!(PacketHeader::parse(&mut cursor));
             match header.packet_type {
@@ -197,12 +214,12 @@ impl StreamingLoop {
                     unwrap_or_continue!(async_std::task::block_on(self.sender.send(Ok(payload))));
                 }
                 PacketType::GenericPayload => {
-                    let Some(mut builder) = builder.take() else {
+                    let Some(builder) = builder.as_mut() else {
                         warn!("Generic packet received while no leader packet arrived");
                         continue;
                     };
                     // TODO: migrate to Cursor::remaining_slice when it's stable
-                    let remaining_slice = &self.buffer[cursor.position() as usize..];
+                    let remaining_slice = &self.buffer[cursor.position() as usize..length];
                     handle_packet_mismatch!(builder.push(header, remaining_slice));
                 }
                 PacketType::H264Payload => error!("H264 Payload not implemented"),
@@ -263,9 +280,9 @@ impl<'a> PayloadBuilder<'a> {
                 pixel_format: self.leader.pixel_format(),
                 image_size: self.payload.len(),
             }),
-            payload: todo!(),
-            valid_payload_size: todo!(),
-            timestamp: todo!(),
+            payload: self.payload.clone(),
+            valid_payload_size: self.payload.len(),
+            timestamp: self.leader.timestamp(),
         })
     }
 }

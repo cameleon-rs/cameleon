@@ -24,8 +24,11 @@ use crate::{
 
 use tracing::{debug, error};
 
-use super::register_map::{
-    Bootstrap, ControlChannelPriviledge, GvcpCapability, StreamRegister, XmlFileLocation,
+use super::{
+    register_map::{
+        Bootstrap, ControlChannelPriviledge, GvcpCapability, StreamRegister, XmlFileLocation,
+    },
+    stream_handle::StreamParams,
 };
 
 const GVCP_DEFAULT_PORT: u16 = 3956;
@@ -51,8 +54,11 @@ pub struct ControlHandle {
 }
 
 impl ControlHandle {
-    pub fn new(info: DeviceInfo) -> ControlResult<Self> {
-        let inner = Arc::new(Mutex::new(task::block_on(ControlHandleInner::new(&info))?));
+    pub fn new(info: DeviceInfo, stream_params: StreamParams) -> ControlResult<Self> {
+        let inner = Arc::new(Mutex::new(task::block_on(ControlHandleInner::new(
+            &info,
+            stream_params,
+        ))?));
 
         Ok(Self {
             inner,
@@ -204,10 +210,11 @@ struct ControlHandleInner {
     buffer: Vec<u8>,
     capability: Option<GvcpCapability>,
     is_opened: bool,
+    stream_params: StreamParams,
 }
 
 impl ControlHandleInner {
-    async fn new(info: &DeviceInfo) -> ControlResult<Self> {
+    async fn new(info: &DeviceInfo, stream_params: StreamParams) -> ControlResult<Self> {
         let sock = UdpSocket::bind("0.0.0.0:0")
             .await
             .map_err(|err| ControlError::Io(err.into()))?;
@@ -223,6 +230,7 @@ impl ControlHandleInner {
             buffer: vec![0; GVCP_BUFFER_SIZE],
             capability: None,
             is_opened: false,
+            stream_params,
         })
     }
 
@@ -546,12 +554,15 @@ impl DeviceControl for ControlHandleInner {
             ControlError::NotSupported("Number of stream channels other than 1".into())
         );
 
-        let packet_size = StreamRegister::new(0).packet_size(self)?;
-        StreamRegister::new(0).set_packet_size(self, packet_size)?;
+        let sr = StreamRegister::new(0);
+
+        let packet_size = sr.packet_size(self)?;
+        sr.set_packet_size(self, packet_size)?;
 
         let port = StreamRegister::new(0).channel_port(self)?;
-        let bound_port = unwrap_or_log!(self.sock.local_addr()).port();
-        StreamRegister::new(0).set_channel_port(self, port.set_host_port(bound_port))?;
+        sr.set_channel_port(self, port.set_host_port(self.stream_params.host_port))?;
+
+        sr.set_destination_address(self, self.stream_params.host_addr)?;
 
         Ok(())
     }

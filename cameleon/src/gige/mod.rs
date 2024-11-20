@@ -8,12 +8,16 @@ pub mod stream_handle;
 
 pub use control_handle::ControlHandle;
 pub use stream_handle::StreamHandle;
+use stream_handle::StreamParams;
 
-use std::{net::Ipv4Addr, time};
+use std::{
+    net::{Ipv4Addr, UdpSocket},
+    time,
+};
 
-use cameleon_device::gige;
+use cameleon_device::gige::{self, register_map::GvspCapability};
 
-use crate::ControlError;
+use crate::{ControlError, StreamError};
 
 use async_std::task;
 
@@ -45,8 +49,13 @@ pub fn enumerate_cameras(
             model_name: info.model_name.clone(),
             serial_number: info.serial_number.clone(),
         };
-        let ctrl_handle = unwrap_or_log!(ControlHandle::new(info));
-        let strm_handle = unwrap_or_log!(StreamHandle::new());
+        let stream_socket = UdpSocket::bind((local_addr, 0)).map_err(Into::<StreamError>::into)?;
+        let stream_params = StreamParams {
+            host_addr: local_addr,
+            host_port: stream_socket.local_addr().unwrap().port(),
+        };
+        let strm_handle = unwrap_or_log!(StreamHandle::new(stream_socket));
+        let ctrl_handle = unwrap_or_log!(ControlHandle::new(info, stream_params));
         cameras.push(Camera::new(ctrl_handle, strm_handle, None, camera_info));
     }
 

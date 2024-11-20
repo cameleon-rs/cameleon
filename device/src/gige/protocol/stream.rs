@@ -176,8 +176,8 @@ impl ImageLeader {
         self.payload_type
     }
 
-    pub fn timestamp(&self) -> u64 {
-        self.timestamp
+    pub fn timestamp(&self) -> std::time::Duration {
+        std::time::Duration::from_nanos(self.timestamp)
     }
 
     pub fn pixel_format(&self) -> PixelFormat {
