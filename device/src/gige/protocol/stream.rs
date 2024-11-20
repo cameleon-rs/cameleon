@@ -180,6 +180,10 @@ impl ImageLeader {
         self.timestamp
     }
 
+    pub fn pixel_format(&self) -> PixelFormat {
+        self.pixel_format
+    }
+
     pub fn width(&self) -> u32 {
         self.width
     }
@@ -237,8 +241,26 @@ impl ImageLeader {
     }
 }
 
-pub struct ImageTrailer {}
+pub struct ImageTrailer {
+    payload_type: PayloadType,
+    size_y: u32,
+}
 
 impl ImageTrailer {
-    pub fn parse(cursor: &mut io::Cursor<&[u8]>) -> Result<Self> {}
+    pub fn payload_type(&self) -> PayloadType {
+        self.payload_type
+    }
+
+    pub fn size_y(&self) -> u32 {
+        self.size_y
+    }
+
+    pub fn parse(cursor: &mut io::Cursor<&[u8]>) -> Result<Self> {
+        let payload_type = PayloadType::parse(cursor)?;
+        let size_y = cursor.read_bytes_be()?;
+        Ok(Self {
+            payload_type,
+            size_y,
+        })
+    }
 }

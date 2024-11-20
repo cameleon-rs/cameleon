@@ -15,6 +15,7 @@ use cameleon_device::gige::protocol::stream::{
 };
 use futures_channel::oneshot;
 use tracing::{error, warn};
+use ureq::head;
 
 use crate::{
     payload::{Payload, PayloadSender},
@@ -50,7 +51,7 @@ impl PayloadStream for StreamHandle {
 
     fn start_streaming_loop(
         &mut self,
-        _sender: PayloadSender,
+        sender: PayloadSender,
         ctrl: &mut dyn DeviceControl,
     ) -> StreamResult<()> {
         if self.is_loop_running() {
@@ -69,6 +70,7 @@ impl PayloadStream for StreamHandle {
             cancellation_rx,
             completion,
             sock: UdpSocket::bind(("0.0.0.0", stream_port.host_port()))?,
+            sender,
         };
 
         thread::spawn(move || {
@@ -135,12 +137,30 @@ impl StreamingLoop {
                 if !($expr) {
                     use tracing::error;
                     error!($($tt)*);
+                    continue;
                 }
-                continue;
             };
         }
         let mut payload = Vec::new();
         let mut builder = None;
+
+        macro_rules! handle_packet_mismatch {
+            ($expr:expr) => {
+                match $expr {
+                    Ok(p) => p,
+                    // if we get an old packet,
+                    // we just ignore it and keep building
+                    // the new frame
+                    Err(PacketMismatch::TooOld) => continue,
+                    Err(PacketMismatch::TooNew) => {
+                        tracing::warn!("Packet loss occured, frame skipped");
+                        builder = None;
+                        continue;
+                    }
+                }
+            };
+        }
+
         loop {
             self.sock.recv(&mut self.buffer).unwrap();
             let mut cursor = Cursor::new(&self.buffer[..]);
@@ -158,19 +178,32 @@ impl StreamingLoop {
                     if builder.is_some() {
                         warn!("A new leader packet has arrived while no trailer packet arrived");
                     }
-                    builder = Some(PayloadBuilder::new(leader, &mut payload));
+                    builder = Some(PayloadBuilder::new(header, leader, &mut payload));
                 }
                 PacketType::Trailer => {
-                    let Some(payload) = builder.take() else {
-                        warn!("Trailer packed received while no leader packet arrived");
+                    let payload_type =
+                        unwrap_or_continue!(PayloadType::parse_generic_leader(&mut cursor));
+                    let Some(builder) = builder.take() else {
+                        warn!("Trailer packet received while no leader packet arrived");
                         continue;
                     };
-                    let trailer = unwrap_or_continue!(ImageTrailer::parse(&mut cursor));
-                    let payload = payload.build(trailer);
-                    unwrap_or_continue!(self.sender.send(Ok(payload)));
+                    ensure_or_continue!(
+                        payload_type.kind() == PayloadTypeKind::Image,
+                        "Payload type kind: {:?} not suported",
+                        payload_type.kind()
+                    );
+                    let _trailer = unwrap_or_continue!(ImageTrailer::parse(&mut cursor));
+                    let payload = handle_packet_mismatch!(builder.build(header));
+                    unwrap_or_continue!(async_std::task::block_on(self.sender.send(Ok(payload))));
                 }
                 PacketType::GenericPayload => {
-                    builder.push();
+                    let Some(mut builder) = builder.take() else {
+                        warn!("Generic packet received while no leader packet arrived");
+                        continue;
+                    };
+                    // TODO: migrate to Cursor::remaining_slice when it's stable
+                    let remaining_slice = &self.buffer[cursor.position() as usize..];
+                    handle_packet_mismatch!(builder.push(header, remaining_slice));
                 }
                 PacketType::H264Payload => error!("H264 Payload not implemented"),
                 PacketType::MultiZonePayload => error!("Multi Zone Payload not implemented"),
@@ -182,33 +215,62 @@ impl StreamingLoop {
 struct PayloadBuilder<'a> {
     payload: &'a mut Vec<u8>,
     leader: ImageLeader,
+    pub block_id: u64,
+    last_packet_id: u32,
 }
 
 impl<'a> PayloadBuilder<'a> {
-    pub fn new(leader: ImageLeader, payload: &'a mut Vec<u8>) -> Self {
+    fn new(header: PacketHeader, leader: ImageLeader, payload: &'a mut Vec<u8>) -> Self {
         payload.clear();
-        Self { payload, leader }
+        Self {
+            payload,
+            leader,
+            block_id: header.block_id,
+            last_packet_id: 0,
+        }
     }
 
-    pub fn push(packet: ImageGeneric) {
-        //
+    fn verify_header(&self, header: &PacketHeader) -> Result<(), PacketMismatch> {
+        if header.block_id > self.block_id || header.packet_id > self.last_packet_id + 1 {
+            // New frame or new packet, we can't wait, we quit
+            return Err(PacketMismatch::TooNew);
+        }
+        if header.block_id < self.block_id {
+            // We ignore packets from earlier presumed lost frames
+            return Err(PacketMismatch::TooOld);
+        }
+        Ok(())
     }
 
-    pub fn build(self, trailer: ImageTrailer) -> Payload {
-        Payload {
-            id: todo!(),
+    fn push(&mut self, header: PacketHeader, data: &[u8]) -> Result<(), PacketMismatch> {
+        self.verify_header(&header)?;
+        assert_eq!(header.packet_id, self.last_packet_id + 1);
+        self.last_packet_id += 1;
+        self.payload.extend_from_slice(data);
+        Ok(())
+    }
+
+    fn build(self, header: PacketHeader) -> Result<Payload, PacketMismatch> {
+        self.verify_header(&header)?;
+        Ok(Payload {
+            id: self.block_id,
             payload_type: crate::payload::PayloadType::Image,
             image_info: Some(crate::payload::ImageInfo {
-                width: (),
-                height: (),
-                x_offset: (),
-                y_offset: (),
-                pixel_format: (),
-                image_size: (),
+                width: self.leader.width() as usize,
+                height: self.leader.height() as usize,
+                x_offset: self.leader.x_offset() as usize,
+                y_offset: self.leader.y_offset() as usize,
+                pixel_format: self.leader.pixel_format(),
+                image_size: self.payload.len(),
             }),
             payload: todo!(),
             valid_payload_size: todo!(),
             timestamp: todo!(),
-        }
+        })
     }
+}
+
+enum PacketMismatch {
+    TooNew,
+    TooOld,
 }
