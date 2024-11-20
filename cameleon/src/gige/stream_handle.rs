@@ -21,7 +21,6 @@ use crate::{
     DeviceControl, PayloadStream, StreamError, StreamResult,
 };
 
-
 #[derive(Debug)]
 pub struct StreamParams {
     pub host_addr: Ipv4Addr,
