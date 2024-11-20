@@ -131,6 +131,22 @@ impl PayloadType {
     fn parse(cursor: &mut io::Cursor<&[u8]>) -> Result<Self> {
         cursor.read_bytes_be().map(Self).map_err(Into::into)
     }
+
+    /// to be used after the generic GSVP leader packet header
+    /// was parsed, before parsing the payload-specific packet
+    ///
+    // we need it this weird way because for some reason, the
+    // potentially useful payload type specific field goes
+    // BEFORE the payload type, so we have to look into the future
+    // a bit, because we need to be able to see which payload type
+    // we need, e. g. Image or RawData or File or etc.
+    pub fn parse_generic_leader(cursor: &mut io::Cursor<&[u8]>) -> Result<Self> {
+        let position_pre = cursor.position();
+        let _payload_type_specific: u16 = cursor.read_bytes_be()?;
+        let res = Self::parse(cursor);
+        cursor.set_position(position_pre);
+        res
+    }
 }
 
 pub struct ImageLeader {

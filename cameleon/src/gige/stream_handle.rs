@@ -11,7 +11,7 @@ use std::{
 };
 
 use cameleon_device::gige::protocol::stream::{
-    ImageLeader, ImageTrailer, PacketHeader, PacketType,
+    ImageLeader, ImageTrailer, PacketHeader, PacketType, PayloadType, PayloadTypeKind,
 };
 use futures_channel::oneshot;
 use tracing::{error, warn};
@@ -130,6 +130,15 @@ impl StreamingLoop {
                 }
             };
         }
+        macro_rules! ensure_or_continue {
+            ($expr:expr, $($tt:tt)*) => {
+                if !($expr) {
+                    use tracing::error;
+                    error!($($tt)*);
+                }
+                continue;
+            };
+        }
         let mut payload = Vec::new();
         let mut builder = None;
         loop {
@@ -138,6 +147,13 @@ impl StreamingLoop {
             let header = unwrap_or_continue!(PacketHeader::parse(&mut cursor));
             match header.packet_type {
                 PacketType::Leader => {
+                    let payload_type =
+                        unwrap_or_continue!(PayloadType::parse_generic_leader(&mut cursor));
+                    ensure_or_continue!(
+                        payload_type.kind() == PayloadTypeKind::Image,
+                        "Payload type kind: {:?} not suported",
+                        payload_type.kind()
+                    );
                     let leader = unwrap_or_continue!(ImageLeader::parse(&mut cursor));
                     if builder.is_some() {
                         warn!("A new leader packet has arrived while no trailer packet arrived");
