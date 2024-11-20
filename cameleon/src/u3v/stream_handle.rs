@@ -12,7 +12,6 @@ use std::{
 };
 
 use cameleon_device::u3v::{self, async_read::AsyncPool, protocol::stream as u3v_stream};
-use futures_channel::oneshot;
 use tracing::{error, info, warn};
 
 use crate::{
