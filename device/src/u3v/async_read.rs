@@ -203,6 +203,9 @@ impl AsyncTransfer {
 impl Drop for AsyncTransfer {
     fn drop(&mut self) {
         unsafe {
+            drop(Box::from_raw(
+                self.transfer().user_data.cast::<AtomicBool>(),
+            ));
             libusb1_sys::libusb_free_transfer(self.ptr.as_ptr());
         }
     }
@@ -214,7 +217,7 @@ impl Drop for AsyncTransfer {
 /// timeout, or error, instead of potentially returning early.
 ///
 /// This design is based on
-/// https://libusb.sourceforge.io/api-1.0/libusb_mtasync.html#threadwait
+/// <https://libusb.sourceforge.io/api-1.0/libusb_mtasync.html#threadwait>
 fn poll_completed(
     ctx: &impl UsbContext,
     timeout: Duration,
@@ -230,6 +233,8 @@ fn poll_completed(
             let remaining = deadline.saturating_duration_since(Instant::now());
             let timeval = libc::timeval {
                 tv_sec: remaining.as_secs().try_into().unwrap(),
+                // tv_usec is i64 on Linux (with infallible conversion from u32), but i32 on Mac.
+                #[allow(clippy::unnecessary_fallible_conversions)]
                 tv_usec: remaining.subsec_micros().try_into().unwrap(),
             };
 

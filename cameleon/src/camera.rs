@@ -341,6 +341,8 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
     /// let payload_rx = camera.start_streaming(3).unwrap();
     ///
     /// camera.stop_streaming().unwrap();
+    ///
+    /// # camera.close().unwrap();
     /// ```
     #[tracing::instrument(skip(self),
                           level = "info",
@@ -405,7 +407,7 @@ impl<Ctrl, Strm, Ctxt> Camera<Ctrl, Strm, Ctxt> {
     /// if gain_node.is_writable(&mut params_ctxt).unwrap() {
     ///     gain_node.set_value(&mut params_ctxt, 0.1).unwrap();
     /// }
-    /// # camera.close();
+    /// # camera.close().unwrap();
     /// ```
     pub fn params_ctxt(&mut self) -> CameleonResult<ParamsCtxt<&mut Ctrl, &mut Ctxt>>
     where

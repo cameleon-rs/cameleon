@@ -44,7 +44,7 @@ const DEFAULT_RETRY_COUNT: u16 = 3;
 const PAYLOAD_TRANSFER_SIZE: u32 = 1024 * 64;
 
 /// This handle provides low level API to read and write data from the device.  
-/// See [`ControlHandle::abrm`] and [`register_map`](super::register_map) which provide more
+/// See [`ControlHandle::abrm`] and [`register_map`] which provide more
 /// convenient way to communicate with `u3v` specific registers.
 ///
 /// # Examples
@@ -442,6 +442,13 @@ impl DeviceControl for ControlHandle {
 
     fn enable_streaming(&mut self) -> ControlResult<()> {
         let sirm = unwrap_or_log!(self.sirm());
+
+        // It's forbidden to set SIRM registers while stream is enabled.
+        // This is necessary in case we lost control of a device before properly closing it, which
+        // can happen if the process closes in some way without gracefully terminating.
+        if unwrap_or_log!(sirm.is_stream_enable(self)) {
+            unwrap_or_log!(sirm.disable_stream(self));
+        }
 
         let payload_alignment = unwrap_or_log!(sirm.payload_size_alignment(self));
         macro_rules! align {

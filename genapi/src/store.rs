@@ -87,23 +87,32 @@ pub trait ValueStore {
         self.value_opt(id).unwrap()
     }
 
-    fn integer_value(&self, id: IntegerId) -> Option<i64> {
-        if let ValueData::Integer(i) = self.value_opt(id)? {
-            Some(*i)
-        } else {
-            None
+    fn integer_value<T>(&self, id: T) -> Option<i64>
+    where
+        T: Into<ValueId>,
+    {
+        match self.value_opt(id)? {
+            ValueData::Integer(i) => Some(*i),
+            ValueData::Float(f) => Some(*f as i64),
+            _ => None,
         }
     }
 
-    fn float_value(&self, id: FloatId) -> Option<f64> {
-        if let ValueData::Float(f) = self.value_opt(id)? {
-            Some(*f)
-        } else {
-            None
+    fn float_value<T>(&self, id: T) -> Option<f64>
+    where
+        T: Into<ValueId>,
+    {
+        match self.value_opt(id)? {
+            ValueData::Integer(i) => Some(*i as f64),
+            ValueData::Float(f) => Some(*f),
+            _ => None,
         }
     }
 
-    fn str_value(&self, id: StringId) -> Option<&String> {
+    fn str_value<T>(&self, id: T) -> Option<&String>
+    where
+        T: Into<ValueId>,
+    {
         if let ValueData::Str(s) = self.value_opt(id)? {
             Some(s)
         } else {
@@ -513,7 +522,7 @@ impl CacheStore for DefaultCacheStore {
             .and_modify(|level1| {
                 level1
                     .entry((address, length))
-                    .and_modify(|level2| *level2 = data.to_owned())
+                    .and_modify(|level2| data.clone_into(level2))
                     .or_insert_with(|| data.to_owned());
             })
             .or_insert_with(|| {

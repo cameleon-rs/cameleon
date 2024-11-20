@@ -6,7 +6,7 @@ use ambassador::delegatable_trait;
 
 use super::{
     elem_type::{ImmOrPNode, PIndex, PValue, ValueKind},
-    interface::{IFloat, IInteger, IString},
+    interface::{IEnumeration, IFloat, IInteger, IString},
     store::{CacheStore, FloatId, IntegerId, NodeId, NodeStore, StringId, ValueStore},
     Device, GenApiError, GenApiResult, ValueCtxt,
 };
@@ -44,20 +44,20 @@ pub(super) trait IValue<T> {
 }
 
 macro_rules! impl_ivalue_for_imm {
-    ($ty:ty) => {
-        impl IValue<$ty> for $ty {
+    ($imm_ty:ty, $result_ty:ty) => {
+        impl IValue<$result_ty> for $imm_ty {
             fn value<U: ValueStore, S: CacheStore>(
                 &self,
                 _: &mut impl Device,
                 _: &impl NodeStore,
                 _: &mut ValueCtxt<U, S>,
-            ) -> GenApiResult<$ty> {
-                Ok(*self)
+            ) -> GenApiResult<$result_ty> {
+                Ok(*self as $result_ty)
             }
 
             fn set_value<U, S>(
                 &self,
-                _: $ty,
+                _: $result_ty,
                 _: &mut impl Device,
                 _: &impl NodeStore,
                 _: &mut ValueCtxt<U, S>,
@@ -85,8 +85,10 @@ macro_rules! impl_ivalue_for_imm {
         }
     };
 }
-impl_ivalue_for_imm!(i64);
-impl_ivalue_for_imm!(f64);
+impl_ivalue_for_imm!(i64, i64);
+impl_ivalue_for_imm!(i64, f64);
+impl_ivalue_for_imm!(f64, i64);
+impl_ivalue_for_imm!(f64, f64);
 
 macro_rules! impl_ivalue_for_vid {
     ($ty:ty, $vid:ty, $f:ident) => {
@@ -97,7 +99,7 @@ macro_rules! impl_ivalue_for_vid {
                 _: &impl NodeStore,
                 cx: &mut ValueCtxt<U, S>,
             ) -> GenApiResult<$ty> {
-                Ok(cx.value_store.$f(*self).unwrap().into())
+                Ok(cx.value_store.$f(*self).unwrap() as $ty)
             }
 
             fn set_value<U: ValueStore, S: CacheStore>(
@@ -132,55 +134,232 @@ macro_rules! impl_ivalue_for_vid {
     };
 }
 impl_ivalue_for_vid!(i64, IntegerId, integer_value);
+impl_ivalue_for_vid!(f64, IntegerId, integer_value);
 impl_ivalue_for_vid!(f64, FloatId, float_value);
-impl_ivalue_for_vid!(String, StringId, str_value);
+impl_ivalue_for_vid!(i64, FloatId, float_value);
+impl IValue<String> for StringId {
+    fn value<U: ValueStore, S: CacheStore>(
+        &self,
+        _: &mut impl Device,
+        _: &impl NodeStore,
+        cx: &mut ValueCtxt<U, S>,
+    ) -> GenApiResult<String> {
+        Ok(cx.value_store.str_value(*self).unwrap().into())
+    }
 
-macro_rules! impl_ivalue_for_node_id {
-    ($ty:ty, $expect_kind:ident) => {
-        impl IValue<$ty> for NodeId {
-            fn value<U: ValueStore, S: CacheStore>(
-                &self,
-                device: &mut impl Device,
-                store: &impl NodeStore,
-                cx: &mut ValueCtxt<U, S>,
-            ) -> GenApiResult<$ty> {
-                self.$expect_kind(store)?.value(device, store, cx)
-            }
+    fn set_value<U: ValueStore, S: CacheStore>(
+        &self,
+        value: String,
+        _: &mut impl Device,
+        _: &impl NodeStore,
+        cx: &mut ValueCtxt<U, S>,
+    ) -> GenApiResult<()> {
+        cx.value_store_mut().update(*self, value);
+        Ok(())
+    }
 
-            fn set_value<U: ValueStore, S: CacheStore>(
-                &self,
-                value: $ty,
-                device: &mut impl Device,
-                store: &impl NodeStore,
-                cx: &mut ValueCtxt<U, S>,
-            ) -> GenApiResult<()> {
-                self.$expect_kind(store)?
-                    .set_value(value, device, store, cx)
-            }
+    fn is_readable<U: ValueStore, S: CacheStore>(
+        &self,
+        _: &mut impl Device,
+        _: &impl NodeStore,
+        _: &mut ValueCtxt<U, S>,
+    ) -> GenApiResult<bool> {
+        Ok(true)
+    }
 
-            fn is_readable<U: ValueStore, S: CacheStore>(
-                &self,
-                device: &mut impl Device,
-                store: &impl NodeStore,
-                cx: &mut ValueCtxt<U, S>,
-            ) -> GenApiResult<bool> {
-                self.$expect_kind(store)?.is_readable(device, store, cx)
-            }
-
-            fn is_writable<U: ValueStore, S: CacheStore>(
-                &self,
-                device: &mut impl Device,
-                store: &impl NodeStore,
-                cx: &mut ValueCtxt<U, S>,
-            ) -> GenApiResult<bool> {
-                self.$expect_kind(store)?.is_writable(device, store, cx)
-            }
-        }
-    };
+    fn is_writable<U: ValueStore, S: CacheStore>(
+        &self,
+        _: &mut impl Device,
+        _: &impl NodeStore,
+        _: &mut ValueCtxt<U, S>,
+    ) -> GenApiResult<bool> {
+        Ok(true)
+    }
 }
-impl_ivalue_for_node_id!(f64, expect_ifloat_kind);
-impl_ivalue_for_node_id!(i64, expect_iinteger_kind);
-impl_ivalue_for_node_id!(String, expect_istring_kind);
+
+impl IValue<i64> for NodeId {
+    fn value<U: ValueStore, S: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<U, S>,
+    ) -> GenApiResult<i64> {
+        if let Some(i) = self.as_iinteger_kind(store) {
+            i.value(device, store, cx)
+        } else if let Some(f) = self.as_ifloat_kind(store) {
+            f.value(device, store, cx).map(|f| f as i64)
+        } else if let Some(e) = self.as_ienumeration_kind(store) {
+            e.current_value(device, store, cx)
+        } else {
+            Err(GenApiError::invalid_node(
+                format!("Node {:?} is not an integer, float, or enumeration", self).into(),
+            ))
+        }
+    }
+
+    fn set_value<U: ValueStore, S: CacheStore>(
+        &self,
+        value: i64,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<U, S>,
+    ) -> GenApiResult<()> {
+        if let Some(i) = self.as_iinteger_kind(store) {
+            i.set_value(value, device, store, cx)
+        } else if let Some(f) = self.as_ifloat_kind(store) {
+            f.set_value(value as f64, device, store, cx)
+        } else if let Some(e) = self.as_ienumeration_kind(store) {
+            e.set_entry_by_value(value, device, store, cx)
+        } else {
+            Err(GenApiError::not_writable())
+        }
+    }
+
+    fn is_readable<U: ValueStore, S: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<U, S>,
+    ) -> GenApiResult<bool> {
+        if let Some(i) = self.as_iinteger_kind(store) {
+            i.is_readable(device, store, cx)
+        } else if let Some(f) = self.as_ifloat_kind(store) {
+            f.is_readable(device, store, cx)
+        } else if let Some(e) = self.as_ienumeration_kind(store) {
+            e.is_readable(device, store, cx)
+        } else {
+            Ok(false)
+        }
+    }
+
+    fn is_writable<U: ValueStore, S: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<U, S>,
+    ) -> GenApiResult<bool> {
+        if let Some(i) = self.as_iinteger_kind(store) {
+            i.is_writable(device, store, cx)
+        } else if let Some(f) = self.as_ifloat_kind(store) {
+            f.is_writable(device, store, cx)
+        } else {
+            Ok(false)
+        }
+    }
+}
+
+impl IValue<f64> for NodeId {
+    fn value<U: ValueStore, S: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<U, S>,
+    ) -> GenApiResult<f64> {
+        if let Some(i) = self.as_iinteger_kind(store) {
+            i.value(device, store, cx).map(|i| i as f64)
+        } else if let Some(f) = self.as_ifloat_kind(store) {
+            f.value(device, store, cx)
+        } else if let Some(e) = self.as_ienumeration_kind(store) {
+            e.current_value(device, store, cx).map(|i| i as f64)
+        } else {
+            Err(GenApiError::invalid_node(
+                format!("Node {:?} is not an integer, float, or enumeration", self).into(),
+            ))
+        }
+    }
+
+    fn set_value<U: ValueStore, S: CacheStore>(
+        &self,
+        value: f64,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<U, S>,
+    ) -> GenApiResult<()> {
+        if let Some(i) = self.as_iinteger_kind(store) {
+            i.set_value(value as i64, device, store, cx)
+        } else if let Some(f) = self.as_ifloat_kind(store) {
+            f.set_value(value, device, store, cx)
+        } else if let Some(e) = self.as_ienumeration_kind(store) {
+            e.set_entry_by_value(value as i64, device, store, cx)
+        } else {
+            Err(GenApiError::not_writable())
+        }
+    }
+
+    fn is_readable<U: ValueStore, S: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<U, S>,
+    ) -> GenApiResult<bool> {
+        if let Some(i) = self.as_iinteger_kind(store) {
+            i.is_readable(device, store, cx)
+        } else if let Some(f) = self.as_ifloat_kind(store) {
+            f.is_readable(device, store, cx)
+        } else if let Some(e) = self.as_ienumeration_kind(store) {
+            e.is_readable(device, store, cx)
+        } else {
+            Ok(false)
+        }
+    }
+
+    fn is_writable<U: ValueStore, S: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<U, S>,
+    ) -> GenApiResult<bool> {
+        if let Some(i) = self.as_iinteger_kind(store) {
+            i.is_writable(device, store, cx)
+        } else if let Some(f) = self.as_ifloat_kind(store) {
+            f.is_writable(device, store, cx)
+        } else {
+            Ok(false)
+        }
+    }
+}
+
+impl IValue<String> for NodeId {
+    fn value<U: ValueStore, S: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<U, S>,
+    ) -> GenApiResult<String> {
+        self.expect_istring_kind(store)?.value(device, store, cx)
+    }
+
+    fn set_value<U: ValueStore, S: CacheStore>(
+        &self,
+        value: String,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<U, S>,
+    ) -> GenApiResult<()> {
+        self.expect_istring_kind(store)?
+            .set_value(value, device, store, cx)
+    }
+
+    fn is_readable<U: ValueStore, S: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<U, S>,
+    ) -> GenApiResult<bool> {
+        self.expect_istring_kind(store)?
+            .is_readable(device, store, cx)
+    }
+
+    fn is_writable<U: ValueStore, S: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<U, S>,
+    ) -> GenApiResult<bool> {
+        self.expect_istring_kind(store)?
+            .is_writable(device, store, cx)
+    }
+}
 
 impl<T, Ty> IValue<T> for ImmOrPNode<Ty>
 where

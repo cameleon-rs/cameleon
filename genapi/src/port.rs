@@ -62,9 +62,7 @@ impl IPort for PortNode {
         if self.chunk_id.is_some() {
             Err(GenApiError::chunk_data_missing())
         } else {
-            device
-                .read_mem(address, buf)
-                .map_err(|e| GenApiError::device(e))
+            device.read_mem(address, buf).map_err(GenApiError::device)
         }
     }
 
@@ -85,9 +83,7 @@ impl IPort for PortNode {
             // TODO: Implement chunk parser.
             todo!()
         } else {
-            device
-                .write_mem(address, buf)
-                .map_err(|e| GenApiError::device(e))
+            device.write_mem(address, buf).map_err(GenApiError::device)
         }
     }
 }

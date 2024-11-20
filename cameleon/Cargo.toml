@@ -1,6 +1,6 @@
 [package]
 name = "cameleon"
-version = "0.1.7"
+version = "0.1.13"
 authors = ["Cameleon Project Developers"]
 edition = "2018"
 license = "MPL-2.0"
@@ -10,7 +10,7 @@ repository = "https://github.com/cameleon-rs/cameleon"
 description = """
 cameleon is a safe, fast, and flexible library for GenICam compatible cameras.
 """
-categories = ["computer-vision"] 
+categories = ["computer-vision"]
 keywords = ["genicam", "camera", "usb3", "gige", "uvc"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -18,15 +18,15 @@ keywords = ["genicam", "camera", "usb3", "gige", "uvc"]
 [dependencies]
 thiserror = "1.0.24"
 semver = "1.0.0"
-zip = "0.6.0"
+zip = { version = "0.6.0", default-features = false, features = ["deflate"] }
 sha-1 = "0.10.0"
 async-std = { version = "1.9.0", features = ["unstable"] }
 futures-channel = "0.3.16"
 futures-util = { version = "0.3.16", features = ["async-await"] }
 tracing = "0.1.26"
 auto_impl = "1.0.1"
-cameleon-device = { path = "../device", version = "0.1.7" }
-cameleon-genapi = { path = "../genapi", version = "0.1.7" }
+cameleon-device = { path = "../device", version = "0.1.13" }
+cameleon-genapi = { path = "../genapi", version = "0.1.13" }
 cameleon-impl = { path = "../impl", version = "0.1.0" }
 anyhow = "1.0.40"
 ureq = "2.1"
