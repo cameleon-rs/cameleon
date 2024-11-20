@@ -29,7 +29,6 @@ use super::register_map::{
 };
 
 const GVCP_DEFAULT_PORT: u16 = 3956;
-const GVSP_DEFAULT_PORT: u16 = 59983;
 
 /// Initial timeout duration for transaction between device and host.
 /// This value is temporarily used until the device's bootstrap register value is read in
@@ -551,7 +550,8 @@ impl DeviceControl for ControlHandleInner {
         StreamRegister::new(0).set_packet_size(self, packet_size)?;
 
         let port = StreamRegister::new(0).channel_port(self)?;
-        StreamRegister::new(0).set_channel_port(self, port.set_host_port(GVSP_DEFAULT_PORT))?;
+        let bound_port = unwrap_or_log!(self.sock.local_addr()).port();
+        StreamRegister::new(0).set_channel_port(self, port.set_host_port(bound_port))?;
 
         Ok(())
     }

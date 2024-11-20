@@ -279,6 +279,12 @@ impl From<TryFromIntError> for ControlError {
     }
 }
 
+impl From<std::io::Error> for StreamError {
+    fn from(value: std::io::Error) -> Self {
+        Self::Io(value.into())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

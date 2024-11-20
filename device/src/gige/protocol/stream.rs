@@ -13,16 +13,16 @@ use super::PacketStatus;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PacketHeader {
-    status: PacketStatus,
-    ei_flag: bool,
-    packet_type: PacketType,
-    block_id: u64,
-    packet_id: u32,
-    stream_flag: StreamFlag,
+    pub status: PacketStatus,
+    pub ei_flag: bool,
+    pub packet_type: PacketType,
+    pub block_id: u64,
+    pub packet_id: u32,
+    pub stream_flag: StreamFlag,
 }
 
 impl PacketHeader {
-    fn parse(cursor: &mut io::Cursor<&[u8]>) -> Result<Self> {
+    pub fn parse(cursor: &mut io::Cursor<&[u8]>) -> Result<Self> {
         let status = PacketStatus::parse(cursor)?;
         let bid_sflag: u16 = cursor.read_bytes_be()?;
         let ei_ptype_pid: u32 = cursor.read_bytes_be()?;
@@ -188,7 +188,7 @@ impl ImageLeader {
         self.y_padding
     }
 
-    fn parse(cursor: &mut io::Cursor<&[u8]>) -> Result<Self> {
+    pub fn parse(cursor: &mut io::Cursor<&[u8]>) -> Result<Self> {
         let field: u8 = cursor.read_bytes_be()?;
         let field_id = field >> 4;
         let field_count = field & 0x0f;
@@ -219,4 +219,10 @@ impl ImageLeader {
             y_padding,
         })
     }
+}
+
+pub struct ImageTrailer {}
+
+impl ImageTrailer {
+    pub fn parse(cursor: &mut io::Cursor<&[u8]>) -> Result<Self> {}
 }

@@ -9,7 +9,7 @@ pub mod stream_handle;
 pub use control_handle::ControlHandle;
 pub use stream_handle::StreamHandle;
 
-use std::time;
+use std::{net::Ipv4Addr, time};
 
 use cameleon_device::gige;
 
@@ -31,9 +31,11 @@ impl From<gige::Error> for ControlError {
     }
 }
 
-pub fn enumerate_cameras() -> CameleonResult<Vec<Camera<ControlHandle, StreamHandle>>> {
-    let device_infos =
-        task::block_on(gige::enumerate_devices(ENUMERATION_TIMEOUT)).map_err(ControlError::from)?;
+pub fn enumerate_cameras(
+    local_addr: Ipv4Addr,
+) -> CameleonResult<Vec<Camera<ControlHandle, StreamHandle>>> {
+    let device_infos = task::block_on(gige::enumerate_devices(local_addr, ENUMERATION_TIMEOUT))
+        .map_err(ControlError::from)?;
 
     let mut cameras: Vec<Camera<ControlHandle, StreamHandle>> =
         Vec::with_capacity(device_infos.len());
@@ -44,7 +46,7 @@ pub fn enumerate_cameras() -> CameleonResult<Vec<Camera<ControlHandle, StreamHan
             serial_number: info.serial_number.clone(),
         };
         let ctrl_handle = unwrap_or_log!(ControlHandle::new(info));
-        let strm_handle = StreamHandle {};
+        let strm_handle = unwrap_or_log!(StreamHandle::new());
         cameras.push(Camera::new(ctrl_handle, strm_handle, None, camera_info));
     }
 
