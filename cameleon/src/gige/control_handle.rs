@@ -13,10 +13,7 @@ use async_std::{channel, future, net::UdpSocket, task};
 use futures_channel::oneshot;
 use futures_util::{select, FutureExt};
 
-use cameleon_device::gige::{
-    protocol::{ack, cmd},
-    register_map::{self, bootstrap, StreamChannelPort, StreamPacketSize},
-};
+use cameleon_device::gige::protocol::{ack, cmd};
 
 use crate::{
     genapi::CompressionType, utils::unzip_genxml, ControlError, ControlResult, DeviceControl,

@@ -15,7 +15,7 @@ use std::{
     time,
 };
 
-use cameleon_device::gige::{self, register_map::GvspCapability};
+use cameleon_device::gige::{self};
 
 use crate::{ControlError, StreamError};
 

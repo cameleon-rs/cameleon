@@ -15,14 +15,12 @@ use cameleon_device::gige::protocol::stream::{
 };
 use futures_channel::oneshot;
 use tracing::{error, warn};
-use ureq::head;
 
 use crate::{
     payload::{Payload, PayloadSender},
     DeviceControl, PayloadStream, StreamError, StreamResult,
 };
 
-use super::register_map::{Bootstrap, StreamRegister};
 
 #[derive(Debug)]
 pub struct StreamParams {
