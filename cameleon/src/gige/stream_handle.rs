@@ -71,12 +71,12 @@ impl PayloadStream for StreamHandle {
         let completion = Arc::new((Mutex::new(false), Condvar::new()));
         self.completion = Some(completion.clone());
 
-        // let stream_port = StreamRegister::new(0).channel_port(ctrl).unwrap().packet_size() as usize; // TODO: redo unwrap
-        // let packet_size = StreamRegister::new(0).packet_size(ctrl).unwrap().host_port();
-        let packet_size = 8996;
-
         let strm_loop = StreamingLoop {
-            buffer: vec![0u8; packet_size],
+            // 65536 is the max UDP packet size
+            // but the actual packet size is available
+            // only after control handle is created
+            // so we go the safe way here
+            buffer: vec![0u8; 65536],
             cancellation_rx,
             completion,
             sock: self.sock.clone(),
