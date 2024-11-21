@@ -6,7 +6,6 @@
 
 use std::{
     convert::TryInto,
-    io::Read,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -14,12 +13,17 @@ use std::{
 use cameleon_device::{
     u3v,
     u3v::protocol::{ack, cmd},
+    GenICamFileType,
 };
+
 use tracing::error;
 
 use super::register_map::{self, Abrm, ManifestTable, Sbrm, Sirm};
 
-use crate::{camera::DeviceControl, genapi::CompressionType, ControlError, ControlResult};
+use crate::{
+    camera::DeviceControl, genapi::CompressionType, utils::unzip_genxml, ControlError,
+    ControlResult,
+};
 
 /// Initial timeout duration for transaction between device and host.
 /// This value is temporarily used until the device's bootstrap register value is read.
@@ -32,6 +36,10 @@ const INITIAL_MAXIMUM_CMD_LENGTH: u32 = 128;
 /// Initial maximum acknowledge packet length for transaction between device and host.
 /// This value is temporarily used until the device's bootstrap register value is read.
 const INITIAL_MAXIMUM_ACK_LENGTH: u32 = 128;
+
+/// Default maximum retry count which determines how many times to retry when
+/// pending acknowledge is returned from the device.
+const DEFAULT_RETRY_COUNT: u16 = 3;
 
 const PAYLOAD_TRANSFER_SIZE: u32 = 1024 * 64;
 
@@ -61,7 +69,7 @@ const PAYLOAD_TRANSFER_SIZE: u32 = 1024 * 64;
 /// // Read 64bytes from address 0x0184.
 /// let address = 0x0184;
 /// let mut buffer = vec![0; 64];
-/// camera.ctrl.read(address, &mut buffer).unwrap();
+/// camera.ctrl.read_mem(address, &mut buffer).unwrap();
 /// ```
 pub struct ControlHandle {
     inner: u3v::ControlChannel,
@@ -102,7 +110,7 @@ impl ControlHandle {
 
     /// Timeout duration of each transaction between device.
     ///
-    /// NOTE: [`ControlHandle::read`] and [`ControlHandle::write`] may send multiple
+    /// NOTE: [`ControlHandle::read_mem`] and [`ControlHandle::write_mem`] may send multiple
     /// requests in a single call. In that case, Timeout is reflected to each request.
     #[must_use]
     pub fn timeout_duration(&self) -> Duration {
@@ -111,7 +119,7 @@ impl ControlHandle {
 
     /// Set timeout duration of each transaction between device.
     ///
-    /// NOTE: [`ControlHandle::read`] and [`ControlHandle::write`] may send multiple
+    /// NOTE: [`ControlHandle::read_mem`] and [`ControlHandle::write_mem`] may send multiple
     /// requests in a single call. In that case, Timeout is reflected to each request.
     ///
     /// In normal use case, no need to modify timeout duration.
@@ -313,18 +321,6 @@ impl ControlHandle {
     }
 }
 
-macro_rules! unwrap_or_log {
-    ($expr:expr) => {{
-        match $expr {
-            Ok(v) => v,
-            Err(error) => {
-                error!(?error);
-                return Err(error.into());
-            }
-        }
-    }};
-}
-
 impl DeviceControl for ControlHandle {
     fn open(&mut self) -> ControlResult<()> {
         if self.is_opened() {
@@ -351,26 +347,7 @@ impl DeviceControl for ControlHandle {
         Ok(())
     }
 
-    fn write(&mut self, address: u64, data: &[u8]) -> ControlResult<()> {
-        unwrap_or_log!(self.assert_open());
-
-        let cmd = unwrap_or_log!(cmd::WriteMem::new(address, data));
-        let maximum_cmd_length = self.config.maximum_cmd_length;
-
-        for chunk in cmd.chunks(maximum_cmd_length as usize).unwrap() {
-            let chunk_data_len = chunk.data_len();
-            let ack: ack::WriteMem = unwrap_or_log!(self.send_cmd(chunk));
-
-            if ack.length as usize != chunk_data_len {
-                let err_msg = "write mem failed: written length mismatch";
-                return Err(ControlError::Io(anyhow::Error::msg(err_msg)));
-            }
-        }
-
-        Ok(())
-    }
-
-    fn read(&mut self, mut address: u64, buf: &mut [u8]) -> ControlResult<()> {
+    fn read_mem(&mut self, mut address: u64, buf: &mut [u8]) -> ControlResult<()> {
         unwrap_or_log!(self.assert_open());
 
         // Chunks buffer if buffer length is larger than maximum read length calculated from
@@ -390,17 +367,42 @@ impl DeviceControl for ControlHandle {
         Ok(())
     }
 
-    fn genapi(&mut self) -> ControlResult<String> {
-        fn zip_err(err: impl std::fmt::Debug) -> ControlError {
-            ControlError::InvalidDevice(format!("zipped xml file is broken: {:?}", err).into())
+    fn read_reg(&mut self, address: u64) -> ControlResult<[u8; 4]> {
+        let mut buf = [0; 4];
+        self.read_mem(address, &mut buf)?;
+        Ok(buf)
+    }
+
+    fn write_mem(&mut self, address: u64, data: &[u8]) -> ControlResult<()> {
+        unwrap_or_log!(self.assert_open());
+
+        let cmd = unwrap_or_log!(cmd::WriteMem::new(address, data));
+        let maximum_cmd_length = self.config.maximum_cmd_length;
+
+        for chunk in cmd.chunks(maximum_cmd_length as usize).unwrap() {
+            let chunk_data_len = chunk.data_len();
+            let ack: ack::WriteMem = unwrap_or_log!(self.send_cmd(chunk));
+
+            if ack.length as usize != chunk_data_len {
+                let err_msg = "write mem failed: written length mismatch";
+                return Err(ControlError::Io(anyhow::Error::msg(err_msg)));
+            }
         }
 
+        Ok(())
+    }
+
+    fn write_reg(&mut self, address: u64, data: [u8; 4]) -> ControlResult<()> {
+        self.write_mem(address, &data)
+    }
+
+    fn genapi(&mut self) -> ControlResult<String> {
         let table = unwrap_or_log!(self.manifest_table());
         // Use newest version if there are more than one entries.
         let mut newest_ent = None;
         for ent in unwrap_or_log!(table.entries(self)) {
             let file_info = unwrap_or_log!(ent.file_info(self));
-            if unwrap_or_log!(file_info.file_type()) == register_map::GenICamFileType::DeviceXml {
+            if unwrap_or_log!(file_info.file_type()) == GenICamFileType::DeviceXml {
                 let version = unwrap_or_log!(ent.genicam_file_version(self));
                 match &newest_ent {
                     Some((_, cur_version, _)) if &version <= cur_version => {
@@ -422,7 +424,7 @@ impl DeviceControl for ControlHandle {
         // Store current capacity so that we can set back it after XML retrieval because this needs exceptional large size of internal buffer.
         let current_capacity = self.buffer_capacity();
         let mut buf = vec![0; file_size];
-        unwrap_or_log!(self.read(file_address, &mut buf));
+        unwrap_or_log!(self.read_mem(file_address, &mut buf));
         self.resize_buffer(current_capacity);
 
         // Verify retrieved xml has correct hash.
@@ -430,14 +432,7 @@ impl DeviceControl for ControlHandle {
 
         match comp_type {
             CompressionType::Zip => {
-                let mut zip = zip::ZipArchive::new(std::io::Cursor::new(buf)).unwrap();
-                if zip.len() != 1 {
-                    return Err(zip_err("more than one files in zipped GenApi XML"));
-                }
-                let mut file = unwrap_or_log!(zip.by_index(0).map_err(zip_err));
-                let file_size: usize = unwrap_or_log!(file.size().try_into());
-                let mut xml = Vec::with_capacity(file_size);
-                unwrap_or_log!(file.read_to_end(&mut xml).map_err(zip_err));
+                let xml = unwrap_or_log!(unzip_genxml(buf));
                 Ok(String::from_utf8_lossy(&xml).into())
             }
 
@@ -513,30 +508,6 @@ impl Drop for ControlHandle {
 #[derive(Clone)]
 pub struct SharedControlHandle(Arc<Mutex<ControlHandle>>);
 
-macro_rules! impl_shared_control_handle {
-    ($(
-            $(#[$meta:meta])*
-            $vis:vis fn $method:ident(&$self:ident $(,$arg:ident: $arg_ty:ty)*) -> $ret_ty:ty),*) => {
-        $(
-            $(#[$meta])*
-            $vis fn $method(&$self, $($arg: $arg_ty),*) -> $ret_ty {
-                $self.0.lock().unwrap().$method($($arg),*)
-            }
-        )*
-    };
-
-    ($(
-            $(#[$meta:meta])*
-            $vis:vis fn $method:ident(&mut $self:ident $(,$arg:ident: $arg_ty:ty)*) -> $ret_ty:ty),*) => {
-        $(
-            $(#[$meta])*
-            $vis fn $method(&mut $self, $($arg: $arg_ty),*) -> $ret_ty {
-                $self.0.lock().unwrap().$method($($arg),*)
-            }
-        )*
-    }
-}
-
 impl From<ControlHandle> for SharedControlHandle {
     fn from(handle: ControlHandle) -> Self {
         Self(Arc::new(Mutex::new(handle)))
@@ -576,8 +547,10 @@ impl DeviceControl for SharedControlHandle {
     impl_shared_control_handle! {
         fn open(&mut self) -> ControlResult<()>,
         fn close(&mut self) -> ControlResult<()>,
-        fn read(&mut self, address: u64, buf: &mut [u8]) -> ControlResult<()>,
-        fn write(&mut self, address: u64, data: &[u8]) -> ControlResult<()>,
+        fn read_mem(&mut self, address: u64, buf: &mut [u8]) -> ControlResult<()>,
+        fn read_reg(&mut self, address:u64) -> ControlResult<[u8; 4]>,
+        fn write_mem(&mut self, address: u64, data: &[u8]) -> ControlResult<()>,
+        fn write_reg(&mut self, address:u64, data: [u8; 4]) -> ControlResult<()>,
         fn genapi(&mut self) -> ControlResult<String>,
         fn enable_streaming(&mut self) -> ControlResult<()>,
         fn disable_streaming(&mut self) -> ControlResult<()>
@@ -603,7 +576,7 @@ impl Default for ConnectionConfig {
     fn default() -> Self {
         Self {
             timeout_duration: INITIAL_TIMEOUT_DURATION,
-            retry_count: 3,
+            retry_count: DEFAULT_RETRY_COUNT,
             maximum_cmd_length: INITIAL_MAXIMUM_CMD_LENGTH,
             maximum_ack_length: INITIAL_MAXIMUM_ACK_LENGTH,
         }

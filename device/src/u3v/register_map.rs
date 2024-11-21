@@ -2,7 +2,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-/// (Address, Length, Access Right) of registers in Technology Agnostic Boot Register Map (ABRM).
+use cameleon_impl::bit_op::BitOp;
+
+use super::{Error, Result};
+use crate::{CompressionType, GenICamFileType};
+
+/// (Address, Length) of registers in Technology Agnostic Boot Register Map (ABRM).
 pub mod abrm {
     pub const GENCP_VERSION: (u64, u16) = (0x0000, 4);
     pub const MANUFACTURER_NAME: (u64, u16) = (0x0004, 64);
@@ -28,7 +33,7 @@ pub mod abrm {
     pub const DEVICE_SOFTWARE_INTERFACE_VERSION: (u64, u16) = (0x0210, 64);
 }
 
-/// (Offset, Length, Access Right) of registers in Technology Specific Boot Register Map (SBRM).
+/// (Offset, Length) of registers in Technology Specific Boot Register Map (SBRM).
 /// SBRM base address can be obtained by reading `abrm::SBRM_ADDRESS`.
 pub mod sbrm {
     pub const U3V_VERSION: (u64, u16) = (0x0000, 4);
@@ -45,7 +50,7 @@ pub mod sbrm {
     pub const CURRENT_SPEED: (u64, u16) = (0x040, 4);
 }
 
-/// (Offset, Length, Access Right) of registers in Event Interface Register Map (EIRM).
+/// (Offset, Length) of registers in Event Interface Register Map (EIRM).
 /// SIRM base address can be obtained by
 /// [`sbrm::EIRM_ADDRESS`].
 pub mod eirm {
@@ -79,4 +84,122 @@ pub mod manifest_entry {
     pub const REGISTER_ADDRESS: (u64, u16) = (0x0008, 8);
     pub const FILE_SIZE: (u64, u16) = (0x0010, 8);
     pub const SHA1_HASH: (u64, u16) = (0x0018, 20);
+}
+
+/// Configuration of the device.
+#[derive(Clone, Copy, Debug)]
+pub struct DeviceConfiguration(pub u64);
+impl DeviceConfiguration {
+    /// Indicate multi event is enabled on the device.
+    #[must_use]
+    pub fn is_multi_event_enabled(self) -> bool {
+        self.0.is_set(1)
+    }
+
+    /// Sets multi event enable bit.
+    pub fn set_multi_event_enable_bit(&mut self) {
+        self.0 = self.0.set_bit(1)
+    }
+
+    /// Unsets bit multi event of the device.
+    pub fn disable_multi_event(&mut self) {
+        self.0 = self.0.clear_bit(1)
+    }
+}
+
+/// Indicate some optional features are supported or not.
+#[derive(Clone, Copy, Debug)]
+pub struct DeviceCapability(pub u64);
+
+impl DeviceCapability {
+    /// Indicate whether use defined name is supported or not.
+    #[must_use]
+    pub fn is_user_defined_name_supported(self) -> bool {
+        self.0.is_set(0)
+    }
+
+    /// Indicate whether family name is supported or not.
+    #[must_use]
+    pub fn is_family_name_supported(self) -> bool {
+        self.0.is_set(8)
+    }
+
+    /// Indicate whether the device supports multiple events in a single event command packet.
+    #[must_use]
+    pub fn is_multi_event_supported(self) -> bool {
+        self.0.is_set(12)
+    }
+
+    /// Indicate whether the device supports stacked commands (`ReadMemStacked` and `WriteMemStacked`).
+    #[must_use]
+    pub fn is_stacked_commands_supported(self) -> bool {
+        self.0.is_set(13)
+    }
+
+    /// Indicate whether the device supports software interface version is supported.
+    #[must_use]
+    pub fn is_device_software_interface_version_supported(self) -> bool {
+        self.0.is_set(14)
+    }
+}
+
+/// Indicate some optional U3V specific features are supported or not.
+#[derive(Clone, Copy, Debug)]
+pub struct U3VCapablitiy(pub u64);
+
+impl U3VCapablitiy {
+    /// Indicate whether SIRM is available or not.
+    #[must_use]
+    pub fn is_sirm_available(self) -> bool {
+        self.0.is_set(0)
+    }
+
+    /// Indicate whether EIRM is available or not.
+    #[must_use]
+    pub fn is_eirm_available(self) -> bool {
+        self.0.is_set(1)
+    }
+
+    /// Indicate whether IIDC2 is available or not.
+    #[must_use]
+    pub fn is_iidc2_available(self) -> bool {
+        self.0.is_set(2)
+    }
+}
+
+/// XML file information.
+pub struct GenICamFileInfo(pub u32);
+
+impl GenICamFileInfo {
+    /// Type of the XML file.
+    pub fn file_type(&self) -> Result<GenICamFileType> {
+        let raw = self.0 & 0b111;
+        match raw {
+            0 => Ok(GenICamFileType::DeviceXml),
+            1 => Ok(GenICamFileType::BufferXml),
+            _ => Err(Error::InvalidDevice(
+                format!("invalid U3V GenICamFileType value: {}", raw).into(),
+            )),
+        }
+    }
+
+    /// Compression type of the XML File.
+    pub fn compression_type(&self) -> Result<CompressionType> {
+        let raw = (self.0 >> 10_i32) & 0b11_1111;
+        match raw {
+            0 => Ok(CompressionType::Uncompressed),
+            1 => Ok(CompressionType::Zip),
+            _ => Err(Error::InvalidDevice(
+                format!("invalid U3V GenICamFilFormat value: {}", raw).into(),
+            )),
+        }
+    }
+
+    /// `GenICam` schema version of the XML file compiles with.
+    #[must_use]
+    pub fn schema_version(&self) -> semver::Version {
+        let major = (self.0 >> 24_i32) & 0xff;
+        let minor = (self.0 >> 16_i32) & 0xff;
+        semver::Version::new(u64::from(major), u64::from(minor), 0)
+    }
 }

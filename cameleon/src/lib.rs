@@ -136,15 +136,19 @@
 //!
 //! [license]: https://github.com/cameleon-rs/cameleon/blob/main/LICENSE
 
-#![warn(missing_docs)]
+//#![warn(missing_docs)]
 #![allow(
     clippy::similar_names,
     clippy::missing_errors_doc,
     clippy::module_name_repetitions
 )]
 
+#[macro_use]
+pub(crate) mod utils;
+
 pub mod camera;
 pub mod genapi;
+pub mod gige;
 pub mod payload;
 #[cfg(feature = "libusb")]
 pub mod u3v;
@@ -198,8 +202,8 @@ pub enum ControlError {
     #[error("input/output error: {0}")]
     Io(anyhow::Error),
 
-    /// Timeout has occured when receiving stream payload.
-    #[error("timeout has occured when receiving stream payload")]
+    /// Timeout has occured when sending/receiveing a packet.
+    #[error("timeout has occured when sending/receiveing a packet")]
     Timeout,
 
     /// The device is not opened.
@@ -218,6 +222,10 @@ pub enum ControlError {
     /// e.g. try to write too large data that will overrun register.
     #[error("try to write invalid data to the device: {0}")]
     InvalidData(Box<dyn std::error::Error + Send + Sync>),
+
+    /// Try to use unsupported feature.
+    #[error("try to use unsupported feature: {0}")]
+    NotSupported(Cow<'static, str>),
 }
 
 /// A specialized `Result` type for streaming.
@@ -268,6 +276,12 @@ pub enum StreamError {
 impl From<TryFromIntError> for ControlError {
     fn from(e: TryFromIntError) -> Self {
         Self::InvalidDevice(format!("internal data has invalid num type: {}", e).into())
+    }
+}
+
+impl From<std::io::Error> for StreamError {
+    fn from(value: std::io::Error) -> Self {
+        Self::Io(value.into())
     }
 }
 

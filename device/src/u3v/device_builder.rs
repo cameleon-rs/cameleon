@@ -73,7 +73,9 @@ impl DeviceBuilder {
             .skip_while(|iface| iface.number() != self.u3v_iad.first_interface);
 
         // Retrieve control interface information.
-        let ctrl_iface = interfaces.next().ok_or(Error::InvalidDevice)?;
+        let ctrl_iface = interfaces
+            .next()
+            .ok_or_else(|| Error::InvalidDevice("invalid interface".into()))?;
         let ctrl_iface_info = ControlIfaceInfo::new(&ctrl_iface)?;
 
         // Retrieve device information.
@@ -81,7 +83,7 @@ impl DeviceBuilder {
         let ctrl_iface_desc = ctrl_iface
             .descriptors()
             .next()
-            .ok_or(Error::InvalidDevice)?;
+            .ok_or_else(|| Error::InvalidDevice("control interface descriptor not found".into()))?;
         let device_info_desc = ctrl_iface_desc.extra();
         let device_info_desc = DeviceInfoDescriptor::from_bytes(device_info_desc)?;
         let device_info = device_info_desc.interpret(&dev_channel)?;
@@ -92,7 +94,9 @@ impl DeviceBuilder {
             receive_ifaces.collect();
 
         if receive_ifaces.len() > 2 {
-            return Err(Error::InvalidDevice);
+            return Err(Error::InvalidDevice(
+                "more than 1 stream interfaces are found".into(),
+            ));
         }
 
         let (event_iface, stream_iface) = match receive_ifaces.pop() {
@@ -101,14 +105,14 @@ impl DeviceBuilder {
                     (Some(event_iface), Some(stream_iface))
                 }
                 None => (Some(event_iface), None),
-                Some(_) => return Err(Error::InvalidDevice),
+                Some(_) => return Err(Error::InvalidDevice("unknown interface is found".into())),
             },
             Some((stream_iface, ReceiveIfaceKind::Stream)) => match receive_ifaces.pop() {
                 Some((event_iface, ReceiveIfaceKind::Event)) => {
                     (Some(event_iface), Some(stream_iface))
                 }
                 None => (None, Some(stream_iface)),
-                Some(_) => return Err(Error::InvalidDevice),
+                Some(_) => return Err(Error::InvalidDevice("unknown interface is found".into())),
             },
             None => (None, None),
         };
@@ -275,7 +279,9 @@ impl DeviceInfoDescriptor {
 
     fn from_bytes(mut bytes: &[u8]) -> Result<Self> {
         if bytes.len() < Self::MINIMUM_DESC_LENGTH as usize {
-            return Err(Error::InvalidDevice);
+            return Err(Error::InvalidDevice(
+                "`DeviceInfoDescriptor` is too short".into(),
+            ));
         }
 
         let length: u8 = bytes.read_bytes_le()?;
@@ -286,7 +292,7 @@ impl DeviceInfoDescriptor {
             || descriptor_type != Self::DESCRIPTOR_TYPE
             || descriptor_subtype != Self::DESCRIPTOR_SUBTYPE
         {
-            return Err(Error::InvalidDevice);
+            return Err(Error::InvalidDevice("invalid descriptor type".into()));
         }
 
         let gencp_version_minor = bytes.read_bytes_le()?;
@@ -364,7 +370,9 @@ impl DeviceInfoDescriptor {
         } else if self.supported_speed_mask & 0b1 == 1 {
             BusSpeed::LowSpeed
         } else {
-            return Err(Error::InvalidDevice);
+            return Err(Error::InvalidDevice(
+                "invalid bus speed is specified".into(),
+            ));
         };
 
         Ok(DeviceInfo {
@@ -388,31 +396,38 @@ impl ControlIfaceInfo {
 
     fn new(iface: &rusb::Interface) -> Result<Self> {
         let iface_number = iface.number();
-        let iface_desc = iface.descriptors().next().ok_or(Error::InvalidDevice)?;
+        let iface_desc = iface
+            .descriptors()
+            .next()
+            .ok_or_else(|| Error::InvalidDevice("invalid interface descriptor".into()))?;
 
         if iface_desc.class_code() != MISCELLANEOUS_CLASS
             || iface_desc.sub_class_code() != USB3V_SUBCLASS
             || iface_desc.protocol_code() != Self::CONTROL_IFACE_PROTOCOL
         {
-            return Err(Error::InvalidDevice);
+            return Err(Error::InvalidDevice("invalid iface code".into()));
         }
 
         let eps: Vec<rusb::EndpointDescriptor> = iface_desc.endpoint_descriptors().collect();
         if eps.len() != 2 {
-            return Err(Error::InvalidDevice);
+            return Err(Error::InvalidDevice(
+                "invalid number of `EndpointDescriptor`".into(),
+            ));
         }
         let ep_in = eps
             .iter()
             .find(|ep| ep.direction() == rusb::Direction::In)
-            .ok_or(Error::InvalidDevice)?;
+            .ok_or_else(|| Error::InvalidDevice("first endpoint must be in-endpoint".into()))?;
         let ep_out = eps
             .iter()
             .find(|ep| ep.direction() == rusb::Direction::Out)
-            .ok_or(Error::InvalidDevice)?;
+            .ok_or_else(|| Error::InvalidDevice("second endpoint must be out-endpoint".into()))?;
         if ep_in.transfer_type() != rusb::TransferType::Bulk
             || ep_out.transfer_type() != rusb::TransferType::Bulk
         {
-            return Err(Error::InvalidDevice);
+            return Err(Error::InvalidDevice(
+                "invalid in-endpoint transfer type".into(),
+            ));
         }
 
         Ok(Self {
