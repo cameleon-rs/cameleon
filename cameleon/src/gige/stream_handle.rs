@@ -172,10 +172,6 @@ impl StreamingLoop {
         }
 
         loop {
-            if self.cancellation_rx.try_recv().is_ok() {
-                *self.completion.0.lock().unwrap() = true;
-                self.completion.1.notify_all();
-            }
             let length = self.sock.recv(&mut self.buffer).unwrap();
             let mut cursor = Cursor::new(&self.buffer[..]);
             let header = unwrap_or_continue!(PacketHeader::parse(&mut cursor));
@@ -195,6 +191,14 @@ impl StreamingLoop {
                     builder = Some(PayloadBuilder::new(header, leader, &mut payload));
                 }
                 PacketType::Trailer => {
+                    match self.cancellation_rx.try_recv() {
+                        Ok(Some(())) | Err(_) => {
+                            *self.completion.0.lock().unwrap() = true;
+                            self.completion.1.notify_all();
+                            break;
+                        }
+                        Ok(None) => {}
+                    }
                     let payload_type =
                         unwrap_or_continue!(PayloadType::parse_generic_leader(&mut cursor));
                     let Some(builder) = builder.take() else {

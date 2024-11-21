@@ -6,14 +6,18 @@ use std::{
     convert::TryInto,
     io::Read,
     sync::{Arc, Mutex},
-    thread, time,
+    thread,
+    time::{self},
 };
 
 use async_std::{channel, future, net::UdpSocket, task};
 use futures_channel::oneshot;
 use futures_util::{select, FutureExt};
 
-use cameleon_device::gige::protocol::{ack, cmd};
+use cameleon_device::gige::{
+    protocol::{ack, cmd},
+    register_map::StreamChannelPort,
+};
 
 use crate::{
     genapi::CompressionType, utils::unzip_genxml, ControlError, ControlResult, DeviceControl,
@@ -565,8 +569,8 @@ impl DeviceControl for ControlHandleInner {
     }
 
     fn disable_streaming(&mut self) -> ControlResult<()> {
-        let port = StreamRegister::new(0).channel_port(self)?;
-        StreamRegister::new(0).set_channel_port(self, port.set_host_port(0))?;
+        StreamRegister::new(0)
+            .set_channel_port(self, StreamChannelPort::from_raw(0).set_host_port(0))?;
         Ok(())
     }
 }
