@@ -433,7 +433,7 @@ impl<'a, T> GenApiDevice<'a, T> {
     }
 }
 
-impl<'a, T> cameleon_genapi::Device for GenApiDevice<'a, T>
+impl<T> cameleon_genapi::Device for GenApiDevice<'_, T>
 where
     T: DeviceControl,
 {

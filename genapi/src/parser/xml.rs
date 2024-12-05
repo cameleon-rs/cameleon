@@ -133,7 +133,7 @@ impl<'a, 'input> Node<'a, 'input> {
     }
 }
 
-impl<'a, 'input> fmt::Debug for Node<'a, 'input> {
+impl fmt::Debug for Node<'_, '_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let span = self.inner.range();
         let node_src = std::str::from_utf8(&self.src.as_bytes()[span]).unwrap();
@@ -165,7 +165,7 @@ pub(super) struct TextView<'a, 'input> {
     inner: roxmltree::Node<'a, 'input>,
 }
 
-impl<'a, 'input> TextView<'a, 'input> {
+impl<'a> TextView<'a, '_> {
     pub(super) fn view(&self) -> std::borrow::Cow<'a, str> {
         let first_child = self.inner.first_child().unwrap();
         if first_child.has_siblings() {
@@ -185,7 +185,7 @@ impl<'a, 'input> TextView<'a, 'input> {
     }
 }
 
-impl<'a, 'input> PartialEq<&str> for TextView<'a, 'input> {
+impl PartialEq<&str> for TextView<'_, '_> {
     fn eq(&self, rhs: &&str) -> bool {
         &self.view() == rhs
     }

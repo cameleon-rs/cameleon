@@ -41,7 +41,7 @@ impl<'a> DeviceModuleRef<'a> {
     }
 }
 
-impl<'a> Deref for DeviceModuleRef<'a> {
+impl Deref for DeviceModuleRef<'_> {
     type Target = Mutex<dyn imp::device::Device>;
 
     fn deref(&self) -> &Self::Target {
@@ -54,7 +54,7 @@ pub(super) struct RemoteDeviceRef<'a> {
     inner: &'a Mutex<dyn imp::port::Port>,
 }
 
-impl<'a> Deref for RemoteDeviceRef<'a> {
+impl Deref for RemoteDeviceRef<'_> {
     type Target = Mutex<dyn imp::port::Port>;
 
     fn deref(&self) -> &Self::Target {

@@ -93,7 +93,7 @@ impl<'a> AsyncPool<'a> {
     }
 }
 
-impl<'a> Drop for AsyncPool<'a> {
+impl Drop for AsyncPool<'_> {
     fn drop(&mut self) {
         self.cancel_all();
         while !self.is_empty() {
