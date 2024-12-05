@@ -375,7 +375,7 @@ macro_rules! parse_binop {
     }
 }
 
-impl<'a> Parser<'a> {
+impl Parser<'_> {
     fn expr(&mut self) -> Expr {
         let expr = self.logical_or();
         if self.eat(&Token::Question) {

@@ -28,7 +28,7 @@ impl<'a> InterfaceModuleRef<'a> {
     }
 }
 
-impl<'a> std::ops::Deref for InterfaceModuleRef<'a> {
+impl std::ops::Deref for InterfaceModuleRef<'_> {
     type Target = Mutex<dyn imp::interface::Interface>;
 
     fn deref(&self) -> &Self::Target {

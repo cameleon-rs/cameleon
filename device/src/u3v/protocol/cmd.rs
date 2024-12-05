@@ -425,7 +425,7 @@ impl CommandScd for ReadMem {
     }
 }
 
-impl<'a> CommandScd for WriteMem<'a> {
+impl CommandScd for WriteMem<'_> {
     fn flag(&self) -> CommandFlag {
         CommandFlag::RequestAck
     }
@@ -475,7 +475,7 @@ impl CommandScd for ReadMemStacked {
     }
 }
 
-impl<'a> CommandScd for WriteMemStacked<'a> {
+impl CommandScd for WriteMemStacked<'_> {
     fn flag(&self) -> CommandFlag {
         CommandFlag::RequestAck
     }

@@ -305,7 +305,7 @@ struct PayloadBuilder<'a> {
     trailer: u3v_stream::Trailer<'a>,
 }
 
-impl<'a> PayloadBuilder<'a> {
+impl PayloadBuilder<'_> {
     fn build(self) -> StreamResult<Payload> {
         let payload_status = self.trailer.payload_status();
         if payload_status != u3v_stream::PayloadStatus::Success {
