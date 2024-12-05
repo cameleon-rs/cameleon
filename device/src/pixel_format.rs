@@ -809,6 +809,56 @@ pub enum PixelFormat {
 
     /// Data 64-bit floating point.
     Data64f,
+
+    /// Bayer red green filter, with an image size of 10 bits per pixel, lsb grouped into 40 bits.
+    /// This pixel format is preliminary and its name and value may change in a future product version.
+    /// This feature is only supported by uEye+ cameras (GV and U3 models).
+    BayerRG10g40IDS,
+
+    /// Bayer red green filter, with an image size of 12 bits per pixel, lsb grouped into 24 bits.
+    /// This pixel format is preliminary and its name and value may change in a future product version.
+    /// This feature is only supported by uEye+ cameras (GV and U3 models).
+    BayerRG12g24IDS,
+
+    /// Bayer green blue filter, with an image size of 10 bits per pixel, lsb grouped into 40 bits.
+    /// This pixel format is preliminary and its name and value may change in a future product version.
+    /// This feature is only supported by uEye+ cameras (GV and U3 models).
+    BayerGB10g40IDS,
+
+    /// Bayer green blue filter, with an image size of 12 bits per pixel, lsb grouped into 24 bits.
+    /// This pixel format is preliminary and its name and value may change in a future product version.
+    /// This feature is only supported by uEye+ cameras (GV and U3 models).
+    BayerGB12g24IDS,
+
+    /// Bayer green red filter, with an image size of 10 bits per pixel, lsb grouped into 40 bits.
+    /// This pixel format is preliminary and its name and value may change in a future product version.
+    /// This feature is only supported by uEye+ cameras (GV and U3 models).
+    BayerGR10g40IDS,
+
+    /// Bayer green red filter, with an image size of 12 bits per pixel, lsb grouped into 24 bits.
+    /// This pixel format is preliminary and its name and value may change in a future product version.
+    /// This feature is only supported by uEye+ cameras (GV and U3 models).
+    BayerGR12g24IDS,
+
+    /// Bayer blue green filter, with an image size of 10 bits per pixel, lsb grouped into 40 bits.
+    /// This pixel format is preliminary and its name and value may change in a future product version.
+    /// This feature is only supported by uEye+ cameras (GV and U3 models).
+    BayerBG10g40IDS,
+
+    /// Bayer blue green filter, with an image size of 12 bits per pixel, lsb grouped into 24 bits.
+    /// This pixel format is preliminary and its name and value may change in a future product version.
+    /// This feature is only supported by uEye+ cameras (GV and U3 models).
+    BayerBG12g24IDS,
+
+    /// Monochrome, with an image size of 10 bits per pixel, lsb grouped into 40 bits.
+    /// This pixel format is preliminary and its name and value may change in a future product version.
+    /// This feature is only supported by uEye+ cameras (GV and U3 models).
+    Mono10g40IDS,
+
+    /// Monochrome, with an image size of 12 bits per pixel, lsb grouped into 24 bits.
+    /// This pixel format is preliminary and its name and value may change in a future product version.
+    /// This feature is only supported by uEye+ cameras (GV and U3 models).
+    Mono12g24IDS,
 }
 
 impl TryFrom<u32> for PixelFormat {
@@ -1083,6 +1133,16 @@ impl TryFrom<u32> for PixelFormat {
             0x0140_011D => Ok(Data64),
             0x0140_011E => Ok(Data64s),
             0x0140_011F => Ok(Data64f),
+            0x4000_0001 => Ok(BayerRG10g40IDS),
+            0x4000_0011 => Ok(BayerRG12g24IDS),
+            0x4000_0002 => Ok(BayerGB10g40IDS),
+            0x4000_0012 => Ok(BayerGB12g24IDS),
+            0x4000_0003 => Ok(BayerGR10g40IDS),
+            0x4000_0013 => Ok(BayerGR12g24IDS),
+            0x4000_0004 => Ok(BayerBG10g40IDS),
+            0x4000_0014 => Ok(BayerBG12g24IDS),
+            0x4000_000F => Ok(Mono10g40IDS),
+            0x4000_001F => Ok(Mono12g24IDS),
             otherwise => Err(format!("{:x} is invalid value for pixel format", otherwise)),
         }
     }
@@ -1358,6 +1418,16 @@ impl From<PixelFormat> for u32 {
             Data64 => 0x0140_011D,
             Data64s => 0x0140_011E,
             Data64f => 0x0140_011F,
+            BayerRG10g40IDS => 0x4000_0001,
+            BayerRG12g24IDS => 0x4000_0011,
+            BayerGB10g40IDS => 0x4000_0002,
+            BayerGB12g24IDS => 0x4000_0012,
+            BayerGR10g40IDS => 0x4000_0003,
+            BayerGR12g24IDS => 0x4000_0013,
+            BayerBG10g40IDS => 0x4000_0004,
+            BayerBG12g24IDS => 0x4000_0014,
+            Mono10g40IDS => 0x4000_000F,
+            Mono12g24IDS => 0x4000_001F,
         }
     }
 }
