@@ -552,9 +552,6 @@ fn read_payload(
         async_pool.submit(&mut buf[cursor..cursor + params.payload_final1_size])?;
         cursor += params.payload_final1_size;
     }
-    if params.payload_final2_size != 0 {
-        async_pool.submit(&mut buf[cursor..cursor + params.payload_final2_size])?;
-    }
 
     Ok(())
 }
