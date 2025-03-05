@@ -169,14 +169,14 @@ impl MemoryProtection {
         let block = &mut self.inner[address / 4];
         let offset = address % 4 * 2;
         let mask = !(0b11 << offset);
-        *block = (*block & mask) | access_right.as_num() << offset;
+        *block = (*block & mask) | (access_right.as_num() << offset);
     }
 
     #[must_use]
     pub fn access_right(&self, address: usize) -> AccessRight {
         let block = self.inner[address / 4];
         let offset = address % 4 * 2;
-        AccessRight::from_num(block >> offset & 0b11)
+        AccessRight::from_num((block >> offset) & 0b11)
     }
 
     pub fn access_right_with_range(&self, range: impl IntoIterator<Item = usize>) -> AccessRight {

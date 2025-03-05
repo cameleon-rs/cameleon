@@ -353,13 +353,13 @@ impl DeviceInfoDescriptor {
         } else {
             Some(channel.read_string_descriptor_ascii(self.user_defined_name_idx)?)
         };
-        let supported_speed = if self.supported_speed_mask >> 4_i32 & 0b1 == 1 {
+        let supported_speed = if (self.supported_speed_mask >> 4_i32) & 0b1 == 1 {
             BusSpeed::SuperSpeedPlus
-        } else if self.supported_speed_mask >> 3_i32 & 0b1 == 1 {
+        } else if (self.supported_speed_mask >> 3_i32) & 0b1 == 1 {
             BusSpeed::SuperSpeed
-        } else if self.supported_speed_mask >> 2_i32 & 0b1 == 1 {
+        } else if (self.supported_speed_mask >> 2_i32) & 0b1 == 1 {
             BusSpeed::HighSpeed
-        } else if self.supported_speed_mask >> 1_i32 & 0b1 == 1 {
+        } else if (self.supported_speed_mask >> 1_i32) & 0b1 == 1 {
             BusSpeed::FullSpeed
         } else if self.supported_speed_mask & 0b1 == 1 {
             BusSpeed::LowSpeed
