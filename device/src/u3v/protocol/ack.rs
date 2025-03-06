@@ -260,7 +260,7 @@ impl Status {
             StreamEndpointHalted,
         };
 
-        debug_assert!(code >> 13_i32 & 0b11 == 0b01);
+        debug_assert!((code >> 13_i32) & 0b11 == 0b01);
 
         let status = match code {
             0xA001 => ResendNotSupported,
