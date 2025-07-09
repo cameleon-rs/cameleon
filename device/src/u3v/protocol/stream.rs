@@ -344,7 +344,7 @@ impl TryFrom<u16> for PayloadType {
             0x4001 => Ok(PayloadType::ImageExtendedChunk),
             0x4000 => Ok(PayloadType::Chunk),
             val => Err(Error::InvalidPacket(
-                format!("invalid value for leader payload type: {}", val).into(),
+                format!("invalid value for leader payload type: {val}").into(),
             )),
         }
     }
@@ -573,7 +573,7 @@ impl TryFrom<u16> for PayloadStatus {
             0xA100 => Ok(PayloadStatus::DataDiscarded),
             0xA101 => Ok(PayloadStatus::DataOverrun),
             otherwise => Err(Error::InvalidPacket(
-                format!("{} is invalid value for stream payload status", otherwise,).into(),
+                format!("{otherwise} is invalid value for stream payload status",).into(),
             )),
         }
     }

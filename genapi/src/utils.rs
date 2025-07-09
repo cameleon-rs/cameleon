@@ -227,7 +227,7 @@ impl<'a> VariableKind<'a> {
             [_, "Enum", name] => Self::Enum(name),
             _ => {
                 return Err(GenApiError::invalid_node(
-                    format!("invalid `pVariable`: {}", s).into(),
+                    format!("invalid `pVariable`: {s}").into(),
                 ))
             }
         })

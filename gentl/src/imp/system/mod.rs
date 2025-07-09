@@ -159,7 +159,7 @@ impl SystemModule {
         let full_path = Self::full_path()
             .into_os_string()
             .into_string()
-            .map_err(|e| GenTlError::Error(format!("{:?}", e)))?;
+            .map_err(|e| GenTlError::Error(format!("{e:?}")))?;
         self.vm.write::<GenApiReg::TlPath>(full_path)?;
 
         // Initialize registers related to interface.

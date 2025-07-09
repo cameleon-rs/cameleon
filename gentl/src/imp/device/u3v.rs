@@ -223,7 +223,7 @@ impl Device for U3VDeviceModule {
         let vendor = self.vendor_name()?;
         let model_name = self.model_name()?;
         let id = self.device_id();
-        Ok(format!("{} {} ({})", vendor, model_name, id))
+        Ok(format!("{vendor} {model_name} ({id})"))
     }
 
     fn tl_type(&self) -> TlType {

@@ -32,7 +32,7 @@ fn main() {
     // Get the current value of `Gain`.
     if gain_node.is_readable(&mut params_ctxt).unwrap() {
         let value = gain_node.value(&mut params_ctxt).unwrap();
-        println!("{}", value);
+        println!("{value}");
     }
 
     // Set `0.1` to `Gain`.
@@ -44,6 +44,6 @@ fn main() {
     // The float value may be truncated to valid value by the camera.
     if gain_node.is_readable(&mut params_ctxt).unwrap() {
         let value = gain_node.value(&mut params_ctxt).unwrap();
-        println!("{}", value);
+        println!("{value}");
     }
 }

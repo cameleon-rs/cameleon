@@ -90,8 +90,7 @@ impl PayloadStream for StreamHandle {
     ) -> StreamResult<()> {
         self.params = StreamParams::from_control(ctrl).map_err(|e| {
             StreamError::Io(anyhow::Error::msg(format!(
-                "failed to setup streaming parameters: {}",
-                e
+                "failed to setup streaming parameters: {e}"
             )))
         })?;
 
@@ -246,7 +245,7 @@ impl StreamingLoop {
 
             // We received the data from the bulk transfers, try to parse stuff now.
             let leader = match u3v_stream::Leader::parse(&leader_buf)
-                .map_err(|e| StreamError::InvalidPayload(format!("{}", e).into()))
+                .map_err(|e| StreamError::InvalidPayload(format!("{e}").into()))
             {
                 Ok(leader) => leader,
                 Err(err) => {
@@ -259,7 +258,7 @@ impl StreamingLoop {
             };
 
             let trailer = match u3v_stream::Trailer::parse(&trailer_buf)
-                .map_err(|e| StreamError::InvalidPayload(format!("invalid trailer: {}", e).into()))
+                .map_err(|e| StreamError::InvalidPayload(format!("invalid trailer: {e}").into()))
             {
                 Ok(trailer) => trailer,
                 Err(err) => {
@@ -310,7 +309,7 @@ impl PayloadBuilder<'_> {
         let payload_status = self.trailer.payload_status();
         if payload_status != u3v_stream::PayloadStatus::Success {
             return Err(StreamError::InvalidPayload(
-                format!("trailer status indicates error: {:?}", payload_status).into(),
+                format!("trailer status indicates error: {payload_status:?}").into(),
             ));
         }
 
@@ -427,13 +426,13 @@ impl PayloadBuilder<'_> {
     fn specific_leader_as<T: u3v_stream::SpecificLeader>(&self) -> StreamResult<T> {
         self.leader
             .specific_leader_as()
-            .map_err(|e| StreamError::InvalidPayload(format!("{}", e).into()))
+            .map_err(|e| StreamError::InvalidPayload(format!("{e}").into()))
     }
 
     fn specific_trailer_as<T: u3v_stream::SpecificTrailer>(&self) -> StreamResult<T> {
         self.trailer
             .specific_trailer_as()
-            .map_err(|e| StreamError::InvalidPayload(format!("{}", e).into()))
+            .map_err(|e| StreamError::InvalidPayload(format!("{e}").into()))
     }
 }
 

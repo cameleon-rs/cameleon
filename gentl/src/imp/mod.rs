@@ -36,7 +36,7 @@ impl From<ControlError> for GenTlError {
                 Io(err.into())
             }
             ControlError::NotOpened => NotInitialized,
-            ControlError::InvalidData(..) => InvalidValue(format!("{}", err).into()),
+            ControlError::InvalidData(..) => InvalidValue(format!("{err}").into()),
             ControlError::Timeout => Timeout,
             ControlError::BufferTooSmall => BufferTooSmall,
         }

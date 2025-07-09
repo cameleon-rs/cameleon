@@ -243,7 +243,7 @@ impl Status {
             0x8FFF => GenericError,
             _ => {
                 return Err(Error::InvalidPacket(
-                    format! {"invalid gencp status code {:#X}", code}.into(),
+                    format! {"invalid gencp status code {code:#X}"}.into(),
                 ))
             }
         };
@@ -270,7 +270,7 @@ impl Status {
             0xA005 => EventEndpointHalted,
             _ => {
                 return Err(Error::InvalidPacket(
-                    format! {"invalid usb status code {:#X}", code}.into(),
+                    format! {"invalid usb status code {code:#X}"}.into(),
                 ))
             }
         };
@@ -301,7 +301,7 @@ impl ScdKind {
             0x0807 => Ok(ScdKind::ReadMemStacked),
             0x0809 => Ok(ScdKind::WriteMemStacked),
             _ => Err(Error::InvalidPacket(
-                format!("unknown ack command id {:#X}", id).into(),
+                format!("unknown ack command id {id:#X}").into(),
             )),
         }
     }

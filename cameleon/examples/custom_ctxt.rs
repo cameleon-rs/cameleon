@@ -134,7 +134,7 @@ fn main() {
     params_ctxt.ctxt.disable_cache();
     // This call will read the device's memory even if its cache exists in the context.
     let value = gain_node.value(&mut params_ctxt).unwrap();
-    println!("Gain: {}", value);
+    println!("Gain: {value}");
 
     camera.close().unwrap();
 }

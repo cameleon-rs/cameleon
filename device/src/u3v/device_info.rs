@@ -81,7 +81,7 @@ impl fmt::Display for DeviceInfo {
         writeln!(f, "Model Name: {}", self.model_name)?;
 
         if let Some(family_name) = &self.family_name {
-            writeln!(f, "Family Name: {}", family_name)
+            writeln!(f, "Family Name: {family_name}")
         } else {
             writeln!(f, "Family Name: N/A")
         }?;
@@ -91,7 +91,7 @@ impl fmt::Display for DeviceInfo {
         writeln!(f, "Serial Number: {}", self.serial_number)?;
 
         if let Some(user_defined_name) = &self.user_defined_name {
-            writeln!(f, "User Defined Name: {}", user_defined_name)
+            writeln!(f, "User Defined Name: {user_defined_name}")
         } else {
             writeln!(f, "User Defined Name: N/A")
         }?;

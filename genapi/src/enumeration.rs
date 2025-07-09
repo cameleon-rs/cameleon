@@ -135,7 +135,7 @@ impl IEnumeration for EnumerationNode {
             .any(|ent| ent.value() == value)
         {
             return Err(GenApiError::invalid_data(
-                format!("not found entry with the value `{}`", value).into(),
+                format!("not found entry with the value `{value}`").into(),
             ));
         };
         cx.invalidate_cache_by(self.node_base().id());
