@@ -103,19 +103,15 @@ pub fn enumerate_cameras() -> CameleonResult<Vec<Camera<ControlHandle, StreamHan
 
 impl From<u3v::Error> for ControlError {
     fn from(err: u3v::Error) -> ControlError {
-        use u3v::Error::{BufferIo, InvalidDevice, InvalidPacket, LibUsb};
-        use u3v::LibUsbError::{
-            Access, BadDescriptor, Busy, Interrupted, InvalidParam, Io, NoDevice, NoMem, NotFound,
-            NotSupported, Other, Overflow, Pipe, Timeout,
-        };
+        use u3v::Error::{BufferIo, InvalidDevice, InvalidPacket, Usb};
+        use u3v::UsbError;
 
         match &err {
-            LibUsb(libusb_error) => match libusb_error {
-                Io | InvalidParam | Access | Overflow | Pipe | Interrupted | NoMem
-                | NotSupported | BadDescriptor | Other => ControlError::Io(err.into()),
-                Busy => ControlError::Busy,
-                NoDevice | NotFound => ControlError::Disconnected,
-                Timeout => ControlError::Timeout,
+            Usb(usb_error) => match usb_error {
+                UsbError::Busy => ControlError::Busy,
+                UsbError::Disconnected | UsbError::NotFound => ControlError::Disconnected,
+                UsbError::Timeout | UsbError::Cancelled => ControlError::Timeout,
+                _ => ControlError::Io(err.into()),
             },
 
             BufferIo(_) | InvalidPacket(_) => ControlError::Io(err.into()),
@@ -127,19 +123,16 @@ impl From<u3v::Error> for ControlError {
 
 impl From<u3v::Error> for StreamError {
     fn from(err: u3v::Error) -> Self {
-        use u3v::Error::LibUsb;
-        use u3v::LibUsbError::{
-            Access, BadDescriptor, Busy, Interrupted, InvalidParam, Io, NoDevice, NoMem, NotFound,
-            NotSupported, Other, Overflow, Pipe, Timeout,
-        };
+        use u3v::Error::Usb;
+        use u3v::UsbError;
 
         match &err {
-            LibUsb(libusb_error) => match libusb_error {
-                Io | InvalidParam | Access | Overflow | Pipe | Interrupted | NoMem
-                | NotSupported | BadDescriptor | Busy | Other => Self::Io(err.into()),
-                NoDevice | NotFound => Self::Disconnected,
-                Timeout => Self::Timeout,
+            Usb(usb_error) => match usb_error {
+                UsbError::Disconnected | UsbError::NotFound => Self::Disconnected,
+                UsbError::Timeout | UsbError::Cancelled => Self::Timeout,
+                _ => Self::Io(err.into()),
             },
+
             _ => Self::Io(err.into()),
         }
     }

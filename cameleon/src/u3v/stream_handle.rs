@@ -162,7 +162,7 @@ impl StreamingLoop {
         let mut trailer_buf = vec![0; self.params.trailer_size];
         let mut payload_buf_opt = None;
         let mut leader_buf = vec![0; self.params.leader_size];
-        let inner = self.inner.lock().unwrap();
+        let mut inner = self.inner.lock().unwrap();
 
         'outer: loop {
             // Stop the loop when
@@ -189,7 +189,16 @@ impl StreamingLoop {
                 },
             };
 
-            let mut async_pool = AsyncPool::new(&inner);
+            let mut async_pool = match inner.async_pool() {
+                Ok(pool) => pool,
+                Err(err) => {
+                    let stream_err = StreamError::from(err);
+                    warn!(?stream_err);
+                    payload_buf_opt = Some(payload_buf);
+                    self.sender.try_send(Err(stream_err)).ok();
+                    continue;
+                }
+            };
 
             if let Err(err) = read_leader(&mut async_pool, &self.params, &mut leader_buf) {
                 // Report and send error if the error is fatal.
