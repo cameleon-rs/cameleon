@@ -118,7 +118,7 @@ fn main() {
     // Read manifest entries.
     let manifest_table = abrm.manifest_table(ctrl).unwrap();
     for (i, entry) in manifest_table.entries(ctrl).unwrap().enumerate() {
-        println!("\n### Manifest Entry {} ###\n", i);
+        println!("\n### Manifest Entry {i} ###\n");
         println!(
             "GenICam file version: {}",
             entry.genicam_file_version(ctrl).unwrap()

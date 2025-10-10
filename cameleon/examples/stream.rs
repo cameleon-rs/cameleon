@@ -39,7 +39,7 @@ fn main() {
             payload.timestamp()
         );
         if let Some(image_info) = payload.image_info() {
-            println!("{:?}\n", image_info);
+            println!("{image_info:?}\n");
         }
 
         // Send back payload to streaming loop to reuse the buffer.

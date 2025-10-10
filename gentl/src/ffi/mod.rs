@@ -460,7 +460,7 @@ gentl_api!(
     ) -> GenTlResult<()> {
         let code = if let Some((code, text)) = LAST_ERROR.with(|err| {
             let err = err.borrow();
-            err.err.as_ref().map(|err| (err.into(), format!("{}", err)))
+            err.err.as_ref().map(|err| (err.into(), format!("{err}")))
         }) {
             text.as_str().copy_to(sErrorText, piSize)?;
             code

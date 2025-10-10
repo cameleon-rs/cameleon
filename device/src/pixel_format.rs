@@ -1143,7 +1143,7 @@ impl TryFrom<u32> for PixelFormat {
             0x4000_0014 => Ok(BayerBG12g24IDS),
             0x4000_000F => Ok(Mono10g40IDS),
             0x4000_001F => Ok(Mono12g24IDS),
-            otherwise => Err(format!("{:x} is invalid value for pixel format", otherwise)),
+            otherwise => Err(format!("{otherwise:x} is invalid value for pixel format")),
         }
     }
 }

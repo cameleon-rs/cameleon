@@ -157,7 +157,7 @@ impl Expr {
                 .get(s.as_str())
                 .ok_or_else(|| {
                     GenApiError::invalid_node(
-                        format!("ident not found in variable env: {} not found", s).into(),
+                        format!("ident not found in variable env: {s} not found").into(),
                     )
                 })?
                 .borrow()

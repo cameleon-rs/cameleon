@@ -1017,7 +1017,7 @@ impl GenICamFileInfo {
             0 => Ok(GenICamFileType::DeviceXml),
             1 => Ok(GenICamFileType::BufferXml),
             _ => Err(ControlError::InvalidDevice(
-                format!("Invalid U3V GenICamFileType value: {}", raw).into(),
+                format!("Invalid U3V GenICamFileType value: {raw}").into(),
             )),
         }
     }
@@ -1029,7 +1029,7 @@ impl GenICamFileInfo {
             0 => Ok(CompressionType::Uncompressed),
             1 => Ok(CompressionType::Zip),
             _ => Err(ControlError::InvalidDevice(
-                format!("Invalid U3V GenICamFilFormat value: {}", raw).into(),
+                format!("Invalid U3V GenICamFilFormat value: {raw}").into(),
             )),
         }
     }
@@ -1117,7 +1117,7 @@ impl ParseBytes for u3v::BusSpeed {
             0b10000 => SuperSpeedPlus,
             other => {
                 return Err(ControlError::InvalidDevice(
-                    format!("invalid bus speed defined:  {:#b}", other).into(),
+                    format!("invalid bus speed defined:  {other:#b}").into(),
                 ))
             }
         };

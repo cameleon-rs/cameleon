@@ -137,7 +137,7 @@ impl fmt::Debug for Node<'_, '_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let span = self.inner.range();
         let node_src = std::str::from_utf8(&self.src.as_bytes()[span]).unwrap();
-        write!(f, "{}", node_src)
+        write!(f, "{node_src}")
     }
 }
 

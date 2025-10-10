@@ -192,7 +192,7 @@ impl IValue<i64> for NodeId {
             e.current_value(device, store, cx)
         } else {
             Err(GenApiError::invalid_node(
-                format!("Node {:?} is not an integer, float, or enumeration", self).into(),
+                format!("Node {self:?} is not an integer, float, or enumeration").into(),
             ))
         }
     }
@@ -263,7 +263,7 @@ impl IValue<f64> for NodeId {
             e.current_value(device, store, cx).map(|i| i as f64)
         } else {
             Err(GenApiError::invalid_node(
-                format!("Node {:?} is not an integer, float, or enumeration", self).into(),
+                format!("Node {self:?} is not an integer, float, or enumeration").into(),
             ))
         }
     }
