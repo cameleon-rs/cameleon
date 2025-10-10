@@ -24,7 +24,7 @@ pub trait INode {
         store.name_by_id(self.node_base().id()).unwrap()
     }
 
-    fn node_base(&self) -> NodeBase;
+    fn node_base(&self) -> NodeBase<'_>;
     fn streamable(&self) -> bool;
 }
 

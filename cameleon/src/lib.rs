@@ -281,6 +281,7 @@ mod tests {
         fn assert_send<T: Send>() {}
         fn assert_sync<T: Sync>() {}
 
+        #[expect(unused)]
         fn assert_cameleon_error_is_send_sync() {
             assert_send::<CameleonError>();
             assert_sync::<CameleonError>();

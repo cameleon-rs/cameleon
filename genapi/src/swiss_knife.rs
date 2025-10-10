@@ -70,7 +70,7 @@ impl SwissKnifeNode {
 }
 
 impl INode for SwissKnifeNode {
-    fn node_base(&self) -> NodeBase {
+    fn node_base(&self) -> NodeBase<'_> {
         NodeBase::new(&self.attr_base, &self.elem_base)
     }
 

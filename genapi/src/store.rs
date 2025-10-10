@@ -154,111 +154,111 @@ impl NodeId {
         store.name_by_id(self).unwrap()
     }
 
-    pub fn as_inode_kind(self, store: &impl NodeStore) -> Option<INodeKind> {
+    pub fn as_inode_kind(self, store: &impl NodeStore) -> Option<INodeKind<'_>> {
         INodeKind::maybe_from(self, store)
     }
 
-    pub fn expect_inode_kind(self, store: &impl NodeStore) -> GenApiResult<INodeKind> {
+    pub fn expect_inode_kind(self, store: &impl NodeStore) -> GenApiResult<INodeKind<'_>> {
         self.as_inode_kind(store).ok_or_else(|| {
             GenApiError::invalid_node("the node doesn't implement `IInteger`".into())
         })
     }
 
-    pub fn as_iinteger_kind(self, store: &impl NodeStore) -> Option<IIntegerKind> {
+    pub fn as_iinteger_kind(self, store: &impl NodeStore) -> Option<IIntegerKind<'_>> {
         IIntegerKind::maybe_from(self, store)
     }
 
-    pub fn expect_iinteger_kind(self, store: &impl NodeStore) -> GenApiResult<IIntegerKind> {
+    pub fn expect_iinteger_kind(self, store: &impl NodeStore) -> GenApiResult<IIntegerKind<'_>> {
         self.as_iinteger_kind(store).ok_or_else(|| {
             GenApiError::invalid_node("the node doesn't implement `IInteger`".into())
         })
     }
 
-    pub fn as_ifloat_kind(self, store: &impl NodeStore) -> Option<IFloatKind> {
+    pub fn as_ifloat_kind(self, store: &impl NodeStore) -> Option<IFloatKind<'_>> {
         IFloatKind::maybe_from(self, store)
     }
 
-    pub fn expect_ifloat_kind(self, store: &impl NodeStore) -> GenApiResult<IFloatKind> {
+    pub fn expect_ifloat_kind(self, store: &impl NodeStore) -> GenApiResult<IFloatKind<'_>> {
         self.as_ifloat_kind(store)
             .ok_or_else(|| GenApiError::invalid_node("the node doesn't implement `IFloat`".into()))
     }
 
-    pub fn as_istring_kind(self, store: &impl NodeStore) -> Option<IStringKind> {
+    pub fn as_istring_kind(self, store: &impl NodeStore) -> Option<IStringKind<'_>> {
         IStringKind::maybe_from(self, store)
     }
 
-    pub fn expect_istring_kind(self, store: &impl NodeStore) -> GenApiResult<IStringKind> {
+    pub fn expect_istring_kind(self, store: &impl NodeStore) -> GenApiResult<IStringKind<'_>> {
         self.as_istring_kind(store)
             .ok_or_else(|| GenApiError::invalid_node("the node doesn't implement `IString`".into()))
     }
 
-    pub fn as_icommand_kind(self, store: &impl NodeStore) -> Option<ICommandKind> {
+    pub fn as_icommand_kind(self, store: &impl NodeStore) -> Option<ICommandKind<'_>> {
         ICommandKind::maybe_from(self, store)
     }
 
-    pub fn expect_icommand_kind(self, store: &impl NodeStore) -> GenApiResult<ICommandKind> {
+    pub fn expect_icommand_kind(self, store: &impl NodeStore) -> GenApiResult<ICommandKind<'_>> {
         self.as_icommand_kind(store).ok_or_else(|| {
             GenApiError::invalid_node("the node doesn't implement `ICommand`".into())
         })
     }
 
-    pub fn as_ienumeration_kind(self, store: &impl NodeStore) -> Option<IEnumerationKind> {
+    pub fn as_ienumeration_kind(self, store: &impl NodeStore) -> Option<IEnumerationKind<'_>> {
         IEnumerationKind::maybe_from(self, store)
     }
 
     pub fn expect_ienumeration_kind(
         self,
         store: &impl NodeStore,
-    ) -> GenApiResult<IEnumerationKind> {
+    ) -> GenApiResult<IEnumerationKind<'_>> {
         self.as_ienumeration_kind(store).ok_or_else(|| {
             GenApiError::invalid_node("the node doesn't implement `IEnumeration`".into())
         })
     }
 
-    pub fn as_iboolean_kind(self, store: &impl NodeStore) -> Option<IBooleanKind> {
+    pub fn as_iboolean_kind(self, store: &impl NodeStore) -> Option<IBooleanKind<'_>> {
         IBooleanKind::maybe_from(self, store)
     }
 
-    pub fn expect_iboolean_kind(self, store: &impl NodeStore) -> GenApiResult<IBooleanKind> {
+    pub fn expect_iboolean_kind(self, store: &impl NodeStore) -> GenApiResult<IBooleanKind<'_>> {
         self.as_iboolean_kind(store).ok_or_else(|| {
             GenApiError::invalid_node("the node doesn't implement `IBoolean`".into())
         })
     }
 
-    pub fn as_iregister_kind(self, store: &impl NodeStore) -> Option<IRegisterKind> {
+    pub fn as_iregister_kind(self, store: &impl NodeStore) -> Option<IRegisterKind<'_>> {
         IRegisterKind::maybe_from(self, store)
     }
 
-    pub fn expect_iregister_kind(self, store: &impl NodeStore) -> GenApiResult<IRegisterKind> {
+    pub fn expect_iregister_kind(self, store: &impl NodeStore) -> GenApiResult<IRegisterKind<'_>> {
         self.as_iregister_kind(store).ok_or_else(|| {
             GenApiError::invalid_node("the node doesn't implement `IRegister`".into())
         })
     }
 
-    pub fn as_icategory_kind(self, store: &impl NodeStore) -> Option<ICategoryKind> {
+    pub fn as_icategory_kind(self, store: &impl NodeStore) -> Option<ICategoryKind<'_>> {
         ICategoryKind::maybe_from(self, store)
     }
 
-    pub fn expect_icategory_kind(self, store: &impl NodeStore) -> GenApiResult<ICategoryKind> {
+    pub fn expect_icategory_kind(self, store: &impl NodeStore) -> GenApiResult<ICategoryKind<'_>> {
         self.as_icategory_kind(store).ok_or_else(|| {
             GenApiError::invalid_node("the node doesn't implement `ICategory`".into())
         })
     }
 
-    pub fn as_iport_kind(self, store: &impl NodeStore) -> Option<IPortKind> {
+    pub fn as_iport_kind(self, store: &impl NodeStore) -> Option<IPortKind<'_>> {
         IPortKind::maybe_from(self, store)
     }
 
-    pub fn expect_iport_kind(self, store: &impl NodeStore) -> GenApiResult<IPortKind> {
+    pub fn expect_iport_kind(self, store: &impl NodeStore) -> GenApiResult<IPortKind<'_>> {
         self.as_iport_kind(store)
             .ok_or_else(|| GenApiError::invalid_node("the node doesn't implement `IPort`".into()))
     }
 
-    pub fn as_iselector_kind(self, store: &impl NodeStore) -> Option<ISelectorKind> {
+    pub fn as_iselector_kind(self, store: &impl NodeStore) -> Option<ISelectorKind<'_>> {
         ISelectorKind::maybe_from(self, store)
     }
 
-    pub fn expect_iselector_kind(self, store: &impl NodeStore) -> GenApiResult<ISelectorKind> {
+    pub fn expect_iselector_kind(self, store: &impl NodeStore) -> GenApiResult<ISelectorKind<'_>> {
         self.as_iselector_kind(store).ok_or_else(|| {
             GenApiError::invalid_node("the node doesn't implement `ISelector`".into())
         })
