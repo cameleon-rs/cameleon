@@ -32,12 +32,12 @@ Currently, `cameleon` supports only `USB3 Vision` cameras, but it's planned to s
 ## Usage
 
 ### USB3 Vision cameras
-You need to install `libusb` to use USB3 Vision cameras, see [How to install `libusb`](#how-to-install-libusb).
+`cameleon` uses the pure-Rust [`nusb`][nusb-url] backend for USB3 Vision devices, so no external `libusb` installation is required. Enable the `usb` feature (the legacy `libusb` feature remains as an alias).
 
 First, add dependencies like below.
 ```toml
 [dependencies]
-cameleon = { version = "0.1", features = ["libusb"] }
+cameleon = { version = "0.1", features = ["usb"] }
 ```
 
 Then, you can enumerate all cameras connected to the host, and start streaming.
@@ -93,7 +93,7 @@ camera.close().unwrap();
 
 More examples can be found [here][cameleon-example].
 
-[libusb-url]: https://libusb.info
+[nusb-url]: https://docs.rs/nusb
 [cameleon-example]: https://github.com/cameleon-rs/cameleon/tree/main/cameleon/examples
 
 
@@ -119,25 +119,15 @@ More examples can be found [here][cameleon-example].
 
 ### USB3 Vision
 
-#### How to install `libusb`?
+#### Platform notes
 ##### Linux/macOS
-You need to install [libusb][libusb-url] to the place where `pkg-config` can find. Basically all you have to do is just installing `libusb` through your system package manager like `sudo apt install libusb-1.0-0-dev` or `brew install libusb`.
-
-If you use Linux, it's probably needed to edit permissions for USB devices. You could add permissions by editing `udev` rules, a configuration example is found [here](misc/u3v.rules).
+On Linux you may need to adjust device permissions so that your user can access USB cameras. You can add rules with `udev`; a configuration example is available in [`misc/u3v.rules`](misc/u3v.rules).
 
 ##### Windows
-You need to install [libusb][libusb-url] with `vcpkg`, please see [here][libusb-vcpkg] to install `libusb` with `vcpkg`.
-
-Also, you need to install a driver for your device. You can find resource [here][libusb-driver-installation] for driver-installation.  
-NOTE: Make sure to install a driver to a composite device not to its child devices.  
-To do this, you need to list all devices connected to the host computer with `zadig` like below.  
+The backend relies on the WinUSB driver. You can install it for your device with [Zadig](https://zadig.akeo.ie/). When selecting your device in Zadig, ensure you choose the composite device entry, not the child interfaces, before installing WinUSB.  
 ![describe zadig list option][zadig-list-option]
 
-Then install `WinUSB` to your device.  
 ![describe how to install WinUSB driver to your composite device][zadig-composite-device]
-
-[libusb-vcpkg]: https://github.com/libusb/libusb/wiki/Windows#vcpkg_port
-[libusb-driver-installation]: https://github.com/libusb/libusb/wiki/Windows#driver-installation
 [zadig-list-option]: https://user-images.githubusercontent.com/6376004/123678264-11720d00-d881-11eb-98aa-eb649fdf3cb2.png
 [zadig-composite-device]: https://user-images.githubusercontent.com/6376004/123937380-10e88c00-d9d1-11eb-9999-61439b6db788.png
 

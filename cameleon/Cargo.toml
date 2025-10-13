@@ -31,32 +31,33 @@ anyhow = "1.0.40"
 trybuild = "1.0.42"
 
 [features]
-libusb = ["cameleon-device/libusb"]
+usb = ["cameleon-device/usb"]
+libusb = ["usb"]
 
 [[example]]
 name = "u3v_register_map"
 path = "examples/u3v/register_map.rs"
-required-features = ["libusb"]
+required-features = ["usb"]
 
 [[example]]
 name = "stream"
 path = "examples/stream.rs"
-required-features = ["libusb"]
+required-features = ["usb"]
 
 [[example]]
 name = "params"
 path = "examples/params.rs"
-required-features = ["libusb"]
+required-features = ["usb"]
 
 [[example]]
 name = "no_cache"
 path = "examples/no_cache.rs"
-required-features = ["libusb"]
+required-features = ["usb"]
 
 [[example]]
 name = "custom_ctxt"
 path = "examples/custom_ctxt.rs"
-required-features = ["libusb"]
+required-features = ["usb"]
 
 [package.metadata.docs.rs]
 all-features = true

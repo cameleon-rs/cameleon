@@ -10,7 +10,7 @@
     clippy::cast_possible_truncation
 )]
 
-#[cfg(feature = "libusb")]
+#[cfg(feature = "usb")]
 pub mod u3v;
 
 mod pixel_format;
