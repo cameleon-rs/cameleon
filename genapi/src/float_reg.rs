@@ -55,7 +55,7 @@ impl FloatRegNode {
 }
 
 impl INode for FloatRegNode {
-    fn node_base(&self) -> NodeBase {
+    fn node_base(&self) -> NodeBase<'_> {
         let elem_base = &self.register_base.elem_base;
         NodeBase::new(&self.attr_base, elem_base)
     }

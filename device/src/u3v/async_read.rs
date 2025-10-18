@@ -302,7 +302,7 @@ cfg_if::cfg_if! {
     } else {
         type AsyncHandle<'a> = &'a RusbDeviceHandle;
 
-        fn get_handle(channel: &ReceiveChannel) -> AsyncHandle {
+        fn get_handle(channel: &ReceiveChannel) -> AsyncHandle<'_> {
             &channel.device_handle
         }
     }
