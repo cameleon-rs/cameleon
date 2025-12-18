@@ -40,12 +40,6 @@ macro_rules! match_text_view{
     }
 }
 
-impl Default for NameSpace {
-    fn default() -> Self {
-        Self::Custom
-    }
-}
-
 impl From<&str> for NameSpace {
     fn from(value: &str) -> Self {
         match value {
@@ -68,12 +62,6 @@ impl Parse for NameSpace {
             "Standard" => Self::Standard,
             "Custom" => Self::Custom,
         )
-    }
-}
-
-impl Default for Visibility {
-    fn default() -> Self {
-        Self::Beginner
     }
 }
 
@@ -102,12 +90,6 @@ impl From<&str> for MergePriority {
             "-1" => Self::Low,
             _ => unreachable!(),
         }
-    }
-}
-
-impl Default for MergePriority {
-    fn default() -> Self {
-        Self::Mid
     }
 }
 
@@ -221,12 +203,6 @@ macro_rules! impl_parse_for_imm_or_pnode_id {
 impl_parse_for_imm_or_pnode_id!(IntegerId, i64);
 impl_parse_for_imm_or_pnode_id!(FloatId, f64);
 
-impl Default for IntegerRepresentation {
-    fn default() -> Self {
-        Self::PureNumber
-    }
-}
-
 impl Parse for IntegerRepresentation {
     fn parse(
         node: &mut xml::Node,
@@ -267,12 +243,6 @@ impl Parse for FloatRepresentation {
     }
 }
 
-impl Default for FloatRepresentation {
-    fn default() -> Self {
-        Self::PureNumber
-    }
-}
-
 impl Parse for Slope {
     fn parse(
         node: &mut xml::Node,
@@ -287,18 +257,6 @@ impl Parse for Slope {
             "Varying" => Self::Varying,
             "Automatic" => Self::Automatic,
         }
-    }
-}
-
-impl Default for Slope {
-    fn default() -> Self {
-        Self::Automatic
-    }
-}
-
-impl Default for DisplayNotation {
-    fn default() -> Self {
-        Self::Automatic
     }
 }
 
@@ -328,12 +286,6 @@ impl From<&str> for StandardNameSpace {
             "USB" => Self::USB,
             _ => unreachable!(),
         }
-    }
-}
-
-impl Default for CachingMode {
-    fn default() -> Self {
-        Self::WriteThrough
     }
 }
 
@@ -647,12 +599,6 @@ impl Parse for RegPIndex {
     }
 }
 
-impl Default for Endianness {
-    fn default() -> Self {
-        Self::LE
-    }
-}
-
 impl Parse for Endianness {
     fn parse(
         node: &mut xml::Node,
@@ -665,12 +611,6 @@ impl Parse for Endianness {
             "LittleEndian" => Self::LE,
             "BigEndian" => Self::BE,
         }
-    }
-}
-
-impl Default for Sign {
-    fn default() -> Self {
-        Self::Unsigned
     }
 }
 
