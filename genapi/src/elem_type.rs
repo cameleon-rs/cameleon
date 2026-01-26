@@ -11,23 +11,26 @@ use super::{
     Device, GenApiResult, ValueCtxt,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum NameSpace {
     Standard,
+    #[default]
     Custom,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Visibility {
+    #[default]
     Beginner,
     Expert,
     Guru,
     Invisible,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum MergePriority {
     High,
+    #[default]
     Mid,
     Low,
 }
@@ -61,11 +64,12 @@ impl<T> ImmOrPNode<T> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum IntegerRepresentation {
     Linear,
     Logarithmic,
     Boolean,
+    #[default]
     PureNumber,
     HexNumber,
     IpV4Address,
@@ -97,23 +101,26 @@ impl IntegerRepresentation {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum FloatRepresentation {
     Linear,
     Logarithmic,
+    #[default]
     PureNumber,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Slope {
     Increasing,
     Decreasing,
     Varying,
+    #[default]
     Automatic,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum DisplayNotation {
+    #[default]
     Automatic,
     Fixed,
     Scientific,
@@ -128,9 +135,10 @@ pub enum StandardNameSpace {
     USB,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CachingMode {
     /// Allow to caching on read/write.
+    #[default]
     WriteThrough,
     /// Allow to caching on read.
     WriteAround,
@@ -319,15 +327,17 @@ impl RegPIndex {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Endianness {
+    #[default]
     LE,
     BE,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Sign {
     Signed,
+    #[default]
     Unsigned,
 }
 
