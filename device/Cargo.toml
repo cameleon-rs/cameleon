@@ -14,7 +14,7 @@ categories = ["computer-vision"]
 keywords = ["genicam", "camera", "usb3", "gige", "uvc"]
 
 [dependencies]
-thiserror = "1.0.24"
+thiserror = "2.0.18"
 log = "0.4.14"
 semver = "1.0.0"
 cfg-if = "1.0.0"
