@@ -242,7 +242,11 @@ impl CopyTo for &str {
                 if *dst_size < string_len {
                     return Err(GenTlError::BufferTooSmall);
                 }
-                std::ptr::copy_nonoverlapping(self.as_ptr().cast::<i8>(), dst, self.len());
+                std::ptr::copy_nonoverlapping(
+                    self.as_ptr().cast::<libc::c_char>(),
+                    dst,
+                    self.len(),
+                );
                 dst.add(self.len()).write(0); // Null terminated.
             }
         }
