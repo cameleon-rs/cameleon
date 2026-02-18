@@ -16,7 +16,7 @@ keywords = ["genicam", "camera", "usb3", "gige", "uvc"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-thiserror = "1.0.24"
+thiserror = "2.0.18"
 semver = "1.0.0"
 zip = { version = "0.6.0", default-features = false, features = ["deflate"] }
 sha-1 = "0.10.0"
