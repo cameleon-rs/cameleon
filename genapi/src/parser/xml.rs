@@ -147,7 +147,9 @@ struct Attributes<'a, 'input> {
 
 impl<'a, 'input> Attributes<'a, 'input> {
     fn from_xmltree_attrs(attrs: roxmltree::Attributes<'a, 'input>) -> Self {
-        Self { attrs: attrs.collect() }
+        Self {
+            attrs: attrs.collect(),
+        }
     }
 
     fn attribute_of(&self, name: &str) -> Option<&'a str> {
