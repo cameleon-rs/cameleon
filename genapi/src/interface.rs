@@ -415,25 +415,25 @@ pub trait ISelector {
 #[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(INode)]
 pub enum INodeKind<'a> {
-    Integer(&'a super::IntegerNode),
-    IntReg(&'a super::IntRegNode),
-    MaskedIntReg(&'a super::MaskedIntRegNode),
-    IntConverter(&'a super::IntConverterNode),
-    IntSwissKnife(&'a super::IntSwissKnifeNode),
-    Float(&'a super::FloatNode),
-    FloatReg(&'a super::FloatRegNode),
-    Converter(&'a super::ConverterNode),
-    SwissKnife(&'a super::SwissKnifeNode),
-    String(&'a super::StringNode),
-    StringReg(&'a super::StringRegNode),
-    Boolean(&'a super::BooleanNode),
-    Command(&'a super::CommandNode),
-    Register(&'a super::RegisterNode),
-    Category(&'a super::CategoryNode),
-    Port(&'a super::PortNode),
-    Enumeration(&'a super::EnumerationNode),
-    EnumEntry(&'a super::EnumEntryNode),
-    Node(&'a super::Node),
+    Integer(&'a crate::IntegerNode),
+    IntReg(&'a crate::IntRegNode),
+    MaskedIntReg(&'a crate::MaskedIntRegNode),
+    IntConverter(&'a crate::IntConverterNode),
+    IntSwissKnife(&'a crate::IntSwissKnifeNode),
+    Float(&'a crate::FloatNode),
+    FloatReg(&'a crate::FloatRegNode),
+    Converter(&'a crate::ConverterNode),
+    SwissKnife(&'a crate::SwissKnifeNode),
+    String(&'a crate::StringNode),
+    StringReg(&'a crate::StringRegNode),
+    Boolean(&'a crate::BooleanNode),
+    Command(&'a crate::CommandNode),
+    Register(&'a crate::RegisterNode),
+    Category(&'a crate::CategoryNode),
+    Port(&'a crate::PortNode),
+    Enumeration(&'a crate::EnumerationNode),
+    EnumEntry(&'a crate::EnumEntryNode),
+    Node(&'a crate::Node),
 }
 
 impl<'a> INodeKind<'a> {
@@ -491,11 +491,11 @@ impl<'a> INodeKind<'a> {
 #[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(IInteger)]
 pub enum IIntegerKind<'a> {
-    Integer(&'a super::IntegerNode),
-    IntReg(&'a super::IntRegNode),
-    MaskedIntReg(&'a super::MaskedIntRegNode),
-    IntConverter(&'a super::IntConverterNode),
-    IntSwissKnife(&'a super::IntSwissKnifeNode),
+    Integer(&'a crate::IntegerNode),
+    IntReg(&'a crate::IntRegNode),
+    MaskedIntReg(&'a crate::MaskedIntRegNode),
+    IntConverter(&'a crate::IntConverterNode),
+    IntSwissKnife(&'a crate::IntSwissKnifeNode),
 }
 
 impl<'a> IIntegerKind<'a> {
@@ -514,10 +514,10 @@ impl<'a> IIntegerKind<'a> {
 #[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(IFloat)]
 pub enum IFloatKind<'a> {
-    Float(&'a super::FloatNode),
-    FloatReg(&'a super::FloatRegNode),
-    Converter(&'a super::ConverterNode),
-    SwissKnife(&'a super::SwissKnifeNode),
+    Float(&'a crate::FloatNode),
+    FloatReg(&'a crate::FloatRegNode),
+    Converter(&'a crate::ConverterNode),
+    SwissKnife(&'a crate::SwissKnifeNode),
 }
 
 impl<'a> IFloatKind<'a> {
@@ -535,8 +535,8 @@ impl<'a> IFloatKind<'a> {
 #[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(IString)]
 pub enum IStringKind<'a> {
-    String(&'a super::StringNode),
-    StringReg(&'a super::StringRegNode),
+    String(&'a crate::StringNode),
+    StringReg(&'a crate::StringRegNode),
 }
 
 impl<'a> IStringKind<'a> {
@@ -552,7 +552,7 @@ impl<'a> IStringKind<'a> {
 #[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(ICommand)]
 pub enum ICommandKind<'a> {
-    Command(&'a super::CommandNode),
+    Command(&'a crate::CommandNode),
 }
 
 impl<'a> ICommandKind<'a> {
@@ -567,7 +567,7 @@ impl<'a> ICommandKind<'a> {
 #[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(IEnumeration)]
 pub enum IEnumerationKind<'a> {
-    Enumeration(&'a super::EnumerationNode),
+    Enumeration(&'a crate::EnumerationNode),
 }
 
 impl<'a> IEnumerationKind<'a> {
@@ -582,7 +582,7 @@ impl<'a> IEnumerationKind<'a> {
 #[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(IBoolean)]
 pub enum IBooleanKind<'a> {
-    Boolean(&'a super::BooleanNode),
+    Boolean(&'a crate::BooleanNode),
 }
 
 impl<'a> IBooleanKind<'a> {
@@ -597,11 +597,11 @@ impl<'a> IBooleanKind<'a> {
 #[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(IRegister)]
 pub enum IRegisterKind<'a> {
-    Register(&'a super::RegisterNode),
-    IntReg(&'a super::IntRegNode),
-    MaskedIntReg(&'a super::MaskedIntRegNode),
-    StringReg(&'a super::StringRegNode),
-    FloatReg(&'a super::FloatRegNode),
+    Register(&'a crate::RegisterNode),
+    IntReg(&'a crate::IntRegNode),
+    MaskedIntReg(&'a crate::MaskedIntRegNode),
+    StringReg(&'a crate::StringRegNode),
+    FloatReg(&'a crate::FloatRegNode),
 }
 
 impl<'a> IRegisterKind<'a> {
@@ -620,7 +620,7 @@ impl<'a> IRegisterKind<'a> {
 #[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(ICategory)]
 pub enum ICategoryKind<'a> {
-    Category(&'a super::CategoryNode),
+    Category(&'a crate::CategoryNode),
 }
 
 impl<'a> ICategoryKind<'a> {
@@ -635,7 +635,7 @@ impl<'a> ICategoryKind<'a> {
 #[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(IPort)]
 pub enum IPortKind<'a> {
-    Port(&'a super::PortNode),
+    Port(&'a crate::PortNode),
 }
 
 impl<'a> IPortKind<'a> {
@@ -650,11 +650,11 @@ impl<'a> IPortKind<'a> {
 #[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(ISelector)]
 pub enum ISelectorKind<'a> {
-    Integer(&'a super::IntegerNode),
-    IntReg(&'a super::IntRegNode),
-    MaskedIntReg(&'a super::MaskedIntRegNode),
-    Boolean(&'a super::BooleanNode),
-    Enumeration(&'a super::EnumerationNode),
+    Integer(&'a crate::IntegerNode),
+    IntReg(&'a crate::IntRegNode),
+    MaskedIntReg(&'a crate::MaskedIntRegNode),
+    Boolean(&'a crate::BooleanNode),
+    Enumeration(&'a crate::EnumerationNode),
 }
 
 impl<'a> ISelectorKind<'a> {
@@ -669,3 +669,612 @@ impl<'a> ISelectorKind<'a> {
         }
     }
 }
+
+// Blanket implementations for references to support ambassador 0.5.0
+// These forward trait calls from &T to T by dereferencing
+
+macro_rules! impl_trait_for_ref {
+    ($trait:ident for $($type:ty),+) => {
+        $(
+            impl<'a> $trait for &'a $type {
+                fn node_base(&self) -> NodeBase<'_> {
+                    (**self).node_base()
+                }
+
+                fn streamable(&self) -> bool {
+                    (**self).streamable()
+                }
+            }
+        )+
+    };
+}
+
+impl_trait_for_ref!(INode for 
+    crate::IntegerNode,
+    crate::IntRegNode,
+    crate::MaskedIntRegNode,
+    crate::IntConverterNode,
+    crate::IntSwissKnifeNode,
+    crate::FloatNode,
+    crate::FloatRegNode,
+    crate::ConverterNode,
+    crate::SwissKnifeNode,
+    crate::StringNode,
+    crate::StringRegNode,
+    crate::BooleanNode,
+    crate::CommandNode,
+    crate::RegisterNode,
+    crate::CategoryNode,
+    crate::PortNode,
+    crate::EnumerationNode,
+    crate::EnumEntryNode,
+    crate::Node
+);
+
+macro_rules! impl_iinteger_for_ref {
+    ($($type:ty),+) => {
+        $(
+            impl<'a> IInteger for &'a $type {
+                fn value<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<i64> {
+                    (**self).value(device, store, cx)
+                }
+
+                fn set_value<T: ValueStore, U: CacheStore>(
+                    &self,
+                    value: i64,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<()> {
+                    (**self).set_value(value, device, store, cx)
+                }
+
+                fn min<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<i64> {
+                    (**self).min(device, store, cx)
+                }
+
+                fn max<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<i64> {
+                    (**self).max(device, store, cx)
+                }
+
+                fn inc_mode(&self, store: &impl NodeStore) -> Option<IncrementMode> {
+                    (**self).inc_mode(store)
+                }
+
+                fn inc<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<Option<i64>> {
+                    (**self).inc(device, store, cx)
+                }
+
+                fn valid_value_set(&self, store: &impl NodeStore) -> &[i64] {
+                    (**self).valid_value_set(store)
+                }
+
+                fn representation(&self, store: &impl NodeStore) -> IntegerRepresentation {
+                    (**self).representation(store)
+                }
+
+                fn unit(&self, store: &impl NodeStore) -> Option<&str> {
+                    (**self).unit(store)
+                }
+
+                fn set_min<T: ValueStore, U: CacheStore>(
+                    &self,
+                    value: i64,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<()> {
+                    (**self).set_min(value, device, store, cx)
+                }
+
+                fn set_max<T: ValueStore, U: CacheStore>(
+                    &self,
+                    value: i64,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<()> {
+                    (**self).set_max(value, device, store, cx)
+                }
+
+                fn is_readable<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<bool> {
+                    (**self).is_readable(device, store, cx)
+                }
+
+                fn is_writable<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<bool> {
+                    (**self).is_writable(device, store, cx)
+                }
+            }
+        )+
+    };
+}
+
+impl_iinteger_for_ref!(
+    crate::IntegerNode,
+    crate::IntRegNode,
+    crate::MaskedIntRegNode,
+    crate::IntConverterNode,
+    crate::IntSwissKnifeNode
+);
+
+macro_rules! impl_ifloat_for_ref {
+    ($($type:ty),+) => {
+        $(
+            impl<'a> IFloat for &'a $type {
+                fn value<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<f64> {
+                    (**self).value(device, store, cx)
+                }
+
+                fn set_value<T: ValueStore, U: CacheStore>(
+                    &self,
+                    value: f64,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<()> {
+                    (**self).set_value(value, device, store, cx)
+                }
+
+                fn min<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<f64> {
+                    (**self).min(device, store, cx)
+                }
+
+                fn max<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<f64> {
+                    (**self).max(device, store, cx)
+                }
+
+                fn inc_mode(&self, store: &impl NodeStore) -> Option<IncrementMode> {
+                    (**self).inc_mode(store)
+                }
+
+                fn inc<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<Option<f64>> {
+                    (**self).inc(device, store, cx)
+                }
+
+                fn representation(&self, store: &impl NodeStore) -> FloatRepresentation {
+                    (**self).representation(store)
+                }
+
+                fn unit(&self, store: &impl NodeStore) -> Option<&str> {
+                    (**self).unit(store)
+                }
+
+                fn display_notation(&self, store: &impl NodeStore) -> DisplayNotation {
+                    (**self).display_notation(store)
+                }
+
+                fn display_precision(&self, store: &impl NodeStore) -> i64 {
+                    (**self).display_precision(store)
+                }
+
+                fn set_min<T: ValueStore, U: CacheStore>(
+                    &self,
+                    value: f64,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<()> {
+                    (**self).set_min(value, device, store, cx)
+                }
+
+                fn set_max<T: ValueStore, U: CacheStore>(
+                    &self,
+                    value: f64,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<()> {
+                    (**self).set_max(value, device, store, cx)
+                }
+
+                fn is_readable<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<bool> {
+                    (**self).is_readable(device, store, cx)
+                }
+
+                fn is_writable<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<bool> {
+                    (**self).is_writable(device, store, cx)
+                }
+            }
+        )+
+    };
+}
+
+impl_ifloat_for_ref!(
+    crate::FloatNode,
+    crate::FloatRegNode,
+    crate::ConverterNode,
+    crate::SwissKnifeNode
+);
+
+macro_rules! impl_istring_for_ref {
+    ($($type:ty),+) => {
+        $(
+            impl<'a> IString for &'a $type {
+                fn value<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<String> {
+                    (**self).value(device, store, cx)
+                }
+
+                fn set_value<T: ValueStore, U: CacheStore>(
+                    &self,
+                    value: String,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<()> {
+                    (**self).set_value(value, device, store, cx)
+                }
+
+                fn max_length<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<i64> {
+                    (**self).max_length(device, store, cx)
+                }
+
+                fn is_readable<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<bool> {
+                    (**self).is_readable(device, store, cx)
+                }
+
+                fn is_writable<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<bool> {
+                    (**self).is_writable(device, store, cx)
+                }
+            }
+        )+
+    };
+}
+
+impl_istring_for_ref!(
+    crate::StringNode,
+    crate::StringRegNode
+);
+
+macro_rules! impl_ienumeration_for_ref {
+    ($($type:ty),+) => {
+        $(
+            impl<'a> IEnumeration for &'a $type {
+                fn current_value<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<i64> {
+                    (**self).current_value(device, store, cx)
+                }
+
+                fn current_entry<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<NodeId> {
+                    (**self).current_entry(device, store, cx)
+                }
+
+                fn entries(&self, store: &impl NodeStore) -> &[NodeId] {
+                    (**self).entries(store)
+                }
+
+                fn set_entry_by_symbolic<T: ValueStore, U: CacheStore>(
+                    &self,
+                    name: &str,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<()> {
+                    (**self).set_entry_by_symbolic(name, device, store, cx)
+                }
+
+                fn set_entry_by_value<T: ValueStore, U: CacheStore>(
+                    &self,
+                    value: i64,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<()> {
+                    (**self).set_entry_by_value(value, device, store, cx)
+                }
+
+                fn is_readable<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<bool> {
+                    (**self).is_readable(device, store, cx)
+                }
+
+                fn is_writable<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<bool> {
+                    (**self).is_writable(device, store, cx)
+                }
+            }
+        )+
+    };
+}
+
+impl_ienumeration_for_ref!(crate::EnumerationNode);
+
+macro_rules! impl_icommand_for_ref {
+    ($($type:ty),+) => {
+        $(
+            impl<'a> ICommand for &'a $type {
+                fn execute<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<()> {
+                    (**self).execute(device, store, cx)
+                }
+
+                fn is_done<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<bool> {
+                    (**self).is_done(device, store, cx)
+                }
+
+                fn is_writable<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<bool> {
+                    (**self).is_writable(device, store, cx)
+                }
+            }
+        )+
+    };
+}
+
+impl_icommand_for_ref!(crate::CommandNode);
+
+macro_rules! impl_iboolean_for_ref {
+    ($($type:ty),+) => {
+        $(
+            impl<'a> IBoolean for &'a $type {
+                fn value<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<bool> {
+                    (**self).value(device, store, cx)
+                }
+
+                fn set_value<T: ValueStore, U: CacheStore>(
+                    &self,
+                    value: bool,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<()> {
+                    (**self).set_value(value, device, store, cx)
+                }
+
+                fn is_readable<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<bool> {
+                    (**self).is_readable(device, store, cx)
+                }
+
+                fn is_writable<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<bool> {
+                    (**self).is_writable(device, store, cx)
+                }
+            }
+        )+
+    };
+}
+
+impl_iboolean_for_ref!(crate::BooleanNode);
+
+macro_rules! impl_iregister_for_ref {
+    ($($type:ty),+) => {
+        $(
+            impl<'a> IRegister for &'a $type {
+                fn read<T: ValueStore, U: CacheStore>(
+                    &self,
+                    buf: &mut [u8],
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<()> {
+                    (**self).read(buf, device, store, cx)
+                }
+
+                fn write<T: ValueStore, U: CacheStore>(
+                    &self,
+                    buf: &[u8],
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<()> {
+                    (**self).write(buf, device, store, cx)
+                }
+
+                fn address<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<i64> {
+                    (**self).address(device, store, cx)
+                }
+
+                fn length<T: ValueStore, U: CacheStore>(
+                    &self,
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<i64> {
+                    (**self).length(device, store, cx)
+                }
+            }
+        )+
+    };
+}
+
+impl_iregister_for_ref!(
+    crate::RegisterNode,
+    crate::IntRegNode,
+    crate::MaskedIntRegNode,
+    crate::StringRegNode,
+    crate::FloatRegNode
+);
+
+macro_rules! impl_icategory_for_ref {
+    ($($type:ty),+) => {
+        $(
+            impl<'a> ICategory for &'a $type {
+                fn nodes(&self, store: &impl NodeStore) -> &[NodeId] {
+                    (**self).nodes(store)
+                }
+            }
+        )+
+    };
+}
+
+impl_icategory_for_ref!(crate::CategoryNode);
+
+macro_rules! impl_iport_for_ref {
+    ($($type:ty),+) => {
+        $(
+            impl<'a> IPort for &'a $type {
+                fn read<T: ValueStore, U: CacheStore>(
+                    &self,
+                    address: i64,
+                    buf: &mut [u8],
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<()> {
+                    (**self).read(address, buf, device, store, cx)
+                }
+
+                fn write<T: ValueStore, U: CacheStore>(
+                    &self,
+                    address: i64,
+                    buf: &[u8],
+                    device: &mut impl Device,
+                    store: &impl NodeStore,
+                    cx: &mut ValueCtxt<T, U>,
+                ) -> GenApiResult<()> {
+                    (**self).write(address, buf, device, store, cx)
+                }
+            }
+        )+
+    };
+}
+
+impl_iport_for_ref!(crate::PortNode);
+
+macro_rules! impl_iselector_for_ref {
+    ($($type:ty),+) => {
+        $(
+            impl<'a> ISelector for &'a $type {
+                fn selecting_nodes(&self, store: &impl NodeStore) -> GenApiResult<&[NodeId]> {
+                    (**self).selecting_nodes(store)
+                }
+            }
+        )+
+    };
+}
+
+impl_iselector_for_ref!(
+    crate::IntegerNode,
+    crate::IntRegNode,
+    crate::MaskedIntRegNode,
+    crate::BooleanNode,
+    crate::EnumerationNode
+);
