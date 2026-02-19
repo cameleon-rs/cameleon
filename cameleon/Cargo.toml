@@ -18,7 +18,7 @@ keywords = ["genicam", "camera", "usb3", "gige", "uvc"]
 [dependencies]
 thiserror = "2.0.18"
 semver = "1.0.0"
-zip = { version = "0.6.0", default-features = false, features = ["deflate"] }
+zip = { version = "8.1.0", default-features = false, features = ["deflate"] }
 sha-1 = "0.10.0"
 async-channel = "1.7.0" # 1.7.0 has added recv_blocking()
 tracing = "0.1.26"
