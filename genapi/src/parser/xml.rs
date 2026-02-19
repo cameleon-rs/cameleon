@@ -142,18 +142,18 @@ impl fmt::Debug for Node<'_, '_> {
 }
 
 struct Attributes<'a, 'input> {
-    attrs: &'a [roxmltree::Attribute<'input>],
+    attrs: Vec<roxmltree::Attribute<'a, 'input>>,
 }
 
 impl<'a, 'input> Attributes<'a, 'input> {
-    fn from_xmltree_attrs(attrs: &'a [roxmltree::Attribute<'input>]) -> Self {
-        Self { attrs }
+    fn from_xmltree_attrs(attrs: roxmltree::Attributes<'a, 'input>) -> Self {
+        Self { attrs: attrs.collect() }
     }
 
-    fn attribute_of(&self, name: &str) -> Option<&str> {
+    fn attribute_of(&self, name: &str) -> Option<&'a str> {
         self.attrs.iter().find_map(|attr| {
             if attr.name() == name {
-                Some(roxmltree::Attribute::value(attr))
+                Some(attr.value())
             } else {
                 None
             }
