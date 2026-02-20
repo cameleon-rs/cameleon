@@ -17,7 +17,7 @@ use tracing::{error, info, warn};
 use crate::{
     camera::PayloadStream,
     payload::{ImageInfo, Payload, PayloadSender, PayloadType},
-    ControlError, ControlResult, DeviceControl, StreamError, StreamResult,
+    ControlError, ControlResult, DeviceControl, DeviceIoError, StreamError, StreamResult,
 };
 
 use super::register_map::Abrm;
@@ -89,7 +89,7 @@ impl PayloadStream for StreamHandle {
         ctrl: &mut dyn DeviceControl,
     ) -> StreamResult<()> {
         self.params = StreamParams::from_control(ctrl).map_err(|e| {
-            StreamError::Io(anyhow::Error::msg(format!(
+            StreamError::Io(DeviceIoError::msg(format!(
                 "failed to setup streaming parameters: {e}"
             )))
         })?;
