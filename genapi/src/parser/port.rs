@@ -68,7 +68,7 @@ mod tests {
             <Port Name="TestNode">
                 <ChunkID>Fd3219</ChunkID>
                 <SwapEndianess>Yes</SwapEndianess>
-            <Port>
+            </Port>
             "#;
 
         let (node, ..): (PortNode, _, _, _) = parse_default(xml);
@@ -81,7 +81,7 @@ mod tests {
         let xml = r#"
             <Port Name="TestNode">
                 <pChunkID>Fd3219</pChunkID>
-            <Port>
+            </Port>
             "#;
 
         let (node, mut node_builder, ..): (PortNode, _, _, _) = parse_default(xml);
@@ -96,7 +96,7 @@ mod tests {
         let xml = r#"
             <Port Name="TestNode">
                 <CacheChunkData>Yes</CacheChunkData>
-            <Port>
+            </Port>
             "#;
 
         let (node, ..): (PortNode, _, _, _) = parse_default(xml);
