@@ -152,7 +152,7 @@ impl<'a, 'input> Attributes<'a, 'input> {
         }
     }
 
-    fn attribute_of(&self, name: &str) -> Option<&'a str> {
+    fn attribute_of(&self, name: &str) -> Option<&str> {
         self.attrs.iter().find_map(|attr| {
             if attr.name() == name {
                 Some(attr.value())
