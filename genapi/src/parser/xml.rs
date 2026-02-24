@@ -31,7 +31,6 @@ impl<'input> Document<'input> {
 pub(super) struct Node<'a, 'input> {
     inner: roxmltree::Node<'a, 'input>,
     children: Peekable<roxmltree::Children<'a, 'input>>,
-    attributes: Attributes<'a, 'input>,
     src: &'input str,
 }
 
@@ -112,7 +111,7 @@ impl<'a, 'input> Node<'a, 'input> {
     }
 
     pub(super) fn attribute_of(&self, name: &str) -> Option<&str> {
-        self.attributes.attribute_of(name)
+        self.inner.attribute(name)
     }
 
     pub(super) fn text(&self) -> TextView<'a, 'input> {
@@ -122,12 +121,9 @@ impl<'a, 'input> Node<'a, 'input> {
     fn from_xmltree_node(node: roxmltree::Node<'a, 'input>, src: &'input str) -> Self {
         debug_assert!(node.node_type() == roxmltree::NodeType::Element);
         let children = node.children().peekable();
-        let attributes = Attributes::from_xmltree_attrs(node.attributes());
-
         Self {
             inner: node,
             children,
-            attributes,
             src,
         }
     }
@@ -138,26 +134,6 @@ impl fmt::Debug for Node<'_, '_> {
         let span = self.inner.range();
         let node_src = std::str::from_utf8(&self.src.as_bytes()[span]).unwrap();
         write!(f, "{node_src}")
-    }
-}
-
-struct Attributes<'a, 'input> {
-    attrs: &'a [roxmltree::Attribute<'input>],
-}
-
-impl<'a, 'input> Attributes<'a, 'input> {
-    fn from_xmltree_attrs(attrs: &'a [roxmltree::Attribute<'input>]) -> Self {
-        Self { attrs }
-    }
-
-    fn attribute_of(&self, name: &str) -> Option<&str> {
-        self.attrs.iter().find_map(|attr| {
-            if attr.name() == name {
-                Some(roxmltree::Attribute::value(attr))
-            } else {
-                None
-            }
-        })
     }
 }
 
