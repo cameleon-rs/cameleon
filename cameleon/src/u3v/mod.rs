@@ -57,7 +57,8 @@ pub use cameleon_device::u3v::DeviceInfo;
 use cameleon_device::u3v;
 
 use super::{
-    genapi::DefaultGenApiCtxt, CameleonResult, Camera, CameraInfo, ControlError, StreamError,
+    genapi::DefaultGenApiCtxt, CameleonResult, Camera, CameraInfo, ControlError, DeviceIoError,
+    StreamError,
 };
 
 /// Enumerate all U3V compatible cameras connected to the host.
@@ -112,13 +113,15 @@ impl From<u3v::Error> for ControlError {
         match &err {
             LibUsb(libusb_error) => match libusb_error {
                 Io | InvalidParam | Access | Overflow | Pipe | Interrupted | NoMem
-                | NotSupported | BadDescriptor | Other => ControlError::Io(err.into()),
+                | NotSupported | BadDescriptor | Other => {
+                    ControlError::Io(DeviceIoError::from(err))
+                }
                 Busy => ControlError::Busy,
                 NoDevice | NotFound => ControlError::Disconnected,
                 Timeout => ControlError::Timeout,
             },
 
-            BufferIo(_) | InvalidPacket(_) => ControlError::Io(err.into()),
+            BufferIo(_) | InvalidPacket(_) => ControlError::Io(DeviceIoError::from(err)),
 
             InvalidDevice => ControlError::InvalidDevice("invalid device".into()),
         }
@@ -136,11 +139,11 @@ impl From<u3v::Error> for StreamError {
         match &err {
             LibUsb(libusb_error) => match libusb_error {
                 Io | InvalidParam | Access | Overflow | Pipe | Interrupted | NoMem
-                | NotSupported | BadDescriptor | Busy | Other => Self::Io(err.into()),
+                | NotSupported | BadDescriptor | Busy | Other => Self::Io(DeviceIoError::from(err)),
                 NoDevice | NotFound => Self::Disconnected,
                 Timeout => Self::Timeout,
             },
-            _ => Self::Io(err.into()),
+            _ => Self::Io(DeviceIoError::from(err)),
         }
     }
 }

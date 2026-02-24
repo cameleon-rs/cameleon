@@ -19,7 +19,9 @@ use tracing::error;
 
 use super::register_map::{self, Abrm, ManifestTable, Sbrm, Sirm};
 
-use crate::{camera::DeviceControl, genapi::CompressionType, ControlError, ControlResult};
+use crate::{
+    camera::DeviceControl, genapi::CompressionType, ControlError, ControlResult, DeviceIoError,
+};
 
 /// Initial timeout duration for transaction between device and host.
 /// This value is temporarily used until the device's bootstrap register value is read.
@@ -273,7 +275,7 @@ impl ControlHandle {
                 .unwrap()
                 .scd_as()?)
         } else {
-            Err(ControlError::Io(anyhow::Error::msg(
+            Err(ControlError::Io(DeviceIoError::msg(
                 "the number of times pending was returned exceeds the retry_count.",
             )))
         }
@@ -282,14 +284,14 @@ impl ControlHandle {
     fn verify_ack(&self, ack: &ack::AckPacket) -> ControlResult<()> {
         let status = ack.status().kind();
         if status != ack::StatusKind::GenCp(ack::GenCpStatus::Success) {
-            return Err(ControlError::Io(anyhow::Error::msg(format!(
+            return Err(ControlError::Io(DeviceIoError::msg(format!(
                 "invalid status: {:?}",
                 ack.status().kind()
             ))));
         }
 
         if ack.request_id() != self.next_req_id {
-            return Err(ControlError::Io(anyhow::Error::msg("request id mismatch")));
+            return Err(ControlError::Io(DeviceIoError::msg("request id mismatch")));
         }
 
         Ok(())
@@ -363,7 +365,7 @@ impl DeviceControl for ControlHandle {
 
             if ack.length as usize != chunk_data_len {
                 let err_msg = "write mem failed: written length mismatch";
-                return Err(ControlError::Io(anyhow::Error::msg(err_msg)));
+                return Err(ControlError::Io(DeviceIoError::msg(err_msg)));
             }
         }
 

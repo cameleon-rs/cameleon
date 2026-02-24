@@ -183,6 +183,27 @@ pub enum CameleonError {
 /// A specialized `Result` type for device control.
 pub type ControlResult<T> = std::result::Result<T, ControlError>;
 
+/// An error detail for communication with a device.
+#[derive(Debug, thiserror::Error)]
+pub enum DeviceIoError {
+    /// Underlying transport error.
+    #[cfg(feature = "libusb")]
+    #[error(transparent)]
+    Transport(#[from] cameleon_device::u3v::Error),
+
+    /// Protocol or runtime error represented as a message.
+    #[error("{0}")]
+    Message(Cow<'static, str>),
+}
+
+impl DeviceIoError {
+    /// Constructs [`DeviceIoError::Message`].
+    #[must_use]
+    pub fn msg(msg: impl Into<Cow<'static, str>>) -> Self {
+        Self::Message(msg.into())
+    }
+}
+
 /// An error type for device control.
 #[derive(Debug, thiserror::Error)]
 pub enum ControlError {
@@ -196,7 +217,7 @@ pub enum ControlError {
 
     /// IO error.
     #[error("input/output error: {0}")]
-    Io(anyhow::Error),
+    Io(DeviceIoError),
 
     /// Timeout has occured when receiving stream payload.
     #[error("timeout has occured when receiving stream payload")]
@@ -244,7 +265,7 @@ pub enum StreamError {
 
     /// IO error.
     #[error("can't communicate with the device: {0}")]
-    Io(anyhow::Error),
+    Io(DeviceIoError),
 
     /// Timeout has occured when receiving stream payload.
     #[error("timeout has occured when receiving stream payload")]
