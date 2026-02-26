@@ -143,8 +143,13 @@
     clippy::module_name_repetitions
 )]
 
+#[macro_use]
+pub(crate) mod utils;
+
 pub mod camera;
 pub mod genapi;
+/// GigE Vision camera support.
+pub mod gige;
 pub mod payload;
 #[cfg(feature = "libusb")]
 pub mod u3v;
@@ -189,7 +194,7 @@ pub enum DeviceIoError {
     /// Underlying transport error.
     #[cfg(feature = "libusb")]
     #[error(transparent)]
-    Transport(#[from] cameleon_device::u3v::Error),
+    U3V(#[from] cameleon_device::u3v::Error),
 
     /// Protocol or runtime error represented as a message.
     #[error("{0}")]
@@ -201,6 +206,18 @@ impl DeviceIoError {
     #[must_use]
     pub fn msg(msg: impl Into<Cow<'static, str>>) -> Self {
         Self::Message(msg.into())
+    }
+}
+
+impl From<std::io::Error> for DeviceIoError {
+    fn from(value: std::io::Error) -> Self {
+        Self::msg(value.to_string())
+    }
+}
+
+impl From<ureq::Error> for DeviceIoError {
+    fn from(value: ureq::Error) -> Self {
+        Self::msg(value.to_string())
     }
 }
 
@@ -293,6 +310,12 @@ pub enum StreamError {
 impl From<TryFromIntError> for ControlError {
     fn from(e: TryFromIntError) -> Self {
         Self::InvalidDevice(format!("internal data has invalid num type: {e}").into())
+    }
+}
+
+impl From<std::io::Error> for StreamError {
+    fn from(value: std::io::Error) -> Self {
+        Self::Io(value.into())
     }
 }
 

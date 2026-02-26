@@ -5,6 +5,7 @@
 pub mod protocol;
 pub mod register_map;
 
+use std::net::Ipv4Addr;
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -19,8 +20,11 @@ use tracing::warn;
 use protocol::{ack, cmd, prelude::*};
 
 #[tracing::instrument(level = "warn")]
-pub async fn enumerate_devices(timeout: time::Duration) -> Result<Vec<ack::Discovery>> {
-    let sock = net::UdpSocket::bind("0.0.0.0:0").await?;
+pub async fn enumerate_devices(
+    local_addr: Ipv4Addr,
+    timeout: time::Duration,
+) -> Result<Vec<ack::Discovery>> {
+    let sock = net::UdpSocket::bind((local_addr, 0)).await?;
     let packet = cmd::Discovery::new().finalize(0xffff);
     let mut buf = [0_u8; 1024];
     packet.serialize(buf.as_mut()).unwrap();

@@ -816,7 +816,7 @@ impl<'a> Lexer<'a> {
     fn peek_char_raw(&self, c: char, n: usize) -> bool {
         self.src
             .get(self.cur + n)
-            .map_or(false, |next| c == *next as char)
+            .is_some_and(|next| c == *next as char)
     }
 
     fn sub_string(&self, start_pos: usize, end_pos: usize) -> &str {

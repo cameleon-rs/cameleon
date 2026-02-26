@@ -566,8 +566,9 @@ impl XmlFileLocation {
             .map_err(|_| invalid_url())?;
         let size = u64::from_str_radix(xml_info.next().ok_or_else(invalid_url)?, 16)
             .map_err(|_| invalid_url())?;
-        let compression_type =
-            CompressionType::from_extension(file_name.split('.').next_back().ok_or_else(invalid_url)?)?;
+        let compression_type = CompressionType::from_extension(
+            file_name.split('.').next_back().ok_or_else(invalid_url)?,
+        )?;
 
         Ok(Self::Device {
             file_name: file_name.to_string(),
@@ -716,13 +717,19 @@ mod tests {
 
     #[test]
     fn test_parse_file_url() {
-        let src = "file:test_xml.zip";
+        #[cfg(windows)]
+        let src = "file:///C:/test_xml.zip";
+        #[cfg(not(windows))]
+        let src = "file:///test_xml.zip";
         let loc = XmlFileLocation::parse(src).unwrap();
         match loc {
             XmlFileLocation::Host {
                 path,
                 compression_type,
             } => {
+                #[cfg(windows)]
+                assert_eq!(path, std::path::Path::new("C:/test_xml.zip"));
+                #[cfg(not(windows))]
                 assert_eq!(path, std::path::Path::new("/test_xml.zip"));
                 assert_eq!(compression_type, CompressionType::Zip);
             }

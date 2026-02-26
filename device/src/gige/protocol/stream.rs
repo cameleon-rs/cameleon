@@ -1,6 +1,6 @@
 // TODO:
 #![allow(unused)]
-use std::{convert::TryInto, io};
+use std::{convert::TryInto, io, time};
 
 use cameleon_impl::{bit_op::BitOp, bytes_io::ReadBytes};
 
@@ -13,16 +13,16 @@ use super::PacketStatus;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PacketHeader {
-    status: PacketStatus,
-    ei_flag: bool,
-    packet_type: PacketType,
-    block_id: u64,
-    packet_id: u32,
-    stream_flag: StreamFlag,
+    pub status: PacketStatus,
+    pub ei_flag: bool,
+    pub packet_type: PacketType,
+    pub block_id: u64,
+    pub packet_id: u32,
+    pub stream_flag: StreamFlag,
 }
 
 impl PacketHeader {
-    fn parse(cursor: &mut io::Cursor<&[u8]>) -> Result<Self> {
+    pub fn parse(cursor: &mut io::Cursor<&[u8]>) -> Result<Self> {
         let status = PacketStatus::parse(cursor)?;
         let bid_sflag: u16 = cursor.read_bytes_be()?;
         let ei_ptype_pid: u32 = cursor.read_bytes_be()?;
@@ -131,6 +131,10 @@ impl PayloadType {
     fn parse(cursor: &mut io::Cursor<&[u8]>) -> Result<Self> {
         cursor.read_bytes_be().map(Self).map_err(Into::into)
     }
+
+    pub fn parse_generic_leader(cursor: &mut io::Cursor<&[u8]>) -> Result<Self> {
+        Self::parse(cursor)
+    }
 }
 
 pub struct ImageLeader {
@@ -160,8 +164,12 @@ impl ImageLeader {
         self.payload_type
     }
 
-    pub fn timestamp(&self) -> u64 {
-        self.timestamp
+    pub fn timestamp(&self) -> time::Duration {
+        time::Duration::from_nanos(self.timestamp)
+    }
+
+    pub fn pixel_format(&self) -> PixelFormat {
+        self.pixel_format
     }
 
     pub fn width(&self) -> u32 {
@@ -188,7 +196,7 @@ impl ImageLeader {
         self.y_padding
     }
 
-    fn parse(cursor: &mut io::Cursor<&[u8]>) -> Result<Self> {
+    pub fn parse(cursor: &mut io::Cursor<&[u8]>) -> Result<Self> {
         let field: u8 = cursor.read_bytes_be()?;
         let field_id = field >> 4;
         let field_count = field & 0x0f;
@@ -218,5 +226,20 @@ impl ImageLeader {
             x_padding,
             y_padding,
         })
+    }
+}
+
+pub struct ImageTrailer {
+    actual_height: u32,
+}
+
+impl ImageTrailer {
+    pub fn actual_height(&self) -> u32 {
+        self.actual_height
+    }
+
+    pub fn parse(cursor: &mut io::Cursor<&[u8]>) -> Result<Self> {
+        let actual_height = cursor.read_bytes_be()?;
+        Ok(Self { actual_height })
     }
 }
