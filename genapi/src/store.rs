@@ -290,6 +290,7 @@ impl NodeData {
             Self::Boolean(node) => node.node_base(),
             Self::Command(node) => node.node_base(),
             Self::Enumeration(node) => node.node_base(),
+            Self::EnumEntry(node) => node.node_base(),
             Self::Float(node) => node.node_base(),
             Self::FloatReg(node) => node.node_base(),
             Self::String(node) => node.node_base(),
