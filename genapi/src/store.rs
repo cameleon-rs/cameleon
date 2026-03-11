@@ -301,7 +301,13 @@ impl NodeData {
             Self::SwissKnife(node) => node.node_base(),
             Self::IntSwissKnife(node) => node.node_base(),
             Self::Port(node) => node.node_base(),
-            _ => todo!(),
+            Self::ConfRom(_)
+            | Self::TextDesc(_)
+            | Self::IntKey(_)
+            | Self::AdvFeatureLock(_)
+            | Self::SmartFeature(_) => {
+                todo!("Implement node_base for DCAM specific nodes")
+            }
         }
     }
 }
