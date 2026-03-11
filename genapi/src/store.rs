@@ -290,6 +290,7 @@ impl NodeData {
             Self::Boolean(node) => node.node_base(),
             Self::Command(node) => node.node_base(),
             Self::Enumeration(node) => node.node_base(),
+            Self::EnumEntry(node) => node.node_base(),
             Self::Float(node) => node.node_base(),
             Self::FloatReg(node) => node.node_base(),
             Self::String(node) => node.node_base(),
@@ -300,7 +301,13 @@ impl NodeData {
             Self::SwissKnife(node) => node.node_base(),
             Self::IntSwissKnife(node) => node.node_base(),
             Self::Port(node) => node.node_base(),
-            _ => todo!(),
+            Self::ConfRom(_)
+            | Self::TextDesc(_)
+            | Self::IntKey(_)
+            | Self::AdvFeatureLock(_)
+            | Self::SmartFeature(_) => {
+                todo!("Implement node_base for DCAM specific nodes")
+            }
         }
     }
 }
