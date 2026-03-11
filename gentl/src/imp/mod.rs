@@ -27,7 +27,8 @@ impl From<MemoryError> for GenTlError {
 impl From<ControlError> for GenTlError {
     fn from(err: ControlError) -> Self {
         use GenTlError::{
-            BufferTooSmall, InvalidValue, Io, NotInitialized, ResourceInUse, Timeout,
+            BufferTooSmall, InvalidValue, Io, NotImplemented, NotInitialized, ResourceInUse,
+            Timeout,
         };
 
         match err {
@@ -36,9 +37,10 @@ impl From<ControlError> for GenTlError {
                 Io(err.into())
             }
             ControlError::NotOpened => NotInitialized,
-            ControlError::InvalidData(..) => InvalidValue(format!("{err}").into()),
+            ControlError::InvalidData(..) => InvalidValue(format!("{}", err).into()),
             ControlError::Timeout => Timeout,
             ControlError::BufferTooSmall => BufferTooSmall,
+            ControlError::NotSupported(..) => NotImplemented,
         }
     }
 }

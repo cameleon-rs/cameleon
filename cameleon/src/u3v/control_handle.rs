@@ -63,7 +63,7 @@ const PAYLOAD_TRANSFER_SIZE: u32 = 1024 * 64;
 /// // Read 64bytes from address 0x0184.
 /// let address = 0x0184;
 /// let mut buffer = vec![0; 64];
-/// camera.ctrl.read(address, &mut buffer).unwrap();
+/// camera.ctrl.read_mem(address, &mut buffer).unwrap();
 /// ```
 pub struct ControlHandle {
     inner: u3v::ControlChannel,
@@ -353,7 +353,7 @@ impl DeviceControl for ControlHandle {
         Ok(())
     }
 
-    fn write(&mut self, address: u64, data: &[u8]) -> ControlResult<()> {
+    fn write_mem(&mut self, address: u64, data: &[u8]) -> ControlResult<()> {
         unwrap_or_log!(self.assert_open());
 
         let cmd = unwrap_or_log!(cmd::WriteMem::new(address, data));
@@ -372,7 +372,7 @@ impl DeviceControl for ControlHandle {
         Ok(())
     }
 
-    fn read(&mut self, mut address: u64, buf: &mut [u8]) -> ControlResult<()> {
+    fn read_mem(&mut self, mut address: u64, buf: &mut [u8]) -> ControlResult<()> {
         unwrap_or_log!(self.assert_open());
 
         // Chunks buffer if buffer length is larger than maximum read length calculated from
@@ -390,6 +390,18 @@ impl DeviceControl for ControlHandle {
         }
 
         Ok(())
+    }
+
+    fn write_reg(&mut self, _address: u64, _data: [u8; 4]) -> ControlResult<()> {
+        Err(ControlError::NotSupported(
+            "USB3Vision does not support WRITEREG command".into(),
+        ))
+    }
+
+    fn read_reg(&mut self, _address: u64) -> ControlResult<[u8; 4]> {
+        Err(ControlError::NotSupported(
+            "USB3Vision does not support READREG command".into(),
+        ))
     }
 
     fn genapi(&mut self) -> ControlResult<String> {
@@ -424,7 +436,7 @@ impl DeviceControl for ControlHandle {
         // Store current capacity so that we can set back it after XML retrieval because this needs exceptional large size of internal buffer.
         let current_capacity = self.buffer_capacity();
         let mut buf = vec![0; file_size];
-        unwrap_or_log!(self.read(file_address, &mut buf));
+        unwrap_or_log!(self.read_mem(file_address, &mut buf));
         self.resize_buffer(current_capacity);
 
         // Verify retrieved xml has correct hash.
@@ -578,8 +590,10 @@ impl DeviceControl for SharedControlHandle {
     impl_shared_control_handle! {
         fn open(&mut self) -> ControlResult<()>,
         fn close(&mut self) -> ControlResult<()>,
-        fn read(&mut self, address: u64, buf: &mut [u8]) -> ControlResult<()>,
-        fn write(&mut self, address: u64, data: &[u8]) -> ControlResult<()>,
+        fn read_mem(&mut self, address: u64, buf: &mut [u8]) -> ControlResult<()>,
+        fn write_mem(&mut self, address: u64, data: &[u8]) -> ControlResult<()>,
+        fn read_reg(&mut self, address: u64) -> ControlResult<[u8; 4]>,
+        fn write_reg(&mut self, address: u64, data: [u8; 4]) -> ControlResult<()>,
         fn genapi(&mut self) -> ControlResult<String>,
         fn enable_streaming(&mut self) -> ControlResult<()>,
         fn disable_streaming(&mut self) -> ControlResult<()>
