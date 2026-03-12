@@ -7,8 +7,8 @@
 //! In this example, we'll define a context in which the cache can be dynamically switched on and off.
 
 use cameleon::genapi::{
-    CacheStore, DefaultCacheStore, DefaultGenApiCtxt, DefaultNodeStore, DefaultValueStore,
-    GenApiCtxt, NodeId, ValueCtxt,
+    CacheState, CacheStore, DefaultCacheStore, DefaultGenApiCtxt, DefaultNodeStore,
+    DefaultValueStore, GenApiCtxt, NodeId, ValueCtxt,
 };
 use cameleon::{u3v, Camera};
 
@@ -18,16 +18,23 @@ struct MyCacheStore {
     use_cache: bool,
 }
 impl CacheStore for MyCacheStore {
-    fn cache(&mut self, nid: NodeId, address: i64, length: i64, data: &[u8]) {
+    fn cache(
+        &mut self,
+        nid: NodeId,
+        address: i64,
+        length: i64,
+        data: &[u8],
+        ttl: Option<std::time::Duration>,
+    ) {
         if self.use_cache {
-            self.store.cache(nid, address, length, data)
+            self.store.cache(nid, address, length, data, ttl)
         }
     }
-    fn get_cache(&self, nid: NodeId, address: i64, length: i64) -> Option<&[u8]> {
+    fn get_cache(&self, nid: NodeId, address: i64, length: i64) -> CacheState<'_> {
         if self.use_cache {
             self.store.get_cache(nid, address, length)
         } else {
-            None
+            CacheState::Miss
         }
     }
     fn invalidate_by(&mut self, nid: NodeId) {

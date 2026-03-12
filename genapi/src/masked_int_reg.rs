@@ -110,8 +110,6 @@ impl IInteger for MaskedIntRegNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         let nid = self.node_base().id();
-        cx.invalidate_cache_by(nid);
-
         let reg = self.register_base();
         let old_reg_value = reg.with_cache_or_read(nid, device, store, cx, |data| {
             utils::int_from_slice(data, self.endianness, self.sign)

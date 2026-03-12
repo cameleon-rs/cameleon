@@ -77,8 +77,6 @@ impl IString for StringRegNode {
         }
 
         let nid = self.node_base().id();
-        cx.invalidate_cache_by(nid);
-
         let reg = self.register_base();
         let mut bytes = value.into_bytes();
         bytes.resize(max_length, 0);

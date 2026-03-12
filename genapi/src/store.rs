@@ -2,7 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-use std::{collections::HashMap, convert::TryFrom};
+use std::{
+    collections::HashMap,
+    convert::TryFrom,
+    time::{Duration, Instant},
+};
 
 use auto_impl::auto_impl;
 use string_interner::{backend::StringBackend, StringInterner, Symbol};
@@ -123,15 +127,22 @@ pub trait ValueStore {
 
 #[auto_impl(&mut, Box)]
 pub trait CacheStore {
-    fn cache(&mut self, nid: NodeId, address: i64, length: i64, data: &[u8]);
+    fn cache(&mut self, nid: NodeId, address: i64, length: i64, data: &[u8], ttl: Option<Duration>);
 
-    fn get_cache(&self, nid: NodeId, address: i64, length: i64) -> Option<&[u8]>;
+    fn get_cache(&self, nid: NodeId, address: i64, length: i64) -> CacheState<'_>;
 
     fn invalidate_by(&mut self, nid: NodeId);
 
     fn invalidate_of(&mut self, nid: NodeId);
 
     fn clear(&mut self);
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CacheState<'a> {
+    Miss,
+    Fresh(&'a [u8]),
+    Stale(&'a [u8]),
 }
 
 impl Symbol for NodeId {
@@ -498,7 +509,7 @@ impl ValueStore for DefaultValueStore {
 
 #[derive(Debug, Default)]
 pub struct DefaultCacheStore {
-    store: HashMap<NodeId, HashMap<(i64, i64), Vec<u8>>>,
+    store: HashMap<NodeId, HashMap<(i64, i64), CacheEntry>>,
     invalidators: HashMap<NodeId, Vec<NodeId>>,
 }
 
@@ -507,6 +518,13 @@ impl DefaultCacheStore {
     pub fn new() -> Self {
         Self::default()
     }
+}
+
+#[derive(Debug)]
+struct CacheEntry {
+    data: Vec<u8>,
+    cached_at: Instant,
+    ttl: Option<Duration>,
 }
 
 impl builder::CacheStoreBuilder for DefaultCacheStore {
@@ -523,24 +541,61 @@ impl builder::CacheStoreBuilder for DefaultCacheStore {
 }
 
 impl CacheStore for DefaultCacheStore {
-    fn cache(&mut self, nid: NodeId, address: i64, length: i64, data: &[u8]) {
+    fn cache(
+        &mut self,
+        nid: NodeId,
+        address: i64,
+        length: i64,
+        data: &[u8],
+        ttl: Option<Duration>,
+    ) {
         self.store
             .entry(nid)
             .and_modify(|level1| {
                 level1
                     .entry((address, length))
-                    .and_modify(|level2| data.clone_into(level2))
-                    .or_insert_with(|| data.to_owned());
+                    .and_modify(|level2| {
+                        data.clone_into(&mut level2.data);
+                        level2.cached_at = Instant::now();
+                        level2.ttl = ttl;
+                    })
+                    .or_insert_with(|| CacheEntry {
+                        data: data.to_owned(),
+                        cached_at: Instant::now(),
+                        ttl,
+                    });
             })
             .or_insert_with(|| {
                 let mut level1 = HashMap::new();
-                level1.insert((address, length), data.to_owned());
+                level1.insert(
+                    (address, length),
+                    CacheEntry {
+                        data: data.to_owned(),
+                        cached_at: Instant::now(),
+                        ttl,
+                    },
+                );
                 level1
             });
     }
 
-    fn get_cache(&self, nid: NodeId, address: i64, length: i64) -> Option<&[u8]> {
-        Some(self.store.get(&nid)?.get(&(address, length))?.as_ref())
+    fn get_cache(&self, nid: NodeId, address: i64, length: i64) -> CacheState<'_> {
+        let Some(entry) = self
+            .store
+            .get(&nid)
+            .and_then(|entries| entries.get(&(address, length)))
+        else {
+            return CacheState::Miss;
+        };
+
+        if entry
+            .ttl
+            .is_some_and(|ttl| entry.cached_at.elapsed() >= ttl)
+        {
+            CacheState::Stale(entry.data.as_ref())
+        } else {
+            CacheState::Fresh(entry.data.as_ref())
+        }
     }
 
     fn invalidate_by(&mut self, nid: NodeId) {
@@ -588,10 +643,10 @@ impl builder::CacheStoreBuilder for CacheSink {
 }
 
 impl CacheStore for CacheSink {
-    fn cache(&mut self, _: NodeId, _: i64, _: i64, _: &[u8]) {}
+    fn cache(&mut self, _: NodeId, _: i64, _: i64, _: &[u8], _: Option<Duration>) {}
 
-    fn get_cache(&self, _: NodeId, _: i64, _: i64) -> Option<&[u8]> {
-        None
+    fn get_cache(&self, _: NodeId, _: i64, _: i64) -> CacheState<'_> {
+        CacheState::Miss
     }
 
     fn invalidate_by(&mut self, _: NodeId) {}

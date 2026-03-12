@@ -94,8 +94,6 @@ impl IInteger for IntRegNode {
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<()> {
         let nid = self.node_base().id();
-        cx.invalidate_cache_by(nid);
-
         let reg = self.register_base();
         let len = reg.length(device, store, cx)?;
         let mut buf = vec![0; len as usize];
