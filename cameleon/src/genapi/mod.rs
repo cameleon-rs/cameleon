@@ -58,8 +58,8 @@ use super::{ControlError, ControlResult, DeviceControl};
 pub use cameleon_genapi::{
     elem_type::{AccessMode, NameSpace, Visibility},
     store::{
-        CacheSink, CacheStore, DefaultCacheStore, DefaultNodeStore, DefaultValueStore, NodeId,
-        NodeStore, ValueStore,
+        CacheSink, CacheState, CacheStore, DefaultCacheStore, DefaultNodeStore, DefaultValueStore,
+        NodeId, NodeStore, ValueStore,
     },
     GenApiError, RegisterDescription, ValueCtxt,
 };

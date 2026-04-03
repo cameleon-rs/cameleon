@@ -7,7 +7,7 @@ use super::{
     interface::IPort,
     ivalue::IValue,
     node_base::NodeElementBase,
-    store::{CacheStore, NodeId, NodeStore, ValueStore},
+    store::{CacheState, CacheStore, NodeId, NodeStore, ValueStore},
     Device, GenApiError, GenApiResult, ValueCtxt,
 };
 
@@ -66,6 +66,10 @@ impl RegisterBase {
         &self.p_invalidators
     }
 
+    fn cache_ttl(&self) -> Option<std::time::Duration> {
+        self.polling_time.map(std::time::Duration::from_millis)
+    }
+
     pub(super) fn with_cache_or_read<T: ValueStore, U: CacheStore, R>(
         &self,
         nid: NodeId,
@@ -76,12 +80,14 @@ impl RegisterBase {
     ) -> GenApiResult<R> {
         let length = self.length(device, store, cx)?;
         let address = self.address(device, store, cx)?;
-        if let Some(cache) = cx.get_cache(nid, address, length) {
-            f(cache)
-        } else {
-            let mut buf = vec![0; length as usize];
-            self.read_and_cache(nid, address, length, &mut buf, device, store, cx)?;
-            f(&buf)
+
+        match cx.get_cache(nid, address, length) {
+            CacheState::Fresh(cache) => f(cache),
+            CacheState::Miss | CacheState::Stale(_) => {
+                let mut buf = vec![0; length as usize];
+                self.read_and_cache(nid, address, length, &mut buf, device, store, cx)?;
+                f(&buf)
+            }
         }
     }
 
@@ -105,7 +111,7 @@ impl RegisterBase {
             .expect_iport_kind(store)?
             .read(address, buf, device, store, cx)?;
         if self.cacheable != CachingMode::NoCache {
-            cx.cache_data(nid, address, length, buf);
+            cx.cache_data(nid, address, length, buf, self.cache_ttl());
         }
 
         Ok(())
@@ -132,8 +138,10 @@ impl RegisterBase {
             .expect_iport_kind(store)?
             .write(address, buf, device, store, cx)?;
 
+        cx.invalidate_cache_of(nid);
+        cx.invalidate_cache_by(nid);
         if self.cacheable == CachingMode::WriteThrough {
-            cx.cache_data(nid, address, length, buf);
+            cx.cache_data(nid, address, length, buf, self.cache_ttl());
         }
         Ok(())
     }

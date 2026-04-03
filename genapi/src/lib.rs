@@ -61,12 +61,12 @@ pub use port::PortNode;
 pub use register::RegisterNode;
 pub use register_base::RegisterBase;
 pub use register_description::RegisterDescription;
-pub use store::{CacheStore, NodeId, NodeStore, ValueStore};
+pub use store::{CacheState, CacheStore, NodeId, NodeStore, ValueStore};
 pub use string::StringNode;
 pub use string_reg::StringRegNode;
 pub use swiss_knife::SwissKnifeNode;
 
-use std::borrow::Cow;
+use std::{borrow::Cow, time::Duration};
 
 use auto_impl::auto_impl;
 use tracing::error;
@@ -195,14 +195,20 @@ impl<T, U> ValueCtxt<T, U> {
         &mut self.cache_store
     }
 
-    pub fn cache_data(&mut self, nid: store::NodeId, address: i64, length: i64, value: &[u8])
-    where
+    pub fn cache_data(
+        &mut self,
+        nid: store::NodeId,
+        address: i64,
+        length: i64,
+        value: &[u8],
+        ttl: Option<Duration>,
+    ) where
         U: store::CacheStore,
     {
-        self.cache_store.cache(nid, address, length, value);
+        self.cache_store.cache(nid, address, length, value, ttl);
     }
 
-    pub fn get_cache(&self, nid: store::NodeId, address: i64, length: i64) -> Option<&[u8]>
+    pub fn get_cache(&self, nid: store::NodeId, address: i64, length: i64) -> store::CacheState<'_>
     where
         U: store::CacheStore,
     {
