@@ -78,6 +78,14 @@ pub mod prelude {
     };
 }
 
+#[doc(hidden)]
+pub use interface::{
+    ambassador_impl_IBoolean, ambassador_impl_ICategory, ambassador_impl_ICommand,
+    ambassador_impl_IEnumeration, ambassador_impl_IFloat, ambassador_impl_IInteger,
+    ambassador_impl_INode, ambassador_impl_IPort, ambassador_impl_IRegister,
+    ambassador_impl_ISelector, ambassador_impl_IString,
+};
+
 #[auto_impl(&mut, Box)]
 pub trait Device {
     fn read_mem(
