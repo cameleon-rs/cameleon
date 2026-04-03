@@ -8,6 +8,7 @@
     clippy::missing_errors_doc
 )]
 
+pub mod bit_op;
 pub mod bytes_io;
 pub mod memory;
 
