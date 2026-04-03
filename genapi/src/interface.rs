@@ -3,6 +3,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 use ambassador::{delegatable_trait, Delegate};
+use auto_impl::auto_impl;
 
 use super::{
     elem_type::{DisplayNotation, FloatRepresentation, IntegerRepresentation},
@@ -18,6 +19,7 @@ pub enum IncrementMode {
     ListIncrement,
 }
 
+#[auto_impl(&)]
 #[delegatable_trait]
 pub trait INode {
     fn name<'s>(&self, store: &'s impl NodeStore) -> &'s str {
@@ -28,6 +30,7 @@ pub trait INode {
     fn streamable(&self) -> bool;
 }
 
+#[auto_impl(&)]
 #[delegatable_trait]
 pub trait IInteger {
     fn value<T: ValueStore, U: CacheStore>(
@@ -106,6 +109,7 @@ pub trait IInteger {
     ) -> GenApiResult<bool>;
 }
 
+#[auto_impl(&)]
 #[delegatable_trait]
 pub trait IFloat {
     fn value<T: ValueStore, U: CacheStore>(
@@ -185,6 +189,7 @@ pub trait IFloat {
     ) -> GenApiResult<bool>;
 }
 
+#[auto_impl(&)]
 #[delegatable_trait]
 pub trait IString {
     fn value<T: ValueStore, U: CacheStore>(
@@ -224,6 +229,7 @@ pub trait IString {
     ) -> GenApiResult<bool>;
 }
 
+#[auto_impl(&)]
 #[delegatable_trait]
 pub trait IEnumeration {
     fn current_value<T: ValueStore, U: CacheStore>(
@@ -284,6 +290,7 @@ pub trait IEnumeration {
     ) -> GenApiResult<bool>;
 }
 
+#[auto_impl(&)]
 #[delegatable_trait]
 pub trait ICommand {
     fn execute<T: ValueStore, U: CacheStore>(
@@ -308,6 +315,7 @@ pub trait ICommand {
     ) -> GenApiResult<bool>;
 }
 
+#[auto_impl(&)]
 #[delegatable_trait]
 pub trait IBoolean {
     fn value<T: ValueStore, U: CacheStore>(
@@ -340,6 +348,7 @@ pub trait IBoolean {
     ) -> GenApiResult<bool>;
 }
 
+#[auto_impl(&)]
 #[delegatable_trait]
 pub trait IRegister {
     /// Read bytes from the register.
@@ -379,12 +388,14 @@ pub trait IRegister {
     ) -> GenApiResult<i64>;
 }
 
+#[auto_impl(&)]
 #[delegatable_trait]
 pub trait ICategory {
     /// Return nodes in the category.
     fn nodes(&self, store: &impl NodeStore) -> &[NodeId];
 }
 
+#[auto_impl(&)]
 #[delegatable_trait]
 pub trait IPort {
     fn read<T: ValueStore, U: CacheStore>(
@@ -406,6 +417,7 @@ pub trait IPort {
     ) -> GenApiResult<()>;
 }
 
+#[auto_impl(&)]
 #[delegatable_trait]
 pub trait ISelector {
     /// Return nodes which refer to the current node as a selector.
@@ -415,25 +427,25 @@ pub trait ISelector {
 #[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(INode)]
 pub enum INodeKind<'a> {
-    Integer(&'a super::IntegerNode),
-    IntReg(&'a super::IntRegNode),
-    MaskedIntReg(&'a super::MaskedIntRegNode),
-    IntConverter(&'a super::IntConverterNode),
-    IntSwissKnife(&'a super::IntSwissKnifeNode),
-    Float(&'a super::FloatNode),
-    FloatReg(&'a super::FloatRegNode),
-    Converter(&'a super::ConverterNode),
-    SwissKnife(&'a super::SwissKnifeNode),
-    String(&'a super::StringNode),
-    StringReg(&'a super::StringRegNode),
-    Boolean(&'a super::BooleanNode),
-    Command(&'a super::CommandNode),
-    Register(&'a super::RegisterNode),
-    Category(&'a super::CategoryNode),
-    Port(&'a super::PortNode),
-    Enumeration(&'a super::EnumerationNode),
-    EnumEntry(&'a super::EnumEntryNode),
-    Node(&'a super::Node),
+    Integer(&'a crate::IntegerNode),
+    IntReg(&'a crate::IntRegNode),
+    MaskedIntReg(&'a crate::MaskedIntRegNode),
+    IntConverter(&'a crate::IntConverterNode),
+    IntSwissKnife(&'a crate::IntSwissKnifeNode),
+    Float(&'a crate::FloatNode),
+    FloatReg(&'a crate::FloatRegNode),
+    Converter(&'a crate::ConverterNode),
+    SwissKnife(&'a crate::SwissKnifeNode),
+    String(&'a crate::StringNode),
+    StringReg(&'a crate::StringRegNode),
+    Boolean(&'a crate::BooleanNode),
+    Command(&'a crate::CommandNode),
+    Register(&'a crate::RegisterNode),
+    Category(&'a crate::CategoryNode),
+    Port(&'a crate::PortNode),
+    Enumeration(&'a crate::EnumerationNode),
+    EnumEntry(&'a crate::EnumEntryNode),
+    Node(&'a crate::Node),
 }
 
 impl<'a> INodeKind<'a> {
@@ -491,11 +503,11 @@ impl<'a> INodeKind<'a> {
 #[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(IInteger)]
 pub enum IIntegerKind<'a> {
-    Integer(&'a super::IntegerNode),
-    IntReg(&'a super::IntRegNode),
-    MaskedIntReg(&'a super::MaskedIntRegNode),
-    IntConverter(&'a super::IntConverterNode),
-    IntSwissKnife(&'a super::IntSwissKnifeNode),
+    Integer(&'a crate::IntegerNode),
+    IntReg(&'a crate::IntRegNode),
+    MaskedIntReg(&'a crate::MaskedIntRegNode),
+    IntConverter(&'a crate::IntConverterNode),
+    IntSwissKnife(&'a crate::IntSwissKnifeNode),
 }
 
 impl<'a> IIntegerKind<'a> {
@@ -514,10 +526,10 @@ impl<'a> IIntegerKind<'a> {
 #[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(IFloat)]
 pub enum IFloatKind<'a> {
-    Float(&'a super::FloatNode),
-    FloatReg(&'a super::FloatRegNode),
-    Converter(&'a super::ConverterNode),
-    SwissKnife(&'a super::SwissKnifeNode),
+    Float(&'a crate::FloatNode),
+    FloatReg(&'a crate::FloatRegNode),
+    Converter(&'a crate::ConverterNode),
+    SwissKnife(&'a crate::SwissKnifeNode),
 }
 
 impl<'a> IFloatKind<'a> {
@@ -535,8 +547,8 @@ impl<'a> IFloatKind<'a> {
 #[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(IString)]
 pub enum IStringKind<'a> {
-    String(&'a super::StringNode),
-    StringReg(&'a super::StringRegNode),
+    String(&'a crate::StringNode),
+    StringReg(&'a crate::StringRegNode),
 }
 
 impl<'a> IStringKind<'a> {
@@ -549,10 +561,9 @@ impl<'a> IStringKind<'a> {
     }
 }
 
-#[derive(Delegate, Clone, Copy, Debug)]
-#[delegate(ICommand)]
+#[derive(Clone, Copy, Debug)]
 pub enum ICommandKind<'a> {
-    Command(&'a super::CommandNode),
+    Command(&'a crate::CommandNode),
 }
 
 impl<'a> ICommandKind<'a> {
@@ -564,10 +575,44 @@ impl<'a> ICommandKind<'a> {
     }
 }
 
-#[derive(Delegate, Clone, Copy, Debug)]
-#[delegate(IEnumeration)]
+impl<'a> ICommand for ICommandKind<'a> {
+    fn execute<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        match self {
+            Self::Command(node) => node.execute(device, store, cx),
+        }
+    }
+
+    fn is_done<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        match self {
+            Self::Command(node) => node.is_done(device, store, cx),
+        }
+    }
+
+    fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        match self {
+            Self::Command(node) => node.is_writable(device, store, cx),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
 pub enum IEnumerationKind<'a> {
-    Enumeration(&'a super::EnumerationNode),
+    Enumeration(&'a crate::EnumerationNode),
 }
 
 impl<'a> IEnumerationKind<'a> {
@@ -579,10 +624,85 @@ impl<'a> IEnumerationKind<'a> {
     }
 }
 
-#[derive(Delegate, Clone, Copy, Debug)]
-#[delegate(IBoolean)]
+impl<'a> IEnumeration for IEnumerationKind<'a> {
+    fn current_value<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<i64> {
+        match self {
+            Self::Enumeration(node) => node.current_value(device, store, cx),
+        }
+    }
+
+    fn current_entry<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<NodeId> {
+        match self {
+            Self::Enumeration(node) => node.current_entry(device, store, cx),
+        }
+    }
+
+    fn entries(&self, store: &impl NodeStore) -> &[NodeId] {
+        match self {
+            Self::Enumeration(node) => node.entries(store),
+        }
+    }
+
+    fn set_entry_by_symbolic<T: ValueStore, U: CacheStore>(
+        &self,
+        name: &str,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        match self {
+            Self::Enumeration(node) => node.set_entry_by_symbolic(name, device, store, cx),
+        }
+    }
+
+    fn set_entry_by_value<T: ValueStore, U: CacheStore>(
+        &self,
+        value: i64,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        match self {
+            Self::Enumeration(node) => node.set_entry_by_value(value, device, store, cx),
+        }
+    }
+
+    fn is_readable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        match self {
+            Self::Enumeration(node) => node.is_readable(device, store, cx),
+        }
+    }
+
+    fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        match self {
+            Self::Enumeration(node) => node.is_writable(device, store, cx),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
 pub enum IBooleanKind<'a> {
-    Boolean(&'a super::BooleanNode),
+    Boolean(&'a crate::BooleanNode),
 }
 
 impl<'a> IBooleanKind<'a> {
@@ -594,14 +714,61 @@ impl<'a> IBooleanKind<'a> {
     }
 }
 
+impl<'a> IBoolean for IBooleanKind<'a> {
+    fn value<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        match self {
+            Self::Boolean(node) => node.value(device, store, cx),
+        }
+    }
+
+    fn set_value<T: ValueStore, U: CacheStore>(
+        &self,
+        value: bool,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        match self {
+            Self::Boolean(node) => node.set_value(value, device, store, cx),
+        }
+    }
+
+    fn is_readable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        match self {
+            Self::Boolean(node) => node.is_readable(device, store, cx),
+        }
+    }
+
+    fn is_writable<T: ValueStore, U: CacheStore>(
+        &self,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<bool> {
+        match self {
+            Self::Boolean(node) => node.is_writable(device, store, cx),
+        }
+    }
+}
+
 #[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(IRegister)]
 pub enum IRegisterKind<'a> {
-    Register(&'a super::RegisterNode),
-    IntReg(&'a super::IntRegNode),
-    MaskedIntReg(&'a super::MaskedIntRegNode),
-    StringReg(&'a super::StringRegNode),
-    FloatReg(&'a super::FloatRegNode),
+    Register(&'a crate::RegisterNode),
+    IntReg(&'a crate::IntRegNode),
+    MaskedIntReg(&'a crate::MaskedIntRegNode),
+    StringReg(&'a crate::StringRegNode),
+    FloatReg(&'a crate::FloatRegNode),
 }
 
 impl<'a> IRegisterKind<'a> {
@@ -617,10 +784,9 @@ impl<'a> IRegisterKind<'a> {
     }
 }
 
-#[derive(Delegate, Clone, Copy, Debug)]
-#[delegate(ICategory)]
+#[derive(Clone, Copy, Debug)]
 pub enum ICategoryKind<'a> {
-    Category(&'a super::CategoryNode),
+    Category(&'a crate::CategoryNode),
 }
 
 impl<'a> ICategoryKind<'a> {
@@ -632,10 +798,17 @@ impl<'a> ICategoryKind<'a> {
     }
 }
 
-#[derive(Delegate, Clone, Copy, Debug)]
-#[delegate(IPort)]
+impl<'a> ICategory for ICategoryKind<'a> {
+    fn nodes(&self, store: &impl NodeStore) -> &[NodeId] {
+        match self {
+            Self::Category(node) => node.nodes(store),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
 pub enum IPortKind<'a> {
-    Port(&'a super::PortNode),
+    Port(&'a crate::PortNode),
 }
 
 impl<'a> IPortKind<'a> {
@@ -647,14 +820,42 @@ impl<'a> IPortKind<'a> {
     }
 }
 
+impl<'a> IPort for IPortKind<'a> {
+    fn read<T: ValueStore, U: CacheStore>(
+        &self,
+        address: i64,
+        buf: &mut [u8],
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        match self {
+            Self::Port(node) => node.read(address, buf, device, store, cx),
+        }
+    }
+
+    fn write<T: ValueStore, U: CacheStore>(
+        &self,
+        address: i64,
+        buf: &[u8],
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<()> {
+        match self {
+            Self::Port(node) => node.write(address, buf, device, store, cx),
+        }
+    }
+}
+
 #[derive(Delegate, Clone, Copy, Debug)]
 #[delegate(ISelector)]
 pub enum ISelectorKind<'a> {
-    Integer(&'a super::IntegerNode),
-    IntReg(&'a super::IntRegNode),
-    MaskedIntReg(&'a super::MaskedIntRegNode),
-    Boolean(&'a super::BooleanNode),
-    Enumeration(&'a super::EnumerationNode),
+    Integer(&'a crate::IntegerNode),
+    IntReg(&'a crate::IntRegNode),
+    MaskedIntReg(&'a crate::MaskedIntRegNode),
+    Boolean(&'a crate::BooleanNode),
+    Enumeration(&'a crate::EnumerationNode),
 }
 
 impl<'a> ISelectorKind<'a> {
