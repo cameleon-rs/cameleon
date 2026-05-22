@@ -4,12 +4,20 @@
 
 use super::{
     elem_type::{IntegerRepresentation, NamedValue, Slope},
-    formula::{Expr, Formula},
+    formula::{EvaluationResult, Expr, Formula},
     interface::{IInteger, INode, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, NodeId, NodeStore, ValueStore},
     utils, Device, GenApiError, GenApiResult, ValueCtxt,
 };
+
+fn expr_as_integer(expr: Expr) -> i64 {
+    match expr {
+        Expr::Integer(i) => i,
+        Expr::Float(f) => f as i64,
+        _ => unreachable!("node min/max/inc values must evaluate to immediate expressions"),
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct IntConverterNode {
@@ -73,6 +81,21 @@ impl IntConverterNode {
     pub fn slope(&self) -> Slope {
         self.slope
     }
+
+    fn eval_formula_from<T: ValueStore, U: CacheStore>(
+        &self,
+        to: impl Into<Expr>,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<EvaluationResult> {
+        let mut collector =
+            utils::FormulaEnvCollector::new(&self.p_variables, &self.constants, &self.expressions);
+        collector.insert_imm("TO", to);
+        let var_env = collector.collect(device, store, cx)?;
+
+        self.formula_from.eval(&var_env)
+    }
 }
 
 impl INode for IntConverterNode {
@@ -128,20 +151,24 @@ impl IInteger for IntConverterNode {
 
     fn min<T: ValueStore, U: CacheStore>(
         &self,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        _: &mut ValueCtxt<T, U>,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
-        Ok(i64::MIN)
+        let raw_min = utils::min_from_nid(self.p_value, device, store, cx)?;
+        self.eval_formula_from(raw_min, device, store, cx)
+            .map(|value| value.as_integer())
     }
 
     fn max<T: ValueStore, U: CacheStore>(
         &self,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        _: &mut ValueCtxt<T, U>,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<i64> {
-        Ok(i64::MAX)
+        let raw_max = utils::max_from_nid(self.p_value, device, store, cx)?;
+        self.eval_formula_from(raw_max, device, store, cx)
+            .map(|value| value.as_integer())
     }
 
     fn inc_mode(&self, _: &impl NodeStore) -> Option<IncrementMode> {
@@ -150,11 +177,23 @@ impl IInteger for IntConverterNode {
 
     fn inc<T: ValueStore, U: CacheStore>(
         &self,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        _: &mut ValueCtxt<T, U>,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Option<i64>> {
-        Ok(None)
+        let Some(raw_inc) = utils::inc_from_nid(self.p_value, device, store, cx)? else {
+            return Ok(None);
+        };
+        let raw_min = expr_as_integer(utils::min_from_nid(self.p_value, device, store, cx)?);
+        let raw_inc = expr_as_integer(raw_inc);
+        let min_plus_inc = self
+            .eval_formula_from(raw_min + raw_inc, device, store, cx)?
+            .as_integer();
+        let min = self
+            .eval_formula_from(raw_min, device, store, cx)?
+            .as_integer();
+
+        Ok(Some(min_plus_inc - min))
     }
 
     fn valid_value_set(&self, _: &impl NodeStore) -> &[i64] {

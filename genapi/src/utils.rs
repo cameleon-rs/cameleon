@@ -6,8 +6,7 @@ use std::{borrow::Cow, collections::HashMap, convert::TryInto};
 
 use super::{
     elem_type::{Endianness, NamedValue, Sign},
-    formula::EvaluationResult,
-    formula::Expr,
+    formula::{EvaluationResult, Expr},
     interface::{IBoolean, IEnumeration, IFloat, IInteger},
     store::{CacheStore, NodeId, NodeStore, ValueStore},
     Device, GenApiError, GenApiResult, ValueCtxt,
@@ -207,6 +206,67 @@ impl<'a, T: Copy + Into<Expr>> FormulaEnvCollector<'a, T> {
     }
 }
 
+pub(super) fn min_from_nid<T, U>(
+    nid: NodeId,
+    device: &mut impl Device,
+    store: &impl NodeStore,
+    cx: &mut ValueCtxt<T, U>,
+) -> GenApiResult<Expr>
+where
+    T: ValueStore,
+    U: CacheStore,
+{
+    if let Some(node) = nid.as_iinteger_kind(store) {
+        node.min(device, store, cx).map(Into::into)
+    } else if let Some(node) = nid.as_ifloat_kind(store) {
+        node.min(device, store, cx).map(Into::into)
+    } else {
+        Err(invalid_p_variable_nid(nid, store))
+    }
+}
+
+pub(super) fn max_from_nid<T, U>(
+    nid: NodeId,
+    device: &mut impl Device,
+    store: &impl NodeStore,
+    cx: &mut ValueCtxt<T, U>,
+) -> GenApiResult<Expr>
+where
+    T: ValueStore,
+    U: CacheStore,
+{
+    if let Some(node) = nid.as_iinteger_kind(store) {
+        node.max(device, store, cx).map(Into::into)
+    } else if let Some(node) = nid.as_ifloat_kind(store) {
+        node.max(device, store, cx).map(Into::into)
+    } else {
+        Err(invalid_p_variable_nid(nid, store))
+    }
+}
+
+pub(super) fn inc_from_nid<T, U>(
+    nid: NodeId,
+    device: &mut impl Device,
+    store: &impl NodeStore,
+    cx: &mut ValueCtxt<T, U>,
+) -> GenApiResult<Option<Expr>>
+where
+    T: ValueStore,
+    U: CacheStore,
+{
+    if let Some(node) = nid.as_iinteger_kind(store) {
+        node.inc(device, store, cx).map(|inc| inc.map(Into::into))
+    } else if let Some(node) = nid.as_ifloat_kind(store) {
+        node.inc(device, store, cx).map(|inc| inc.map(Into::into))
+    } else {
+        Err(invalid_p_variable_nid(nid, store))
+    }
+}
+
+fn invalid_p_variable_nid(nid: NodeId, store: &impl NodeStore) -> GenApiError {
+    GenApiError::invalid_node(format!("invalid `pVariable: {}`", nid.name(store)).into())
+}
+
 #[derive(Debug)]
 enum VariableKind<'a> {
     Value,
@@ -240,52 +300,21 @@ impl<'a> VariableKind<'a> {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Expr> {
-        fn error(nid: NodeId, store: &impl NodeStore) -> GenApiError {
-            GenApiError::invalid_node(format!("invalid `pVariable: {}`", nid.name(store)).into())
-        }
-
         let expr: Expr = match self {
             Self::Value => expr_from_nid(nid, device, store, cx)?,
-            Self::Min => {
-                if let Some(node) = nid.as_iinteger_kind(store) {
-                    node.min(device, store, cx)?.into()
-                } else if let Some(node) = nid.as_ifloat_kind(store) {
-                    node.min(device, store, cx)?.into()
-                } else {
-                    return Err(error(nid, store));
-                }
-            }
-            Self::Max => {
-                if let Some(node) = nid.as_iinteger_kind(store) {
-                    node.max(device, store, cx)?.into()
-                } else if let Some(node) = nid.as_ifloat_kind(store) {
-                    node.max(device, store, cx)?.into()
-                } else {
-                    return Err(error(nid, store));
-                }
-            }
-            Self::Inc => {
-                if let Some(node) = nid.as_iinteger_kind(store) {
-                    node.inc(device, store, cx)?
-                        .ok_or_else(|| error(nid, store))?
-                        .into()
-                } else if let Some(node) = nid.as_ifloat_kind(store) {
-                    node.inc(device, store, cx)?
-                        .ok_or_else(|| error(nid, store))?
-                        .into()
-                } else {
-                    return Err(error(nid, store));
-                }
-            }
+            Self::Min => min_from_nid(nid, device, store, cx)?,
+            Self::Max => max_from_nid(nid, device, store, cx)?,
+            Self::Inc => inc_from_nid(nid, device, store, cx)?
+                .ok_or_else(|| invalid_p_variable_nid(nid, store))?,
             Self::Enum(name) => {
                 if let Some(node) = nid.as_ienumeration_kind(store) {
                     node.entry_by_symbolic(name, store)
-                        .ok_or_else(|| error(nid, store))
+                        .ok_or_else(|| invalid_p_variable_nid(nid, store))
                         .map(|nid| nid.expect_enum_entry(store).unwrap())?
                         .value()
                         .into()
                 } else {
-                    return Err(error(nid, store));
+                    return Err(invalid_p_variable_nid(nid, store));
                 }
             }
         };

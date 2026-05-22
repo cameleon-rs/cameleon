@@ -4,12 +4,20 @@
 
 use super::{
     elem_type::{DisplayNotation, FloatRepresentation, NamedValue, Slope},
-    formula::{Expr, Formula},
+    formula::{EvaluationResult, Expr, Formula},
     interface::{IFloat, INode, IncrementMode},
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, NodeId, NodeStore, ValueStore},
     utils, Device, GenApiError, GenApiResult, ValueCtxt,
 };
+
+fn expr_as_float(expr: Expr) -> f64 {
+    match expr {
+        Expr::Integer(i) => i as f64,
+        Expr::Float(f) => f,
+        _ => unreachable!("node min/max/inc values must evaluate to immediate expressions"),
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct ConverterNode {
@@ -91,6 +99,21 @@ impl ConverterNode {
     pub fn is_linear(&self) -> bool {
         self.is_linear
     }
+
+    fn eval_formula_from<T: ValueStore, U: CacheStore>(
+        &self,
+        to: impl Into<Expr>,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
+    ) -> GenApiResult<EvaluationResult> {
+        let mut collector =
+            utils::FormulaEnvCollector::new(&self.p_variables, &self.constants, &self.expressions);
+        collector.insert_imm("TO", to);
+        let var_env = collector.collect(device, store, cx)?;
+
+        self.formula_from.eval(&var_env)
+    }
 }
 
 impl INode for ConverterNode {
@@ -146,20 +169,24 @@ impl IFloat for ConverterNode {
 
     fn min<T: ValueStore, U: CacheStore>(
         &self,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        _: &mut ValueCtxt<T, U>,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
-        Ok(f64::MIN)
+        let raw_min = utils::min_from_nid(self.p_value, device, store, cx)?;
+        self.eval_formula_from(raw_min, device, store, cx)
+            .map(|value| value.as_float())
     }
 
     fn max<T: ValueStore, U: CacheStore>(
         &self,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        _: &mut ValueCtxt<T, U>,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
-        Ok(f64::MAX)
+        let raw_max = utils::max_from_nid(self.p_value, device, store, cx)?;
+        self.eval_formula_from(raw_max, device, store, cx)
+            .map(|value| value.as_float())
     }
 
     fn inc_mode(&self, _: &impl NodeStore) -> Option<IncrementMode> {
@@ -168,11 +195,23 @@ impl IFloat for ConverterNode {
 
     fn inc<T: ValueStore, U: CacheStore>(
         &self,
-        _: &mut impl Device,
-        _: &impl NodeStore,
-        _: &mut ValueCtxt<T, U>,
+        device: &mut impl Device,
+        store: &impl NodeStore,
+        cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Option<f64>> {
-        Ok(None)
+        let Some(raw_inc) = utils::inc_from_nid(self.p_value, device, store, cx)? else {
+            return Ok(None);
+        };
+        let raw_min = expr_as_float(utils::min_from_nid(self.p_value, device, store, cx)?);
+        let raw_inc = expr_as_float(raw_inc);
+        let min_plus_inc = self
+            .eval_formula_from(raw_min + raw_inc, device, store, cx)?
+            .as_float();
+        let min = self
+            .eval_formula_from(raw_min, device, store, cx)?
+            .as_float();
+
+        Ok(Some(min_plus_inc - min))
     }
 
     fn representation(&self, _: &impl NodeStore) -> FloatRepresentation {
@@ -247,5 +286,166 @@ impl IFloat for ConverterNode {
         Ok(self.elem_base.is_writable(device, store, cx)?
             && utils::is_nid_writable(self.p_value, device, store, cx)?
             && collector.is_readable(device, store, cx)?) // Collector is needed to be readable to write a value.
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        builder::GenApiBuilder,
+        prelude::{IFloat, IInteger},
+        store::{DefaultCacheStore, DefaultNodeStore, DefaultValueStore, NodeStore},
+        Device, RegisterDescription, ValueCtxt,
+    };
+
+    struct DummyDevice;
+
+    impl Device for DummyDevice {
+        fn read_mem(
+            &mut self,
+            _: i64,
+            _: &mut [u8],
+        ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+            unreachable!()
+        }
+
+        fn write_mem(
+            &mut self,
+            _: i64,
+            _: &[u8],
+        ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+            unreachable!()
+        }
+    }
+
+    #[test]
+    fn test_converter_min_max_inc_from_p_value() {
+        let xml = r#"
+        <RegisterDescription
+          ModelName="CameleonModel"
+          VendorName="CameleonVendor"
+          StandardNameSpace="None"
+          SchemaMajorVersion="1"
+          SchemaMinorVersion="1"
+          SchemaSubMinorVersion="0"
+          MajorVersion="1"
+          MinorVersion="0"
+          SubMinorVersion="0"
+          ProductGuid="01234567-0123-0123-0123-0123456789ab"
+          VersionGuid="76543210-3210-3210-3210-ba9876543210"
+          xmlns="http://www.genicam.org/GenApi/Version_1_0">
+
+            <Category Name="Root" NameSpace="Standard">
+                <pFeature>Converted</pFeature>
+            </Category>
+
+            <Integer Name="Scale">
+                <Value>3</Value>
+            </Integer>
+
+            <Integer Name="Raw">
+                <Value>10</Value>
+                <Min>10</Min>
+                <Max>20</Max>
+                <Inc>2</Inc>
+            </Integer>
+
+            <Float Name="Alias">
+                <pValue>Raw</pValue>
+            </Float>
+
+            <Converter Name="Converted">
+                <pVariable Name="Scale">Scale</pVariable>
+                <FormulaTo>(FROM - 5) / Scale</FormulaTo>
+                <FormulaFrom>TO * Scale + 5</FormulaFrom>
+                <pValue>Alias</pValue>
+             </Converter>
+        </RegisterDescription>
+        "#;
+
+        let (_, node_store, mut value_ctxt): (
+            RegisterDescription,
+            DefaultNodeStore,
+            ValueCtxt<DefaultValueStore, DefaultCacheStore>,
+        ) = GenApiBuilder::<DefaultNodeStore, DefaultValueStore, DefaultCacheStore>::default()
+            .build(&xml)
+            .unwrap();
+        let node_id = node_store.id_by_name("Converted").unwrap();
+        let node = node_id.expect_ifloat_kind(&node_store).unwrap();
+        let mut device = DummyDevice;
+
+        assert_eq!(
+            node.min(&mut device, &node_store, &mut value_ctxt).unwrap(),
+            35.0
+        );
+        assert_eq!(
+            node.max(&mut device, &node_store, &mut value_ctxt).unwrap(),
+            65.0
+        );
+        assert_eq!(
+            node.inc(&mut device, &node_store, &mut value_ctxt).unwrap(),
+            Some(6.0)
+        );
+    }
+
+    #[test]
+    fn test_int_converter_min_max_inc_from_p_value() {
+        let xml = r#"
+        <RegisterDescription
+          ModelName="CameleonModel"
+          VendorName="CameleonVendor"
+          StandardNameSpace="None"
+          SchemaMajorVersion="1"
+          SchemaMinorVersion="1"
+          SchemaSubMinorVersion="0"
+          MajorVersion="1"
+          MinorVersion="0"
+          SubMinorVersion="0"
+          ProductGuid="01234567-0123-0123-0123-0123456789ab"
+          VersionGuid="76543210-3210-3210-3210-ba9876543210"
+          xmlns="http://www.genicam.org/GenApi/Version_1_0">
+
+            <Category Name="Root" NameSpace="Standard">
+                <pFeature>Converted</pFeature>
+            </Category>
+
+            <Integer Name="Raw">
+                <Value>10</Value>
+                <Min>10</Min>
+                <Max>20</Max>
+                <Inc>2</Inc>
+            </Integer>
+
+            <IntConverter Name="Converted">
+                <FormulaTo>(FROM - 5) / 3</FormulaTo>
+                <FormulaFrom>TO * 3 + 5</FormulaFrom>
+                <pValue>Raw</pValue>
+             </IntConverter>
+        </RegisterDescription>
+        "#;
+
+        let (_, node_store, mut value_ctxt): (
+            RegisterDescription,
+            DefaultNodeStore,
+            ValueCtxt<DefaultValueStore, DefaultCacheStore>,
+        ) = GenApiBuilder::<DefaultNodeStore, DefaultValueStore, DefaultCacheStore>::default()
+            .build(&xml)
+            .unwrap();
+        let node_id = node_store.id_by_name("Converted").unwrap();
+        let node = node_id.expect_iinteger_kind(&node_store).unwrap();
+        let mut device = DummyDevice;
+
+        assert_eq!(
+            node.min(&mut device, &node_store, &mut value_ctxt).unwrap(),
+            35
+        );
+        assert_eq!(
+            node.max(&mut device, &node_store, &mut value_ctxt).unwrap(),
+            65
+        );
+        assert_eq!(
+            node.inc(&mut device, &node_store, &mut value_ctxt).unwrap(),
+            Some(6)
+        );
     }
 }

@@ -4,7 +4,7 @@
 
 use super::{
     elem_type::{DisplayNotation, FloatRepresentation, ImmOrPNode, ValueKind},
-    interface::{IFloat, INode, IncrementMode},
+    interface::{IFloat, IInteger, INode, IncrementMode},
     ivalue::IValue,
     node_base::{NodeAttributeBase, NodeBase, NodeElementBase},
     store::{CacheStore, FloatId, NodeStore, ValueStore},
@@ -67,6 +67,10 @@ impl FloatNode {
     pub fn display_precision_elem(&self) -> i64 {
         self.display_precision
     }
+
+    fn p_value(&self) -> Option<super::store::NodeId> {
+        self.value_kind.p_value().map(|p_value| p_value.p_value())
+    }
 }
 
 impl INode for FloatNode {
@@ -115,7 +119,19 @@ impl IFloat for FloatNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
-        self.min.value(device, store, cx)
+        let value = self.min.value(device, store, cx)?;
+        if value == f64::MIN {
+            if let Some(p_value) = self.p_value() {
+                if let Some(node) = p_value.as_ifloat_kind(store) {
+                    return node.min(device, store, cx);
+                }
+                if let Some(node) = p_value.as_iinteger_kind(store) {
+                    return node.min(device, store, cx).map(|value| value as f64);
+                }
+            }
+        }
+
+        Ok(value)
     }
 
     #[tracing::instrument(skip(self, device, store, cx),
@@ -127,7 +143,19 @@ impl IFloat for FloatNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<f64> {
-        self.max.value(device, store, cx)
+        let value = self.max.value(device, store, cx)?;
+        if value == f64::MAX {
+            if let Some(p_value) = self.p_value() {
+                if let Some(node) = p_value.as_ifloat_kind(store) {
+                    return node.max(device, store, cx);
+                }
+                if let Some(node) = p_value.as_iinteger_kind(store) {
+                    return node.max(device, store, cx).map(|value| value as f64);
+                }
+            }
+        }
+
+        Ok(value)
     }
 
     fn inc_mode(&self, _store: &impl NodeStore) -> Option<IncrementMode> {
@@ -143,7 +171,21 @@ impl IFloat for FloatNode {
         store: &impl NodeStore,
         cx: &mut ValueCtxt<T, U>,
     ) -> GenApiResult<Option<f64>> {
-        self.inc.map(|n| n.value(device, store, cx)).transpose()
+        let inc = self.inc.map(|n| n.value(device, store, cx)).transpose()?;
+        if inc.is_none() {
+            if let Some(p_value) = self.p_value() {
+                if let Some(node) = p_value.as_ifloat_kind(store) {
+                    return node.inc(device, store, cx);
+                }
+                if let Some(node) = p_value.as_iinteger_kind(store) {
+                    return node
+                        .inc(device, store, cx)
+                        .map(|inc| inc.map(|value| value as f64));
+                }
+            }
+        }
+
+        Ok(inc)
     }
 
     fn representation(&self, _store: &impl NodeStore) -> FloatRepresentation {
